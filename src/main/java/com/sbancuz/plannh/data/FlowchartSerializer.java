@@ -12,6 +12,8 @@ import java.util.zip.GZIPOutputStream;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -39,6 +41,12 @@ public class FlowchartSerializer {
                 obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
                 obj.add("inputs", itemStackArrayToJson(node.inputs));
                 obj.add("outputs", itemStackArrayToJson(node.outputs));
+                obj.add("fluidInputs", fluidStackArrayToJson(node.fluidInputs));
+                obj.add("fluidOutputs", fluidStackArrayToJson(node.fluidOutputs));
+
+                if (node.machineConfig.hasAnyBoost()) {
+                    obj.add("machineConfig", machineConfigToJson(node.machineConfig));
+                }
 
                 if (!node.properties.isEmpty()) {
                     JsonObject propsObj = new JsonObject();
@@ -116,6 +124,12 @@ public class FlowchartSerializer {
                     .getAsInt() : 0;
                 jsonArrayToItemStacks(obj.getAsJsonArray("inputs"), node.inputs);
                 jsonArrayToItemStacks(obj.getAsJsonArray("outputs"), node.outputs);
+                if (obj.has("fluidInputs")) jsonArrayToFluidStacks(obj.getAsJsonArray("fluidInputs"), node.fluidInputs);
+                if (obj.has("fluidOutputs")) jsonArrayToFluidStacks(obj.getAsJsonArray("fluidOutputs"), node.fluidOutputs);
+
+                if (obj.has("machineConfig")) {
+                    jsonToMachineConfig(obj.getAsJsonObject("machineConfig"), node.machineConfig);
+                }
 
                 if (obj.has("properties")) {
                     JsonObject propsObj = obj.getAsJsonObject("properties");
@@ -206,6 +220,72 @@ public class FlowchartSerializer {
                 } catch (net.minecraft.nbt.NBTException ignored) {}
             }
             out.add(stack);
+        }
+    }
+
+    private static JsonArray fluidStackArrayToJson(java.util.List<FluidStack> fluids) {
+        JsonArray arr = new JsonArray();
+        for (FluidStack fs : fluids) {
+            if (fs == null || fs.getFluid() == null) continue;
+            JsonObject obj = new JsonObject();
+            obj.addProperty("fluid", FluidRegistry.getFluidName(fs.getFluid()));
+            obj.addProperty("amount", fs.amount);
+            arr.add(obj);
+        }
+        return arr;
+    }
+
+    private static void jsonArrayToFluidStacks(JsonArray arr, java.util.List<FluidStack> out) {
+        for (JsonElement elem : arr) {
+            JsonObject obj = elem.getAsJsonObject();
+            String name = obj.get("fluid").getAsString();
+            int amount = obj.get("amount").getAsInt();
+            FluidStack fs = FluidRegistry.getFluidStack(name, amount);
+            if (fs != null) out.add(fs);
+        }
+    }
+
+    private static JsonObject machineConfigToJson(MachineConfig cfg) {
+        JsonObject obj = new JsonObject();
+        if (cfg.speedBoostPercent != 100) obj.addProperty("speed", cfg.speedBoostPercent);
+        if (cfg.parallels != 1) obj.addProperty("par", cfg.parallels);
+        if (cfg.machineCount != 1) obj.addProperty("mach", cfg.machineCount);
+        if (cfg.overclockTiers != 0) obj.addProperty("oc", cfg.overclockTiers);
+        if (cfg.perfectOC) obj.addProperty("poc", true);
+        if (!cfg.inputConsumption.isEmpty()) {
+            JsonArray arr = new JsonArray();
+            for (java.util.Map.Entry<Integer, Float> e : cfg.inputConsumption.entrySet()) {
+                arr.add(new com.google.gson.JsonPrimitive(e.getKey() + ":" + e.getValue()));
+            }
+            obj.add("inMul", arr);
+        }
+        if (!cfg.outputProductivity.isEmpty()) {
+            JsonArray arr = new JsonArray();
+            for (java.util.Map.Entry<Integer, Float> e : cfg.outputProductivity.entrySet()) {
+                arr.add(new com.google.gson.JsonPrimitive(e.getKey() + ":" + e.getValue()));
+            }
+            obj.add("outMul", arr);
+        }
+        return obj;
+    }
+
+    private static void jsonToMachineConfig(JsonObject obj, MachineConfig cfg) {
+        if (obj.has("speed")) cfg.speedBoostPercent = obj.get("speed").getAsInt();
+        if (obj.has("par")) cfg.parallels = obj.get("par").getAsInt();
+        if (obj.has("mach")) cfg.machineCount = obj.get("mach").getAsInt();
+        if (obj.has("oc")) cfg.overclockTiers = obj.get("oc").getAsInt();
+        if (obj.has("poc")) cfg.perfectOC = obj.get("poc").getAsBoolean();
+        if (obj.has("inMul")) {
+            for (JsonElement e : obj.getAsJsonArray("inMul")) {
+                String[] parts = e.getAsString().split(":");
+                cfg.inputConsumption.put(Integer.parseInt(parts[0]), Float.parseFloat(parts[1]));
+            }
+        }
+        if (obj.has("outMul")) {
+            for (JsonElement e : obj.getAsJsonArray("outMul")) {
+                String[] parts = e.getAsString().split(":");
+                cfg.outputProductivity.put(Integer.parseInt(parts[0]), Float.parseFloat(parts[1]));
+            }
         }
     }
 }

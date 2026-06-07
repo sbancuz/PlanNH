@@ -4,10 +4,10 @@ import static org.lwjgl.opengl.GL11.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
@@ -15,10 +15,10 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
-import com.sbancuz.plannh.data.FlowchartBalancer;
 import com.sbancuz.plannh.data.FlowchartBalancer.BalanceResult;
 import com.sbancuz.plannh.data.FlowchartBalancer.NodeBalance;
 import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 
@@ -32,6 +32,7 @@ import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
 
 public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Interactable {
 
@@ -81,6 +82,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private List<ThroughputLine> outputLines = new ArrayList<>();
     private int recipeDurationTicks;
     private long lastHandlerUpdate = 0;
+    private boolean configOpen = false;
+    private final java.util.List<ClickZone> configZones = new java.util.ArrayList<>();
+
+    private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action) {
+        boolean contains(int ux, int uy) {
+            return ux >= ux1 && ux < ux2 && uy >= uy1 && uy < uy2;
+        }
+    }
 
     public RecipeNodeWidget(FlowchartNode node, CanvasWidget canvas) {
         this.node = node;
@@ -128,6 +137,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (recipeDurationTicks > 0) lines++;
         if (hasEnergy) lines++;
         lines += inputLines.size() + outputLines.size();
+        lines += node.fluidInputs.size() + node.fluidOutputs.size();
         return lines * 11 + 6;
     }
 
@@ -171,19 +181,22 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             if (!handlers.isEmpty()) {
                 ICraftingHandler chosen = null;
                 int chosenIdx = 0;
-                int bestScore = 0;
 
                 if (!node.recipeOwner.isEmpty()) {
                     for (ICraftingHandler h : handlers) {
                         String ident = h.getOverlayIdentifier();
                         if (ident != null && ident.equals(node.recipeOwner)) {
-                            int n = h.numRecipes();
-                            for (int idx = 0; idx < n; idx++) {
-                                int score = countMatchingOutputs(h, idx);
-                                if (score > bestScore) {
-                                    bestScore = score;
-                                    chosen = h;
-                                    chosenIdx = idx;
+                            chosen = h;
+                            if (node.handlerRecipeIndex >= 0 && node.handlerRecipeIndex < h.numRecipes()) {
+                                chosenIdx = node.handlerRecipeIndex;
+                            } else {
+                                int bestScore = 0;
+                                for (int idx = 0; idx < h.numRecipes(); idx++) {
+                                    int score = countMatchingOutputs(h, idx);
+                                    if (score > bestScore) {
+                                        bestScore = score;
+                                        chosenIdx = idx;
+                                    }
                                 }
                             }
                             break;
@@ -191,7 +204,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                     }
                 }
 
-                if (chosen == null || bestScore == 0) {
+                if (chosen == null) {
+                    int bestScore = 0;
                     for (ICraftingHandler h : handlers) {
                         int n = h.numRecipes();
                         for (int idx = 0; idx < n; idx++) {
@@ -205,26 +219,22 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                     }
                 }
 
-                if (chosen == null || bestScore == 0) {
+                if (chosen == null) {
                     handlerInitFailed = true;
                     return;
                 }
 
                 RecipeHandlerRef ref = RecipeHandlerRef.of(chosen, chosenIdx);
-                if (ref != null) {
-                    handlerRef = ref;
-                    neiWidget = new NEIRecipeWidget(ref);
-                    neiWidget.showAsWidget(true);
-                    neiWidget.x = 5;
-                    neiWidget.y = 17;
-                    IRecipeHandler h = ref.handler;
-                    recipeName = h.getRecipeName()
-                        .trim();
-                    extractThroughput();
-                    resizeForZoom(canvas.getZoom());
-                } else {
-                    handlerInitFailed = true;
-                }
+                handlerRef = ref;
+                neiWidget = new NEIRecipeWidget(ref);
+                neiWidget.showAsWidget(true);
+                neiWidget.x = 5;
+                neiWidget.y = 17;
+                IRecipeHandler h = ref.handler;
+                recipeName = h.getRecipeName()
+                    .trim();
+                extractThroughput();
+                resizeForZoom(canvas.getZoom());
             } else {
                 handlerInitFailed = true;
             }
@@ -242,7 +252,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private void resizeForZoom(float z) {
         if (handlerRef != null) {
             int cw = neiWidget.w + 10;
-            int ch = neiWidget.h + 22 + calcInfoHeight();
+            int configH = configOpen ? 88 : 0;
+            int ch = neiWidget.h + 22 + calcInfoHeight() + configH;
             setAreaSize(Math.round((cw + 16) * z), Math.round((ch + 16) * z));
         } else {
             setAreaSize(Math.round(BASE_W * z), Math.round(BASE_H * z));
@@ -282,9 +293,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             codechicken.lib.gui.GuiDraw.drawRect(5, 5, cw - 10, 12, 0x30000000);
             codechicken.lib.gui.GuiDraw.drawStringC(recipeName, neiWidget.w / 2, 7, 0xFFFFFF);
 
+            if (node.machineConfig.hasAnyBoost()) {
+                String badge = buildConfigBadge();
+                codechicken.lib.gui.GuiDraw.drawString(badge, 8, 7, 0x88AAFF, false);
+            }
+
+            codechicken.lib.gui.GuiDraw.drawString("⚙", cw - 14, 6, configOpen ? 0x88FF88 : 0x888888, false);
+
             neiWidget.draw(5, 17);
 
             drawThroughputInfo();
+            drawConfigContent();
 
             glPopMatrix();
             drawCloseButtonPixel(getArea().width, getArea().height);
@@ -308,7 +327,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             GuiDraw.drawText(timeLabel, zq(4), h - zq(12), z, 0x888888, false);
 
             if (!node.outputs.isEmpty()) {
-                ItemStack primary = node.outputs.get(0);
+                ItemStack primary = node.outputs.getFirst();
                 if (primary != null) {
                     int is = zq(16);
                     GuiDraw.drawItem(primary, w - is - zq(4), zq(14), is, is, context.getCurrentDrawingZ());
@@ -396,7 +415,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             float sec = totalDur / 20f;
             String durStr = "Duration: " + totalDur + "t";
             if (sec > 0) durStr += " (" + String.format("%.1f", sec) + "s)";
-            if (ops > 1 && recipeDurationTicks > 0) {
+            if (ops > 1) {
                 durStr += "  (\u00d7" + ops + ")";
             }
             codechicken.lib.gui.GuiDraw.drawString(durStr, x, y, 0xCCCCCC, false);
@@ -426,6 +445,21 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             y += 11;
             outIdx++;
         }
+
+        if (!node.fluidInputs.isEmpty()) {
+            for (FluidStack fs : node.fluidInputs) {
+                String label = formatFluidAmount(fs.amount) + " " + fs.getLocalizedName();
+                codechicken.lib.gui.GuiDraw.drawString(label, x, y, 0x77AAFF, false);
+                y += 11;
+            }
+        }
+        if (!node.fluidOutputs.isEmpty()) {
+            for (FluidStack fs : node.fluidOutputs) {
+                String label = formatFluidAmount(fs.amount) + " " + fs.getLocalizedName();
+                codechicken.lib.gui.GuiDraw.drawString(label, x + 4, y, 0x77FFAA, false);
+                y += 11;
+            }
+        }
     }
 
     private String formatProperty(RecipeProperty<?> prop, Object value) {
@@ -446,8 +480,13 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         return String.valueOf(energy);
     }
 
+    private static String formatFluidAmount(int mb) {
+        if (mb >= 1000) return (mb / 1000) + "." + ((mb % 1000) / 100) + "B";
+        return mb + "mB";
+    }
+
     @Override
-    public Interactable.Result onMousePressed(int mouseButton) {
+    public @NotNull Result onMousePressed(int mouseButton) {
         if (mouseButton == 0) {
             int mx = getContext().getMouseX();
             int my = getContext().getMouseY();
@@ -455,6 +494,28 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 canvas.removeNode(node.id);
                 return Result.SUCCESS;
             }
+
+            float z = canvas.getZoom();
+            int ux = Math.round(mx / z);
+            int uy = Math.round(my / z);
+
+            if (neiWidget != null) {
+                int cw = neiWidget.w + 10;
+                if (ux >= cw - 18 && ux <= cw - 6 && uy >= 4 && uy <= 16) {
+                    configOpen = !configOpen;
+                    resizeForZoom(canvas.getZoom());
+                    return Result.SUCCESS;
+                }
+                if (configOpen) {
+                    for (ClickZone zone : configZones) {
+                        if (zone.contains(ux, uy)) {
+                            zone.action.run();
+                            return Result.SUCCESS;
+                        }
+                    }
+                }
+            }
+
             if (getOutputPortAt(mx, my) >= 0) {
                 return Result.IGNORE;
             }
@@ -500,6 +561,81 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             node.y = nodeStartY + Math.round(dy / z);
             syncTransform(z, canvas.getPanX(), canvas.getPanY());
         }
+    }
+
+    private String buildConfigBadge() {
+        MachineConfig c = node.machineConfig;
+        StringBuilder sb = new StringBuilder();
+        if (c.speedBoostPercent != 100) sb.append("⏱").append(c.speedBoostPercent).append("% ");
+        if (c.parallels > 1) sb.append("∥").append(c.parallels).append(" ");
+        if (c.machineCount > 1) sb.append("×").append(c.machineCount).append(" ");
+        if (c.overclockTiers > 0) {
+            sb.append("⚡OC").append(c.overclockTiers);
+            if (c.perfectOC) sb.append("P");
+            sb.append(" ");
+        }
+        if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ' ') {
+            sb.setLength(sb.length() - 1);
+        }
+        return sb.toString();
+    }
+
+    private void drawConfigContent() {
+        configZones.clear();
+        if (!configOpen) return;
+
+        int x = 8;
+        int y0 = 17 + neiWidget.h + 4 + calcInfoHeight();
+
+        codechicken.lib.gui.GuiDraw.drawRect(x - 2, y0 - 2, 170, 80, 0xAA202020);
+
+        MachineConfig c = node.machineConfig;
+        int y = y0;
+        y = drawConfigIntField(x, y, "Speed %", c.speedBoostPercent, 10, 10000, v -> c.speedBoostPercent = v, y0);
+        y = drawConfigIntField(x, y, "Parallels", c.parallels, 1, 4096, v -> c.parallels = v, y0);
+        y = drawConfigIntField(x, y, "Machines ", c.machineCount, 1, 4096, v -> c.machineCount = v, y0);
+        y = drawConfigIntField(x, y, "OC tiers", c.overclockTiers, 0, 32, v -> c.overclockTiers = v, y0);
+
+        String pocLabel = c.perfectOC ? "[\u2713] Perfect OC" : "[  ] Perfect OC";
+        codechicken.lib.gui.GuiDraw.drawString(pocLabel, x, y, c.perfectOC ? 0x88FF88 : 0x888888, false);
+        configZones.add(new ClickZone(x, y, x + 90, y + 10, () -> {
+            c.perfectOC = !c.perfectOC;
+            onConfigChanged();
+        }));
+        y += 11;
+    }
+
+    private int drawConfigIntField(int x, int y, String label, int value, int min, int max,
+        java.util.function.IntConsumer setter, int y0) {
+        int labelW = 70;
+        String dec = "[-]", inc = "[+]";
+        int decX = x + labelW;
+        int incX = decX + 22;
+
+        String text = label + " " + value;
+        codechicken.lib.gui.GuiDraw.drawString(text, x, y, 0xCCCCCC, false);
+        codechicken.lib.gui.GuiDraw.drawString(dec, decX, y, 0xAAAAAA, false);
+        codechicken.lib.gui.GuiDraw.drawString(inc, incX, y, 0xAAAAAA, false);
+
+        int finalValue = value;
+        configZones.add(new ClickZone(decX, y, incX, y + 10, () -> {
+            if (finalValue > min) {
+                setter.accept(finalValue - 1);
+                onConfigChanged();
+            }
+        }));
+        configZones.add(new ClickZone(incX, y, incX + 22, y + 10, () -> {
+            if (finalValue < max) {
+                setter.accept(finalValue + 1);
+                onConfigChanged();
+            }
+        }));
+
+        return y + 11;
+    }
+
+    private void onConfigChanged() {
+        resizeForZoom(canvas.getZoom());
     }
 
     private void openNeiRecipe() {

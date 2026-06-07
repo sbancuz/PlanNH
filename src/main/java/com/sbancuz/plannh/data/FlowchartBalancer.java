@@ -54,7 +54,7 @@ public class FlowchartBalancer {
 
             int currentOps = ops.get(nodeId);
 
-            // Group demand per output port — same output feeding multiple consumers must sum item counts
+            // Group demand per output port
             Map<Integer, Float> itemsNeededPerPort = new HashMap<>();
             Map<Integer, Float> yieldPerPort = new HashMap<>();
             for (FlowchartEdge edge : outEdges.get(nodeId)) {
@@ -84,11 +84,21 @@ public class FlowchartBalancer {
                     chance = chances[edge.sourceOutputIndex];
                 }
 
-                float yield = myOutputCount * chance;
+                MachineConfig cfg = node.machineConfig;
+                MachineConfig tgtCfg = target.machineConfig;
+
+                float yield = myOutputCount * chance
+                    * cfg.outputMultiplier(edge.sourceOutputIndex)
+                    * cfg.parallels * cfg.machineCount;
+
+                float itemsNeeded = targetOps * targetInputCount
+                    * tgtCfg.inputMultiplier(edge.targetInputIndex)
+                    * tgtCfg.parallels * tgtCfg.machineCount;
+
                 if (yield <= 0) continue;
 
                 int port = edge.sourceOutputIndex;
-                itemsNeededPerPort.merge(port, (float) (targetOps * targetInputCount), Float::sum);
+                itemsNeededPerPort.merge(port, itemsNeeded, Float::sum);
                 yieldPerPort.put(port, yield);
             }
 
@@ -173,9 +183,15 @@ public class FlowchartBalancer {
             int opCount = ops.get(node.id);
             totalOps += opCount;
 
-            long energy = extractEnergy(node, opCount);
-            int duration = node.durationTicks * opCount;
-            totalDuration += duration;
+            MachineConfig cfg = node.machineConfig;
+
+            long baseEnergy = baseEnergyPerOp(node);
+            long energyPerCycle = cfg.energyPerCycle(baseEnergy);
+            long totalEnergy = energyPerCycle * opCount;
+
+            float durationPerCycle = cfg.durationPerCycle(node.durationTicks);
+            int totalDurationTicksForNode = Math.round(durationPerCycle * opCount);
+            totalDuration += totalDurationTicksForNode;
 
             Map<Integer, Float> effOuts = new HashMap<>();
             for (int i = 0; i < node.outputs.size(); i++) {
@@ -186,17 +202,22 @@ public class FlowchartBalancer {
                 if (chances != null && i < chances.length) {
                     chance = chances[i];
                 }
-                effOuts.put(i, opCount * stack.stackSize * chance);
+                float total = opCount * stack.stackSize * chance
+                    * cfg.outputMultiplier(i) * cfg.parallels * cfg.machineCount;
+                if (total > 0) effOuts.put(i, total);
             }
 
             Map<Integer, Integer> effIns = new HashMap<>();
             for (int i = 0; i < node.inputs.size(); i++) {
                 ItemStack stack = node.inputs.get(i);
                 if (stack == null || stack.stackSize <= 0) continue;
-                effIns.put(i, opCount * stack.stackSize);
+                int total = Math.round(opCount * stack.stackSize
+                    * cfg.inputMultiplier(i) * cfg.parallels * cfg.machineCount);
+                if (total > 0) effIns.put(i, total);
             }
 
-            nodeBalances.put(node.id, new NodeBalance(opCount, duration, energy, effOuts, effIns));
+            nodeBalances.put(node.id, new NodeBalance(
+                opCount, totalDurationTicksForNode, totalEnergy, effOuts, effIns));
 
             for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
                 RecipeProperty<?> prop = entry.getKey();
@@ -225,17 +246,18 @@ public class FlowchartBalancer {
                 ItemStack stack = node.inputs.get(i);
                 if (stack == null || stack.stackSize <= 0) continue;
                 if (fulfilledInputs.contains(node.id + ":" + i)) continue;
-                int totalCount = nb.effectiveInputs.get(i);
-                FlowchartSummary.mergeInto(netInputs, stack, totalCount);
+                Integer totalCount = nb.effectiveInputs.get(i);
+                if (totalCount != null && totalCount > 0) {
+                    FlowchartSummary.mergeInto(netInputs, stack, totalCount);
+                }
             }
             for (int i = 0; i < node.outputs.size(); i++) {
                 ItemStack stack = node.outputs.get(i);
                 if (stack == null || stack.stackSize <= 0) continue;
                 if (consumedOutputs.contains(node.id + ":" + i)) continue;
-                float totalCount = nb.effectiveOutputs.get(i);
-                if (totalCount > 0) {
-                    int intCount = (int) Math.ceil(totalCount);
-                    FlowchartSummary.mergeInto(netOutputs, stack, intCount);
+                Float totalCount = nb.effectiveOutputs.get(i);
+                if (totalCount != null && totalCount > 0) {
+                    FlowchartSummary.mergeInto(netOutputs, stack, (int) Math.ceil(totalCount));
                 }
             }
         }
@@ -245,9 +267,9 @@ public class FlowchartBalancer {
             propertyTotals, totalOps, totalDuration);
     }
 
-    private static long extractEnergy(FlowchartNode node, int ops) {
+    private static long baseEnergyPerOp(FlowchartNode node) {
         Long totalEu = node.properties.get(RecipePropertyAPI.TOTAL_EU);
-        if (totalEu != null && totalEu > 0) return totalEu * ops;
+        if (totalEu != null && totalEu > 0) return totalEu;
         for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
             RecipeProperty<?> prop = entry.getKey();
             Object val = entry.getValue();
@@ -255,8 +277,8 @@ public class FlowchartBalancer {
             if (prop == RecipePropertyAPI.OUTPUT_CHANCES) continue;
             if (prop == RecipePropertyAPI.EU_PER_TICK) continue;
             if (prop == RecipePropertyAPI.DURATION_TICKS) continue;
-            if (val instanceof Integer i && i > 0) return (long) i * ops;
-            if (val instanceof Long l && l > 0) return l * ops;
+            if (val instanceof Integer i && i > 0) return i;
+            if (val instanceof Long l && l > 0) return l;
         }
         return 0;
     }
