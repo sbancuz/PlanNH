@@ -7,7 +7,6 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -79,8 +78,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private NEIRecipeWidget neiWidget;
     private String recipeName = "";
     private boolean handlerInitFailed = false;
-    private List<ThroughputLine> inputLines = new ArrayList<>();
-    private List<ThroughputLine> outputLines = new ArrayList<>();
+    private final List<ThroughputLine> inputLines = new ArrayList<>();
+    private final List<ThroughputLine> outputLines = new ArrayList<>();
     private int recipeDurationTicks;
     private long lastHandlerUpdate = 0;
     private boolean configOpen = false;
@@ -112,12 +111,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private void extractThroughput() {
         recipeDurationTicks = node.durationTicks;
 
-        for (ItemStack stack : node.inputs) {
+        for (var p : node.inputs) {
+            ItemStack stack = p.left();
             if (stack != null && stack.stackSize > 0) {
                 inputLines.add(new ThroughputLine(stack, stack.stackSize, 0));
             }
         }
-        for (ItemStack stack : node.outputs) {
+        for (var p : node.outputs) {
+            ItemStack stack = p.left();
             if (stack != null && stack.stackSize > 0) {
                 outputLines.add(new ThroughputLine(stack, stack.stackSize, 0));
             }
@@ -149,7 +150,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int matches = 0;
         PositionedStack result = handler.getResultStack(idx);
         if (result != null && result.item != null) {
-            for (ItemStack saved : node.outputs) {
+            for (var p : node.outputs) {
+                ItemStack saved = p.left();
                 if (saved != null && saved.isItemEqual(result.item)) {
                     matches++;
                     break;
@@ -158,7 +160,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
         for (PositionedStack ps : handler.getOtherStacks(idx)) {
             if (ps != null && ps.item != null) {
-                for (ItemStack saved : node.outputs) {
+                for (var p : node.outputs) {
+                    ItemStack saved = p.left();
                     if (saved != null && saved.isItemEqual(ps.item)) {
                         matches++;
                         break;
@@ -176,7 +179,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             return;
         }
         try {
-            ItemStack stack = node.outputs.get(0);
+            ItemStack stack = node.outputs.getFirst()
+                .left();
             if (stack == null) {
                 handlerInitFailed = true;
                 return;
@@ -331,7 +335,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             GuiDraw.drawText(timeLabel, zq(4), h - zq(12), z, 0x888888, false);
 
             if (!node.outputs.isEmpty()) {
-                ItemStack primary = node.outputs.getFirst();
+                ItemStack primary = node.outputs.getFirst()
+                    .left();
                 if (primary != null) {
                     int is = zq(16);
                     GuiDraw.drawItem(primary, w - is - zq(4), zq(14), is, is, context.getCurrentDrawingZ());
@@ -434,8 +439,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             y += 11;
         }
 
-        float[] outputChances = node.properties.get(RecipePropertyAPI.OUTPUT_CHANCES);
-
         for (ThroughputLine line : inputLines) {
             String label = line.count + "x " + line.stack.getDisplayName();
             codechicken.lib.gui.GuiDraw.drawString(label, x, y, 0xAAAAAA, false);
@@ -444,8 +447,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int outIdx = 0;
         for (ThroughputLine line : outputLines) {
             String label = line.count + "x " + line.stack.getDisplayName();
-            if (outputChances != null && outIdx < outputChances.length && outputChances[outIdx] < 0.999f) {
-                label += " (" + Math.round(outputChances[outIdx] * 100) + "%)";
+            float chance = node.outputs.get(outIdx)
+                .rightFloat();
+            if (chance < 0.999f) {
+                label += " (" + Math.round(chance * 100) + "%)";
             }
             codechicken.lib.gui.GuiDraw.drawString(label, x + 4, y, 0xFFFFAA, false);
             y += 11;
@@ -453,15 +458,19 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
 
         if (!node.fluidInputs.isEmpty()) {
-            for (FluidStack fs : node.fluidInputs) {
-                String label = formatFluidAmount(fs.amount) + " " + fs.getLocalizedName();
+            for (var fs : node.fluidInputs) {
+                String label = formatFluidAmount(fs.left().amount) + " "
+                    + fs.left()
+                        .getLocalizedName();
                 codechicken.lib.gui.GuiDraw.drawString(label, x, y, 0x77AAFF, false);
                 y += 11;
             }
         }
         if (!node.fluidOutputs.isEmpty()) {
-            for (FluidStack fs : node.fluidOutputs) {
-                String label = formatFluidAmount(fs.amount) + " " + fs.getLocalizedName();
+            for (var fs : node.fluidOutputs) {
+                String label = formatFluidAmount(fs.left().amount) + " "
+                    + fs.left()
+                        .getLocalizedName();
                 codechicken.lib.gui.GuiDraw.drawString(label, x + 4, y, 0x77FFAA, false);
                 y += 11;
             }
@@ -721,7 +730,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     private void openNeiRecipe() {
         if (!node.outputs.isEmpty()) {
-            ItemStack stack = node.outputs.get(0);
+            ItemStack stack = node.outputs.getFirst()
+                .left();
             GuiCraftingRecipe.openRecipeGui("item", stack);
         }
     }

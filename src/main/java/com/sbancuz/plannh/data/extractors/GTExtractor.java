@@ -4,7 +4,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.FlowchartNode;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
@@ -14,19 +16,22 @@ import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.api.util.GTRecipe;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
+import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
 public class GTExtractor implements RecipePropertyExtractor {
 
     public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty
         .intProperty("specialValue", "Special Value", 0);
 
-    static {
-        RecipePropertyAPI.registerProperty(SPECIAL_VALUE);
+    @Override
+    public String getModId() {
+        return Compat.GREGTECH.modid;
     }
 
     @Override
-    public String getModId() {
-        return "gregtech";
+    public void register() {
+        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerProperty(SPECIAL_VALUE);
     }
 
     @Override
@@ -35,7 +40,7 @@ public class GTExtractor implements RecipePropertyExtractor {
     }
 
     @Override
-    public Map<RecipeProperty<?>, Object> extract(IRecipeHandler handler, int recipeIndex) {
+    public Map<RecipeProperty<?>, Object> extract(FlowchartNode node, IRecipeHandler handler, int recipeIndex) {
         Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof GTNEIDefaultHandler gth)) return props;
 
@@ -57,15 +62,41 @@ public class GTExtractor implements RecipePropertyExtractor {
             props.put(SPECIAL_VALUE, r.mSpecialValue);
         }
 
-        if (r.mOutputChances != null && r.mOutputChances.length > 0) {
-            int[] raw = r.mOutputChances;
-            float[] chances = new float[raw.length];
-            for (int i = 0; i < raw.length; i++) {
-                chances[i] = raw[i] / 10000f;
+        if (r.mInputChances != null) {
+            for (int i = 0; i < r.mInputs.length; i++) {
+                node.inputs.set(
+                    i,
+                    new ObjectFloatImmutablePair<>(
+                        node.inputs.get(i)
+                            .left(),
+                        r.mInputChances[i]));
             }
-            props.put(RecipePropertyAPI.OUTPUT_CHANCES, chances);
+        }
+        if (r.mOutputChances != null) {
+            for (int i = 0; i < r.mOutputs.length; i++) {
+                node.outputs.set(
+                    i,
+                    new ObjectFloatImmutablePair<>(
+                        node.outputs.get(i)
+                            .left(),
+                        r.mOutputChances[i]));
+            }
         }
 
+        for (int i = 0; i < r.mFluidInputs.length; i++) {
+            node.fluidInputs.add(
+                i,
+                new ObjectFloatImmutablePair<>(
+                    r.mFluidInputs[i],
+                    r.mFluidInputChances != null ? r.mFluidInputChances[i] : 1.f));
+        }
+        for (int i = 0; i < r.mFluidOutputs.length; i++) {
+            node.fluidOutputs.add(
+                i,
+                new ObjectFloatImmutablePair<>(
+                    r.mFluidOutputs[i],
+                    r.mFluidOutputChances != null ? r.mFluidOutputChances[i] : 1.f));
+        }
         return props;
     }
 }

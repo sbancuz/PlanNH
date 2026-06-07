@@ -68,34 +68,41 @@ public class FlowchartBalancer {
                 if (targetOps <= 0) continue;
 
                 int targetInputCount = 0;
+                float inputChance = 1.f;
                 if (edge.targetInputIndex >= 0 && edge.targetInputIndex < target.inputs.size()) {
-                    ItemStack stack = target.inputs.get(edge.targetInputIndex);
-                    if (stack != null) targetInputCount = stack.stackSize;
+                    ItemStack stack = target.inputs.get(edge.targetInputIndex)
+                        .left();
+                    if (stack != null) {
+                        targetInputCount = stack.stackSize;
+                        inputChance = target.inputs.get(edge.targetInputIndex)
+                            .rightFloat();
+                    }
                 }
                 if (targetInputCount <= 0) continue;
 
                 int myOutputCount = 0;
+                float outputChance = 1.f;
                 if (edge.sourceOutputIndex >= 0 && edge.sourceOutputIndex < node.outputs.size()) {
-                    ItemStack stack = node.outputs.get(edge.sourceOutputIndex);
-                    if (stack != null) myOutputCount = stack.stackSize;
+                    ItemStack stack = node.outputs.get(edge.sourceOutputIndex)
+                        .left();
+                    if (stack != null) {
+                        myOutputCount = stack.stackSize;
+                        outputChance = node.outputs.get((edge.sourceOutputIndex))
+                            .rightFloat();
+                    }
                 }
                 if (myOutputCount <= 0) continue;
-
-                float[] chances = node.properties.get(RecipePropertyAPI.OUTPUT_CHANCES);
-                float chance = 1.0f;
-                if (chances != null && edge.sourceOutputIndex < chances.length) {
-                    chance = chances[edge.sourceOutputIndex];
-                }
 
                 MachineConfig cfg = node.machineConfig;
                 MachineConfig tgtCfg = target.machineConfig;
 
-                float yield = myOutputCount * chance
+                float yield = myOutputCount * outputChance
                     * cfg.outputMultiplier(edge.sourceOutputIndex)
                     * cfg.maxParallel
                     * cfg.machineCount;
 
                 float itemsNeeded = targetOps * targetInputCount
+                    * inputChance
                     * tgtCfg.inputMultiplier(edge.targetInputIndex)
                     * tgtCfg.maxParallel
                     * tgtCfg.machineCount;
@@ -119,7 +126,7 @@ public class FlowchartBalancer {
             if (maxDemand > currentOps) {
                 ops.put(nodeId, maxDemand);
             } else if (currentOps == 0) {
-                ops.put(nodeId, Math.max(1, maxDemand));
+                ops.put(nodeId, 1);
             }
         }
 
@@ -198,10 +205,9 @@ public class FlowchartBalancer {
 
             long recipeEUt = recipeEUt(node);
             int recipeDuration = node.durationTicks;
-            MachineConfig.OverclockResult oc = cfg.computeOverclock(recipeEUt, recipeDuration);
-            long eutPerOp = oc.consumptionEUt();
-            int durPerOp = oc.durationTicks();
-            int performedOC = oc.performedOC();
+            var oc = cfg.computeOverclock(recipeEUt, recipeDuration);
+            long eutPerOp = oc.getConsumption();
+            int durPerOp = oc.getDuration();
 
             long totalEnergy = eutPerOp * durPerOp * opCount;
             int totalDurationTicksForNode = durPerOp * opCount;
@@ -209,15 +215,10 @@ public class FlowchartBalancer {
 
             Map<Integer, Float> effOuts = new HashMap<>();
             for (int i = 0; i < node.outputs.size(); i++) {
-                ItemStack stack = node.outputs.get(i);
-                if (stack == null || stack.stackSize <= 0) continue;
-                float[] chances = node.properties.get(RecipePropertyAPI.OUTPUT_CHANCES);
-                float chance = 1.0f;
-                if (chances != null && i < chances.length) {
-                    chance = chances[i];
-                }
-                float total = opCount * stack.stackSize
-                    * chance
+                var pair = node.outputs.get(i);
+                if (pair == null || pair.left() == null || pair.left().stackSize <= 0) continue;
+                float total = opCount * pair.left().stackSize
+                    * pair.rightFloat()
                     * cfg.outputMultiplier(i)
                     * cfg.maxParallel
                     * cfg.machineCount;
@@ -226,10 +227,14 @@ public class FlowchartBalancer {
 
             Map<Integer, Integer> effIns = new HashMap<>();
             for (int i = 0; i < node.inputs.size(); i++) {
-                ItemStack stack = node.inputs.get(i);
-                if (stack == null || stack.stackSize <= 0) continue;
-                int total = Math
-                    .round(opCount * stack.stackSize * cfg.inputMultiplier(i) * cfg.maxParallel * cfg.machineCount);
+                var pair = node.inputs.get(i);
+                if (pair == null || pair.left() == null || pair.left().stackSize <= 0) continue;
+                int total = Math.round(
+                    opCount * pair.left().stackSize
+                        * pair.rightFloat()
+                        * cfg.inputMultiplier(i)
+                        * cfg.maxParallel
+                        * cfg.machineCount);
                 if (total > 0) effIns.put(i, total);
             }
 
@@ -240,7 +245,6 @@ public class FlowchartBalancer {
             for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
                 RecipeProperty<?> prop = entry.getKey();
                 Object val = entry.getValue();
-                if (prop == RecipePropertyAPI.OUTPUT_CHANCES) continue;
                 if (prop == RecipePropertyAPI.EU_PER_TICK) continue;
                 if (val instanceof Number num) {
                     propertyTotals.merge(prop, num.longValue() * opCount, Long::sum);
@@ -261,7 +265,8 @@ public class FlowchartBalancer {
         for (FlowchartNode node : graph.getNodes()) {
             NodeBalance nb = nodeBalances.get(node.id);
             for (int i = 0; i < node.inputs.size(); i++) {
-                ItemStack stack = node.inputs.get(i);
+                ItemStack stack = node.inputs.get(i)
+                    .left();
                 if (stack == null || stack.stackSize <= 0) continue;
                 if (fulfilledInputs.contains(node.id + ":" + i)) continue;
                 Integer totalCount = nb.effectiveInputs.get(i);
@@ -270,7 +275,8 @@ public class FlowchartBalancer {
                 }
             }
             for (int i = 0; i < node.outputs.size(); i++) {
-                ItemStack stack = node.outputs.get(i);
+                ItemStack stack = node.outputs.get(i)
+                    .left();
                 if (stack == null || stack.stackSize <= 0) continue;
                 if (consumedOutputs.contains(node.id + ":" + i)) continue;
                 Float totalCount = nb.effectiveOutputs.get(i);
@@ -292,7 +298,6 @@ public class FlowchartBalancer {
             RecipeProperty<?> prop = entry.getKey();
             Object val = entry.getValue();
             if (prop == RecipePropertyAPI.TOTAL_EU) continue;
-            if (prop == RecipePropertyAPI.OUTPUT_CHANCES) continue;
             if (prop == RecipePropertyAPI.EU_PER_TICK) continue;
             if (prop == RecipePropertyAPI.DURATION_TICKS) continue;
             if (val instanceof Integer i && i > 0) return i;

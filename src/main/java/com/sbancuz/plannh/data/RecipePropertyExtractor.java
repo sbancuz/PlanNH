@@ -8,7 +8,9 @@ public interface RecipePropertyExtractor {
 
     String getModId();
 
+    void register();
+
     boolean canHandle(String recipeOwner);
 
-    Map<RecipeProperty<?>, Object> extract(IRecipeHandler handler, int recipeIndex);
+    Map<RecipeProperty<?>, Object> extract(FlowchartNode node, IRecipeHandler handler, int recipeIndex);
 }

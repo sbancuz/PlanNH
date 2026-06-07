@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -20,6 +21,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+
+import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
 public class FlowchartSerializer {
 
@@ -180,10 +183,11 @@ public class FlowchartSerializer {
         props.set((RecipeProperty<T>) prop, (T) value);
     }
 
-    private static JsonArray itemStackArrayToJson(java.util.List<ItemStack> stacks) {
+    private static JsonArray itemStackArrayToJson(List<ObjectFloatImmutablePair<ItemStack>> stacks) {
         JsonArray arr = new JsonArray();
-        for (ItemStack stack : stacks) {
-            if (stack == null) continue;
+        for (var pair : stacks) {
+            if (pair.left() == null) continue;
+            ItemStack stack = pair.left();
             JsonObject obj = new JsonObject();
             obj.addProperty("id", net.minecraft.item.Item.itemRegistry.getNameForObject(stack.getItem()));
             obj.addProperty("size", stack.stackSize);
@@ -194,12 +198,13 @@ public class FlowchartSerializer {
                     stack.getTagCompound()
                         .toString());
             }
+            obj.addProperty("chance", pair.rightFloat());
             arr.add(obj);
         }
         return arr;
     }
 
-    private static void jsonArrayToItemStacks(JsonArray arr, java.util.List<ItemStack> out) {
+    private static void jsonArrayToItemStacks(JsonArray arr, List<ObjectFloatImmutablePair<ItemStack>> out) {
         for (JsonElement elem : arr) {
             JsonObject obj = elem.getAsJsonObject();
             String itemId = obj.get("id")
@@ -220,23 +225,29 @@ public class FlowchartSerializer {
                                 .getAsString()));
                 } catch (net.minecraft.nbt.NBTException ignored) {}
             }
-            out.add(stack);
+            out.add(
+                new ObjectFloatImmutablePair<>(
+                    stack,
+                    obj.get("chance")
+                        .getAsFloat()));
         }
     }
 
-    private static JsonArray fluidStackArrayToJson(java.util.List<FluidStack> fluids) {
+    private static JsonArray fluidStackArrayToJson(List<ObjectFloatImmutablePair<FluidStack>> fluids) {
         JsonArray arr = new JsonArray();
-        for (FluidStack fs : fluids) {
+        for (var pair : fluids) {
+            FluidStack fs = pair.left();
             if (fs == null || fs.getFluid() == null) continue;
             JsonObject obj = new JsonObject();
             obj.addProperty("fluid", FluidRegistry.getFluidName(fs.getFluid()));
             obj.addProperty("amount", fs.amount);
+            obj.addProperty("chance", pair.rightFloat());
             arr.add(obj);
         }
         return arr;
     }
 
-    private static void jsonArrayToFluidStacks(JsonArray arr, java.util.List<FluidStack> out) {
+    private static void jsonArrayToFluidStacks(JsonArray arr, List<ObjectFloatImmutablePair<FluidStack>> out) {
         for (JsonElement elem : arr) {
             JsonObject obj = elem.getAsJsonObject();
             String name = obj.get("fluid")
@@ -244,7 +255,11 @@ public class FlowchartSerializer {
             int amount = obj.get("amount")
                 .getAsInt();
             FluidStack fs = FluidRegistry.getFluidStack(name, amount);
-            if (fs != null) out.add(fs);
+            if (fs != null) out.add(
+                new ObjectFloatImmutablePair<>(
+                    fs,
+                    obj.get("chance")
+                        .getAsFloat()));
         }
     }
 

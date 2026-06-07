@@ -1,14 +1,9 @@
 package com.sbancuz.plannh.data;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-
-import net.minecraft.item.ItemStack;
 
 public class FlowchartGraph {
 
@@ -33,44 +28,44 @@ public class FlowchartGraph {
         edges.remove(id);
     }
 
-    public FlowchartSummary calculateSummary() {
-        Set<String> fulfilledInputs = new HashSet<>();
-        Set<String> consumedOutputs = new HashSet<>();
-
-        for (FlowchartEdge edge : edges.values()) {
-            fulfilledInputs.add(edge.targetNodeId + ":" + edge.targetInputIndex);
-            consumedOutputs.add(edge.sourceNodeId + ":" + edge.sourceOutputIndex);
-        }
-
-        ArrayList<FlowchartSummary.SummaryLine> netIns = new ArrayList<>();
-        ArrayList<FlowchartSummary.SummaryLine> netOuts = new ArrayList<>();
-
-        Map<RecipeProperty<?>, Long> totals = new HashMap<>();
-        for (FlowchartNode node : nodes.values()) {
-            for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
-                RecipeProperty<?> prop = entry.getKey();
-                Object val = entry.getValue();
-                if (val instanceof Number num) {
-                    totals.merge(prop, num.longValue(), Long::sum);
-                }
-            }
-            for (int i = 0; i < node.inputs.size(); i++) {
-                ItemStack stack = node.inputs.get(i);
-                if (stack != null && stack.stackSize > 0 && !fulfilledInputs.contains(node.id + ":" + i)) {
-                    FlowchartSummary.mergeInto(netIns, stack, stack.stackSize);
-                }
-            }
-            for (int i = 0; i < node.outputs.size(); i++) {
-                ItemStack stack = node.outputs.get(i);
-                if (stack != null && stack.stackSize > 0 && !consumedOutputs.contains(node.id + ":" + i)) {
-                    FlowchartSummary.mergeInto(netOuts, stack, stack.stackSize);
-                }
-            }
-        }
-
-        return new FlowchartSummary(netIns, netOuts, totals);
-    }
-
+    // public FlowchartSummary calculateSummary() {
+    // Set<String> fulfilledInputs = new HashSet<>();
+    // Set<String> consumedOutputs = new HashSet<>();
+    //
+    // for (FlowchartEdge edge : edges.values()) {
+    // fulfilledInputs.add(edge.targetNodeId + ":" + edge.targetInputIndex);
+    // consumedOutputs.add(edge.sourceNodeId + ":" + edge.sourceOutputIndex);
+    // }
+    //
+    // ArrayList<FlowchartSummary.SummaryLine> netIns = new ArrayList<>();
+    // ArrayList<FlowchartSummary.SummaryLine> netOuts = new ArrayList<>();
+    //
+    // Map<RecipeProperty<?>, Long> totals = new HashMap<>();
+    // for (FlowchartNode node : nodes.values()) {
+    // for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
+    // RecipeProperty<?> prop = entry.getKey();
+    // Object val = entry.getValue();
+    // if (val instanceof Number num) {
+    // totals.merge(prop, num.longValue(), Long::sum);
+    // }
+    // }
+    // for (int i = 0; i < node.inputs.size(); i++) {
+    // ItemStack stack = node.inputs.get(i);
+    // if (stack != null && stack.stackSize > 0 && !fulfilledInputs.contains(node.id + ":" + i)) {
+    // FlowchartSummary.mergeInto(netIns, stack, stack.stackSize);
+    // }
+    // }
+    // for (int i = 0; i < node.outputs.size(); i++) {
+    // ItemStack stack = node.outputs.get(i);
+    // if (stack != null && stack.stackSize > 0 && !consumedOutputs.contains(node.id + ":" + i)) {
+    // FlowchartSummary.mergeInto(netOuts, stack, stack.stackSize);
+    // }
+    // }
+    // }
+    //
+    // return new FlowchartSummary(netIns, netOuts, totals);
+    // }
+    //
     public FlowchartBalancer.BalanceResult balance() {
         return FlowchartBalancer.balance(this);
     }

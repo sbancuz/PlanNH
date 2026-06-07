@@ -241,8 +241,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (srcNode == dstNode) return false;
         if (srcOutIdx < 0 || srcOutIdx >= srcNode.outputs.size()) return false;
         if (dstInIdx < 0 || dstInIdx >= dstNode.inputs.size()) return false;
-        ItemStack out = srcNode.outputs.get(srcOutIdx);
-        ItemStack in = dstNode.inputs.get(dstInIdx);
+        ItemStack out = srcNode.outputs.get(srcOutIdx)
+            .left();
+        ItemStack in = dstNode.inputs.get(dstInIdx)
+            .left();
         if (out == null || in == null) return false;
         return out.isItemEqual(in);
     }

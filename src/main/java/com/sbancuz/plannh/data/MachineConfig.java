@@ -29,34 +29,21 @@ public class MachineConfig {
         return outputProductivity.getOrDefault(outputIndex, 1.0f);
     }
 
-    public OverclockResult computeOverclock(long recipeEUt, int recipeDuration) {
+    public OverclockCalculator computeOverclock(long recipeEUt, int recipeDuration) {
+        var calc = new OverclockCalculator().setRecipeEUt(recipeEUt)
+            .setDuration(recipeDuration);
+
         if (machineVoltage <= 0 || recipeEUt <= 0 || recipeDuration <= 0) {
-            return new OverclockResult(recipeEUt, recipeDuration, 0);
+            return calc.calculate();
         }
-        OverclockCalculator calc = new OverclockCalculator().setRecipeEUt(recipeEUt)
-            .setEUt(machineVoltage)
-            .setDuration(recipeDuration)
+        calc.setEUt(machineVoltage)
             .setAmperage(machineAmperage)
             .setDurationModifier(100.0 / speedBoostPercent)
             .setParallel(maxParallel)
             .setAmperageOC(true);
         if (perfectOC) calc.enablePerfectOC();
         calc.calculate();
-        return new OverclockResult(calc.getConsumption(), calc.getDuration(), calc.getPerformedOverclocks());
-    }
-
-    public record OverclockResult(long consumptionEUt, int durationTicks, int performedOC) {}
-
-    public float durationPerCycle(float baseDuration) {
-        return baseDuration / speedFactor();
-    }
-
-    public long energyPerCycle(long baseTotalEU) {
-        return baseTotalEU;
-    }
-
-    public int throughputFactor() {
-        return maxParallel * machineCount;
+        return calc;
     }
 
     public boolean hasAnyBoost() {

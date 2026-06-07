@@ -2,11 +2,8 @@ package com.sbancuz.plannh.nei;
 
 import net.minecraftforge.common.MinecraftForge;
 
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.Tags;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.extractors.EnderIOExtractor;
-import com.sbancuz.plannh.data.extractors.GTExtractor;
-import com.sbancuz.plannh.data.extractors.VanillaExtractor;
 import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 
 import codechicken.nei.api.API;
@@ -17,7 +14,6 @@ import codechicken.nei.recipe.GuiRecipeButton;
 import codechicken.nei.recipe.GuiRecipeButton.UpdateRecipeButtonsEvent;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.RecipeInfo;
-import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class NEIFlowchartConfig implements IConfigureNEI {
@@ -26,14 +22,7 @@ public class NEIFlowchartConfig implements IConfigureNEI {
 
     @Override
     public void loadConfig() {
-        RecipePropertyAPI.registerExtractor(new VanillaExtractor());
-        if (Loader.isModLoaded("gregtech")) {
-            RecipePropertyAPI.registerExtractor(new GTExtractor());
-        }
-        try {
-            Class.forName("crazypants.enderio.EnderIO");
-            RecipePropertyAPI.registerExtractor(new EnderIOExtractor());
-        } catch (Throwable ignored) {}
+        Compat.init();
         API.registerNEIGuiHandler(new FlowchartGuiHandler());
         MinecraftForge.EVENT_BUS.register(this);
     }
@@ -67,11 +56,5 @@ public class NEIFlowchartConfig implements IConfigureNEI {
     @Override
     public String getVersion() {
         return Tags.VERSION;
-    }
-
-    private static void tryLoad(String className) {
-        try {
-            Class.forName(className);
-        } catch (Throwable ignored) {}
     }
 }

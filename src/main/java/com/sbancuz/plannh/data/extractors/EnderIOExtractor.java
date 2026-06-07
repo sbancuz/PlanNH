@@ -5,7 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.FlowchartNode;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
@@ -17,15 +19,23 @@ import crazypants.enderio.nei.SagMillRecipeHandler.MillRecipe;
 import crazypants.enderio.nei.SliceAndSpliceRecipeHandler.SliceAndSpliceRecipe;
 import crazypants.enderio.nei.SoulBinderRecipeHandler.SoulBinderRecipeNEI;
 import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
+import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
 public class EnderIOExtractor implements RecipePropertyExtractor {
 
     public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.intProperty("rfTotal", "RF Total", 0);
     public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.intProperty("experience", "Experience", 0);
 
-    private static final Field MILL_OUTPUT_CHANCE;
+    private static Field MILL_OUTPUT_CHANCE;
 
-    static {
+    @Override
+    public String getModId() {
+        return Compat.ENDERIO.modid;
+    }
+
+    @Override
+    public void register() {
+        RecipePropertyAPI.registerExtractor(this);
         RecipePropertyAPI.registerProperty(RF_TOTAL);
         RecipePropertyAPI.registerProperty(EXPERIENCE);
 
@@ -38,17 +48,12 @@ public class EnderIOExtractor implements RecipePropertyExtractor {
     }
 
     @Override
-    public String getModId() {
-        return "enderio";
-    }
-
-    @Override
     public boolean canHandle(String recipeOwner) {
         return recipeOwner != null && (recipeOwner.startsWith("EnderIO") || recipeOwner.equals("EIOEnchanter"));
     }
 
     @Override
-    public Map<RecipeProperty<?>, Object> extract(IRecipeHandler handler, int recipeIndex) {
+    public Map<RecipeProperty<?>, Object> extract(FlowchartNode node, IRecipeHandler handler, int recipeIndex) {
         Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof TemplateRecipeHandler trh)) return props;
 
@@ -64,8 +69,13 @@ public class EnderIOExtractor implements RecipePropertyExtractor {
             if (MILL_OUTPUT_CHANCE != null) {
                 try {
                     float[] chances = (float[]) MILL_OUTPUT_CHANCE.get(r);
-                    if (chances.length > 0) {
-                        props.put(RecipePropertyAPI.OUTPUT_CHANCES, chances);
+                    for (int i = 0; i < chances.length; i++) {
+                        node.outputs.set(
+                            i,
+                            new ObjectFloatImmutablePair<>(
+                                node.outputs.get(i)
+                                    .left(),
+                                chances[i]));
                     }
                 } catch (Exception ignored) {}
             }
