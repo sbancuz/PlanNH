@@ -5,12 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import codechicken.nei.recipe.IRecipeHandler;
-import codechicken.nei.recipe.TemplateRecipeHandler;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
+
+import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.TemplateRecipeHandler;
 import crazypants.enderio.nei.AlloySmelterRecipeHandler.AlloySmelterRecipe;
 import crazypants.enderio.nei.SagMillRecipeHandler.MillRecipe;
 import crazypants.enderio.nei.SliceAndSpliceRecipeHandler.SliceAndSpliceRecipe;
@@ -19,10 +20,8 @@ import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
 
 public class EnderIOExtractor implements RecipePropertyExtractor {
 
-    public static final RecipeProperty<Integer> RF_TOTAL =
-        RecipeProperty.intProperty("rfTotal", "RF Total", 0);
-    public static final RecipeProperty<Integer> EXPERIENCE =
-        RecipeProperty.intProperty("experience", "Experience", 0);
+    public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.intProperty("rfTotal", "RF Total", 0);
+    public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.intProperty("experience", "Experience", 0);
 
     private static final Field MILL_OUTPUT_CHANCE;
 
@@ -45,8 +44,7 @@ public class EnderIOExtractor implements RecipePropertyExtractor {
 
     @Override
     public boolean canHandle(String recipeOwner) {
-        return recipeOwner != null
-            && (recipeOwner.startsWith("EnderIO") || recipeOwner.equals("EIOEnchanter"));
+        return recipeOwner != null && (recipeOwner.startsWith("EnderIO") || recipeOwner.equals("EIOEnchanter"));
     }
 
     @Override

@@ -5,11 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidContainerItem;
+
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
@@ -110,22 +111,24 @@ public class FlowchartNode {
             Class<?> gthClass = Class.forName("gregtech.nei.GTNEIDefaultHandler");
             if (!gthClass.isInstance(handler)) return;
 
-            List<?> recipes = RecipeHandlerAccess.getArecipes(
-                (codechicken.nei.recipe.TemplateRecipeHandler) handler);
+            List<?> recipes = RecipeHandlerAccess.getArecipes((codechicken.nei.recipe.TemplateRecipeHandler) handler);
             if (recipeIndex < 0 || recipeIndex >= recipes.size()) return;
 
             Object cached = recipes.get(recipeIndex);
 
             if (cachedGtRecipeField == null) {
-                cachedGtRecipeField = cached.getClass().getField("mRecipe");
+                cachedGtRecipeField = cached.getClass()
+                    .getField("mRecipe");
             }
             Object r = cachedGtRecipeField.get(cached);
             if (r == null) return;
 
             if (!cachedFluidFieldsAttempted) {
                 try {
-                    cachedFluidInputsField = r.getClass().getField("mFluidInputs");
-                    cachedFluidOutputsField = r.getClass().getField("mFluidOutputs");
+                    cachedFluidInputsField = r.getClass()
+                        .getField("mFluidInputs");
+                    cachedFluidOutputsField = r.getClass()
+                        .getField("mFluidOutputs");
                 } catch (Exception ignored) {}
                 cachedFluidFieldsAttempted = true;
             }

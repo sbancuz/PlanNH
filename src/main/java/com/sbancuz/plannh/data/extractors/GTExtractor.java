@@ -4,20 +4,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import codechicken.nei.recipe.IRecipeHandler;
-import codechicken.nei.recipe.TemplateRecipeHandler;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
+
+import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.api.util.GTRecipe;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 
 public class GTExtractor implements RecipePropertyExtractor {
 
-    public static final RecipeProperty<Integer> SPECIAL_VALUE =
-        RecipeProperty.intProperty("specialValue", "Special Value", 0);
+    public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty
+        .intProperty("specialValue", "Special Value", 0);
 
     static {
         RecipePropertyAPI.registerProperty(SPECIAL_VALUE);

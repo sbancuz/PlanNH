@@ -3,10 +3,11 @@ package com.sbancuz.plannh.data.extractors;
 import java.util.HashMap;
 import java.util.Map;
 
-import codechicken.nei.recipe.IRecipeHandler;
-import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
+
+import codechicken.nei.recipe.IRecipeHandler;
 
 public class VanillaExtractor implements RecipePropertyExtractor {
 

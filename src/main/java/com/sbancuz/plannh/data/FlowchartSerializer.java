@@ -10,7 +10,6 @@ import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -20,6 +19,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 
 public class FlowchartSerializer {
 
@@ -125,7 +125,8 @@ public class FlowchartSerializer {
                 jsonArrayToItemStacks(obj.getAsJsonArray("inputs"), node.inputs);
                 jsonArrayToItemStacks(obj.getAsJsonArray("outputs"), node.outputs);
                 if (obj.has("fluidInputs")) jsonArrayToFluidStacks(obj.getAsJsonArray("fluidInputs"), node.fluidInputs);
-                if (obj.has("fluidOutputs")) jsonArrayToFluidStacks(obj.getAsJsonArray("fluidOutputs"), node.fluidOutputs);
+                if (obj.has("fluidOutputs"))
+                    jsonArrayToFluidStacks(obj.getAsJsonArray("fluidOutputs"), node.fluidOutputs);
 
                 if (obj.has("machineConfig")) {
                     jsonToMachineConfig(obj.getAsJsonObject("machineConfig"), node.machineConfig);
@@ -238,8 +239,10 @@ public class FlowchartSerializer {
     private static void jsonArrayToFluidStacks(JsonArray arr, java.util.List<FluidStack> out) {
         for (JsonElement elem : arr) {
             JsonObject obj = elem.getAsJsonObject();
-            String name = obj.get("fluid").getAsString();
-            int amount = obj.get("amount").getAsInt();
+            String name = obj.get("fluid")
+                .getAsString();
+            int amount = obj.get("amount")
+                .getAsInt();
             FluidStack fs = FluidRegistry.getFluidStack(name, amount);
             if (fs != null) out.add(fs);
         }
@@ -248,12 +251,14 @@ public class FlowchartSerializer {
     private static String voltageToTierName(long voltage) {
         if (voltage <= 0) return "";
         int tier = (int) Math.round(Math.log(voltage / 8.0) / Math.log(4));
-        String[] names = {"ULV","LV","MV","HV","EV","IV","LuV","ZPM","UV","UHV","UEV","UIV","UMV","UXV","MAX"};
+        String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV",
+            "MAX" };
         return tier >= 0 && tier < names.length ? names[tier] : "T" + tier;
     }
 
     private static long tierNameToVoltage(String name) {
-        String[] names = {"ULV","LV","MV","HV","EV","IV","LuV","ZPM","UV","UHV","UEV","UIV","UMV","UXV","MAX"};
+        String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV",
+            "MAX" };
         for (int i = 0; i < names.length; i++) {
             if (names[i].equals(name)) return (long) (8 * Math.pow(4, i));
         }
@@ -286,28 +291,38 @@ public class FlowchartSerializer {
     }
 
     private static void jsonToMachineConfig(JsonObject obj, MachineConfig cfg) {
-        if (obj.has("speed")) cfg.speedBoostPercent = obj.get("speed").getAsInt();
-        if (obj.has("par")) cfg.maxParallel = obj.get("par").getAsInt();
-        if (obj.has("mach")) cfg.machineCount = obj.get("mach").getAsInt();
-        if (obj.has("voltage")) cfg.machineVoltage = tierNameToVoltage(obj.get("voltage").getAsString());
-        if (obj.has("amp")) cfg.machineAmperage = obj.get("amp").getAsInt();
-        if (obj.has("poc")) cfg.perfectOC = obj.get("poc").getAsBoolean();
+        if (obj.has("speed")) cfg.speedBoostPercent = obj.get("speed")
+            .getAsInt();
+        if (obj.has("par")) cfg.maxParallel = obj.get("par")
+            .getAsInt();
+        if (obj.has("mach")) cfg.machineCount = obj.get("mach")
+            .getAsInt();
+        if (obj.has("voltage")) cfg.machineVoltage = tierNameToVoltage(
+            obj.get("voltage")
+                .getAsString());
+        if (obj.has("amp")) cfg.machineAmperage = obj.get("amp")
+            .getAsInt();
+        if (obj.has("poc")) cfg.perfectOC = obj.get("poc")
+            .getAsBoolean();
         // Legacy migration: if old "oc" field exists, convert to rough voltage
         if (obj.has("oc") && !obj.has("voltage")) {
-            int oldOc = obj.get("oc").getAsInt();
+            int oldOc = obj.get("oc")
+                .getAsInt();
             if (oldOc > 0) {
                 cfg.machineVoltage = 32 * (long) Math.pow(4, oldOc);
             }
         }
         if (obj.has("inMul")) {
             for (JsonElement e : obj.getAsJsonArray("inMul")) {
-                String[] parts = e.getAsString().split(":");
+                String[] parts = e.getAsString()
+                    .split(":");
                 cfg.inputConsumption.put(Integer.parseInt(parts[0]), Float.parseFloat(parts[1]));
             }
         }
         if (obj.has("outMul")) {
             for (JsonElement e : obj.getAsJsonArray("outMul")) {
-                String[] parts = e.getAsString().split(":");
+                String[] parts = e.getAsString()
+                    .split(":");
                 cfg.outputProductivity.put(Integer.parseInt(parts[0]), Float.parseFloat(parts[1]));
             }
         }

@@ -1,12 +1,11 @@
 package com.sbancuz.plannh.nei;
 
-import com.sbancuz.plannh.data.extractors.EnderIOExtractor;
-import com.sbancuz.plannh.data.extractors.GTExtractor;
-import cpw.mods.fml.common.Loader;
 import net.minecraftforge.common.MinecraftForge;
 
 import com.sbancuz.plannh.Tags;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.extractors.EnderIOExtractor;
+import com.sbancuz.plannh.data.extractors.GTExtractor;
 import com.sbancuz.plannh.data.extractors.VanillaExtractor;
 import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 
@@ -18,6 +17,7 @@ import codechicken.nei.recipe.GuiRecipeButton;
 import codechicken.nei.recipe.GuiRecipeButton.UpdateRecipeButtonsEvent;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.RecipeInfo;
+import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class NEIFlowchartConfig implements IConfigureNEI {

@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,8 +33,7 @@ public class MachineConfig {
         if (machineVoltage <= 0 || recipeEUt <= 0 || recipeDuration <= 0) {
             return new OverclockResult(recipeEUt, recipeDuration, 0);
         }
-        OverclockCalculator calc = new OverclockCalculator()
-            .setRecipeEUt(recipeEUt)
+        OverclockCalculator calc = new OverclockCalculator().setRecipeEUt(recipeEUt)
             .setEUt(machineVoltage)
             .setDuration(recipeDuration)
             .setAmperage(machineAmperage)
@@ -44,11 +42,7 @@ public class MachineConfig {
             .setAmperageOC(true);
         if (perfectOC) calc.enablePerfectOC();
         calc.calculate();
-        return new OverclockResult(
-            calc.getConsumption(),
-            calc.getDuration(),
-            calc.getPerformedOverclocks()
-        );
+        return new OverclockResult(calc.getConsumption(), calc.getDuration(), calc.getPerformedOverclocks());
     }
 
     public record OverclockResult(long consumptionEUt, int durationTicks, int performedOC) {}
@@ -66,9 +60,13 @@ public class MachineConfig {
     }
 
     public boolean hasAnyBoost() {
-        return machineVoltage > 0 || machineAmperage != 1 || speedBoostPercent != 100
-            || maxParallel > 1 || machineCount > 1 || perfectOC
-            || !inputConsumption.isEmpty() || !outputProductivity.isEmpty();
+        return machineVoltage > 0 || machineAmperage != 1
+            || speedBoostPercent != 100
+            || maxParallel > 1
+            || machineCount > 1
+            || perfectOC
+            || !inputConsumption.isEmpty()
+            || !outputProductivity.isEmpty();
     }
 
     public MachineConfig copy() {

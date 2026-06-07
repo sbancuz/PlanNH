@@ -11,8 +11,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import net.minecraft.item.ItemStack;
+
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 
 public class FlowchartBalancer {
 
@@ -24,13 +25,16 @@ public class FlowchartBalancer {
             inEdges.put(node.id, new ArrayList<>());
         }
         for (FlowchartEdge edge : graph.getEdges()) {
-            outEdges.get(edge.sourceNodeId).add(edge);
-            inEdges.get(edge.targetNodeId).add(edge);
+            outEdges.get(edge.sourceNodeId)
+                .add(edge);
+            inEdges.get(edge.targetNodeId)
+                .add(edge);
         }
 
         Set<UUID> leafNodes = new HashSet<>();
         for (FlowchartNode node : graph.getNodes()) {
-            if (outEdges.get(node.id).isEmpty()) {
+            if (outEdges.get(node.id)
+                .isEmpty()) {
                 leafNodes.add(node.id);
             }
         }
@@ -88,11 +92,13 @@ public class FlowchartBalancer {
 
                 float yield = myOutputCount * chance
                     * cfg.outputMultiplier(edge.sourceOutputIndex)
-                    * cfg.maxParallel * cfg.machineCount;
+                    * cfg.maxParallel
+                    * cfg.machineCount;
 
                 float itemsNeeded = targetOps * targetInputCount
                     * tgtCfg.inputMultiplier(edge.targetInputIndex)
-                    * tgtCfg.maxParallel * tgtCfg.machineCount;
+                    * tgtCfg.maxParallel
+                    * tgtCfg.machineCount;
 
                 if (yield <= 0) continue;
 
@@ -123,7 +129,10 @@ public class FlowchartBalancer {
     private static List<UUID> topologicalSort(FlowchartGraph graph, Map<UUID, List<FlowchartEdge>> inEdges) {
         Map<UUID, Integer> inDegree = new HashMap<>();
         for (FlowchartNode node : graph.getNodes()) {
-            inDegree.put(node.id, inEdges.get(node.id).size());
+            inDegree.put(
+                node.id,
+                inEdges.get(node.id)
+                    .size());
         }
 
         Deque<UUID> queue = new ArrayDeque<>();
@@ -137,7 +146,8 @@ public class FlowchartBalancer {
             out.put(node.id, new ArrayList<>());
         }
         for (FlowchartEdge edge : graph.getEdges()) {
-            out.get(edge.sourceNodeId).add(edge);
+            out.get(edge.sourceNodeId)
+                .add(edge);
         }
 
         while (!queue.isEmpty()) {
@@ -150,7 +160,8 @@ public class FlowchartBalancer {
             }
         }
 
-        if (result.size() != graph.getNodes().size()) {
+        if (result.size() != graph.getNodes()
+            .size()) {
             return null;
         }
         return result;
@@ -166,7 +177,8 @@ public class FlowchartBalancer {
             outEdges.put(node.id, new ArrayList<>());
         }
         for (FlowchartEdge edge : graph.getEdges()) {
-            outEdges.get(edge.sourceNodeId).add(edge);
+            outEdges.get(edge.sourceNodeId)
+                .add(edge);
         }
         return buildResult(graph, ops, outEdges);
     }
@@ -204,8 +216,11 @@ public class FlowchartBalancer {
                 if (chances != null && i < chances.length) {
                     chance = chances[i];
                 }
-                float total = opCount * stack.stackSize * chance
-                    * cfg.outputMultiplier(i) * cfg.maxParallel * cfg.machineCount;
+                float total = opCount * stack.stackSize
+                    * chance
+                    * cfg.outputMultiplier(i)
+                    * cfg.maxParallel
+                    * cfg.machineCount;
                 if (total > 0) effOuts.put(i, total);
             }
 
@@ -213,13 +228,14 @@ public class FlowchartBalancer {
             for (int i = 0; i < node.inputs.size(); i++) {
                 ItemStack stack = node.inputs.get(i);
                 if (stack == null || stack.stackSize <= 0) continue;
-                int total = Math.round(opCount * stack.stackSize
-                    * cfg.inputMultiplier(i) * cfg.maxParallel * cfg.machineCount);
+                int total = Math
+                    .round(opCount * stack.stackSize * cfg.inputMultiplier(i) * cfg.maxParallel * cfg.machineCount);
                 if (total > 0) effIns.put(i, total);
             }
 
-            nodeBalances.put(node.id, new NodeBalance(
-                opCount, totalDurationTicksForNode, totalEnergy, durPerOp, effOuts, effIns));
+            nodeBalances.put(
+                node.id,
+                new NodeBalance(opCount, totalDurationTicksForNode, totalEnergy, durPerOp, effOuts, effIns));
 
             for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
                 RecipeProperty<?> prop = entry.getKey();
@@ -264,9 +280,7 @@ public class FlowchartBalancer {
             }
         }
 
-        return new BalanceResult(
-            nodeBalances, netInputs, netOutputs,
-            propertyTotals, totalOps, totalDuration);
+        return new BalanceResult(nodeBalances, netInputs, netOutputs, propertyTotals, totalOps, totalDuration);
     }
 
     private static long recipeEUt(FlowchartNode node) {
@@ -288,6 +302,7 @@ public class FlowchartBalancer {
     }
 
     public static class NodeBalance {
+
         public final int operations;
         public final int totalDurationTicks;
         public final long totalEnergy;
@@ -306,12 +321,7 @@ public class FlowchartBalancer {
         }
     }
 
-    public record BalanceResult(
-        Map<UUID, NodeBalance> nodeBalances,
-        List<FlowchartSummary.SummaryLine> netInputs,
-        List<FlowchartSummary.SummaryLine> netOutputs,
-        Map<RecipeProperty<?>, Long> propertyTotals,
-        int totalOperations,
-        int totalDurationTicks
-    ) {}
+    public record BalanceResult(Map<UUID, NodeBalance> nodeBalances, List<FlowchartSummary.SummaryLine> netInputs,
+        List<FlowchartSummary.SummaryLine> netOutputs, Map<RecipeProperty<?>, Long> propertyTotals, int totalOperations,
+        int totalDurationTicks) {}
 }

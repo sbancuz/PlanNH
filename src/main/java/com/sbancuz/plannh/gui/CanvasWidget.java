@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
 
-
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.UpOrDown;

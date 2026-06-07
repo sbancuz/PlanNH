@@ -16,9 +16,7 @@ public class PlanNH {
     public static final String MODID = "plannh";
     public static final Logger LOG = LogManager.getLogger(MODID);
 
-    @SidedProxy(
-        clientSide = "com.sbancuz.plannh.ClientProxy",
-        serverSide = "com.sbancuz.plannh.CommonProxy")
+    @SidedProxy(clientSide = "com.sbancuz.plannh.ClientProxy", serverSide = "com.sbancuz.plannh.CommonProxy")
     public static CommonProxy proxy;
 
     @Mod.EventHandler
