@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import codechicken.nei.recipe.Recipe;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -40,7 +41,7 @@ public class FlowchartSerializer {
                 obj.addProperty("y", node.y);
                 obj.addProperty("machine", node.machineName);
                 obj.addProperty("ticks", node.durationTicks);
-                obj.addProperty("recipeOwner", node.recipeOwner);
+                obj.add("recipeId", node.recipeId.toJsonObject());
                 obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
                 obj.add("inputs", itemStackArrayToJson(node.inputs));
                 obj.add("outputs", itemStackArrayToJson(node.outputs));
@@ -121,8 +122,7 @@ public class FlowchartSerializer {
                     .getAsString();
                 node.durationTicks = obj.get("ticks")
                     .getAsInt();
-                node.recipeOwner = obj.has("recipeOwner") ? obj.get("recipeOwner")
-                    .getAsString() : "";
+                node.recipeId = Recipe.RecipeId.of(obj.get("recipeId").getAsJsonObject());
                 node.handlerRecipeIndex = obj.has("handlerRecipeIndex") ? obj.get("handlerRecipeIndex")
                     .getAsInt() : 0;
                 jsonArrayToItemStacks(obj.getAsJsonArray("inputs"), node.inputs);

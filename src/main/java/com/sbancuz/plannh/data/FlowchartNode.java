@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import codechicken.nei.recipe.Recipe;
+import gregtech.common.items.ItemFluidDisplay;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidContainerRegistry;
+import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidContainerItem;
 
@@ -29,7 +32,7 @@ public class FlowchartNode {
 
     public String machineName;
     public int durationTicks;
-    public String recipeOwner;
+    public Recipe.RecipeId recipeId;
     public int handlerRecipeIndex;
     public final MachineConfig machineConfig = new MachineConfig();
 
@@ -42,37 +45,30 @@ public class FlowchartNode {
 
         this.machineName = handler.getRecipeName()
             .trim();
-        String ident = handler.getOverlayIdentifier();
-        if (ident != null && !ident.isEmpty()) {
-            this.recipeOwner = ident;
-            this.handlerRecipeIndex = recipeIndex;
-        }
-
+        this.recipeId = Recipe.RecipeId.of(handler, recipeIndex);
         this.inputs = new ArrayList<>();
         this.outputs = new ArrayList<>();
 
         List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
         for (PositionedStack ps : ins) {
             if (ps != null && ps.item != null && ps.item.stackSize > 0) {
-                if (!isFluidContainer(ps.item)) {
-                    this.inputs.add(new ObjectFloatImmutablePair<>(ps.item.copy(), 1.f));
-                }
+                this.inputs.add(new ObjectFloatImmutablePair<>(ps.item.copy(), 1.f));
             }
         }
 
         PositionedStack result = handler.getResultStack(recipeIndex);
-        if (result != null && result.item != null && !isFluidContainer(result.item)) {
+        if (result != null && result.item != null) {
             this.outputs.add(new ObjectFloatImmutablePair<>(result.item.copy(), 1.f));
         }
         List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (PositionedStack ps : others) {
-            if (ps != null && ps.item != null && !isFluidContainer(ps.item)) {
+            if (ps != null && ps.item != null) {
                 this.outputs.add(new ObjectFloatImmutablePair<>(ps.item.copy(), 1.f));
             }
         }
 
         for (RecipePropertyExtractor ex : RecipePropertyAPI.getExtractors()) {
-            if (ex.canHandle(this.recipeOwner)) {
+            if (ex.canHandle(handler.getOverlayIdentifier())) {
                 this.properties.putAll(ex.extract(this, handler, recipeIndex));
             }
         }
@@ -89,14 +85,5 @@ public class FlowchartNode {
         this.y = y;
         this.inputs = new ArrayList<>();
         this.outputs = new ArrayList<>();
-    }
-
-    private static boolean isFluidContainer(ItemStack stack) {
-        if (FluidContainerRegistry.getFluidForFilledItem(stack) != null) return true;
-        if (stack.getItem() instanceof IFluidContainerItem container) {
-            FluidStack held = container.getFluid(stack);
-            return held != null && held.amount > 0;
-        }
-        return false;
     }
 }

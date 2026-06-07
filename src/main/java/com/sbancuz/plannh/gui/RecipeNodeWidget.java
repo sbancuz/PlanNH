@@ -5,6 +5,7 @@ import static org.lwjgl.opengl.GL11.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import codechicken.nei.util.FavoriteStorage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 
@@ -83,7 +84,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private int recipeDurationTicks;
     private long lastHandlerUpdate = 0;
     private boolean configOpen = false;
-    private final java.util.List<ClickZone> configZones = new java.util.ArrayList<>();
+    private final List<ClickZone> configZones = new java.util.ArrayList<>();
 
     private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action) {
 
@@ -149,15 +150,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private void ensureRecipeHandler() {
         if (handlerRef != null || handlerInitFailed) return;
 
-        if (node.outputs.isEmpty() || node.outputs.getFirst().left() == null) {
-            handlerInitFailed = true;
-            return;
-        }
-
-        ItemStack stack = node.outputs.getFirst().left();
-        ArrayList<ICraftingHandler> handlers = GuiCraftingRecipe.getCraftingHandlers("all", stack);
-
-        RecipeHandlerRef ref = findExactHandler(handlers);
+        RecipeHandlerRef ref = RecipeHandlerRef.of(node.recipeId);
         if (ref == null) {
             handlerInitFailed = true;
             return;
@@ -172,27 +165,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         this.recipeName = ref.handler.getRecipeName().trim();
         extractThroughput();
         resizeForZoom(canvas.getZoom());
-    }
-
-    /**
-     * Directly looks up the exact handler and index saved from the user's click event.
-     */
-    private RecipeHandlerRef findExactHandler(List<ICraftingHandler> handlers) {
-        if (handlers.isEmpty() || node.recipeOwner.isEmpty()) return null;
-
-        for (ICraftingHandler h : handlers) {
-            String ident = h.getOverlayIdentifier();
-
-            // Match the exact NEI category identifier
-            if (ident != null && ident.equals(node.recipeOwner)) {
-                // Validate that the index is within bounds to avoid any crashes
-                if (node.handlerRecipeIndex >= 0 && node.handlerRecipeIndex < h.numRecipes()) {
-                    return RecipeHandlerRef.of(h, node.handlerRecipeIndex);
-                }
-                break;
-            }
-        }
-        return null;
     }
 
     private void setAreaSize(int pw, int ph) {
@@ -318,6 +290,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 return i;
             }
         }
+        for (int i = 0; i < node.fluidOutputs.size(); i++) {
+            int py = zq((node.outputs.size() + i + 1) * 18 + 10) - half;
+            if (mx >= px && mx < px + zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) {
+                return i;
+            }
+        }
         return -1;
     }
 
@@ -325,6 +303,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int half = zq(PORT_HALF);
         for (int i = 0; i < node.inputs.size(); i++) {
             int py = zq((i + 1) * 18 + 10) - half;
+            if (mx >= 0 && mx < zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) {
+                return i;
+            }
+        }
+        for (int i = 0; i < node.fluidInputs.size(); i++) {
+            int py = zq((node.inputs.size() + i + 1) * 18 + 10) - half;
             if (mx >= 0 && mx < zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) {
                 return i;
             }
@@ -344,6 +328,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         for (int i = 0; i < node.inputs.size(); i++) {
             int py = zq((i + 1) * 18 + 10) - half;
+            GuiDraw.drawRect(0, py, ps, ps, Color.argb(220, 100, 100, 200));
+        }
+
+        for (int i = 0; i < node.fluidOutputs.size(); i++) {
+            int px = getArea().width - ps;
+            int py = zq((node.outputs.size() + i + 1) * 18 + 10) - half;
+            GuiDraw.drawRect(px, py, ps, ps, Color.argb(220, 100, 200, 100));
+        }
+
+        for (int i = 0; i < node.fluidInputs.size(); i++) {
+            int py = zq((node.inputs.size() + i + 1) * 18 + 10) - half;
             GuiDraw.drawRect(0, py, ps, ps, Color.argb(220, 100, 100, 200));
         }
     }

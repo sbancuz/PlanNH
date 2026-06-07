@@ -14,6 +14,7 @@ import com.sbancuz.plannh.data.RecipePropertyExtractor;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.api.util.GTRecipe;
+import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
@@ -97,6 +98,10 @@ public class GTExtractor implements RecipePropertyExtractor {
                     r.mFluidOutputs[i],
                     r.mFluidOutputChances != null ? r.mFluidOutputChances[i] : 1.f));
         }
+
+        node.inputs.removeIf(p -> p.left().getItem() instanceof ItemFluidDisplay );
+        node.outputs.removeIf(p -> p.left().getItem() instanceof ItemFluidDisplay );
+
         return props;
     }
 }

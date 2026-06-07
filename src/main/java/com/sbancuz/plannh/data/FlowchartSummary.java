@@ -4,10 +4,12 @@ import java.util.List;
 import java.util.Map;
 
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 
 public record FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
+    List<FluidSummaryLine> netFluidInputs, List<FluidSummaryLine> netFluidOutputs,
     Map<RecipeProperty<?>, Long> propertyTotals) {
 
     public static class SummaryLine {
@@ -21,6 +23,17 @@ public record FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> ne
         }
     }
 
+    public static class FluidSummaryLine {
+
+        public final FluidStack fluid;
+        public int totalAmount;
+
+        FluidSummaryLine(FluidStack fluid, int amount) {
+            this.fluid = fluid;
+            this.totalAmount = amount;
+        }
+    }
+
     static void mergeInto(List<SummaryLine> list, ItemStack stack, int count) {
         for (SummaryLine line : list) {
             if (line.stack.isItemEqual(stack)) {
@@ -29,5 +42,15 @@ public record FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> ne
             }
         }
         list.add(new SummaryLine(stack, count));
+    }
+
+    static void mergeFluidInto(List<FluidSummaryLine> list, FluidStack fluid, int amount) {
+        for (FluidSummaryLine line : list) {
+            if (line.fluid.isFluidEqual(fluid)) {
+                line.totalAmount += amount;
+                return;
+            }
+        }
+        list.add(new FluidSummaryLine(fluid.copy(), amount));
     }
 }

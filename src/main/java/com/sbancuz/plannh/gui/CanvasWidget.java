@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import org.lwjgl.opengl.GL11;
 
@@ -236,14 +237,31 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private boolean canConnect(FlowchartNode srcNode, int srcOutIdx, FlowchartNode dstNode, int dstInIdx) {
         if (srcNode == dstNode) return false;
-        if (srcOutIdx < 0 || srcOutIdx >= srcNode.outputs.size()) return false;
-        if (dstInIdx < 0 || dstInIdx >= dstNode.inputs.size()) return false;
-        ItemStack out = srcNode.outputs.get(srcOutIdx)
-            .left();
-        ItemStack in = dstNode.inputs.get(dstInIdx)
-            .left();
-        if (out == null || in == null) return false;
-        return out.isItemEqual(in);
+        if (srcOutIdx < 0 || dstInIdx < 0) return false;
+
+        int itemOutCount = srcNode.outputs.size();
+        int itemInCount = dstNode.inputs.size();
+        int fluidOutCount = srcNode.fluidOutputs.size();
+        int fluidInCount = dstNode.fluidInputs.size();
+
+        boolean srcIsFluid = srcOutIdx >= itemOutCount;
+        boolean dstIsFluid = dstInIdx >= itemInCount;
+
+        if (srcIsFluid != dstIsFluid) return false;
+
+        if (!srcIsFluid) {
+            if (srcOutIdx >= itemOutCount || dstInIdx >= itemInCount) return false;
+            ItemStack out = srcNode.outputs.get(srcOutIdx).left();
+            ItemStack in = dstNode.inputs.get(dstInIdx).left();
+            return out != null && in != null && out.isItemEqual(in);
+        }
+
+        int srcFluidIdx = srcOutIdx - itemOutCount;
+        int dstFluidIdx = dstInIdx - itemInCount;
+        if (srcFluidIdx >= fluidOutCount || dstFluidIdx >= fluidInCount) return false;
+        FluidStack out = srcNode.fluidOutputs.get(srcFluidIdx).left();
+        FluidStack in = dstNode.fluidInputs.get(dstFluidIdx).left();
+        return out != null && in != null && out.isFluidEqual(in);
     }
 
     @Override

@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 
@@ -252,12 +253,15 @@ public class FlowchartBalancer {
 
         List<FlowchartSummary.SummaryLine> netInputs = new ArrayList<>();
         List<FlowchartSummary.SummaryLine> netOutputs = new ArrayList<>();
+        List<FlowchartSummary.FluidSummaryLine> netFluidInputs = new ArrayList<>();
+        List<FlowchartSummary.FluidSummaryLine> netFluidOutputs = new ArrayList<>();
 
         for (FlowchartNode node : graph.getNodes()) {
             NodeBalance nb = nodeBalances.get(node.id);
+            MachineConfig cfg = node.machineConfig;
+
             for (int i = 0; i < node.inputs.size(); i++) {
-                ItemStack stack = node.inputs.get(i)
-                    .left();
+                ItemStack stack = node.inputs.get(i).left();
                 if (stack == null || stack.stackSize <= 0) continue;
                 if (fulfilledInputs.contains(node.id + ":" + i)) continue;
                 Integer totalCount = nb.effectiveInputs.get(i);
@@ -266,8 +270,7 @@ public class FlowchartBalancer {
                 }
             }
             for (int i = 0; i < node.outputs.size(); i++) {
-                ItemStack stack = node.outputs.get(i)
-                    .left();
+                ItemStack stack = node.outputs.get(i).left();
                 if (stack == null || stack.stackSize <= 0) continue;
                 if (consumedOutputs.contains(node.id + ":" + i)) continue;
                 Float totalCount = nb.effectiveOutputs.get(i);
@@ -275,9 +278,34 @@ public class FlowchartBalancer {
                     FlowchartSummary.mergeInto(netOutputs, stack, (int) Math.ceil(totalCount));
                 }
             }
+
+            int nodeOps = ops.get(node.id);
+            for (int i = 0; i < node.fluidInputs.size(); i++) {
+                FluidStack fs = node.fluidInputs.get(i).left();
+                if (fs == null || fs.amount <= 0) continue;
+                int combinedIdx = node.inputs.size() + i;
+                if (fulfilledInputs.contains(node.id + ":" + combinedIdx)) continue;
+                int total = Math.round(nodeOps * fs.amount * node.fluidInputs.get(i).rightFloat()
+                    * cfg.maxParallel * cfg.machineCount);
+                if (total > 0) {
+                    FlowchartSummary.mergeFluidInto(netFluidInputs, fs, total);
+                }
+            }
+            for (int i = 0; i < node.fluidOutputs.size(); i++) {
+                FluidStack fs = node.fluidOutputs.get(i).left();
+                if (fs == null || fs.amount <= 0) continue;
+                int combinedIdx = node.outputs.size() + i;
+                if (consumedOutputs.contains(node.id + ":" + combinedIdx)) continue;
+                int total = Math.round(nodeOps * fs.amount * node.fluidOutputs.get(i).rightFloat()
+                    * cfg.maxParallel * cfg.machineCount);
+                if (total > 0) {
+                    FlowchartSummary.mergeFluidInto(netFluidOutputs, fs, total);
+                }
+            }
         }
 
-        return new BalanceResult(nodeBalances, netInputs, netOutputs, propertyTotals, totalOps, totalDuration);
+        return new BalanceResult(nodeBalances, netInputs, netOutputs, netFluidInputs, netFluidOutputs,
+            propertyTotals, totalOps, totalDuration);
     }
 
     private static long recipeEUt(FlowchartNode node) {
@@ -317,7 +345,9 @@ public class FlowchartBalancer {
         }
     }
 
-    public record BalanceResult(Map<UUID, NodeBalance> nodeBalances, List<FlowchartSummary.SummaryLine> netInputs,
-        List<FlowchartSummary.SummaryLine> netOutputs, Map<RecipeProperty<?>, Long> propertyTotals, int totalOperations,
+    public record BalanceResult(Map<UUID, NodeBalance> nodeBalances,
+        List<FlowchartSummary.SummaryLine> netInputs, List<FlowchartSummary.SummaryLine> netOutputs,
+        List<FlowchartSummary.FluidSummaryLine> netFluidInputs, List<FlowchartSummary.FluidSummaryLine> netFluidOutputs,
+        Map<RecipeProperty<?>, Long> propertyTotals, int totalOperations,
         int totalDurationTicks) {}
 }

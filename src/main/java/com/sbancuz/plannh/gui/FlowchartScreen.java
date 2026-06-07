@@ -98,19 +98,20 @@ public class FlowchartScreen extends ModularScreen {
             BalanceResult br = safeBalance();
             int h = TITLE_H + 4;
 
-            if (!br.netOutputs()
-                .isEmpty()) {
-                h += 14 + br.netOutputs()
-                    .size() * 11 + 4;
+            if (!br.netOutputs().isEmpty()) {
+                h += 14 + br.netOutputs().size() * 11 + 4;
             }
-            if (!br.netInputs()
-                .isEmpty()) {
-                h += 14 + br.netInputs()
-                    .size() * 11 + 4;
+            if (!br.netInputs().isEmpty()) {
+                h += 14 + br.netInputs().size() * 11 + 4;
+            }
+            if (!br.netFluidOutputs().isEmpty()) {
+                h += 14 + br.netFluidOutputs().size() * 11 + 4;
+            }
+            if (!br.netFluidInputs().isEmpty()) {
+                h += 14 + br.netFluidInputs().size() * 11 + 4;
             }
             if (br.totalOperations() > 0) {
-                h += 14 + graph.getNodes()
-                    .size() * 11 + 4;
+                h += 14 + graph.getNodes().size() * 11 + 4;
             }
             if (br.totalDurationTicks() > 0) {
                 h += 14;
@@ -124,7 +125,8 @@ public class FlowchartScreen extends ModularScreen {
             try {
                 return graph.balance();
             } catch (Exception e) {
-                return new BalanceResult(Map.of(), java.util.List.of(), java.util.List.of(), Map.of(), 0, 0);
+                return new BalanceResult(Map.of(), java.util.List.of(), java.util.List.of(),
+                    java.util.List.of(), java.util.List.of(), Map.of(), 0, 0);
             }
         }
 
@@ -177,6 +179,28 @@ public class FlowchartScreen extends ModularScreen {
                 for (FlowchartSummary.SummaryLine line : br.netInputs()) {
                     GuiDraw
                         .drawText(line.totalCount + "x " + line.stack.getDisplayName(), 10, ly, 0.8f, 0xAAAAAA, false);
+                    ly += 11;
+                }
+                ly += 4;
+            }
+
+            if (!br.netFluidOutputs().isEmpty()) {
+                GuiDraw.drawText("Fluid Products (" + br.netFluidOutputs().size() + ")", 6, ly, 1.0f, 0x77AAAA, false);
+                ly += 14;
+                for (var line : br.netFluidOutputs()) {
+                    String label = formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
+                    GuiDraw.drawText(label, 10, ly, 0.8f, 0x77FFAA, false);
+                    ly += 11;
+                }
+                ly += 4;
+            }
+
+            if (!br.netFluidInputs().isEmpty()) {
+                GuiDraw.drawText("Fluid Inputs (" + br.netFluidInputs().size() + ")", 6, ly, 1.0f, 0x77AAAA, false);
+                ly += 14;
+                for (var line : br.netFluidInputs()) {
+                    String label = formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
+                    GuiDraw.drawText(label, 10, ly, 0.8f, 0x77AAFF, false);
                     ly += 11;
                 }
                 ly += 4;
@@ -270,6 +294,11 @@ public class FlowchartScreen extends ModularScreen {
         @Override
         public boolean onMouseScroll(UpOrDown direction, int amount) {
             return false;
+        }
+
+        private static String formatFluidAmount(int mb) {
+            if (mb >= 1000) return (mb / 1000) + "." + ((mb % 1000) / 100) + "B";
+            return mb + "mB";
         }
     }
 }
