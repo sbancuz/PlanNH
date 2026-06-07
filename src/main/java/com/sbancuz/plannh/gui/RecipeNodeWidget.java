@@ -15,6 +15,9 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.data.FlowchartBalancer;
+import com.sbancuz.plannh.data.FlowchartBalancer.BalanceResult;
+import com.sbancuz.plannh.data.FlowchartBalancer.NodeBalance;
 import com.sbancuz.plannh.data.FlowchartNode;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -110,8 +113,21 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
     }
 
+    private NodeBalance getNodeBalance() {
+        BalanceResult br = canvas.getGraph().balance();
+        return br.nodeBalances().get(node.id);
+    }
+
     private int calcInfoHeight() {
-        int lines = 1 + inputLines.size() + outputLines.size();
+        int lines = 0;
+        NodeBalance nb = getNodeBalance();
+        int ops = nb != null ? nb.operations : 1;
+        boolean hasEnergy = nb != null && nb.totalEnergy > 0;
+
+        if (ops > 1) lines++;
+        if (recipeDurationTicks > 0) lines++;
+        if (hasEnergy) lines++;
+        lines += inputLines.size() + outputLines.size();
         return lines * 11 + 6;
     }
 
@@ -364,11 +380,34 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int x = 8;
         int y = 17 + neiWidget.h + 4;
 
-        float sec = recipeDurationTicks / 20f;
-        String durStr = "Duration: " + recipeDurationTicks + "t";
-        if (sec > 0) durStr += " (" + String.format("%.1f", sec) + "s)";
-        codechicken.lib.gui.GuiDraw.drawString(durStr, x, y, 0xCCCCCC, false);
-        y += 11;
+        NodeBalance nb = getNodeBalance();
+
+        int ops = nb != null ? nb.operations : 1;
+        int totalDur = nb != null ? nb.totalDurationTicks : recipeDurationTicks;
+        long totalEnergy = nb != null ? nb.totalEnergy : 0;
+
+        if (ops > 1) {
+            codechicken.lib.gui.GuiDraw.drawString(
+                "Operations: " + ops + "\u00d7", x, y, 0x88AAFF, false);
+            y += 11;
+        }
+
+        if (recipeDurationTicks > 0) {
+            float sec = totalDur / 20f;
+            String durStr = "Duration: " + totalDur + "t";
+            if (sec > 0) durStr += " (" + String.format("%.1f", sec) + "s)";
+            if (ops > 1 && recipeDurationTicks > 0) {
+                durStr += "  (\u00d7" + ops + ")";
+            }
+            codechicken.lib.gui.GuiDraw.drawString(durStr, x, y, 0xCCCCCC, false);
+            y += 11;
+        }
+
+        if (totalEnergy > 0) {
+            String energyLabel = "Total Energy: " + formatEnergy(totalEnergy);
+            codechicken.lib.gui.GuiDraw.drawString(energyLabel, x, y, 0x88AAFF, false);
+            y += 11;
+        }
 
         float[] outputChances = node.properties.get(RecipePropertyAPI.OUTPUT_CHANCES);
 
@@ -387,14 +426,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             y += 11;
             outIdx++;
         }
-        for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
-            RecipeProperty<?> prop = entry.getKey();
-            if (prop == RecipePropertyAPI.DURATION_TICKS) continue;
-            if (prop == RecipePropertyAPI.OUTPUT_CHANCES) continue;
-            String label = formatProperty(prop, entry.getValue());
-            codechicken.lib.gui.GuiDraw.drawString(label, x, y, 0x88AAFF, false);
-            y += 11;
-        }
     }
 
     private String formatProperty(RecipeProperty<?> prop, Object value) {
@@ -407,6 +438,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             return "EU/t: " + value;
         }
         return prop.getDisplayName() + ": " + value;
+    }
+
+    private static String formatEnergy(long energy) {
+        if (energy >= 1000000) return energy / 1000 + "k";
+        if (energy >= 1000) return String.format("%.1fk", energy / 1000.0);
+        return String.valueOf(energy);
     }
 
     @Override

@@ -32,6 +32,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final FlowchartGraph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
 
+    public FlowchartGraph getGraph() {
+        return graph;
+    }
+
     @Getter
     private float zoom = 1.0f;
     @Getter

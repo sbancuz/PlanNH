@@ -71,6 +71,10 @@ public class FlowchartGraph {
         return new FlowchartSummary(netIns, netOuts, totals);
     }
 
+    public FlowchartBalancer.BalanceResult balance() {
+        return FlowchartBalancer.balance(this);
+    }
+
     public Collection<FlowchartNode> getNodes() {
         return nodes.values();
     }

@@ -16,7 +16,7 @@ public class RecipePropertyAPI {
 
     // Built-in property constants
     public static final RecipeProperty<Integer> DURATION_TICKS =
-        RecipeProperty.intProperty("durationTicks", "Duration", 200);
+        RecipeProperty.intProperty("durationTicks", "Duration", 0);
     public static final RecipeProperty<Long> TOTAL_EU =
         RecipeProperty.longProperty("totalEu", "Total EU", 0L);
     public static final RecipeProperty<Long> EU_PER_TICK =

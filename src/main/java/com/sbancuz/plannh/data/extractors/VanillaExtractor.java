@@ -17,14 +17,13 @@ public class VanillaExtractor implements RecipePropertyExtractor {
 
     @Override
     public boolean canHandle(String recipeOwner) {
-        return true;
+        return recipeOwner == null || recipeOwner.isEmpty();
     }
 
     @Override
     public Map<RecipeProperty<?>, Object> extract(IRecipeHandler handler, int recipeIndex) {
         Map<RecipeProperty<?>, Object> props = new HashMap<>();
-        int h = handler.getRecipeHeight(recipeIndex);
-        props.put(RecipePropertyAPI.DURATION_TICKS, h > 0 ? h * 20 : 200);
+        props.put(RecipePropertyAPI.DURATION_TICKS, 20);
         return props;
     }
 }
