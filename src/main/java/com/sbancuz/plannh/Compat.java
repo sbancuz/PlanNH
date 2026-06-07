@@ -1,15 +1,23 @@
 package com.sbancuz.plannh;
 
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
+import com.sbancuz.plannh.data.extractors.AE2Extractor;
+import com.sbancuz.plannh.data.extractors.BotaniaExtractor;
 import com.sbancuz.plannh.data.extractors.EnderIOExtractor;
+import com.sbancuz.plannh.data.extractors.ForestryExtractor;
 import com.sbancuz.plannh.data.extractors.GTExtractor;
+import com.sbancuz.plannh.data.extractors.ThaumcraftExtractor;
 
 import cpw.mods.fml.common.Loader;
 
 public enum Compat {
 
     GREGTECH("gregtech", new GTExtractor()),
-    ENDERIO("EnderIO", new EnderIOExtractor())
+    ENDERIO("EnderIO", new EnderIOExtractor()),
+    THAUMCRAFT("Thaumcraft", new ThaumcraftExtractor()),
+    BOTANIA("Botania", new BotaniaExtractor()),
+    FORESTRY("Forestry", new ForestryExtractor()),
+    AE2("appliedenergistics2", new AE2Extractor())
     //
     ;
 

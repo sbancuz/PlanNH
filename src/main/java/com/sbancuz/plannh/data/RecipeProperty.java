@@ -3,7 +3,9 @@ package com.sbancuz.plannh.data;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import lombok.Getter;
 
@@ -72,5 +74,30 @@ public class RecipeProperty<T> {
             (obj, val) -> obj.addProperty(key, val),
             obj -> obj.has(key) ? obj.get(key)
                 .getAsFloat() : defaultValue);
+    }
+
+    public static RecipeProperty<Boolean> boolProperty(String key, String displayName, boolean defaultValue) {
+        return new RecipeProperty<>(
+            key,
+            displayName,
+            defaultValue,
+            (obj, val) -> obj.addProperty(key, val),
+            obj -> obj.has(key) ? obj.get(key)
+                .getAsBoolean() : defaultValue);
+    }
+
+    public static RecipeProperty<int[]> intArrayProperty(String key, String displayName, int[] defaultValue) {
+        return new RecipeProperty<>(key, displayName, defaultValue, (obj, val) -> {
+            JsonArray arr = new JsonArray();
+            for (int v : val) arr.add(new JsonPrimitive(v));
+            obj.add(key, arr);
+        }, obj -> {
+            if (!obj.has(key)) return defaultValue.clone();
+            JsonArray arr = obj.getAsJsonArray(key);
+            int[] result = new int[arr.size()];
+            for (int i = 0; i < result.length; i++) result[i] = arr.get(i)
+                .getAsInt();
+            return result;
+        });
     }
 }

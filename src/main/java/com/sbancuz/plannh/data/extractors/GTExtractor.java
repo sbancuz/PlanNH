@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data.extractors;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,11 +38,149 @@ public class GTExtractor implements RecipePropertyExtractor {
         RecipePropertyAPI.registerExtractor(this);
         RecipePropertyAPI.registerProperty(SPECIAL_VALUE);
 
-        MachineProfileRegistry.register(gtBasicProfile());
-        MachineProfileRegistry.register(gtEbfProfile());
-        MachineProfileRegistry.register(gtLaserProfile());
-        MachineProfileRegistry.register(gtFusionProfile());
+        for (MachineProfile p : PROFILES) {
+            MachineProfileRegistry.register(p);
+        }
+
+        new BartWorksExtractor().register();
     }
+
+    // ── declarative profile definition ──
+
+    private static final List<MachineProfile> PROFILES = List.of(
+        MachineProfile.builder("gregtech:basic", "GT Basic")
+            .baseSettings()
+            .advancedSettings()
+            .effect(new EffectBuilder())
+            .build(),
+        MachineProfile.builder("gregtech:ebf", "GT EBF")
+            .baseSettings()
+            .advancedSettings()
+            .heatSettings()
+            .effect(new EffectBuilder().withHeat())
+            .build(),
+        MachineProfile.builder("gregtech:laser", "GT Laser")
+            .baseSettings()
+            .advancedSettings()
+            .effect(new EffectBuilder().withLaserOC())
+            .build(),
+        MachineProfile.builder("gregtech:fusion", "GT Fusion")
+            .baseSettings()
+            .advancedSettings()
+            .effect(new EffectBuilder().withPerfectOC())
+            .build(),
+        MachineProfile.builder("gregtech:plasmaforge", "GT Plasma Forge")
+            .baseSettings()
+            .advancedSettings()
+            .heatSettings()
+            .effect(new EffectBuilder().withHeat())
+            .build(),
+        MachineProfile.builder("gregtech:cracker", "GT Cracker")
+            .baseSettings()
+            .advancedSettings()
+            .effect(new EffectBuilder())
+            .build(),
+        MachineProfile.builder("gregtech:lcr", "GT LCR")
+            .baseSettings()
+            .advancedSettings()
+            .effect(new EffectBuilder())
+            .build(),
+        MachineProfile.builder("gregtech:distillationtower", "GT Distillation Tower")
+            .baseSettings()
+            .advancedSettings()
+            .effect(new EffectBuilder())
+            .build(),
+        MachineProfile.builder("gregtech:generator", "GT Generator")
+            .setting(SettingDef.intDef("fuelEfficiency", "Fuel Eff.%", 100, 1, 1000))
+            .setting(SettingDef.intDef("parallels", "Par", 1, 1, 4096))
+            .setting(SettingDef.intDef("machines", "Mach", 1, 1, 4096))
+            .effect((s, ctx) -> {
+                int p = MachineProfile.getInt(s, "parallels", 1);
+                int m = MachineProfile.getInt(s, "machines", 1);
+                int eff = MachineProfile.getInt(s, "fuelEfficiency", 100);
+                int dur = Math.max(1, Math.round(ctx.recipeDuration() * 100.0f / eff));
+                return new MachineProfile.EffectResult(dur, ctx.recipeEUt(), p * m);
+            })
+            .build(),
+        MachineProfile.builder("gregtech:fake", "GT Fake (pass-through)")
+            .effect((s, ctx) -> new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), 1))
+            .build(),
+        MachineProfile.builder("tectech:eyeofharmony", "Eye of Harmony")
+            .baseSettings()
+            .advancedSettings()
+            .effect(new EffectBuilder().withPerfectOC())
+            .build());
+
+    // ── declarative overlay-id → profile matchers ──
+
+    @FunctionalInterface
+    private interface ProfileMatcher {
+
+        String match(String overlayId);
+
+        static ProfileMatcher keyword(String profileId, String... keywords) {
+            return id -> {
+                for (String kw : keywords) {
+                    if (id.contains(kw)) return profileId;
+                }
+                return null;
+            };
+        }
+
+        static ProfileMatcher exact(String profileId, String... exacts) {
+            return id -> {
+                for (String ex : exacts) {
+                    if (id.equals(ex)) return profileId;
+                }
+                return null;
+            };
+        }
+    }
+
+    private static final List<ProfileMatcher> PROFILE_MATCHERS = List.of(
+        ProfileMatcher.keyword(
+            "gregtech:ebf",
+            "blastfurnace",
+            "vacfurnace",
+            "alloyblastsmelter",
+            "vacuumfurnace",
+            "digester",
+            "nanochip"),
+        ProfileMatcher.keyword("gregtech:plasmaforge", "plasmaforge", "fog_"),
+        ProfileMatcher.keyword("gregtech:fusion", "fusion"),
+        ProfileMatcher.keyword("gregtech:laser", "laserengraver", "precise_assembler"),
+        ProfileMatcher.keyword("gregtech:cracker", "cracker", "craker"),
+        ProfileMatcher.keyword("gregtech:lcr", "largechemicalreactor"),
+        ProfileMatcher.keyword("gregtech:distillationtower", "distillationtower"),
+        ProfileMatcher.exact("gregtech:generator", "gt.recipe.create-condensate"),
+        ProfileMatcher.keyword(
+            "gregtech:generator",
+            "fuel",
+            "generator",
+            "turbine",
+            "boiler",
+            "RTG",
+            "rocketengine",
+            "htgr",
+            "solartower",
+            "lftr",
+            "condensate"),
+        ProfileMatcher.keyword(
+            "gregtech:fake",
+            "scanner",
+            "massfab",
+            "fake",
+            "assemblyline",
+            "research",
+            "upgrade",
+            "nuke",
+            "computer",
+            "foundry_module",
+            "spaceProject",
+            "nanoforge",
+            "pcbfactory",
+            "purification"),
+        ProfileMatcher.keyword("tectech:eyeofharmony", "eyeofharmony"));
 
     @Override
     public String getProfileId(IRecipeHandler handler, int recipeIndex) {
@@ -53,12 +190,25 @@ public class GTExtractor implements RecipePropertyExtractor {
         CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
         GTRecipe r = cached.mRecipe;
         if (r == null) return null;
-        return r.mSpecialValue > 0 ? "gregtech:ebf" : "gregtech:basic";
+
+        String id = gth.getOverlayIdentifier();
+        if (id == null) return "gregtech:basic";
+        for (ProfileMatcher m : PROFILE_MATCHERS) {
+            String p = m.match(id);
+            if (p != null) return p;
+        }
+        return "gregtech:basic";
     }
 
     @Override
     public boolean canHandle(String recipeOwner) {
-        return recipeOwner != null && recipeOwner.startsWith("gt.recipe");
+        if (recipeOwner == null) return false;
+        return recipeOwner.startsWith("gt.recipe") || recipeOwner.startsWith("gtpp.recipe")
+            || recipeOwner.startsWith("bw.recipe")
+            || recipeOwner.startsWith("bw.fuels")
+            || recipeOwner.startsWith("gg.recipe")
+            || recipeOwner.startsWith("gtnhlanth.recipe")
+            || recipeOwner.startsWith("kubatech");
     }
 
     @Override
@@ -130,52 +280,61 @@ public class GTExtractor implements RecipePropertyExtractor {
         return props;
     }
 
-    // ── shared setting list builders ──
+    // ── EffectBuilder ──
 
-    private static List<SettingDef<?>> gtBaseSettings() {
-        List<SettingDef<?>> list = new ArrayList<>();
-        list.add(
-            SettingDef.enumDef(
-                "voltage",
-                "Tier",
-                "OFF",
-                List.of(
-                    "OFF",
-                    "ULV",
-                    "LV",
-                    "MV",
-                    "HV",
-                    "EV",
-                    "IV",
-                    "LuV",
-                    "ZPM",
-                    "UV",
-                    "UHV",
-                    "UEV",
-                    "UIV",
-                    "UMV",
-                    "UXV",
-                    "MAX")));
-        list.add(SettingDef.intDef("amp", "Amp", 1, 1, 64));
-        list.add(SettingDef.intDef("speed", "Speed", 100, 10, 10000));
-        list.add(SettingDef.intDef("parallels", "Par", 1, 1, 4096));
-        list.add(SettingDef.intDef("machines", "Mach", 1, 1, 4096));
-        list.add(SettingDef.boolDef("perfectOC", "Perfect OC", false));
-        return list;
-    }
+    public static class EffectBuilder implements MachineProfile.EffectComputer {
 
-    private static List<SettingDef<?>> gtAdvancedSettings() {
-        List<SettingDef<?>> list = new ArrayList<>();
-        list.add(SettingDef.boolDef("laserOC", "Laser OC", false));
-        list.add(SettingDef.intDef("eutDiscount", "EU Disc.%", 0, 0, 100));
-        list.add(SettingDef.intDef("eutIncreasePerOC", "EU%/OC", 400, 100, 1000));
-        list.add(SettingDef.intDef("durationDecreasePerOC", "Spd%/OC", 200, 100, 1000));
-        list.add(SettingDef.intDef("maxOverclocks", "Max OC", 0, 0, 64));
-        list.add(SettingDef.intDef("maxRegularOc", "Max Reg OC", 0, 0, 64));
-        list.add(SettingDef.intDef("maxTierSkips", "Max Skips", 0, 0, 10));
-        list.add(SettingDef.boolDef("unlimitedSkips", "Unl. Skips", false));
-        list.add(SettingDef.boolDef("noOverclock", "No OC", false));
-        return list;
+        private boolean forceHeat;
+        private boolean forceLaserOC;
+        private boolean forcePerfectOC;
+
+        public EffectBuilder withHeat() {
+            this.forceHeat = true;
+            return this;
+        }
+
+        public EffectBuilder withPerfectOC() {
+            this.forcePerfectOC = true;
+            return this;
+        }
+
+        public EffectBuilder withLaserOC() {
+            this.forceLaserOC = true;
+            return this;
+        }
+
+        @Override
+        public MachineProfile.EffectResult compute(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
+            int parallels = MachineProfile.getInt(s, "parallels", 1);
+            int machines = MachineProfile.getInt(s, "machines", 1);
+
+            if (ctx.recipeEUt() <= 0 || ctx.recipeDuration() <= 0
+                || MachineProfile.getString(s, "voltage", "OFF")
+                    .equals("OFF")) {
+                return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), parallels * machines);
+            }
+
+            OverclockCalculator calc = buildGtCalc(s, ctx);
+
+            if (forcePerfectOC) calc.enablePerfectOC();
+            if (forceLaserOC) calc.setLaserOC(true);
+
+            if (forceHeat) {
+                int machineHeat = MachineProfile.getInt(s, "machineHeat", 0);
+                if (MachineProfile.getBool(s, "heatOC", true) && machineHeat > 0) {
+                    int recipeHeat = MachineProfile.getInt(s, "recipeHeat", 0);
+                    calc.setHeatOC(true)
+                        .setRecipeHeat(recipeHeat > 0 ? recipeHeat : machineHeat)
+                        .setMachineHeat(machineHeat);
+                    if (MachineProfile.getBool(s, "heatDiscount", false)) calc.setHeatDiscount(true);
+                    int hdMult = MachineProfile.getInt(s, "heatDiscountMult", 100);
+                    if (hdMult != 100) calc.setHeatDiscountMultiplier(hdMult / 100.0);
+                }
+            }
+
+            calc.calculate();
+            return new MachineProfile.EffectResult(calc.getDuration(), calc.getConsumption(), parallels * machines);
+        }
     }
 
     // ── GT helpers ──
@@ -219,130 +378,6 @@ public class GTExtractor implements RecipePropertyExtractor {
         if (MachineProfile.getBool(s, "unlimitedSkips", false)) calc.setUnlimitedTierSkips();
 
         return calc;
-    }
-
-    private static MachineProfile.EffectResult gtFallback(Map<String, Object> s, MachineProfile.RecipeContext ctx,
-        int parallels, int machines) {
-        return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), parallels * machines);
-    }
-
-    // ── gregtech:basic ──
-
-    private static MachineProfile gtBasicProfile() {
-        List<SettingDef<?>> settings = new ArrayList<>();
-        settings.addAll(gtBaseSettings());
-        settings.addAll(gtAdvancedSettings());
-        return new MachineProfile("gregtech:basic", "GT Basic", settings, GTExtractor::gtBasicEffect);
-    }
-
-    private static MachineProfile.EffectResult gtBasicEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int parallels = MachineProfile.getInt(s, "parallels", 1);
-        int machines = MachineProfile.getInt(s, "machines", 1);
-
-        if (ctx.recipeEUt() <= 0 || ctx.recipeDuration() <= 0
-            || MachineProfile.getString(s, "voltage", "OFF")
-                .equals("OFF")) {
-            return gtFallback(s, ctx, parallels, machines);
-        }
-
-        OverclockCalculator calc = buildGtCalc(s, ctx);
-        calc.calculate();
-        return new MachineProfile.EffectResult(calc.getDuration(), calc.getConsumption(), parallels * machines);
-    }
-
-    // ── gregtech:ebf ──
-
-    private static MachineProfile gtEbfProfile() {
-        List<SettingDef<?>> settings = new ArrayList<>();
-        settings.addAll(gtBaseSettings());
-        settings.add(SettingDef.intDef("machineHeat", "M. Heat", 0, 0, 100000));
-        settings.add(SettingDef.intDef("recipeHeat", "R. Heat", 0, 0, 100000));
-        settings.add(SettingDef.boolDef("heatOC", "Heat OC", true));
-        settings.add(SettingDef.boolDef("heatDiscount", "Heat Disc.", false));
-        settings.add(SettingDef.intDef("heatDiscountMult", "HD Mult.%", 100, 0, 200));
-        settings.addAll(gtAdvancedSettings());
-        return new MachineProfile("gregtech:ebf", "GT EBF", settings, GTExtractor::gtEbfEffect);
-    }
-
-    private static MachineProfile.EffectResult gtEbfEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int parallels = MachineProfile.getInt(s, "parallels", 1);
-        int machines = MachineProfile.getInt(s, "machines", 1);
-
-        if (ctx.recipeEUt() <= 0 || ctx.recipeDuration() <= 0
-            || MachineProfile.getString(s, "voltage", "OFF")
-                .equals("OFF")) {
-            return gtFallback(s, ctx, parallels, machines);
-        }
-
-        OverclockCalculator calc = buildGtCalc(s, ctx);
-
-        int machineHeat = MachineProfile.getInt(s, "machineHeat", 0);
-        boolean heatOC = MachineProfile.getBool(s, "heatOC", true);
-
-        if (heatOC && machineHeat > 0) {
-            int recipeHeat = MachineProfile.getInt(s, "recipeHeat", 0);
-            calc.setHeatOC(true)
-                .setRecipeHeat(recipeHeat > 0 ? recipeHeat : machineHeat)
-                .setMachineHeat(machineHeat);
-            if (MachineProfile.getBool(s, "heatDiscount", false)) calc.setHeatDiscount(true);
-            int hdMult = MachineProfile.getInt(s, "heatDiscountMult", 100);
-            if (hdMult != 100) calc.setHeatDiscountMultiplier(hdMult / 100.0);
-        }
-
-        calc.calculate();
-        return new MachineProfile.EffectResult(calc.getDuration(), calc.getConsumption(), parallels * machines);
-    }
-
-    // ── gregtech:laser ──
-
-    private static MachineProfile gtLaserProfile() {
-        List<SettingDef<?>> settings = new ArrayList<>();
-        settings.addAll(gtBaseSettings());
-        settings.addAll(gtAdvancedSettings());
-        return new MachineProfile("gregtech:laser", "GT Laser", settings, GTExtractor::gtLaserEffect);
-    }
-
-    private static MachineProfile.EffectResult gtLaserEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int parallels = MachineProfile.getInt(s, "parallels", 1);
-        int machines = MachineProfile.getInt(s, "machines", 1);
-
-        if (ctx.recipeEUt() <= 0 || ctx.recipeDuration() <= 0
-            || MachineProfile.getString(s, "voltage", "OFF")
-                .equals("OFF")) {
-            return gtFallback(s, ctx, parallels, machines);
-        }
-
-        OverclockCalculator calc = buildGtCalc(s, ctx);
-        calc.setLaserOC(true);
-        calc.calculate();
-        return new MachineProfile.EffectResult(calc.getDuration(), calc.getConsumption(), parallels * machines);
-    }
-
-    // ── gregtech:fusion ──
-
-    private static MachineProfile gtFusionProfile() {
-        List<SettingDef<?>> settings = new ArrayList<>();
-        settings.addAll(gtBaseSettings());
-        settings.add(SettingDef.boolDef("perfectOC", "Perfect OC", true));
-        settings.addAll(gtAdvancedSettings());
-        return new MachineProfile("gregtech:fusion", "GT Fusion", settings, GTExtractor::gtFusionEffect);
-    }
-
-    private static MachineProfile.EffectResult gtFusionEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int parallels = MachineProfile.getInt(s, "parallels", 1);
-        int machines = MachineProfile.getInt(s, "machines", 1);
-
-        if (ctx.recipeEUt() <= 0 || ctx.recipeDuration() <= 0
-            || MachineProfile.getString(s, "voltage", "OFF")
-                .equals("OFF")) {
-            return gtFallback(s, ctx, parallels, machines);
-        }
-
-        OverclockCalculator calc = buildGtCalc(s, ctx);
-        // Fusion always uses perfect-OC-like scaling
-        calc.enablePerfectOC();
-        calc.calculate();
-        return new MachineProfile.EffectResult(calc.getDuration(), calc.getConsumption(), parallels * machines);
     }
 
 }
