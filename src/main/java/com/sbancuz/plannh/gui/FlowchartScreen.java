@@ -204,9 +204,9 @@ public class FlowchartScreen extends ModularScreen {
 
         private final CanvasWidget canvas;
 
-        private int floatX = 210;
-        private int floatY = 46;
-        private boolean collapsed = false;
+        private int floatX;
+        private int floatY;
+        private boolean collapsed;
 
         private boolean dragging = false;
         private int dragAbsMX, dragAbsMY;
@@ -218,6 +218,10 @@ public class FlowchartScreen extends ModularScreen {
 
         SummaryWidget(CanvasWidget canvas) {
             this.canvas = canvas;
+            var set = PlanAPI.getSlotSet();
+            this.floatX = set.summaryX;
+            this.floatY = set.summaryY;
+            this.collapsed = set.summaryCollapsed;
             pos(floatX, floatY);
             size(WIDTH, computeHeight());
         }
@@ -458,6 +462,8 @@ public class FlowchartScreen extends ModularScreen {
 
             if (my < TITLE_H && mx >= WIDTH - COLLAPSE_W) {
                 collapsed = !collapsed;
+                PlanAPI.getSlotSet().summaryCollapsed = collapsed;
+                PlanAPI.save();
                 size(WIDTH, computeHeight());
                 return Result.SUCCESS;
             }
@@ -476,6 +482,12 @@ public class FlowchartScreen extends ModularScreen {
 
         @Override
         public boolean onMouseRelease(int mouseButton) {
+            if (dragging) {
+                var set = PlanAPI.getSlotSet();
+                set.summaryX = floatX;
+                set.summaryY = floatY;
+                PlanAPI.save();
+            }
             dragging = false;
             return true;
         }

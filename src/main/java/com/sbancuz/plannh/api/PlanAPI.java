@@ -65,6 +65,9 @@ public class PlanAPI {
                 .mkdirs();
             JsonObject root = new JsonObject();
             root.addProperty("active", set.activeSlot);
+            root.addProperty("summaryX", set.summaryX);
+            root.addProperty("summaryY", set.summaryY);
+            root.addProperty("summaryCollapsed", set.summaryCollapsed);
             JsonArray arr = new JsonArray();
             for (SlotSet.Slot slot : set.slots) {
                 JsonObject slotObj = new JsonObject();
@@ -81,6 +84,12 @@ public class PlanAPI {
         SlotSet set = new SlotSet();
         set.activeSlot = root.get("active")
             .getAsInt();
+        set.summaryX = root.has("summaryX") ? root.get("summaryX")
+            .getAsInt() : 210;
+        set.summaryY = root.has("summaryY") ? root.get("summaryY")
+            .getAsInt() : 46;
+        set.summaryCollapsed = root.has("summaryCollapsed") && root.get("summaryCollapsed")
+            .getAsBoolean();
         JsonArray arr = root.getAsJsonArray("slots");
         for (JsonElement elem : arr) {
             JsonObject obj = elem.getAsJsonObject();
