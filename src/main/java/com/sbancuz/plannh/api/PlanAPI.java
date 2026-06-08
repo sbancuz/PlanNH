@@ -6,11 +6,6 @@ import java.nio.file.Files;
 
 import net.minecraft.client.Minecraft;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Serializer;
 import com.sbancuz.plannh.data.flowchart.SlotSet;
@@ -20,8 +15,6 @@ import codechicken.nei.NEIClientConfig;
 public class PlanAPI {
 
     private static SlotSet slotSet = null;
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting()
-        .create();
 
     public static SlotSet getSlotSet() {
         if (slotSet == null) {
@@ -44,10 +37,9 @@ public class PlanAPI {
             if (saveFile.isFile()) {
                 String data = Files.readString(saveFile.toPath(), StandardCharsets.UTF_8);
                 if (data.startsWith("{")) {
-                    JsonObject root = GSON.fromJson(data, JsonObject.class);
-                    return parseSlotSet(root);
+                    return Serializer.decodeSlotSet(data);
                 }
-                Graph graph = Serializer.fromBase64(data);
+                Graph graph = Serializer.decode(data);
                 SlotSet set = new SlotSet();
                 set.slots.add(new SlotSet.Slot("Slot 1", graph));
                 return set;
@@ -63,44 +55,8 @@ public class PlanAPI {
             File saveFile = getSaveFile();
             saveFile.getParentFile()
                 .mkdirs();
-            JsonObject root = new JsonObject();
-            root.addProperty("active", set.activeSlot);
-            root.addProperty("summaryX", set.summaryX);
-            root.addProperty("summaryY", set.summaryY);
-            root.addProperty("summaryCollapsed", set.summaryCollapsed);
-            JsonArray arr = new JsonArray();
-            for (SlotSet.Slot slot : set.slots) {
-                JsonObject slotObj = new JsonObject();
-                slotObj.addProperty("name", slot.name);
-                slotObj.addProperty("data", Serializer.toBase64(slot.graph));
-                arr.add(slotObj);
-            }
-            root.add("slots", arr);
-            Files.writeString(saveFile.toPath(), GSON.toJson(root), StandardCharsets.UTF_8);
+            Files.writeString(saveFile.toPath(), Serializer.encode(set), StandardCharsets.UTF_8);
         } catch (Exception ignored) {}
-    }
-
-    private static SlotSet parseSlotSet(JsonObject root) {
-        SlotSet set = new SlotSet();
-        set.activeSlot = root.get("active")
-            .getAsInt();
-        set.summaryX = root.has("summaryX") ? root.get("summaryX")
-            .getAsInt() : 210;
-        set.summaryY = root.has("summaryY") ? root.get("summaryY")
-            .getAsInt() : 46;
-        set.summaryCollapsed = root.has("summaryCollapsed") && root.get("summaryCollapsed")
-            .getAsBoolean();
-        JsonArray arr = root.getAsJsonArray("slots");
-        for (JsonElement elem : arr) {
-            JsonObject obj = elem.getAsJsonObject();
-            String name = obj.get("name")
-                .getAsString();
-            String data = obj.get("data")
-                .getAsString();
-            Graph graph = Serializer.fromBase64(data);
-            set.slots.add(new SlotSet.Slot(name, graph));
-        }
-        return set;
     }
 
     private static File getSaveFile() {
