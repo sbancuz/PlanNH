@@ -14,14 +14,13 @@ import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
-import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
-import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.SettingDef;
+import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
+import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
+import com.sbancuz.plannh.data.flowchart.Node;
 
 import codechicken.nei.drawable.DrawableBuilder;
 import codechicken.nei.drawable.DrawableResource;
@@ -170,17 +169,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             BG_TEXTURE.draw(-4, -4, cw + 8, ch + 8, 9, 9, 9, 9);
 
             glEnable(GL_TEXTURE_2D);
-            int titleCol = titleColorForName(recipeName);
+            int titleCol = PlannhColors.titleColor(recipeName);
             codechicken.lib.gui.GuiDraw.drawRect(5, 5, cw - 10, 12, titleCol);
-            codechicken.lib.gui.GuiDraw.drawRect(5, 17, cw - 10, 1, Color.argb(60, 255, 255, 255));
-            codechicken.lib.gui.GuiDraw.drawStringC(recipeName, neiWidget.w / 2, 7, 0xFFFFFF);
+            codechicken.lib.gui.GuiDraw.drawRect(5, 17, cw - 10, 1, PlannhColors.NODE_TITLE_LINE.getColor());
+            codechicken.lib.gui.GuiDraw.drawStringC(recipeName, neiWidget.w / 2, 7, PlannhColors.TEXT_WHITE.getColor());
 
             if (node.machineConfig.hasAnyBoost()) {
                 String badge = buildConfigBadge();
-                codechicken.lib.gui.GuiDraw.drawString(badge, 8, 7, 0xAAFFFF, false);
+                codechicken.lib.gui.GuiDraw.drawString(badge, 8, 7, PlannhColors.TEXT_BADGE.getColor(), false);
             }
 
-            codechicken.lib.gui.GuiDraw.drawString("⚙", cw - 14, 6, configOpen ? 0x88FF88 : 0x888888, false);
+            codechicken.lib.gui.GuiDraw.drawString("⚙", cw - 14, 6, configOpen ? PlannhColors.ACCENT_GREEN.getColor() : PlannhColors.TEXT_DIM.getColor(), false);
 
             neiWidget.draw(5, 17);
 
@@ -196,17 +195,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             int w = getArea().width;
             int h = getArea().height;
 
-            GuiDraw.drawRect(0, 0, w, h, Color.argb(50, 50, 50, 230));
-            GuiDraw.drawRect(0, 0, w, zq(1), Color.argb(100, 150, 200, 255));
-            GuiDraw.drawRect(0, h - zq(1), w, zq(1), Color.argb(100, 150, 200, 255));
-            GuiDraw.drawRect(0, 0, zq(1), h, Color.argb(100, 150, 200, 255));
-            GuiDraw.drawRect(w - zq(1), 0, zq(1), h, Color.argb(100, 150, 200, 255));
+            GuiDraw.drawRect(0, 0, w, h, PlannhColors.NODE_BG.getColor());
+            GuiDraw.drawRect(0, 0, w, zq(1), PlannhColors.NODE_BORDER.getColor());
+            GuiDraw.drawRect(0, h - zq(1), w, zq(1), PlannhColors.NODE_BORDER.getColor());
+            GuiDraw.drawRect(0, 0, zq(1), h, PlannhColors.NODE_BORDER.getColor());
+            GuiDraw.drawRect(w - zq(1), 0, zq(1), h, PlannhColors.NODE_BORDER.getColor());
 
             String machineLabel = node.machineName.isEmpty() ? "?" : node.machineName;
-            GuiDraw.drawText(machineLabel, zq(4), zq(3), z, 0xCCCCCC, false);
+            GuiDraw.drawText(machineLabel, zq(4), zq(3), z, PlannhColors.TEXT_LIGHT.getColor(), false);
 
             String timeLabel = node.durationTicks + "t (" + String.format("%.1f", node.durationTicks / 20f) + "s)";
-            GuiDraw.drawText(timeLabel, zq(4), h - zq(12), z, 0x888888, false);
+            GuiDraw.drawText(timeLabel, zq(4), h - zq(12), z, PlannhColors.TEXT_DIM.getColor(), false);
 
             if (!node.outputs.isEmpty()) {
                 ItemStack primary = node.outputs.getFirst()
@@ -226,11 +225,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int bs = zq(CLOSE_W);
         int bx = w - bs - zq(CLOSE_MARGIN);
         int by = zq(CLOSE_MARGIN);
-        GuiDraw.drawRect(bx - 1, by - 1, bs + 2, bs + 2, Color.argb(80, 200, 40, 40));
-        GuiDraw.drawRect(bx, by, bs, bs, Color.argb(200, 180, 40, 40));
+        GuiDraw.drawRect(bx - 1, by - 1, bs + 2, bs + 2, PlannhColors.BTN_DELETE_SHADOW.getColor());
+        GuiDraw.drawRect(bx, by, bs, bs, PlannhColors.BTN_DELETE_BG.getColor());
         int inset = zq(2);
-        GuiDraw.drawRect(bx + inset, by + inset, bs - zq(4), bs - zq(4), Color.argb(220, 0, 0, 0));
-        codechicken.lib.gui.GuiDraw.drawStringC("x", bx + bs / 2, by + zq(1), 0xFF5555);
+        GuiDraw.drawRect(bx + inset, by + inset, bs - zq(4), bs - zq(4), PlannhColors.BTN_DELETE_INNER.getColor());
+        codechicken.lib.gui.GuiDraw.drawStringC("x", bx + bs / 2, by + zq(1), PlannhColors.ACCENT_RED_X.getColor());
     }
 
     private boolean isInsideCloseButton(int mx, int my) {
@@ -283,27 +282,27 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         for (int i = 0; i < node.outputs.size(); i++) {
             int px = getArea().width - ps;
             int py = portTopY(i, 0, z);
-            GuiDraw.drawRect(px - 1, py - 1, ps + 2, ps + 2, Color.argb(60, 100, 200, 100));
-            GuiDraw.drawRect(px, py, ps, ps, Color.argb(220, 100, 200, 100));
+            GuiDraw.drawRect(px - 1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_OUTPUT_HOVER.getColor());
+            GuiDraw.drawRect(px, py, ps, ps, PlannhColors.PIN_OUTPUT.getColor());
         }
 
         for (int i = 0; i < node.inputs.size(); i++) {
             int py = portTopY(i, 0, z);
-            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, Color.argb(60, 100, 100, 200));
-            GuiDraw.drawRect(0, py, ps, ps, Color.argb(220, 100, 100, 200));
+            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_INPUT_HOVER.getColor());
+            GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_INPUT.getColor());
         }
 
         for (int i = 0; i < node.fluidOutputs.size(); i++) {
             int px = getArea().width - ps;
             int py = portTopY(i, node.outputs.size(), z);
-            GuiDraw.drawRect(px - 1, py - 1, ps + 2, ps + 2, Color.argb(60, 60, 140, 200));
-            GuiDraw.drawRect(px, py, ps, ps, Color.argb(220, 60, 140, 200));
+            GuiDraw.drawRect(px - 1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_OUT_H.getColor());
+            GuiDraw.drawRect(px, py, ps, ps, PlannhColors.PIN_FLUID_OUT.getColor());
         }
 
         for (int i = 0; i < node.fluidInputs.size(); i++) {
             int py = portTopY(i, node.inputs.size(), z);
-            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, Color.argb(60, 60, 100, 200));
-            GuiDraw.drawRect(0, py, ps, ps, Color.argb(220, 60, 100, 200));
+            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_IN_H.getColor());
+            GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_FLUID_IN.getColor());
         }
     }
 
@@ -345,7 +344,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                         .getDisplayName(),
                 x,
                 y,
-                0xAAAAAA,
+                PlannhColors.TEXT_MUTED.getColor(),
                 false);
             y += 11;
         }
@@ -363,7 +362,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             if (chance < 0.999f) {
                 label += " (" + Math.round(chance * 100) + "%)";
             }
-            codechicken.lib.gui.GuiDraw.drawString(label, x + 4, y, 0xFFFFAA, false);
+            codechicken.lib.gui.GuiDraw.drawString(label, x + 4, y, PlannhColors.ACCENT_YELLOW.getColor(), false);
             y += 11;
         }
 
@@ -376,7 +375,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                         .getLocalizedName(),
                 x,
                 y,
-                0x77AAFF,
+                PlannhColors.ACCENT_BLUE3.getColor(),
                 false);
             y += 11;
         }
@@ -389,7 +388,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                         .getLocalizedName(),
                 x + 4,
                 y,
-                0x77FFAA,
+                PlannhColors.ACCENT_CYAN.getColor(),
                 false);
             y += 11;
         }
@@ -402,15 +401,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         return String.format("%.3f", rate);
     }
 
-    private static int titleColorForName(String name) {
-        int hash = name.hashCode();
-        float hue = ((hash * 0.618033988749895f) % 1.0f + 1.0f) % 1.0f;
-        int rgb = java.awt.Color.HSBtoRGB(hue, 0.45f, 0.55f);
-        int r = (rgb >> 16) & 0xFF;
-        int g = (rgb >> 8) & 0xFF;
-        int b = rgb & 0xFF;
-        return Color.argb(200, r, g, b);
-    }
+
 
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
@@ -571,7 +562,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int settingCount = profile.settings()
             .size();
         int panelH = settingCount * 11 + 4;
-        codechicken.lib.gui.GuiDraw.drawRect(x - 2, y0 - 2, 170, panelH, 0xAA202020);
+        codechicken.lib.gui.GuiDraw.drawRect(x - 2, y0 - 2, 170, panelH, PlannhColors.SETTINGS_PANEL_BG.getColor());
 
         MachineConfig c = node.machineConfig;
         int y = y0;
@@ -591,7 +582,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         } else if (def.type == Boolean.class) {
             boolean val = c.getBoolean(def.key);
             String label = (val ? "[\u2713] " : "[  ] ") + def.label;
-            codechicken.lib.gui.GuiDraw.drawString(label, x, y, val ? 0x88FF88 : 0x888888, false);
+            codechicken.lib.gui.GuiDraw.drawString(label, x, y, val ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(), false);
             configZones.add(new ClickZone(x, y, x + 120, y + 10, () -> {
                 c.setBoolean(def.key, !val);
                 onConfigChanged();
@@ -602,13 +593,13 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             int optIdx = def.options.indexOf(val);
             if (optIdx < 0) optIdx = 0;
             String display = def.label + " " + val;
-            codechicken.lib.gui.GuiDraw.drawString(display, x, y, 0x88FF88, false);
+            codechicken.lib.gui.GuiDraw.drawString(display, x, y, PlannhColors.SETTING_ON.getColor(), false);
 
             String dec = "[-]", inc = "[+]";
             int decX = x + 80;
             int incX = decX + 22;
-            codechicken.lib.gui.GuiDraw.drawString(dec, decX, y, 0xAAAAAA, false);
-            codechicken.lib.gui.GuiDraw.drawString(inc, incX, y, 0xAAAAAA, false);
+            codechicken.lib.gui.GuiDraw.drawString(dec, decX, y, PlannhColors.TEXT_MUTED.getColor(), false);
+            codechicken.lib.gui.GuiDraw.drawString(inc, incX, y, PlannhColors.TEXT_MUTED.getColor(), false);
 
             configZones.add(new ClickZone(decX, y, incX, y + 10, () -> {
                 int cur = def.options.indexOf(c.getString(def.key));
@@ -642,9 +633,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int incX = decX + 22;
 
         String text = label + " " + value;
-        codechicken.lib.gui.GuiDraw.drawString(text, x, y, 0xCCCCCC, false);
-        codechicken.lib.gui.GuiDraw.drawString(dec, decX, y, 0xAAAAAA, false);
-        codechicken.lib.gui.GuiDraw.drawString(inc, incX, y, 0xAAAAAA, false);
+        codechicken.lib.gui.GuiDraw.drawString(text, x, y, PlannhColors.TEXT_LIGHT.getColor(), false);
+        codechicken.lib.gui.GuiDraw.drawString(dec, decX, y, PlannhColors.TEXT_MUTED.getColor(), false);
+        codechicken.lib.gui.GuiDraw.drawString(inc, incX, y, PlannhColors.TEXT_MUTED.getColor(), false);
 
         int finalValue = value;
         configZones.add(new ClickZone(decX, y, incX, y + 10, () -> {

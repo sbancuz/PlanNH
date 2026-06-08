@@ -12,7 +12,7 @@ import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.utils.Color;
+import com.sbancuz.plannh.gui.PlannhColors;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.PlanNH;
@@ -111,8 +111,8 @@ public class FlowchartScreen extends ModularScreen {
             int w = a.width;
             int h = a.height;
 
-            GuiDraw.drawRect(0, 0, w, h, Color.argb(60, 36, 36, 40));
-            GuiDraw.drawRect(0, h - 1, w, 1, Color.argb(100, 100, 160, 220));
+            GuiDraw.drawRect(0, 0, w, h, PlannhColors.SLOT_BAR_BG.getColor());
+            GuiDraw.drawRect(0, h - 1, w, 1, PlannhColors.SLOT_BAR_LINE.getColor());
 
             SlotSet set = PlanAPI.getSlotSet();
             String name = set.activeSlot >= 0 && set.activeSlot < set.slots.size() ? set.slots.get(set.activeSlot).name
@@ -123,25 +123,25 @@ public class FlowchartScreen extends ModularScreen {
             int y = 0;
 
             int px = 4;
-            GuiDraw.drawText("<", px, 4, 1.0f, 0x88AAFF, false);
+            GuiDraw.drawText("<", px, 4, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
             zones.add(new ClickZone(px, y, px + 14, y + h, () -> shiftSlot(-1)));
             int nameX = px + 16;
-            GuiDraw.drawText(name, nameX, 4, 1.0f, 0xFFFFFF, false);
+            GuiDraw.drawText(name, nameX, 4, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
             int nameW = name.length() * 6 + 8;
             int nbx = nameX + nameW;
-            GuiDraw.drawText(">", nbx, 4, 1.0f, 0x88AAFF, false);
+            GuiDraw.drawText(">", nbx, 4, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
             zones.add(new ClickZone(nbx, y, nbx + 14, y + h, () -> shiftSlot(1)));
 
             int ax = w - 30;
-            GuiDraw.drawText("+", ax, 4, 1.0f, 0x88FF88, false);
+            GuiDraw.drawText("+", ax, 4, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
             zones.add(new ClickZone(ax, y, ax + 14, y + h, this::addSlot));
 
             int dx = w - 15;
-            GuiDraw.drawText("\u00d7", dx, 4, 1.0f, 0xFF8888, false);
+            GuiDraw.drawText("\u00d7", dx, 4, 1.0f, PlannhColors.ACCENT_RED.getColor(), false);
             zones.add(new ClickZone(dx, y, dx + 14, y + h, this::deleteSlot));
 
             int nx = w - 44;
-            GuiDraw.drawText("N", nx, 4, 1.0f, 0x88AAFF, false);
+            GuiDraw.drawText("N", nx, 4, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
             zones.add(new ClickZone(nx, y, nx + 14, y + h, this::addNote));
         }
 
@@ -283,11 +283,11 @@ public class FlowchartScreen extends ModularScreen {
             int w = a.width;
             int h = a.height;
 
-            GuiDraw.drawRect(0, 0, w, h, Color.argb(45, 30, 30, 35));
-            GuiDraw.drawRect(0, 0, w, TITLE_H, Color.argb(60, 50, 50, 55));
-            GuiDraw.drawRect(0, TITLE_H, w, 1, Color.argb(80, 120, 160, 220));
-            GuiDraw.drawText("Summary", 4, 3, 1.0f, 0xFFFFFF, false);
-            GuiDraw.drawText(collapsed ? "[+]" : "\u2212", w - COLLAPSE_W, 4, 1.0f, 0xAAAAAA, false);
+            GuiDraw.drawRect(0, 0, w, h, PlannhColors.SUMMARY_BG.getColor());
+            GuiDraw.drawRect(0, 0, w, TITLE_H, PlannhColors.SUMMARY_TITLE_BG.getColor());
+            GuiDraw.drawRect(0, TITLE_H, w, 1, PlannhColors.SUMMARY_TITLE_LINE.getColor());
+            GuiDraw.drawText("Summary", 4, 3, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
+            GuiDraw.drawText(collapsed ? "[+]" : "\u2212", w - COLLAPSE_W, 4, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
 
             if (collapsed) return;
 
@@ -297,19 +297,19 @@ public class FlowchartScreen extends ModularScreen {
 
             if (!br.netOutputs()
                 .isEmpty()) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 180, 140, 60));
+                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_PRODUCT.getColor());
                 GuiDraw.drawText(
                     "Products (" + br.netOutputs()
                         .size() + ")",
                     6,
                     ly + 1,
                     1.0f,
-                    0xFFCC66,
+                    PlannhColors.ACCENT_AMBER.getColor(),
                     false);
                 ly += 14;
                 for (Summary.SummaryLine line : br.netOutputs()) {
-                    GuiDraw
-                        .drawText(line.totalCount + "x " + line.stack.getDisplayName(), 10, ly, 0.8f, 0xFFCC66, false);
+                    GuiDraw.drawText(line.totalCount + "x " + line.stack.getDisplayName(), 10, ly, 0.8f,
+                        PlannhColors.ACCENT_AMBER.getColor(), false);
                     ly += 11;
                 }
                 ly += 4;
@@ -317,19 +317,19 @@ public class FlowchartScreen extends ModularScreen {
 
             if (!br.netInputs()
                 .isEmpty()) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 80, 160, 80));
+                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_INPUT.getColor());
                 GuiDraw.drawText(
                     "External Inputs (" + br.netInputs()
                         .size() + ")",
                     6,
                     ly + 1,
                     1.0f,
-                    0x77DD77,
+                    PlannhColors.ACCENT_GREEN2.getColor(),
                     false);
                 ly += 14;
                 for (Summary.SummaryLine line : br.netInputs()) {
-                    GuiDraw
-                        .drawText(line.totalCount + "x " + line.stack.getDisplayName(), 10, ly, 0.8f, 0xAAAAAA, false);
+                    GuiDraw.drawText(line.totalCount + "x " + line.stack.getDisplayName(), 10, ly, 0.8f,
+                        PlannhColors.TEXT_MUTED.getColor(), false);
                     ly += 11;
                 }
                 ly += 4;
@@ -337,19 +337,19 @@ public class FlowchartScreen extends ModularScreen {
 
             if (!br.netFluidOutputs()
                 .isEmpty()) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 60, 140, 180));
+                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_FLUID_OUT.getColor());
                 GuiDraw.drawText(
                     "Fluid Products (" + br.netFluidOutputs()
                         .size() + ")",
                     6,
                     ly + 1,
                     1.0f,
-                    0x77DDDD,
+                    PlannhColors.ACCENT_CYAN2.getColor(),
                     false);
                 ly += 14;
                 for (var line : br.netFluidOutputs()) {
                     String label = formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
-                    GuiDraw.drawText(label, 10, ly, 0.8f, 0x77FFAA, false);
+                    GuiDraw.drawText(label, 10, ly, 0.8f, PlannhColors.ACCENT_CYAN.getColor(), false);
                     ly += 11;
                 }
                 ly += 4;
@@ -357,33 +357,34 @@ public class FlowchartScreen extends ModularScreen {
 
             if (!br.netFluidInputs()
                 .isEmpty()) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 60, 100, 180));
+                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_FLUID_IN.getColor());
                 GuiDraw.drawText(
                     "Fluid Inputs (" + br.netFluidInputs()
                         .size() + ")",
                     6,
                     ly + 1,
                     1.0f,
-                    0x77AADD,
+                    PlannhColors.ACCENT_BLUE2.getColor(),
                     false);
                 ly += 14;
                 for (var line : br.netFluidInputs()) {
                     String label = formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
-                    GuiDraw.drawText(label, 10, ly, 0.8f, 0x77AAFF, false);
+                    GuiDraw.drawText(label, 10, ly, 0.8f, PlannhColors.ACCENT_BLUE3.getColor(), false);
                     ly += 11;
                 }
                 ly += 4;
             }
 
             if (br.totalOperations() > 0) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 100, 120, 200));
-                GuiDraw.drawText("Operations", 6, ly + 1, 1.0f, 0x88AAFF, false);
+                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_OPS.getColor());
+                GuiDraw.drawText("Operations", 6, ly + 1, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
                 ly += 14;
                 for (Node node : g.getNodes()) {
                     NodeBalance nb = br.nodeBalances()
                         .get(node.id);
                     if (nb == null || nb.operations <= 0) continue;
-                    GuiDraw.drawText("\u00d7" + nb.operations + "  " + node.machineName, 10, ly, 0.8f, 0xCCCCCC, false);
+                    GuiDraw.drawText("\u00d7" + nb.operations + "  " + node.machineName, 10, ly, 0.8f,
+                        PlannhColors.TEXT_LIGHT.getColor(), false);
                     ly += 11;
                 }
                 ly += 4;
@@ -403,24 +404,25 @@ public class FlowchartScreen extends ModularScreen {
                         .append(String.format("%.1f", sec))
                         .append("s)");
                 }
-                GuiDraw.drawRect(0, ly - 2, w, 1, Color.argb(60, 200, 200, 200));
-                GuiDraw.drawText(totals.toString(), 6, ly, 0.9f, 0x88AAFF, false);
+                GuiDraw.drawRect(0, ly - 2, w, 1, PlannhColors.SEPARATOR_LIGHT.getColor());
+                GuiDraw.drawText(totals.toString(), 6, ly, 0.9f, PlannhColors.ACCENT_BLUE.getColor(), false);
                 ly += 14;
             }
 
-            GuiDraw.drawRect(2, ly + 4, w - 4, 1, Color.argb(50, 200, 200, 200));
+            GuiDraw.drawRect(2, ly + 4, w - 4, 1, PlannhColors.SEPARATOR_DIM.getColor());
             ly += 10;
-            GuiDraw.drawText("Zoom: " + canvas.getZoomPercent() + "%", 6, ly, 0.9f, 0xAAAAAA, false);
+            GuiDraw.drawText("Zoom: " + canvas.getZoomPercent() + "%", 6, ly, 0.9f,
+                PlannhColors.TEXT_MUTED.getColor(), false);
             ly += 14;
-            GuiDraw.drawText("[Scroll] zoom", 6, ly, 0.8f, 0x666666, false);
+            GuiDraw.drawText("[Scroll] zoom", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
             ly += 10;
-            GuiDraw.drawText("[MMB] pan", 6, ly, 0.8f, 0x666666, false);
+            GuiDraw.drawText("[MMB] pan", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
             ly += 10;
-            GuiDraw.drawText("[LMB drag] move node", 6, ly, 0.8f, 0x666666, false);
+            GuiDraw.drawText("[LMB drag] move node", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
             ly += 10;
-            GuiDraw.drawText("[Double-click] open NEI", 6, ly, 0.8f, 0x666666, false);
+            GuiDraw.drawText("[Double-click] open NEI", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
             ly += 10;
-            GuiDraw.drawText("[+ in NEI GUI] add recipe", 6, ly, 0.8f, 0x666666, false);
+            GuiDraw.drawText("[+ in NEI GUI] add recipe", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
         }
 
         @Override

@@ -28,9 +28,9 @@ import lombok.Getter;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable {
 
-    private static final int ARROW_COLOR_ITEM = Color.argb(220, 200, 140, 60);
-    private static final int ARROW_COLOR_FLUID = Color.argb(220, 60, 140, 200);
-    private static final int PREVIEW_COLOR = Color.argb(180, 255, 200, 80);
+    private static final int ARROW_COLOR_ITEM = PlannhColors.ARROW_ITEM.getColor();
+    private static final int ARROW_COLOR_FLUID = PlannhColors.ARROW_FLUID.getColor();
+    private static final int PREVIEW_COLOR = PlannhColors.PREVIEW_HIGHLIGHT.getColor();
 
     @Getter
     private Graph graph;
@@ -612,7 +612,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         int labelX = rightSide ? anchorX + gap : anchorX - tw - gap;
         int labelY = centerY - fh / 2;
         int pad = Math.round(2 * z);
-        GuiDraw.drawRect(labelX - pad, labelY - pad, tw + pad * 2, fh + pad * 2, Color.argb(200, 20, 20, 20));
-        GuiDraw.drawText(name, labelX, labelY, z * 0.9f, 0xFFFFFF, false);
+        GuiDraw.drawRect(labelX - pad, labelY - pad, tw + pad * 2, fh + pad * 2, PlannhColors.PORT_LABEL_BG.getColor());
+        GuiDraw.drawText(name, labelX, labelY, z * 0.9f, PlannhColors.TEXT_WHITE.getColor(), false);
     }
 }

@@ -8,8 +8,6 @@ public class Note {
     public int x;
     public int y;
     public String text = "";
-    public int width = 140;
-    public int height = 60;
 
     public Note(UUID id, int x, int y) {
         this.id = id;

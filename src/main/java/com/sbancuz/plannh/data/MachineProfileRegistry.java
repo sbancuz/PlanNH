@@ -24,9 +24,7 @@ public class MachineProfileRegistry {
         return new MachineProfile(
             "vanilla",
             "Vanilla",
-            List.of(
-                Settings.PARALLELS.def(),
-                Settings.MACHINES.def()),
+            List.of(Settings.PARALLELS.def(), Settings.MACHINES.def()),
             MachineProfileRegistry::vanillaEffect);
     }
 

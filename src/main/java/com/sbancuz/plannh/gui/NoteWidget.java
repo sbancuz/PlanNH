@@ -7,7 +7,7 @@ import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.utils.Color;
+
 import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.data.flowchart.Note;
 
@@ -64,8 +64,8 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
         int w = getArea().width;
         int h = getArea().height;
 
-        int bg = editing ? Color.argb(230, 255, 250, 200) : Color.argb(200, 255, 240, 160);
-        int border = editing ? Color.argb(200, 180, 160, 60) : Color.argb(160, 180, 160, 80);
+        int bg = editing ? PlannhColors.NOTE_BG_EDITING.getColor() : PlannhColors.NOTE_BG.getColor();
+        int border = editing ? PlannhColors.NOTE_BORDER_EDIT.getColor() : PlannhColors.NOTE_BORDER.getColor();
 
         GuiDraw.drawRect(0, 0, w, h, bg);
         GuiDraw.drawRect(0, 0, w, 1, border);
@@ -75,10 +75,10 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
 
         // Close button
         int cx = w - Math.round(CLOSE_W * z);
-        GuiDraw.drawRect(cx, 0, Math.round(CLOSE_W * z), Math.round(CLOSE_W * z), Color.argb(180, 200, 60, 60));
+        GuiDraw.drawRect(cx, 0, Math.round(CLOSE_W * z), Math.round(CLOSE_W * z), PlannhColors.NOTE_CLOSE_BG.getColor());
         int cw = Minecraft.getMinecraft().fontRenderer.getStringWidth("x");
         int txtX = cx + (Math.round(CLOSE_W * z) - cw) / 2;
-        GuiDraw.drawText("x", txtX, 2, 1.0f, 0xFFFFFF, false);
+        GuiDraw.drawText("x", txtX, 2, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
 
         // Text
         int pad = Math.round(4 * z);
@@ -91,11 +91,12 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
                 pad,
                 Math.round(8 * z),
                 z * 0.9f,
-                0x444444,
+                PlannhColors.TEXT_DARK.getColor(),
                 false);
         } else {
             GuiDraw
-                .drawText(note.text.isEmpty() ? "Note" : note.text, pad, Math.round(8 * z), z * 0.9f, 0x555555, false);
+                .drawText(note.text.isEmpty() ? "Note" : note.text, pad, Math.round(8 * z), z * 0.9f,
+                    PlannhColors.TEXT_NOTE.getColor(), false);
         }
     }
 

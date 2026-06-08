@@ -2,8 +2,9 @@ package com.sbancuz.plannh.data;
 
 import java.util.Map;
 
-import codechicken.nei.recipe.IRecipeHandler;
 import com.sbancuz.plannh.data.flowchart.Node;
+
+import codechicken.nei.recipe.IRecipeHandler;
 
 public interface RecipePropertyExtractor {
 

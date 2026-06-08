@@ -12,12 +12,6 @@ import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import com.sbancuz.plannh.data.ExtractedProperties;
-import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.SettingDef;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -28,6 +22,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.ExtractedProperties;
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.SettingDef;
 
 import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;

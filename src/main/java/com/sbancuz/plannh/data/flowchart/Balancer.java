@@ -11,12 +11,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.RecipeProperty;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.RecipeProperty;
 
 public class Balancer {
 
@@ -200,7 +200,7 @@ public class Balancer {
     }
 
     private static BalanceResult buildResult(Graph graph, Map<UUID, Integer> ops,
-                                             Map<UUID, Integer> throughputFactors) {
+        Map<UUID, Integer> throughputFactors) {
         Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
         Map<RecipeProperty<?>, Long> propertyTotals = new HashMap<>();
         int totalOps = 0;
@@ -360,7 +360,7 @@ public class Balancer {
     }
 
     public record BalanceResult(Map<UUID, NodeBalance> nodeBalances, List<Summary.SummaryLine> netInputs,
-                                List<Summary.SummaryLine> netOutputs, List<Summary.FluidSummaryLine> netFluidInputs,
-                                List<Summary.FluidSummaryLine> netFluidOutputs, Map<RecipeProperty<?>, Long> propertyTotals,
-                                int totalOperations, int totalDurationTicks) {}
+        List<Summary.SummaryLine> netOutputs, List<Summary.FluidSummaryLine> netFluidInputs,
+        List<Summary.FluidSummaryLine> netFluidOutputs, Map<RecipeProperty<?>, Long> propertyTotals,
+        int totalOperations, int totalDurationTicks) {}
 }

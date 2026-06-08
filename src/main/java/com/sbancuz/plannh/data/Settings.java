@@ -5,9 +5,8 @@ import java.util.List;
 public enum Settings {
 
     // ── enum-type settings ──
-    VOLTAGE("voltage", "Tier", "OFF", List.of(
-        "OFF", "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV",
-        "UHV", "UEV", "UIV", "UMV", "UXV", "MAX")),
+    VOLTAGE("voltage", "Tier", "OFF", List
+        .of("OFF", "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV", "MAX")),
 
     // ── int settings ──
     AMP("amp", "Amp", 1, 1, 64),

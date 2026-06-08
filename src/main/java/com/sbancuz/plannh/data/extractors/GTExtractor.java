@@ -6,13 +6,13 @@ import java.util.Map;
 
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipePropertyExtractor;
 import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.flowchart.Node;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -149,8 +149,14 @@ public class GTExtractor implements RecipePropertyExtractor {
 
     private static final List<ProfileMatcher> PROFILE_MATCHERS = List.of(
         // spotless: off
-        ProfileMatcher.keyword( "gregtech:ebf",
-            "blastfurnace", "vacfurnace", "alloyblastsmelter", "vacuumfurnace", "digester", "nanochip"),
+        ProfileMatcher.keyword(
+            "gregtech:ebf",
+            "blastfurnace",
+            "vacfurnace",
+            "alloyblastsmelter",
+            "vacuumfurnace",
+            "digester",
+            "nanochip"),
         ProfileMatcher.keyword("gregtech:plasmaforge", "plasmaforge", "fog_"),
         ProfileMatcher.keyword("gregtech:fusion", "fusion"),
         ProfileMatcher.keyword("gregtech:laser", "laserengraver", "precise_assembler"),
@@ -158,12 +164,33 @@ public class GTExtractor implements RecipePropertyExtractor {
         ProfileMatcher.keyword("gregtech:lcr", "largechemicalreactor"),
         ProfileMatcher.keyword("gregtech:distillationtower", "distillationtower"),
         ProfileMatcher.exact("gregtech:generator", "gt.recipe.create-condensate"),
-        ProfileMatcher.keyword( "gregtech:generator",
-            "fuel", "generator", "turbine", "boiler", "RTG", "rocketengine", "htgr", "solartower",
-            "lftr", "condensate"),
-        ProfileMatcher.keyword( "gregtech:fake",
-            "scanner", "massfab", "fake", "assemblyline", "research", "upgrade", "nuke", "computer",
-            "foundry_module", "spaceProject", "nanoforge", "pcbfactory", "purification"),
+        ProfileMatcher.keyword(
+            "gregtech:generator",
+            "fuel",
+            "generator",
+            "turbine",
+            "boiler",
+            "RTG",
+            "rocketengine",
+            "htgr",
+            "solartower",
+            "lftr",
+            "condensate"),
+        ProfileMatcher.keyword(
+            "gregtech:fake",
+            "scanner",
+            "massfab",
+            "fake",
+            "assemblyline",
+            "research",
+            "upgrade",
+            "nuke",
+            "computer",
+            "foundry_module",
+            "spaceProject",
+            "nanoforge",
+            "pcbfactory",
+            "purification"),
         ProfileMatcher.keyword("tectech:eyeofharmony", "eyeofharmony"));
     // spotless: on
 
