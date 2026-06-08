@@ -1,7 +1,6 @@
 package com.sbancuz.plannh.data;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class MachineProfileRegistry {
@@ -17,19 +16,7 @@ public class MachineProfileRegistry {
     }
 
     public static String defaultId() {
-        return "vanilla";
+        return "minecraft";
     }
 
-    public static MachineProfile vanillaProfile() {
-        return new MachineProfile(
-            "vanilla",
-            "Vanilla",
-            List.of(Settings.PARALLELS.def(), Settings.MACHINES.def()),
-            MachineProfileRegistry::vanillaEffect);
-    }
-
-    private static MachineProfile.EffectResult vanillaEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), machines);
-    }
 }

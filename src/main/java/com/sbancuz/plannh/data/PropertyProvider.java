@@ -15,6 +15,6 @@ public interface PropertyProvider {
     Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex);
 
     default String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        return "vanilla";
+        return null;
     }
 }

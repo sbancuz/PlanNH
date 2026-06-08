@@ -52,6 +52,7 @@ public class MachineConfig {
 
     public MachineProfile.EffectResult computeEffect(Map<RecipeProperty<?>, Object> properties, int recipeDuration) {
         MachineProfile profile = getProfile();
+        if (profile == null) return new MachineProfile.EffectResult(0, 0, 1);
         return profile.effectComputer()
             .compute(settings, new MachineProfile.RecipeContext(properties, recipeDuration));
     }

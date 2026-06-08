@@ -60,7 +60,8 @@ public class ThaumcraftProvider implements PropertyProvider {
         String overlay = handler.getOverlayIdentifier();
         if (overlay == null) return null;
         if (overlay.equals("arcaneshapedrecipes") || overlay.equals("arcaneshapelessrecipes")
-            || overlay.equals("cruciblerecipe") || overlay.equals("infusionCrafting")) {
+            || overlay.equals("cruciblerecipe")
+            || overlay.equals("infusionCrafting")) {
             return "thaumcraft:basic";
         }
         return null;

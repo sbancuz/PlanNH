@@ -71,19 +71,23 @@ public class Node {
         }
 
         for (PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
-            Map<RecipeProperty<?>, Object> props = ex.extract(this, handler, recipeIndex);
-            if (props != null && !props.isEmpty()) {
-                this.properties.putAll(props);
-            }
+            try {
+                Map<RecipeProperty<?>, Object> props = ex.extract(this, handler, recipeIndex);
+                if (props != null && !props.isEmpty()) {
+                    this.properties.putAll(props);
+                }
+            } catch (Exception ignored) {}
         }
 
         for (PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
-            String pid = ex.getProfileId(handler, recipeIndex);
-            if (pid != null && !MachineProfileRegistry.defaultId()
-                .equals(pid)) {
-                this.machineConfig.profileId = pid;
-                break;
-            }
+            try {
+                String pid = ex.getProfileId(handler, recipeIndex);
+                if (pid != null && !MachineProfileRegistry.defaultId()
+                    .equals(pid)) {
+                    this.machineConfig.profileId = pid;
+                    break;
+                }
+            } catch (Exception ignored) {}
         }
         this.machineConfig.initDefaults();
 
