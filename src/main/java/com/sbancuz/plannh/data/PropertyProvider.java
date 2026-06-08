@@ -12,8 +12,6 @@ public interface PropertyProvider {
 
     void register();
 
-    boolean canHandle(String recipeOwner);
-
     Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex);
 
     default String getProfileId(IRecipeHandler handler, int recipeIndex) {

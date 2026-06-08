@@ -2,9 +2,11 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntityFurnace;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -12,6 +14,7 @@ import com.sbancuz.plannh.data.ExtractedProperties;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.PropertyProvider;
+import com.sbancuz.plannh.data.RecipeProperty;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
@@ -62,25 +65,24 @@ public class Node {
         }
         List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (PositionedStack ps : others) {
-            if (ps != null && ps.item != null) {
+            if (ps != null && ps.item != null && TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
                 this.outputs.add(new ObjectFloatImmutablePair<>(ps.item.copy(), 1.f));
             }
         }
 
         for (PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
-            if (ex.canHandle(handler.getOverlayIdentifier())) {
-                this.properties.putAll(ex.extract(this, handler, recipeIndex));
+            Map<RecipeProperty<?>, Object> props = ex.extract(this, handler, recipeIndex);
+            if (props != null && !props.isEmpty()) {
+                this.properties.putAll(props);
             }
         }
 
         for (PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
-            if (ex.canHandle(handler.getOverlayIdentifier())) {
-                String pid = ex.getProfileId(handler, recipeIndex);
-                if (pid != null && !MachineProfileRegistry.defaultId()
-                    .equals(pid)) {
-                    this.machineConfig.profileId = pid;
-                    break;
-                }
+            String pid = ex.getProfileId(handler, recipeIndex);
+            if (pid != null && !MachineProfileRegistry.defaultId()
+                .equals(pid)) {
+                this.machineConfig.profileId = pid;
+                break;
             }
         }
         this.machineConfig.initDefaults();

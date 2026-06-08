@@ -58,12 +58,10 @@ public class EnderIOProvider implements PropertyProvider {
 
     @Override
     public String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        return "enderio";
-    }
-
-    @Override
-    public boolean canHandle(String recipeOwner) {
-        return recipeOwner != null && (recipeOwner.startsWith("EnderIO") || recipeOwner.equals("EIOEnchanter"));
+        if (!(handler instanceof TemplateRecipeHandler)) return null;
+        String overlay = handler.getOverlayIdentifier();
+        if (overlay != null && (overlay.startsWith("EnderIO") || overlay.equals("EIOEnchanter"))) return "enderio";
+        return null;
     }
 
     @Override

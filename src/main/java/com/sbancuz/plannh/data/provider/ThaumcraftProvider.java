@@ -56,15 +56,14 @@ public class ThaumcraftProvider implements PropertyProvider {
 
     @Override
     public String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        return "thaumcraft:basic";
-    }
-
-    @Override
-    public boolean canHandle(String recipeOwner) {
-        if (recipeOwner == null) return false;
-        return recipeOwner.equals("arcaneshapedrecipes") || recipeOwner.equals("arcaneshapelessrecipes")
-            || recipeOwner.equals("cruciblerecipe")
-            || recipeOwner.equals("infusionCrafting");
+        if (!(handler instanceof TemplateRecipeHandler)) return null;
+        String overlay = handler.getOverlayIdentifier();
+        if (overlay == null) return null;
+        if (overlay.equals("arcaneshapedrecipes") || overlay.equals("arcaneshapelessrecipes")
+            || overlay.equals("cruciblerecipe") || overlay.equals("infusionCrafting")) {
+            return "thaumcraft:basic";
+        }
+        return null;
     }
 
     @Override

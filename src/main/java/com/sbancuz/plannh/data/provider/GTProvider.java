@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import codechicken.nei.recipe.FurnaceRecipeHandler;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -148,7 +149,6 @@ public class GTProvider implements PropertyProvider {
     }
 
     private static final List<ProfileMatcher> PROFILE_MATCHERS = List.of(
-        // spotless: off
         ProfileMatcher.keyword(
             "gregtech:ebf",
             "blastfurnace",
@@ -157,6 +157,7 @@ public class GTProvider implements PropertyProvider {
             "vacuumfurnace",
             "digester",
             "nanochip"),
+        ProfileMatcher.keyword("gregtech:basic", "furnace", "alloysmelter"),
         ProfileMatcher.keyword("gregtech:plasmaforge", "plasmaforge", "fog_"),
         ProfileMatcher.keyword("gregtech:fusion", "fusion"),
         ProfileMatcher.keyword("gregtech:laser", "laserengraver", "precise_assembler"),
@@ -192,10 +193,16 @@ public class GTProvider implements PropertyProvider {
             "pcbfactory",
             "purification"),
         ProfileMatcher.keyword("tectech:eyeofharmony", "eyeofharmony"));
-    // spotless: on
 
     @Override
     public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+        if (handler instanceof FurnaceRecipeHandler fh) {
+            List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(fh);
+            if (recipeIndex < 0 || recipeIndex >= recipes.size()) return null;
+            TemplateRecipeHandler.CachedRecipe recipe = recipes.get(recipeIndex);
+            if (recipe == null) return null;
+            return "gregtech:basic";
+        }
         if (!(handler instanceof GTNEIDefaultHandler gth)) return null;
         List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return null;
@@ -210,20 +217,6 @@ public class GTProvider implements PropertyProvider {
             if (p != null) return p;
         }
         return "gregtech:basic";
-    }
-
-    @Override
-    public boolean canHandle(String recipeOwner) {
-        if (recipeOwner == null) return false;
-        return recipeOwner.startsWith("gt.recipe") || recipeOwner.startsWith("gtpp.recipe")
-            || recipeOwner.startsWith("bw.recipe")
-            || recipeOwner.startsWith("bw.fuels")
-            || recipeOwner.startsWith("gg.recipe")
-            || recipeOwner.startsWith("gtnhlanth.recipe")
-            || recipeOwner.startsWith("kubatech")
-            || recipeOwner.equals("bw.recipe.biolab")
-            || recipeOwner.equals("bw.recipe.BacteriaVat")
-            || recipeOwner.equals("bw.recipe.radhatch");
     }
 
     @Override

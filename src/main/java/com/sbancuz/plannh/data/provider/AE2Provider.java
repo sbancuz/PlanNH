@@ -44,12 +44,8 @@ public class AE2Provider implements PropertyProvider {
 
     @Override
     public String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        return "ae2:basic";
-    }
-
-    @Override
-    public boolean canHandle(String recipeOwner) {
-        return "grindstone".equals(recipeOwner);
+        if (!(handler instanceof TemplateRecipeHandler)) return null;
+        return "grindstone".equals(handler.getOverlayIdentifier()) ? "ae2:basic" : null;
     }
 
     @Override

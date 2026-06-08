@@ -42,12 +42,10 @@ public class BotaniaProvider implements PropertyProvider {
 
     @Override
     public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+        if (!handler.getClass()
+            .getName()
+            .startsWith("vazkii.botania")) return null;
         return "botania:basic";
-    }
-
-    @Override
-    public boolean canHandle(String recipeOwner) {
-        return recipeOwner == null;
     }
 
     @Override

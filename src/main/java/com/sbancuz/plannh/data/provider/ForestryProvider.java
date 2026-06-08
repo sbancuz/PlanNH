@@ -54,17 +54,6 @@ public class ForestryProvider implements PropertyProvider {
     }
 
     @Override
-    public boolean canHandle(String recipeOwner) {
-        if (recipeOwner == null) return false;
-        return recipeOwner.startsWith("forestry.");
-    }
-
-    @Override
-    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        return "forestry:basic";
-    }
-
-    @Override
     public Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex) {
         Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof TemplateRecipeHandler trh)) return props;
