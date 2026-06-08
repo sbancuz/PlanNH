@@ -11,26 +11,26 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.sbancuz.plannh.data.FlowchartGraph;
-import com.sbancuz.plannh.data.FlowchartSerializer;
-import com.sbancuz.plannh.data.FlowchartSlotSet;
+import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Serializer;
+import com.sbancuz.plannh.data.flowchart.SlotSet;
 
 import codechicken.nei.NEIClientConfig;
 
 public class PlanAPI {
 
-    private static FlowchartSlotSet slotSet = null;
+    private static SlotSet slotSet = null;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting()
         .create();
 
-    public static FlowchartSlotSet getSlotSet() {
+    public static SlotSet getSlotSet() {
         if (slotSet == null) {
             slotSet = loadSlotSet();
         }
         return slotSet;
     }
 
-    public static FlowchartGraph getActiveGraph() {
+    public static Graph getActiveGraph() {
         return getSlotSet().getActiveGraph();
     }
 
@@ -38,7 +38,7 @@ public class PlanAPI {
         saveSlotSet(getSlotSet());
     }
 
-    private static FlowchartSlotSet loadSlotSet() {
+    private static SlotSet loadSlotSet() {
         try {
             File saveFile = getSaveFile();
             if (saveFile.isFile()) {
@@ -47,18 +47,18 @@ public class PlanAPI {
                     JsonObject root = GSON.fromJson(data, JsonObject.class);
                     return parseSlotSet(root);
                 }
-                FlowchartGraph graph = FlowchartSerializer.fromBase64(data);
-                FlowchartSlotSet set = new FlowchartSlotSet();
-                set.slots.add(new FlowchartSlotSet.Slot("Slot 1", graph));
+                Graph graph = Serializer.fromBase64(data);
+                SlotSet set = new SlotSet();
+                set.slots.add(new SlotSet.Slot("Slot 1", graph));
                 return set;
             }
         } catch (Exception ignored) {}
-        FlowchartSlotSet set = new FlowchartSlotSet();
-        set.slots.add(new FlowchartSlotSet.Slot("Slot 1", new FlowchartGraph()));
+        SlotSet set = new SlotSet();
+        set.slots.add(new SlotSet.Slot("Slot 1", new Graph()));
         return set;
     }
 
-    private static void saveSlotSet(FlowchartSlotSet set) {
+    private static void saveSlotSet(SlotSet set) {
         try {
             File saveFile = getSaveFile();
             saveFile.getParentFile()
@@ -66,10 +66,10 @@ public class PlanAPI {
             JsonObject root = new JsonObject();
             root.addProperty("active", set.activeSlot);
             JsonArray arr = new JsonArray();
-            for (FlowchartSlotSet.Slot slot : set.slots) {
+            for (SlotSet.Slot slot : set.slots) {
                 JsonObject slotObj = new JsonObject();
                 slotObj.addProperty("name", slot.name);
-                slotObj.addProperty("data", FlowchartSerializer.toBase64(slot.graph));
+                slotObj.addProperty("data", Serializer.toBase64(slot.graph));
                 arr.add(slotObj);
             }
             root.add("slots", arr);
@@ -77,8 +77,8 @@ public class PlanAPI {
         } catch (Exception ignored) {}
     }
 
-    private static FlowchartSlotSet parseSlotSet(JsonObject root) {
-        FlowchartSlotSet set = new FlowchartSlotSet();
+    private static SlotSet parseSlotSet(JsonObject root) {
+        SlotSet set = new SlotSet();
         set.activeSlot = root.get("active")
             .getAsInt();
         JsonArray arr = root.getAsJsonArray("slots");
@@ -88,8 +88,8 @@ public class PlanAPI {
                 .getAsString();
             String data = obj.get("data")
                 .getAsString();
-            FlowchartGraph graph = FlowchartSerializer.fromBase64(data);
-            set.slots.add(new FlowchartSlotSet.Slot(name, graph));
+            Graph graph = Serializer.fromBase64(data);
+            set.slots.add(new SlotSet.Slot(name, graph));
         }
         return set;
     }

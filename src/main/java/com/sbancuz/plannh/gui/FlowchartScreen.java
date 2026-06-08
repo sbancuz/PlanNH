@@ -17,19 +17,19 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
-import com.sbancuz.plannh.data.FlowchartBalancer.BalanceResult;
-import com.sbancuz.plannh.data.FlowchartBalancer.NodeBalance;
-import com.sbancuz.plannh.data.FlowchartGraph;
-import com.sbancuz.plannh.data.FlowchartNode;
-import com.sbancuz.plannh.data.FlowchartSlotSet;
-import com.sbancuz.plannh.data.FlowchartSummary;
+import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
+import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
+import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.SlotSet;
+import com.sbancuz.plannh.data.flowchart.Summary;
 
 public class FlowchartScreen extends ModularScreen {
 
-    public final FlowchartGraph graph;
+    public final Graph graph;
     public final CanvasWidget canvas;
 
-    private FlowchartScreen(ModularPanel panel, FlowchartGraph graph, CanvasWidget canvas) {
+    private FlowchartScreen(ModularPanel panel, Graph graph, CanvasWidget canvas) {
         super(PlanNH.MODID, panel);
         getContext().setSettings(new UISettings());
         getContext().getUISettings()
@@ -40,7 +40,7 @@ public class FlowchartScreen extends ModularScreen {
     }
 
     public static FlowchartScreen create() {
-        FlowchartGraph graph = PlanAPI.getActiveGraph();
+        Graph graph = PlanAPI.getActiveGraph();
         CanvasWidget canvas = new CanvasWidget(graph);
 
         ModularPanel panel = ModularPanel.defaultPanel("flowchart_main");
@@ -114,7 +114,7 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawRect(0, 0, w, h, Color.argb(60, 36, 36, 40));
             GuiDraw.drawRect(0, h - 1, w, 1, Color.argb(100, 100, 160, 220));
 
-            FlowchartSlotSet set = PlanAPI.getSlotSet();
+            SlotSet set = PlanAPI.getSlotSet();
             String name = set.activeSlot >= 0 && set.activeSlot < set.slots.size() ? set.slots.get(set.activeSlot).name
                 : "?";
 
@@ -146,7 +146,7 @@ public class FlowchartScreen extends ModularScreen {
         }
 
         private void shiftSlot(int dir) {
-            FlowchartSlotSet set = PlanAPI.getSlotSet();
+            SlotSet set = PlanAPI.getSlotSet();
             if (set.slots.size() <= 1) return;
             set.activeSlot = (set.activeSlot + dir + set.slots.size()) % set.slots.size();
             canvas.setGraph(set.getActiveGraph());
@@ -154,9 +154,9 @@ public class FlowchartScreen extends ModularScreen {
         }
 
         private void addSlot() {
-            FlowchartSlotSet set = PlanAPI.getSlotSet();
+            SlotSet set = PlanAPI.getSlotSet();
             int n = set.slots.size() + 1;
-            FlowchartSlotSet.Slot slot = new FlowchartSlotSet.Slot("Slot " + n, new FlowchartGraph());
+            SlotSet.Slot slot = new SlotSet.Slot("Slot " + n, new Graph());
             set.slots.add(slot);
             set.activeSlot = set.slots.size() - 1;
             canvas.setGraph(slot.graph);
@@ -164,7 +164,7 @@ public class FlowchartScreen extends ModularScreen {
         }
 
         private void deleteSlot() {
-            FlowchartSlotSet set = PlanAPI.getSlotSet();
+            SlotSet set = PlanAPI.getSlotSet();
             if (set.slots.size() <= 1) return;
             set.slots.remove(set.activeSlot);
             if (set.activeSlot >= set.slots.size()) set.activeSlot = set.slots.size() - 1;
@@ -213,7 +213,7 @@ public class FlowchartScreen extends ModularScreen {
         private int dragAbsMX, dragAbsMY;
         private int dragStartX, dragStartY;
 
-        private FlowchartGraph graph() {
+        private Graph graph() {
             return canvas.getGraph();
         }
 
@@ -225,7 +225,7 @@ public class FlowchartScreen extends ModularScreen {
 
         private int computeHeight() {
             if (collapsed) return TITLE_H;
-            FlowchartGraph g = graph();
+            Graph g = graph();
             BalanceResult br = safeBalance(g);
             int h = TITLE_H + 4;
 
@@ -261,7 +261,7 @@ public class FlowchartScreen extends ModularScreen {
             return h;
         }
 
-        private static BalanceResult safeBalance(FlowchartGraph g) {
+        private static BalanceResult safeBalance(Graph g) {
             try {
                 return g.balance();
             } catch (Exception e) {
@@ -291,7 +291,7 @@ public class FlowchartScreen extends ModularScreen {
 
             if (collapsed) return;
 
-            FlowchartGraph g = graph();
+            Graph g = graph();
             BalanceResult br = safeBalance(g);
             int ly = TITLE_H + 4;
 
@@ -307,7 +307,7 @@ public class FlowchartScreen extends ModularScreen {
                     0xFFCC66,
                     false);
                 ly += 14;
-                for (FlowchartSummary.SummaryLine line : br.netOutputs()) {
+                for (Summary.SummaryLine line : br.netOutputs()) {
                     GuiDraw
                         .drawText(line.totalCount + "x " + line.stack.getDisplayName(), 10, ly, 0.8f, 0xFFCC66, false);
                     ly += 11;
@@ -327,7 +327,7 @@ public class FlowchartScreen extends ModularScreen {
                     0x77DD77,
                     false);
                 ly += 14;
-                for (FlowchartSummary.SummaryLine line : br.netInputs()) {
+                for (Summary.SummaryLine line : br.netInputs()) {
                     GuiDraw
                         .drawText(line.totalCount + "x " + line.stack.getDisplayName(), 10, ly, 0.8f, 0xAAAAAA, false);
                     ly += 11;
@@ -379,7 +379,7 @@ public class FlowchartScreen extends ModularScreen {
                 GuiDraw.drawRect(2, ly, w - 4, 12, Color.argb(50, 100, 120, 200));
                 GuiDraw.drawText("Operations", 6, ly + 1, 1.0f, 0x88AAFF, false);
                 ly += 14;
-                for (FlowchartNode node : g.getNodes()) {
+                for (Node node : g.getNodes()) {
                     NodeBalance nb = br.nodeBalances()
                         .get(node.id);
                     if (nb == null || nb.operations <= 0) continue;

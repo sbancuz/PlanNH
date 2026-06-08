@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data;
+package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -11,21 +11,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.RecipeProperty;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 
-public class FlowchartBalancer {
+public class Balancer {
 
-    public static BalanceResult balance(FlowchartGraph graph) {
-        Map<UUID, List<FlowchartEdge>> outEdges = new HashMap<>();
-        Map<UUID, List<FlowchartEdge>> inEdges = new HashMap<>();
-        for (FlowchartNode node : graph.getNodes()) {
+    public static BalanceResult balance(Graph graph) {
+        Map<UUID, List<Edge>> outEdges = new HashMap<>();
+        Map<UUID, List<Edge>> inEdges = new HashMap<>();
+        for (Node node : graph.getNodes()) {
             outEdges.put(node.id, new ArrayList<>());
             inEdges.put(node.id, new ArrayList<>());
         }
-        for (FlowchartEdge edge : graph.getEdges()) {
+        for (Edge edge : graph.getEdges()) {
             outEdges.get(edge.sourceNodeId)
                 .add(edge);
             inEdges.get(edge.targetNodeId)
@@ -33,7 +35,7 @@ public class FlowchartBalancer {
         }
 
         Set<UUID> leafNodes = new HashSet<>();
-        for (FlowchartNode node : graph.getNodes()) {
+        for (Node node : graph.getNodes()) {
             if (outEdges.get(node.id)
                 .isEmpty()) {
                 leafNodes.add(node.id);
@@ -49,27 +51,27 @@ public class FlowchartBalancer {
         Collections.reverse(reverseTopo);
 
         Map<UUID, Integer> ops = new HashMap<>();
-        for (FlowchartNode node : graph.getNodes()) {
+        for (Node node : graph.getNodes()) {
             ops.put(node.id, leafNodes.contains(node.id) ? 1 : 0);
         }
 
         Map<UUID, Integer> throughputFactors = new HashMap<>();
-        for (FlowchartNode node : graph.getNodes()) {
+        for (Node node : graph.getNodes()) {
             MachineConfig cfg = node.machineConfig;
             var eff = cfg.computeEffect(node.properties.asMap(), node.durationTicks);
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
         for (UUID nodeId : reverseTopo) {
-            FlowchartNode node = graph.nodes.get(nodeId);
+            Node node = graph.nodes.get(nodeId);
             if (node == null) continue;
 
             int currentOps = ops.get(nodeId);
 
             Map<Integer, Float> itemsNeededPerPort = new HashMap<>();
             Map<Integer, Float> yieldPerPort = new HashMap<>();
-            for (FlowchartEdge edge : outEdges.get(nodeId)) {
-                FlowchartNode target = graph.nodes.get(edge.targetNodeId);
+            for (Edge edge : outEdges.get(nodeId)) {
+                Node target = graph.nodes.get(edge.targetNodeId);
                 if (target == null) continue;
 
                 int targetOps = ops.get(edge.targetNodeId);
@@ -141,9 +143,9 @@ public class FlowchartBalancer {
         return buildResult(graph, ops, throughputFactors);
     }
 
-    private static List<UUID> topologicalSort(FlowchartGraph graph, Map<UUID, List<FlowchartEdge>> inEdges) {
+    private static List<UUID> topologicalSort(Graph graph, Map<UUID, List<Edge>> inEdges) {
         Map<UUID, Integer> inDegree = new HashMap<>();
-        for (FlowchartNode node : graph.getNodes()) {
+        for (Node node : graph.getNodes()) {
             inDegree.put(
                 node.id,
                 inEdges.get(node.id)
@@ -156,11 +158,11 @@ public class FlowchartBalancer {
         }
 
         List<UUID> result = new ArrayList<>();
-        Map<UUID, List<FlowchartEdge>> out = new HashMap<>();
-        for (FlowchartNode node : graph.getNodes()) {
+        Map<UUID, List<Edge>> out = new HashMap<>();
+        for (Node node : graph.getNodes()) {
             out.put(node.id, new ArrayList<>());
         }
-        for (FlowchartEdge edge : graph.getEdges()) {
+        for (Edge edge : graph.getEdges()) {
             out.get(edge.sourceNodeId)
                 .add(edge);
         }
@@ -168,7 +170,7 @@ public class FlowchartBalancer {
         while (!queue.isEmpty()) {
             UUID id = queue.poll();
             result.add(id);
-            for (FlowchartEdge edge : out.get(id)) {
+            for (Edge edge : out.get(id)) {
                 int deg = inDegree.get(edge.targetNodeId) - 1;
                 inDegree.put(edge.targetNodeId, deg);
                 if (deg == 0) queue.add(edge.targetNodeId);
@@ -182,13 +184,13 @@ public class FlowchartBalancer {
         return result;
     }
 
-    private static BalanceResult fallbackBalance(FlowchartGraph graph) {
+    private static BalanceResult fallbackBalance(Graph graph) {
         Map<UUID, Integer> ops = new HashMap<>();
-        for (FlowchartNode node : graph.getNodes()) {
+        for (Node node : graph.getNodes()) {
             ops.put(node.id, 1);
         }
         Map<UUID, Integer> throughputFactors = new HashMap<>();
-        for (FlowchartNode node : graph.getNodes()) {
+        for (Node node : graph.getNodes()) {
             throughputFactors.put(
                 node.id,
                 node.machineConfig.computeEffect(node.properties.asMap(), node.durationTicks)
@@ -197,14 +199,14 @@ public class FlowchartBalancer {
         return buildResult(graph, ops, throughputFactors);
     }
 
-    private static BalanceResult buildResult(FlowchartGraph graph, Map<UUID, Integer> ops,
-        Map<UUID, Integer> throughputFactors) {
+    private static BalanceResult buildResult(Graph graph, Map<UUID, Integer> ops,
+                                             Map<UUID, Integer> throughputFactors) {
         Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
         Map<RecipeProperty<?>, Long> propertyTotals = new HashMap<>();
         int totalOps = 0;
         int totalDuration = 0;
 
-        for (FlowchartNode node : graph.getNodes()) {
+        for (Node node : graph.getNodes()) {
             int opCount = ops.get(node.id);
             totalOps += opCount;
 
@@ -256,17 +258,17 @@ public class FlowchartBalancer {
 
         Set<String> fulfilledInputs = new HashSet<>();
         Set<String> consumedOutputs = new HashSet<>();
-        for (FlowchartEdge edge : graph.getEdges()) {
+        for (Edge edge : graph.getEdges()) {
             fulfilledInputs.add(edge.targetNodeId + ":" + edge.targetInputIndex);
             consumedOutputs.add(edge.sourceNodeId + ":" + edge.sourceOutputIndex);
         }
 
-        List<FlowchartSummary.SummaryLine> netInputs = new ArrayList<>();
-        List<FlowchartSummary.SummaryLine> netOutputs = new ArrayList<>();
-        List<FlowchartSummary.FluidSummaryLine> netFluidInputs = new ArrayList<>();
-        List<FlowchartSummary.FluidSummaryLine> netFluidOutputs = new ArrayList<>();
+        List<Summary.SummaryLine> netInputs = new ArrayList<>();
+        List<Summary.SummaryLine> netOutputs = new ArrayList<>();
+        List<Summary.FluidSummaryLine> netFluidInputs = new ArrayList<>();
+        List<Summary.FluidSummaryLine> netFluidOutputs = new ArrayList<>();
 
-        for (FlowchartNode node : graph.getNodes()) {
+        for (Node node : graph.getNodes()) {
             NodeBalance nb = nodeBalances.get(node.id);
             MachineConfig cfg = node.machineConfig;
 
@@ -280,7 +282,7 @@ public class FlowchartBalancer {
                 if (fulfilledInputs.contains(node.id + ":" + i)) continue;
                 Integer totalCount = nb.effectiveInputs.get(i);
                 if (totalCount != null && totalCount > 0) {
-                    FlowchartSummary.mergeInto(netInputs, stack, totalCount);
+                    Summary.mergeInto(netInputs, stack, totalCount);
                 }
             }
             for (int i = 0; i < node.outputs.size(); i++) {
@@ -290,7 +292,7 @@ public class FlowchartBalancer {
                 if (consumedOutputs.contains(node.id + ":" + i)) continue;
                 Float totalCount = nb.effectiveOutputs.get(i);
                 if (totalCount != null && totalCount > 0) {
-                    FlowchartSummary.mergeInto(netOutputs, stack, (int) Math.ceil(totalCount));
+                    Summary.mergeInto(netOutputs, stack, (int) Math.ceil(totalCount));
                 }
             }
 
@@ -306,7 +308,7 @@ public class FlowchartBalancer {
                             .rightFloat()
                         * throughputFactor);
                 if (total > 0) {
-                    FlowchartSummary.mergeFluidInto(netFluidInputs, fs, total);
+                    Summary.mergeFluidInto(netFluidInputs, fs, total);
                 }
             }
             for (int i = 0; i < node.fluidOutputs.size(); i++) {
@@ -321,7 +323,7 @@ public class FlowchartBalancer {
                             .rightFloat()
                         * throughputFactor);
                 if (total > 0) {
-                    FlowchartSummary.mergeFluidInto(netFluidOutputs, fs, total);
+                    Summary.mergeFluidInto(netFluidOutputs, fs, total);
                 }
             }
         }
@@ -357,8 +359,8 @@ public class FlowchartBalancer {
         }
     }
 
-    public record BalanceResult(Map<UUID, NodeBalance> nodeBalances, List<FlowchartSummary.SummaryLine> netInputs,
-        List<FlowchartSummary.SummaryLine> netOutputs, List<FlowchartSummary.FluidSummaryLine> netFluidInputs,
-        List<FlowchartSummary.FluidSummaryLine> netFluidOutputs, Map<RecipeProperty<?>, Long> propertyTotals,
-        int totalOperations, int totalDurationTicks) {}
+    public record BalanceResult(Map<UUID, NodeBalance> nodeBalances, List<Summary.SummaryLine> netInputs,
+                                List<Summary.SummaryLine> netOutputs, List<Summary.FluidSummaryLine> netFluidInputs,
+                                List<Summary.FluidSummaryLine> netFluidOutputs, Map<RecipeProperty<?>, Long> propertyTotals,
+                                int totalOperations, int totalDurationTicks) {}
 }

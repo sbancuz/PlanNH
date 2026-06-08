@@ -1,9 +1,13 @@
-package com.sbancuz.plannh.data;
+package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.sbancuz.plannh.data.ExtractedProperties;
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipePropertyExtractor;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -14,7 +18,7 @@ import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
-public class FlowchartNode {
+public class Node {
 
     public final UUID id;
     public int x;
@@ -34,7 +38,7 @@ public class FlowchartNode {
 
     public final ExtractedProperties properties = new ExtractedProperties();
 
-    public FlowchartNode(IRecipeHandler handler, int recipeIndex, int x, int y) {
+    public Node(IRecipeHandler handler, int recipeIndex, int x, int y) {
         this.id = UUID.randomUUID();
         this.x = x;
         this.y = y;
@@ -87,7 +91,7 @@ public class FlowchartNode {
     /**
      * To be used only for serialization/deserialization
      */
-    public FlowchartNode(UUID id, int x, int y) {
+    public Node(UUID id, int x, int y) {
         this.id = id;
         this.x = x;
         this.y = y;

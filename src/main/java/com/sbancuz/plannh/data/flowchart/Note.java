@@ -1,8 +1,8 @@
-package com.sbancuz.plannh.data;
+package com.sbancuz.plannh.data.flowchart;
 
 import java.util.UUID;
 
-public class FlowchartNote {
+public class Note {
 
     public final UUID id;
     public int x;
@@ -11,7 +11,7 @@ public class FlowchartNote {
     public int width = 140;
     public int height = 60;
 
-    public FlowchartNote(UUID id, int x, int y) {
+    public Note(UUID id, int x, int y) {
         this.id = id;
         this.x = x;
         this.y = y;

@@ -9,7 +9,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
-import com.sbancuz.plannh.data.FlowchartNote;
+import com.sbancuz.plannh.data.flowchart.Note;
 
 public class NoteWidget extends Widget<NoteWidget> implements Interactable {
 
@@ -17,10 +17,10 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     private static final int NOTE_H = 60;
     private static final int CLOSE_W = 10;
 
-    private final FlowchartNote note;
+    private final Note note;
     private final CanvasWidget canvas;
 
-    public FlowchartNote getNote() {
+    public Note getNote() {
         return note;
     }
 
@@ -32,7 +32,7 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     private boolean editing = false;
     private int cursorPos = 0;
 
-    public NoteWidget(FlowchartNote note, CanvasWidget canvas) {
+    public NoteWidget(Note note, CanvasWidget canvas) {
         this.note = note;
         this.canvas = canvas;
         float z = canvas.getZoom();

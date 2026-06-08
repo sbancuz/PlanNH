@@ -19,10 +19,10 @@ import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
-import com.sbancuz.plannh.data.FlowchartEdge;
-import com.sbancuz.plannh.data.FlowchartGraph;
-import com.sbancuz.plannh.data.FlowchartNode;
-import com.sbancuz.plannh.data.FlowchartNote;
+import com.sbancuz.plannh.data.flowchart.Edge;
+import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Note;
 
 import lombok.Getter;
 
@@ -33,7 +33,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int PREVIEW_COLOR = Color.argb(180, 255, 200, 80);
 
     @Getter
-    private FlowchartGraph graph;
+    private Graph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
     private final Map<UUID, NoteWidget> noteWidgets = new HashMap<>();
 
@@ -55,7 +55,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private UUID edgeHoverNodeId;
     private int edgeHoverPortIndex;
 
-    public CanvasWidget(FlowchartGraph graph) {
+    public CanvasWidget(Graph graph) {
         this.graph = graph;
         rebuildNodeWidgets();
     }
@@ -69,7 +69,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildNodeWidgets();
     }
 
-    public void setGraph(FlowchartGraph newGraph) {
+    public void setGraph(Graph newGraph) {
         this.graph = newGraph;
         rebuildNodeWidgets();
         rebuildNoteWidgets();
@@ -79,7 +79,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         removeAll();
         editingNoteId = null;
         nodeWidgets.clear();
-        for (FlowchartNode node : graph.getNodes()) {
+        for (Node node : graph.getNodes()) {
             RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
             widget.syncTransform(zoom, panX, panY);
             nodeWidgets.put(node.id, widget);
@@ -93,7 +93,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             remove(nw);
         }
         noteWidgets.clear();
-        for (FlowchartNote note : graph.notes.values()) {
+        for (Note note : graph.notes.values()) {
             NoteWidget nw = new NoteWidget(note, this);
             nw.syncTransform(zoom, panX, panY);
             noteWidgets.put(note.id, nw);
@@ -103,7 +103,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private void updateNodePositions() {
         for (Map.Entry<UUID, RecipeNodeWidget> entry : nodeWidgets.entrySet()) {
-            FlowchartNode node = graph.nodes.get(entry.getKey());
+            Node node = graph.nodes.get(entry.getKey());
             if (node == null) continue;
             RecipeNodeWidget widget = entry.getValue();
             widget.syncTransform(zoom, panX, panY);
@@ -147,12 +147,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void drawArrows() {
-        for (FlowchartEdge edge : graph.getEdges()) {
+        for (Edge edge : graph.getEdges()) {
             RecipeNodeWidget srcWidget = nodeWidgets.get(edge.sourceNodeId);
             RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
             if (srcWidget == null || dstWidget == null) continue;
 
-            FlowchartNode srcNode = graph.nodes.get(edge.sourceNodeId);
+            Node srcNode = graph.nodes.get(edge.sourceNodeId);
             boolean isFluid = srcNode != null && edge.sourceOutputIndex >= srcNode.outputs.size();
 
             int srcX = widgetX(srcWidget) + srcWidget.getArea().width;
@@ -255,11 +255,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         GL11.glLineWidth(1);
     }
 
-    private FlowchartEdge getEdgeAt(int absMx, int absMy) {
+    private Edge getEdgeAt(int absMx, int absMy) {
         int margin = Math.max(4, Math.round(4 * zoom));
         int cmx = absMx - getArea().x;
         int cmy = absMy - getArea().y;
-        for (FlowchartEdge edge : graph.getEdges()) {
+        for (Edge edge : graph.getEdges()) {
             RecipeNodeWidget srcWidget = nodeWidgets.get(edge.sourceNodeId);
             RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
             if (srcWidget == null || dstWidget == null) continue;
@@ -283,7 +283,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return null;
     }
 
-    private boolean canConnect(FlowchartNode srcNode, int srcOutIdx, FlowchartNode dstNode, int dstInIdx) {
+    private boolean canConnect(Node srcNode, int srcOutIdx, Node dstNode, int dstInIdx) {
         if (srcNode == dstNode) return false;
         if (srcOutIdx < 0 || dstInIdx < 0) return false;
 
@@ -341,7 +341,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
 
             if (!isMouseOverAnyNode(absMx, absMy)) {
-                FlowchartEdge clicked = getEdgeAt(absMx, absMy);
+                Edge clicked = getEdgeAt(absMx, absMy);
                 if (clicked != null) {
                     graph.removeEdge(clicked.id);
                     return Interactable.Result.SUCCESS;
@@ -370,11 +370,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public boolean onMouseRelease(int mouseButton) {
         if (creatingEdge) {
             if (edgeHoverNodeId != null) {
-                FlowchartNode srcNode = graph.nodes.get(edgeSourceNodeId);
-                FlowchartNode dstNode = graph.nodes.get(edgeHoverNodeId);
+                Node srcNode = graph.nodes.get(edgeSourceNodeId);
+                Node dstNode = graph.nodes.get(edgeHoverNodeId);
                 if (srcNode != null && dstNode != null) {
                     graph.addEdge(
-                        new FlowchartEdge(
+                        new Edge(
                             UUID.randomUUID(),
                             edgeSourceNodeId,
                             edgeHoverNodeId,
@@ -459,7 +459,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     // ── Notes ──
 
     public void addNote(int x, int y) {
-        FlowchartNote note = new FlowchartNote(UUID.randomUUID(), x, y);
+        Note note = new Note(UUID.randomUUID(), x, y);
         graph.notes.put(note.id, note);
         NoteWidget nw = new NoteWidget(note, this);
         nw.syncTransform(zoom, panX, panY);
@@ -494,7 +494,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 editingNoteId = null;
                 return Result.IGNORE;
             }
-            FlowchartNote note = nw.getNote();
+            Note note = nw.getNote();
             if (keyCode == org.lwjgl.input.Keyboard.KEY_ESCAPE || keyCode == org.lwjgl.input.Keyboard.KEY_RETURN) {
                 nw.setEditing(false);
                 return Result.SUCCESS;
@@ -514,7 +514,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return Result.IGNORE;
     }
 
-    public FlowchartNote getNoteForEdit() {
+    public Note getNoteForEdit() {
         if (editingNoteId == null) return null;
         return graph.notes.get(editingNoteId);
     }
@@ -533,7 +533,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         int half = Math.round(PORT_HALF * z);
 
         for (RecipeNodeWidget w : nodeWidgets.values()) {
-            FlowchartNode node = w.getNode();
+            Node node = w.getNode();
             int wx = widgetX(w);
             int wy = widgetY(w);
             int ww = w.getArea().width;

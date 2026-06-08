@@ -3,6 +3,7 @@ package com.sbancuz.plannh.data;
 import java.util.Map;
 
 import codechicken.nei.recipe.IRecipeHandler;
+import com.sbancuz.plannh.data.flowchart.Node;
 
 public interface RecipePropertyExtractor {
 
@@ -12,7 +13,7 @@ public interface RecipePropertyExtractor {
 
     boolean canHandle(String recipeOwner);
 
-    Map<RecipeProperty<?>, Object> extract(FlowchartNode node, IRecipeHandler handler, int recipeIndex);
+    Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex);
 
     default String getProfileId(IRecipeHandler handler, int recipeIndex) {
         return "vanilla";

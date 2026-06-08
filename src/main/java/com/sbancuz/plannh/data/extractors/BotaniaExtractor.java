@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
@@ -50,7 +50,7 @@ public class BotaniaExtractor implements RecipePropertyExtractor {
     }
 
     @Override
-    public Map<RecipeProperty<?>, Object> extract(FlowchartNode node, IRecipeHandler handler, int recipeIndex) {
+    public Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex) {
         Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof TemplateRecipeHandler trh)) return props;
         if (!handler.getClass()

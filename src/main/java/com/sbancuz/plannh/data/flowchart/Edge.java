@@ -1,8 +1,8 @@
-package com.sbancuz.plannh.data;
+package com.sbancuz.plannh.data.flowchart;
 
 import java.util.UUID;
 
-public class FlowchartEdge {
+public class Edge {
 
     public final UUID id;
     /// Nodes
@@ -12,7 +12,7 @@ public class FlowchartEdge {
     public int sourceOutputIndex;
     public int targetInputIndex;
 
-    public FlowchartEdge(UUID id, UUID sourceNodeId, UUID targetNodeId, int sourceOutputIndex, int targetInputIndex) {
+    public Edge(UUID id, UUID sourceNodeId, UUID targetNodeId, int sourceOutputIndex, int targetInputIndex) {
         this.id = id;
         this.sourceNodeId = sourceNodeId;
         this.targetNodeId = targetNodeId;

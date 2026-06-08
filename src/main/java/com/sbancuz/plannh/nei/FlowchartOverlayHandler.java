@@ -3,8 +3,8 @@ package com.sbancuz.plannh.nei;
 import net.minecraft.client.gui.inventory.GuiContainer;
 
 import com.sbancuz.plannh.api.PlanAPI;
-import com.sbancuz.plannh.data.FlowchartGraph;
-import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
@@ -30,8 +30,8 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
     }
 
     private static void addRecipe(GuiContainer firstGui, IRecipeHandler handler, int recipeIndex) {
-        FlowchartNode node = new FlowchartNode(handler, recipeIndex, 200, 200);
-        FlowchartGraph graph = PlanAPI.getActiveGraph();
+        Node node = new Node(handler, recipeIndex, 200, 200);
+        Graph graph = PlanAPI.getActiveGraph();
         graph.addNode(node);
         PlanAPI.save();
 

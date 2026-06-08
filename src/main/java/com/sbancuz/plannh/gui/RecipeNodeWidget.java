@@ -16,9 +16,9 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
-import com.sbancuz.plannh.data.FlowchartBalancer.BalanceResult;
-import com.sbancuz.plannh.data.FlowchartBalancer.NodeBalance;
-import com.sbancuz.plannh.data.FlowchartNode;
+import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
+import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.SettingDef;
@@ -50,7 +50,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         174).build();
 
     @Getter
-    private final FlowchartNode node;
+    private final Node node;
     private final CanvasWidget canvas;
 
     private boolean dragging = false;
@@ -75,7 +75,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
     }
 
-    public RecipeNodeWidget(FlowchartNode node, CanvasWidget canvas) {
+    public RecipeNodeWidget(Node node, CanvasWidget canvas) {
         this.node = node;
         this.canvas = canvas;
         float z = canvas.getZoom();

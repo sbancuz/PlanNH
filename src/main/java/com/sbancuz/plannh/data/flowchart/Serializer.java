@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data;
+package com.sbancuz.plannh.data.flowchart;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -12,6 +12,12 @@ import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import com.sbancuz.plannh.data.ExtractedProperties;
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.SettingDef;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -26,16 +32,16 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
-public class FlowchartSerializer {
+public class Serializer {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting()
         .create();
 
-    public static String toBase64(FlowchartGraph graph) {
+    public static String toBase64(Graph graph) {
         try {
             JsonObject root = new JsonObject();
             JsonArray nodesArray = new JsonArray();
-            for (FlowchartNode node : graph.getNodes()) {
+            for (Node node : graph.getNodes()) {
                 JsonObject obj = new JsonObject();
                 obj.addProperty("id", node.id.toString());
                 obj.addProperty("x", node.x);
@@ -66,7 +72,7 @@ public class FlowchartSerializer {
             root.add("nodes", nodesArray);
 
             JsonArray edgesArray = new JsonArray();
-            for (FlowchartEdge edge : graph.getEdges()) {
+            for (Edge edge : graph.getEdges()) {
                 JsonObject obj = new JsonObject();
                 obj.addProperty("id", edge.id.toString());
                 obj.addProperty("src", edge.sourceNodeId.toString());
@@ -78,7 +84,7 @@ public class FlowchartSerializer {
             root.add("edges", edgesArray);
 
             JsonArray notesArray = new JsonArray();
-            for (FlowchartNote note : graph.notes.values()) {
+            for (Note note : graph.notes.values()) {
                 JsonObject obj = new JsonObject();
                 obj.addProperty("id", note.id.toString());
                 obj.addProperty("x", note.x);
@@ -101,7 +107,7 @@ public class FlowchartSerializer {
         }
     }
 
-    public static FlowchartGraph fromBase64(String data) {
+    public static Graph fromBase64(String data) {
         try {
             byte[] bytes = Base64.getDecoder()
                 .decode(data);
@@ -117,7 +123,7 @@ public class FlowchartSerializer {
             }
 
             JsonObject root = GSON.fromJson(json.toString(), JsonObject.class);
-            FlowchartGraph graph = new FlowchartGraph();
+            Graph graph = new Graph();
 
             JsonArray nodesArray = root.getAsJsonArray("nodes");
             for (JsonElement elem : nodesArray) {
@@ -129,7 +135,7 @@ public class FlowchartSerializer {
                     .getAsInt();
                 int y = obj.get("y")
                     .getAsInt();
-                FlowchartNode node = new FlowchartNode(id, x, y);
+                Node node = new Node(id, x, y);
                 node.machineName = obj.get("machine")
                     .getAsString();
                 node.durationTicks = obj.get("ticks")
@@ -178,7 +184,7 @@ public class FlowchartSerializer {
                     .getAsInt();
                 int dstIn = obj.get("dstIn")
                     .getAsInt();
-                graph.addEdge(new FlowchartEdge(id, src, dst, srcOut, dstIn));
+                graph.addEdge(new Edge(id, src, dst, srcOut, dstIn));
             }
 
             if (root.has("notes")) {
@@ -192,7 +198,7 @@ public class FlowchartSerializer {
                         .getAsInt();
                     int y = obj.get("y")
                         .getAsInt();
-                    FlowchartNote note = new FlowchartNote(id, x, y);
+                    Note note = new Note(id, x, y);
                     if (obj.has("text")) note.text = obj.get("text")
                         .getAsString();
                     graph.notes.put(id, note);

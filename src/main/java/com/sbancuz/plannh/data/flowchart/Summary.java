@@ -1,14 +1,15 @@
-package com.sbancuz.plannh.data;
+package com.sbancuz.plannh.data.flowchart;
 
 import java.util.List;
 import java.util.Map;
 
+import com.sbancuz.plannh.data.RecipeProperty;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
-public record FlowchartSummary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
-    List<FluidSummaryLine> netFluidInputs, List<FluidSummaryLine> netFluidOutputs,
-    Map<RecipeProperty<?>, Long> propertyTotals) {
+public record Summary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
+                      List<FluidSummaryLine> netFluidInputs, List<FluidSummaryLine> netFluidOutputs,
+                      Map<RecipeProperty<?>, Long> propertyTotals) {
 
     public static class SummaryLine {
 
