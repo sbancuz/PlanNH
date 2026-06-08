@@ -36,4 +36,8 @@ public class ExtractedProperties {
     public Set<Map.Entry<RecipeProperty<?>, Object>> entrySet() {
         return Collections.unmodifiableSet(values.entrySet());
     }
+
+    public Map<RecipeProperty<?>, Object> asMap() {
+        return Collections.unmodifiableMap(values);
+    }
 }

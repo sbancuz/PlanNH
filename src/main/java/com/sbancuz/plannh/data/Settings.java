@@ -32,6 +32,7 @@ public enum Settings {
     MANA_PER_TICK("manaPerTick", "Mana/t", 10, 1, 10000),
     VIS_PER_TICK("visPerTick", "Vis/t", 1, 1, 100),
     RF_PER_TICK("rfPerTick", "RF/t", 80, 1, 10000),
+    FORESTRY_RF_PER_TICK("forestryRfPerTick", "RF/t", 10, 1, 10000),
 
     // ── bool settings ──
     PERFECT_OC("perfectOC", "Perfect OC", false),

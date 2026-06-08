@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.sbancuz.plannh.api.RecipePropertyAPI;
+
 public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings,
     EffectComputer effectComputer) {
 
@@ -13,9 +15,23 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         EffectResult compute(Map<String, Object> settings, RecipeContext ctx);
     }
 
-    public record EffectResult(int durationTicks, long consumptionEUt, int throughputFactor) {}
+    public record EffectResult(int durationTicks, long energyPerT, int throughputFactor) {}
 
-    public record RecipeContext(long recipeEUt, int recipeDuration) {}
+    public record RecipeContext(Map<RecipeProperty<?>, Object> properties, int recipeDuration) {
+
+        public long recipeEUt() {
+            Long euPerTick = get(RecipePropertyAPI.EU_PER_TICK);
+            if (euPerTick != null && euPerTick > 0) return euPerTick;
+            Long totalEu = get(RecipePropertyAPI.TOTAL_EU);
+            if (totalEu != null && totalEu > 0 && recipeDuration > 0) return totalEu / recipeDuration;
+            return 0;
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T get(RecipeProperty<T> prop) {
+            return (T) properties.get(prop);
+        }
+    }
 
     public static Builder builder(String id, String displayName) {
         return new Builder(id, displayName);
@@ -35,11 +51,6 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
 
         public Builder addSetting(SettingDef<?> setting) {
             settings.add(setting);
-            return this;
-        }
-
-        public Builder addSettings(List<SettingDef<?>> more) {
-            settings.addAll(more);
             return this;
         }
 
@@ -87,11 +98,6 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         public MachineProfile build() {
             return new MachineProfile(id, displayName, List.copyOf(settings), effectComputer);
         }
-    }
-
-    public static EffectResult simpleEffect(Map<String, Object> s, RecipeContext ctx) {
-        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), machines);
     }
 
     public static int getInt(Map<String, Object> s, String key, int def) {

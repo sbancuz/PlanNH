@@ -56,7 +56,7 @@ public class FlowchartBalancer {
         Map<UUID, Integer> throughputFactors = new HashMap<>();
         for (FlowchartNode node : graph.getNodes()) {
             MachineConfig cfg = node.machineConfig;
-            var eff = cfg.computeEffect(recipeEUt(node), node.durationTicks);
+            var eff = cfg.computeEffect(node.properties.asMap(), node.durationTicks);
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
@@ -191,7 +191,7 @@ public class FlowchartBalancer {
         for (FlowchartNode node : graph.getNodes()) {
             throughputFactors.put(
                 node.id,
-                node.machineConfig.computeEffect(recipeEUt(node), node.durationTicks)
+                node.machineConfig.computeEffect(node.properties.asMap(), node.durationTicks)
                     .throughputFactor());
         }
         return buildResult(graph, ops, throughputFactors);
@@ -210,10 +210,9 @@ public class FlowchartBalancer {
 
             MachineConfig cfg = node.machineConfig;
 
-            long recipeEUt = recipeEUt(node);
             int recipeDuration = node.durationTicks;
-            var eff = cfg.computeEffect(recipeEUt, recipeDuration);
-            long eutPerOp = eff.consumptionEUt();
+            var eff = cfg.computeEffect(node.properties.asMap(), recipeDuration);
+            long eutPerOp = eff.energyPerT();
             int durPerOp = eff.durationTicks();
             int throughputFactor = eff.throughputFactor();
 
@@ -336,23 +335,6 @@ public class FlowchartBalancer {
             propertyTotals,
             totalOps,
             totalDuration);
-    }
-
-    private static long recipeEUt(FlowchartNode node) {
-        Long euPerTick = node.properties.get(RecipePropertyAPI.EU_PER_TICK);
-        if (euPerTick != null && euPerTick > 0) return euPerTick;
-        Long totalEu = node.properties.get(RecipePropertyAPI.TOTAL_EU);
-        if (totalEu != null && totalEu > 0 && node.durationTicks > 0) return totalEu / node.durationTicks;
-        for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
-            RecipeProperty<?> prop = entry.getKey();
-            Object val = entry.getValue();
-            if (prop == RecipePropertyAPI.TOTAL_EU) continue;
-            if (prop == RecipePropertyAPI.EU_PER_TICK) continue;
-            if (prop == RecipePropertyAPI.DURATION_TICKS) continue;
-            if (val instanceof Integer i && i > 0) return i;
-            if (val instanceof Long l && l > 0) return l;
-        }
-        return 0;
     }
 
     public static class NodeBalance {

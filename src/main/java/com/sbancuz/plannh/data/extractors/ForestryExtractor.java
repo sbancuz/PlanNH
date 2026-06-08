@@ -42,13 +42,15 @@ public class ForestryExtractor implements RecipePropertyExtractor {
         MachineProfileRegistry.register(
             MachineProfile.builder("forestry:basic", "Forestry")
                 .setting(Settings.MACHINES.def())
+                .setting(Settings.FORESTRY_RF_PER_TICK.def())
                 .effect(ForestryExtractor::simpleEffect)
                 .build());
     }
 
     private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
         int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), machines);
+        int rate = MachineProfile.getInt(s, Settings.FORESTRY_RF_PER_TICK.key(), 10);
+        return new MachineProfile.EffectResult(ctx.recipeDuration(), rate, machines);
     }
 
     @Override

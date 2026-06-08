@@ -50,10 +50,10 @@ public class MachineConfig {
         }
     }
 
-    public MachineProfile.EffectResult computeEffect(long recipeEUt, int recipeDuration) {
+    public MachineProfile.EffectResult computeEffect(Map<RecipeProperty<?>, Object> properties, int recipeDuration) {
         MachineProfile profile = getProfile();
         return profile.effectComputer()
-            .compute(settings, new MachineProfile.RecipeContext(recipeEUt, recipeDuration));
+            .compute(settings, new MachineProfile.RecipeContext(properties, recipeDuration));
     }
 
     public float inputMultiplier(int inputIndex) {

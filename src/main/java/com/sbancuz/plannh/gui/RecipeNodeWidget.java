@@ -16,7 +16,6 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.FlowchartBalancer.BalanceResult;
 import com.sbancuz.plannh.data.FlowchartBalancer.NodeBalance;
 import com.sbancuz.plannh.data.FlowchartNode;
@@ -330,7 +329,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int ops = nb != null ? nb.operations : 1;
         int tf = 1;
         if (nb != null) {
-            var eff = node.machineConfig.computeEffect(recipeEUt(), node.durationTicks);
+            var eff = node.machineConfig.computeEffect(node.properties.asMap(), node.durationTicks);
             tf = eff.throughputFactor();
         }
 
@@ -401,14 +400,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (rate >= 1000) return String.format("%.0f", rate);
         if (rate >= 1) return String.format("%.2f", rate);
         return String.format("%.3f", rate);
-    }
-
-    private long recipeEUt() {
-        Long euPerTick = node.properties.get(RecipePropertyAPI.EU_PER_TICK);
-        if (euPerTick != null && euPerTick > 0) return euPerTick;
-        Long totalEu = node.properties.get(RecipePropertyAPI.TOTAL_EU);
-        if (totalEu != null && totalEu > 0 && node.durationTicks > 0) return totalEu / node.durationTicks;
-        return 0;
     }
 
     private static int titleColorForName(String name) {

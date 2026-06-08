@@ -155,10 +155,12 @@ public class ThaumcraftExtractor implements RecipePropertyExtractor {
     private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
         int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
         int rate = MachineProfile.getInt(s, Settings.VIS_PER_TICK.key(), 1);
+        Integer totalEnergy = ctx.get(ThaumcraftExtractor.TOTAL_VIS);
         int duration = ctx.recipeDuration();
-        if (duration <= 0 && rate > 0 && ctx.recipeEUt() > 0) {
-            duration = Math.max(1, (int)(ctx.recipeEUt() / rate));
+        if (duration <= 0 && rate > 0 && totalEnergy != null && totalEnergy > 0) {
+            duration = Math.max(1, totalEnergy / rate);
         }
-        return new MachineProfile.EffectResult(duration, ctx.recipeEUt(), machines);
+        long consumptionEUt = duration > 0 && totalEnergy != null ? totalEnergy / duration : 0;
+        return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
     }
 }
