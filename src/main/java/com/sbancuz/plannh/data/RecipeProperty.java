@@ -19,8 +19,8 @@ public class RecipeProperty<T> {
     private final BiConsumer<JsonObject, T> serializer;
     private final Function<JsonObject, T> deserializer;
 
-    public RecipeProperty(String key, String displayName, T defaultValue, BiConsumer<JsonObject, T> serializer,
-        Function<JsonObject, T> deserializer) {
+    public RecipeProperty(final String key, final String displayName, final T defaultValue,
+        final BiConsumer<JsonObject, T> serializer, final Function<JsonObject, T> deserializer) {
         this.key = key;
         this.displayName = displayName;
         this.defaultValue = defaultValue;
@@ -28,15 +28,16 @@ public class RecipeProperty<T> {
         this.deserializer = deserializer;
     }
 
-    public void serialize(JsonObject obj, T value) {
+    public void serialize(final JsonObject obj, final T value) {
         serializer.accept(obj, value);
     }
 
-    public T deserialize(JsonObject obj) {
+    public T deserialize(final JsonObject obj) {
         return deserializer.apply(obj);
     }
 
-    public static RecipeProperty<Long> longProperty(String key, String displayName, long defaultValue) {
+    public static RecipeProperty<Long> longProperty(final String key, final String displayName,
+        final long defaultValue) {
         return new RecipeProperty<>(
             key,
             displayName,
@@ -46,7 +47,8 @@ public class RecipeProperty<T> {
                 .getAsLong() : defaultValue);
     }
 
-    public static RecipeProperty<Integer> intProperty(String key, String displayName, int defaultValue) {
+    public static RecipeProperty<Integer> intProperty(final String key, final String displayName,
+        final int defaultValue) {
         return new RecipeProperty<>(
             key,
             displayName,
@@ -56,7 +58,8 @@ public class RecipeProperty<T> {
                 .getAsInt() : defaultValue);
     }
 
-    public static RecipeProperty<String> stringProperty(String key, String displayName, String defaultValue) {
+    public static RecipeProperty<String> stringProperty(final String key, final String displayName,
+        final String defaultValue) {
         return new RecipeProperty<>(
             key,
             displayName,
@@ -66,7 +69,8 @@ public class RecipeProperty<T> {
                 .getAsString() : defaultValue);
     }
 
-    public static RecipeProperty<Float> floatProperty(String key, String displayName, float defaultValue) {
+    public static RecipeProperty<Float> floatProperty(final String key, final String displayName,
+        final float defaultValue) {
         return new RecipeProperty<>(
             key,
             displayName,
@@ -76,7 +80,8 @@ public class RecipeProperty<T> {
                 .getAsFloat() : defaultValue);
     }
 
-    public static RecipeProperty<Boolean> boolProperty(String key, String displayName, boolean defaultValue) {
+    public static RecipeProperty<Boolean> boolProperty(final String key, final String displayName,
+        final boolean defaultValue) {
         return new RecipeProperty<>(
             key,
             displayName,
@@ -86,15 +91,16 @@ public class RecipeProperty<T> {
                 .getAsBoolean() : defaultValue);
     }
 
-    public static RecipeProperty<int[]> intArrayProperty(String key, String displayName, int[] defaultValue) {
+    public static RecipeProperty<int[]> intArrayProperty(final String key, final String displayName,
+        final int[] defaultValue) {
         return new RecipeProperty<>(key, displayName, defaultValue, (obj, val) -> {
-            JsonArray arr = new JsonArray();
-            for (int v : val) arr.add(new JsonPrimitive(v));
+            final JsonArray arr = new JsonArray();
+            for (final int v : val) arr.add(new JsonPrimitive(v));
             obj.add(key, arr);
         }, obj -> {
             if (!obj.has(key)) return defaultValue.clone();
-            JsonArray arr = obj.getAsJsonArray(key);
-            int[] result = new int[arr.size()];
+            final JsonArray arr = obj.getAsJsonArray(key);
+            final int[] result = new int[arr.size()];
             for (int i = 0; i < result.length; i++) result[i] = arr.get(i)
                 .getAsInt();
             return result;

@@ -49,21 +49,22 @@ public enum Settings {
 
     private final SettingDef<?> def;
 
-    Settings(String key, String label, int defaultValue, int min, int max) {
+    Settings(final String key, final String label, final int defaultValue, final int min, final int max) {
         this.def = SettingDef.intDef(key, label, defaultValue, min, max);
     }
 
-    Settings(String key, String label, int defaultValue, int min, int max,
-        BiFunction<Integer, MachineConfig, String> badgeFn) {
+    Settings(final String key, final String label, final int defaultValue, final int min, final int max,
+        final BiFunction<Integer, MachineConfig, String> badgeFn) {
         this.def = SettingDef.intDef(key, label, defaultValue, min, max, badgeFn);
     }
 
-    Settings(String key, String label, boolean defaultValue, BiFunction<Boolean, MachineConfig, String> badgeFn) {
+    Settings(final String key, final String label, final boolean defaultValue,
+        final BiFunction<Boolean, MachineConfig, String> badgeFn) {
         this.def = SettingDef.boolDef(key, label, defaultValue, badgeFn);
     }
 
-    Settings(String key, String label, String defaultValue, List<String> options,
-        BiFunction<String, MachineConfig, String> badgeFn) {
+    Settings(final String key, final String label, final String defaultValue, final List<String> options,
+        final BiFunction<String, MachineConfig, String> badgeFn) {
         this.def = SettingDef.enumDef(key, label, defaultValue, options, badgeFn);
     }
 

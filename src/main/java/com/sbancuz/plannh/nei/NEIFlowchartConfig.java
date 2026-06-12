@@ -26,13 +26,13 @@ public class NEIFlowchartConfig implements IConfigureNEI {
     }
 
     @SubscribeEvent
-    public void onPreButtonUpdate(UpdateRecipeButtonsEvent.Pre event) {
-        GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
+    public void onPreButtonUpdate(final UpdateRecipeButtonsEvent.Pre event) {
+        final GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
         if (!(gui.firstGui instanceof FlowchartGuiContainer)) return;
 
-        for (Object h : gui.currenthandlers) {
-            if (!(h instanceof IRecipeHandler r)) continue;
-            String ident = r.getOverlayIdentifier();
+        for (final Object h : gui.currenthandlers) {
+            if (!(h instanceof final IRecipeHandler r)) continue;
+            final String ident = r.getOverlayIdentifier();
             if (ident != null && !ident.isEmpty()
                 && !RecipeInfo.hasOverlayHandler(FlowchartGuiContainer.class, ident)) {
                 API.registerGuiOverlayHandler(FlowchartGuiContainer.class, HANDLER, ident);
@@ -41,11 +41,11 @@ public class NEIFlowchartConfig implements IConfigureNEI {
     }
 
     @SubscribeEvent
-    public void onPostButtonUpdate(UpdateRecipeButtonsEvent.Post event) {
-        GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
+    public void onPostButtonUpdate(final UpdateRecipeButtonsEvent.Post event) {
+        final GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
         if (!(gui.firstGui instanceof FlowchartGuiContainer)) return;
 
-        for (GuiRecipeButton btn : event.buttonList) {
+        for (final GuiRecipeButton btn : event.buttonList) {
             if (btn instanceof GuiOverlayButton) {
                 ((GuiOverlayButton) btn).setRequireShiftForOverlayRecipe(false);
             }

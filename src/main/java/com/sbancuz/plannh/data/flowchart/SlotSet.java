@@ -10,7 +10,7 @@ public class SlotSet {
         public String name;
         public Graph graph;
 
-        public Slot(String name, Graph graph) {
+        public Slot(final String name, final Graph graph) {
             this.name = name;
             this.graph = graph;
         }

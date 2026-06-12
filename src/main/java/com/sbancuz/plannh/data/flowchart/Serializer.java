@@ -32,7 +32,7 @@ import com.sbancuz.plannh.data.SettingDef;
 import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
-public class Serializer {
+public final class Serializer {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting()
         .create();
@@ -40,39 +40,39 @@ public class Serializer {
     // ── Public API ──
 
     /** Encodes a full graph to a compressed base64 string (gzip + json + base64). */
-    public static String encode(Graph graph) {
+    public static String encode(final Graph graph) {
         try {
-            String json = GSON.toJson(graphToJson(graph));
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try (GZIPOutputStream gzip = new GZIPOutputStream(baos);
-                OutputStreamWriter writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8)) {
+            final String json = GSON.toJson(graphToJson(graph));
+            final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (final GZIPOutputStream gzip = new GZIPOutputStream(baos);
+                final OutputStreamWriter writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8)) {
                 writer.write(json);
             }
             return Base64.getEncoder()
                 .encodeToString(baos.toByteArray());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new RuntimeException("Failed to encode flowchart", e);
         }
     }
 
     /** Decodes a compressed base64 string back to a Graph. */
-    public static Graph decode(String data) {
+    public static Graph decode(final String data) {
         try {
-            byte[] bytes = Base64.getDecoder()
+            final byte[] bytes = Base64.getDecoder()
                 .decode(data);
-            ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-            StringBuilder json = new StringBuilder();
-            try (GZIPInputStream gzip = new GZIPInputStream(bais);
-                InputStreamReader reader = new InputStreamReader(gzip, StandardCharsets.UTF_8)) {
-                char[] buf = new char[4096];
+            final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+            final StringBuilder json = new StringBuilder();
+            try (final GZIPInputStream gzip = new GZIPInputStream(bais);
+                final InputStreamReader reader = new InputStreamReader(gzip, StandardCharsets.UTF_8)) {
+                final char[] buf = new char[4096];
                 int len;
                 while ((len = reader.read(buf)) != -1) {
                     json.append(buf, 0, len);
                 }
             }
-            JsonObject root = GSON.fromJson(json.toString(), JsonObject.class);
+            final JsonObject root = GSON.fromJson(json.toString(), JsonObject.class);
             return jsonToGraph(root);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new RuntimeException("Failed to decode flowchart", e);
         }
     }
@@ -80,15 +80,15 @@ public class Serializer {
     // ── SlotSet serialization ──
 
     /** Encodes a SlotSet (with all its graphs) to a JSON string. */
-    public static String encode(SlotSet set) {
-        JsonObject root = new JsonObject();
+    public static String encode(final SlotSet set) {
+        final JsonObject root = new JsonObject();
         root.addProperty("active", set.activeSlot);
         root.addProperty("summaryX", set.summaryX);
         root.addProperty("summaryY", set.summaryY);
         root.addProperty("summaryCollapsed", set.summaryCollapsed);
-        JsonArray arr = new JsonArray();
-        for (SlotSet.Slot slot : set.slots) {
-            JsonObject slotObj = new JsonObject();
+        final JsonArray arr = new JsonArray();
+        for (final SlotSet.Slot slot : set.slots) {
+            final JsonObject slotObj = new JsonObject();
             slotObj.addProperty("name", slot.name);
             slotObj.addProperty("data", encode(slot.graph));
             arr.add(slotObj);
@@ -98,9 +98,9 @@ public class Serializer {
     }
 
     /** Decodes a SlotSet (with all its graphs) from a JSON string. */
-    public static SlotSet decodeSlotSet(String json) {
-        JsonObject root = GSON.fromJson(json, JsonObject.class);
-        SlotSet set = new SlotSet();
+    public static SlotSet decodeSlotSet(final String json) {
+        final JsonObject root = GSON.fromJson(json, JsonObject.class);
+        final SlotSet set = new SlotSet();
         set.activeSlot = root.get("active")
             .getAsInt();
         set.summaryX = root.has("summaryX") ? root.get("summaryX")
@@ -109,28 +109,28 @@ public class Serializer {
             .getAsInt() : 46;
         set.summaryCollapsed = root.has("summaryCollapsed") && root.get("summaryCollapsed")
             .getAsBoolean();
-        JsonArray arr = root.getAsJsonArray("slots");
-        for (JsonElement elem : arr) {
-            JsonObject obj = elem.getAsJsonObject();
-            String name = obj.get("name")
+        final JsonArray arr = root.getAsJsonArray("slots");
+        for (final JsonElement elem : arr) {
+            final JsonObject obj = elem.getAsJsonObject();
+            final String name = obj.get("name")
                 .getAsString();
-            String data = obj.get("data")
+            final String data = obj.get("data")
                 .getAsString();
-            Graph graph = decode(data);
+            final Graph graph = decode(data);
             set.slots.add(new SlotSet.Slot(name, graph));
         }
         return set;
     }
 
     /** Renders a graph as a Mermaid.js flowchart (LR layout). */
-    public static String toMermaid(Graph graph) {
-        StringBuilder sb = new StringBuilder();
+    public static String toMermaid(final Graph graph) {
+        final StringBuilder sb = new StringBuilder();
         sb.append("flowchart LR\n");
 
         // Map UUIDs to short mermaid-safe IDs
-        for (Node node : graph.getNodes()) {
-            String id = mermaidId(node.id);
-            String label = node.machineName.isEmpty() ? "?" : node.machineName;
+        for (final Node node : graph.getNodes()) {
+            final String id = mermaidId(node.id);
+            final String label = node.machineName.isEmpty() ? "?" : node.machineName;
             sb.append("    ")
                 .append(id)
                 .append("[\"")
@@ -138,10 +138,10 @@ public class Serializer {
                 .append("\"]\n");
         }
 
-        for (Edge edge : graph.getEdges()) {
-            String srcId = mermaidId(edge.sourceNodeId);
-            String dstId = mermaidId(edge.targetNodeId);
-            String label = edgeLabel(graph, edge);
+        for (final Edge edge : graph.getEdges()) {
+            final String srcId = mermaidId(edge.sourceNodeId);
+            final String dstId = mermaidId(edge.targetNodeId);
+            final String label = edgeLabel(graph, edge);
             sb.append("    ")
                 .append(srcId)
                 .append(" -->");
@@ -155,7 +155,7 @@ public class Serializer {
                 .append("\n");
         }
 
-        for (Note note : graph.notes.values()) {
+        for (final Note note : graph.notes.values()) {
             sb.append("    %% Note: ")
                 .append(escapeMermaid(note.text))
                 .append("\n");
@@ -164,12 +164,12 @@ public class Serializer {
         return sb.toString();
     }
 
-    private static JsonObject graphToJson(Graph graph) {
-        JsonObject root = new JsonObject();
+    private static JsonObject graphToJson(final Graph graph) {
+        final JsonObject root = new JsonObject();
 
-        JsonArray nodesArray = new JsonArray();
-        for (Node node : graph.getNodes()) {
-            JsonObject obj = new JsonObject();
+        final JsonArray nodesArray = new JsonArray();
+        for (final Node node : graph.getNodes()) {
+            final JsonObject obj = new JsonObject();
             obj.addProperty("id", node.id.toString());
             obj.addProperty("x", node.x);
             obj.addProperty("y", node.y);
@@ -187,8 +187,8 @@ public class Serializer {
             }
 
             if (!node.properties.isEmpty()) {
-                JsonObject propsObj = new JsonObject();
-                for (Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
+                final JsonObject propsObj = new JsonObject();
+                for (final Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
                     serializeProperty(propsObj, entry.getKey(), entry.getValue());
                 }
                 obj.add("properties", propsObj);
@@ -198,9 +198,9 @@ public class Serializer {
         }
         root.add("nodes", nodesArray);
 
-        JsonArray edgesArray = new JsonArray();
-        for (Edge edge : graph.getEdges()) {
-            JsonObject obj = new JsonObject();
+        final JsonArray edgesArray = new JsonArray();
+        for (final Edge edge : graph.getEdges()) {
+            final JsonObject obj = new JsonObject();
             obj.addProperty("id", edge.id.toString());
             obj.addProperty("src", edge.sourceNodeId.toString());
             obj.addProperty("dst", edge.targetNodeId.toString());
@@ -210,9 +210,9 @@ public class Serializer {
         }
         root.add("edges", edgesArray);
 
-        JsonArray notesArray = new JsonArray();
-        for (Note note : graph.notes.values()) {
-            JsonObject obj = new JsonObject();
+        final JsonArray notesArray = new JsonArray();
+        for (final Note note : graph.notes.values()) {
+            final JsonObject obj = new JsonObject();
             obj.addProperty("id", note.id.toString());
             obj.addProperty("x", note.x);
             obj.addProperty("y", note.y);
@@ -221,9 +221,9 @@ public class Serializer {
         }
         root.add("notes", notesArray);
 
-        JsonArray groupsArray = new JsonArray();
-        for (Group group : graph.getGroups()) {
-            JsonObject obj = new JsonObject();
+        final JsonArray groupsArray = new JsonArray();
+        for (final Group group : graph.getGroups()) {
+            final JsonObject obj = new JsonObject();
             obj.addProperty("id", group.id.toString());
             obj.addProperty("title", group.title);
             obj.addProperty("x", group.x);
@@ -234,8 +234,8 @@ public class Serializer {
             if (group.colorOverride != 0) obj.addProperty("colorOverride", group.colorOverride);
             if (group.clampNodes) obj.addProperty("clampNodes", true);
             if (group.autoResize) obj.addProperty("autoResize", true);
-            JsonArray nodeIdsArray = new JsonArray();
-            for (UUID nid : group.nodeIds) {
+            final JsonArray nodeIdsArray = new JsonArray();
+            for (final UUID nid : group.nodeIds) {
                 nodeIdsArray.add(new com.google.gson.JsonPrimitive(nid.toString()));
             }
             obj.add("nodeIds", nodeIdsArray);
@@ -246,20 +246,20 @@ public class Serializer {
         return root;
     }
 
-    private static Graph jsonToGraph(JsonObject root) {
-        Graph graph = new Graph();
+    private static Graph jsonToGraph(final JsonObject root) {
+        final Graph graph = new Graph();
 
-        JsonArray nodesArray = root.getAsJsonArray("nodes");
-        for (JsonElement elem : nodesArray) {
-            JsonObject obj = elem.getAsJsonObject();
-            UUID id = UUID.fromString(
+        final JsonArray nodesArray = root.getAsJsonArray("nodes");
+        for (final JsonElement elem : nodesArray) {
+            final JsonObject obj = elem.getAsJsonObject();
+            final UUID id = UUID.fromString(
                 obj.get("id")
                     .getAsString());
-            int x = obj.get("x")
+            final int x = obj.get("x")
                 .getAsInt();
-            int y = obj.get("y")
+            final int y = obj.get("y")
                 .getAsInt();
-            Node node = new Node(id, x, y);
+            final Node node = new Node(id, x, y);
             node.machineName = obj.get("machine")
                 .getAsString();
             node.durationTicks = obj.get("ticks")
@@ -279,9 +279,9 @@ public class Serializer {
             }
 
             if (obj.has("properties")) {
-                JsonObject propsObj = obj.getAsJsonObject("properties");
-                for (RecipeProperty<?> prop : RecipePropertyAPI.getProperties()) {
-                    Object value = prop.deserialize(propsObj);
+                final JsonObject propsObj = obj.getAsJsonObject("properties");
+                for (final RecipeProperty<?> prop : RecipePropertyAPI.getProperties()) {
+                    final Object value = prop.deserialize(propsObj);
                     if (value != null && !value.equals(prop.getDefaultValue())) {
                         setProperty(node.properties, prop, value);
                     }
@@ -291,37 +291,37 @@ public class Serializer {
             graph.addNode(node);
         }
 
-        JsonArray edgesArray = root.getAsJsonArray("edges");
-        for (JsonElement elem : edgesArray) {
-            JsonObject obj = elem.getAsJsonObject();
-            UUID id = UUID.fromString(
+        final JsonArray edgesArray = root.getAsJsonArray("edges");
+        for (final JsonElement elem : edgesArray) {
+            final JsonObject obj = elem.getAsJsonObject();
+            final UUID id = UUID.fromString(
                 obj.get("id")
                     .getAsString());
-            UUID src = UUID.fromString(
+            final UUID src = UUID.fromString(
                 obj.get("src")
                     .getAsString());
-            UUID dst = UUID.fromString(
+            final UUID dst = UUID.fromString(
                 obj.get("dst")
                     .getAsString());
-            int srcOut = obj.get("srcOut")
+            final int srcOut = obj.get("srcOut")
                 .getAsInt();
-            int dstIn = obj.get("dstIn")
+            final int dstIn = obj.get("dstIn")
                 .getAsInt();
             graph.addEdge(new Edge(id, src, dst, srcOut, dstIn));
         }
 
         if (root.has("notes")) {
-            JsonArray notesArray = root.getAsJsonArray("notes");
-            for (JsonElement elem : notesArray) {
-                JsonObject obj = elem.getAsJsonObject();
-                UUID id = UUID.fromString(
+            final JsonArray notesArray = root.getAsJsonArray("notes");
+            for (final JsonElement elem : notesArray) {
+                final JsonObject obj = elem.getAsJsonObject();
+                final UUID id = UUID.fromString(
                     obj.get("id")
                         .getAsString());
-                int x = obj.get("x")
+                final int x = obj.get("x")
                     .getAsInt();
-                int y = obj.get("y")
+                final int y = obj.get("y")
                     .getAsInt();
-                Note note = new Note(id, x, y);
+                final Note note = new Note(id, x, y);
                 if (obj.has("text")) note.text = obj.get("text")
                     .getAsString();
                 graph.notes.put(id, note);
@@ -329,25 +329,25 @@ public class Serializer {
         }
 
         if (root.has("groups")) {
-            JsonArray groupsArray = root.getAsJsonArray("groups");
-            for (JsonElement elem : groupsArray) {
-                JsonObject obj = elem.getAsJsonObject();
-                UUID id = UUID.fromString(
+            final JsonArray groupsArray = root.getAsJsonArray("groups");
+            for (final JsonElement elem : groupsArray) {
+                final JsonObject obj = elem.getAsJsonObject();
+                final UUID id = UUID.fromString(
                     obj.get("id")
                         .getAsString());
-                String title = obj.get("title")
+                final String title = obj.get("title")
                     .getAsString();
-                int x = obj.get("x")
+                final int x = obj.get("x")
                     .getAsInt();
-                int y = obj.get("y")
+                final int y = obj.get("y")
                     .getAsInt();
-                int w = obj.get("width")
+                final int w = obj.get("width")
                     .getAsInt();
-                int h = obj.get("height")
+                final int h = obj.get("height")
                     .getAsInt();
-                boolean collapsed = obj.has("collapsed") && obj.get("collapsed")
+                final boolean collapsed = obj.has("collapsed") && obj.get("collapsed")
                     .getAsBoolean();
-                Group group = new Group(id, x, y, w, h, title);
+                final Group group = new Group(id, x, y, w, h, title);
                 group.collapsed = collapsed;
                 if (obj.has("colorOverride")) group.colorOverride = obj.get("colorOverride")
                     .getAsInt();
@@ -356,8 +356,8 @@ public class Serializer {
                 if (obj.has("autoResize")) group.autoResize = obj.get("autoResize")
                     .getAsBoolean();
                 if (obj.has("nodeIds")) {
-                    JsonArray nodeIdsArray = obj.getAsJsonArray("nodeIds");
-                    for (JsonElement nidElem : nodeIdsArray) {
+                    final JsonArray nodeIdsArray = obj.getAsJsonArray("nodeIds");
+                    for (final JsonElement nidElem : nodeIdsArray) {
                         group.nodeIds.add(UUID.fromString(nidElem.getAsString()));
                     }
                 }
@@ -370,12 +370,12 @@ public class Serializer {
 
     // ── Item / Fluid stack helpers ──
 
-    private static JsonArray itemStackArrayToJson(List<ObjectFloatImmutablePair<ItemStack>> stacks) {
-        JsonArray arr = new JsonArray();
-        for (var pair : stacks) {
+    private static JsonArray itemStackArrayToJson(final List<ObjectFloatImmutablePair<ItemStack>> stacks) {
+        final JsonArray arr = new JsonArray();
+        for (final var pair : stacks) {
             if (pair.left() == null) continue;
-            ItemStack stack = pair.left();
-            JsonObject obj = new JsonObject();
+            final ItemStack stack = pair.left();
+            final JsonObject obj = new JsonObject();
             obj.addProperty("id", net.minecraft.item.Item.itemRegistry.getNameForObject(stack.getItem()));
             obj.addProperty("size", stack.stackSize);
             obj.addProperty("meta", stack.getItemDamage());
@@ -391,16 +391,17 @@ public class Serializer {
         return arr;
     }
 
-    private static void jsonArrayToItemStacks(JsonArray arr, List<ObjectFloatImmutablePair<ItemStack>> out) {
-        for (JsonElement elem : arr) {
-            JsonObject obj = elem.getAsJsonObject();
-            String itemId = obj.get("id")
+    private static void jsonArrayToItemStacks(final JsonArray arr,
+        final List<ObjectFloatImmutablePair<ItemStack>> out) {
+        for (final JsonElement elem : arr) {
+            final JsonObject obj = elem.getAsJsonObject();
+            final String itemId = obj.get("id")
                 .getAsString();
-            int size = obj.get("size")
+            final int size = obj.get("size")
                 .getAsInt();
-            int meta = obj.get("meta")
+            final int meta = obj.get("meta")
                 .getAsInt();
-            ItemStack stack = new ItemStack(
+            final ItemStack stack = new ItemStack(
                 (net.minecraft.item.Item) net.minecraft.item.Item.itemRegistry.getObject(itemId),
                 size,
                 meta);
@@ -410,7 +411,7 @@ public class Serializer {
                         (net.minecraft.nbt.NBTTagCompound) net.minecraft.nbt.JsonToNBT.func_150315_a(
                             obj.get("nbt")
                                 .getAsString()));
-                } catch (net.minecraft.nbt.NBTException ignored) {}
+                } catch (final net.minecraft.nbt.NBTException ignored) {}
             }
             out.add(
                 new ObjectFloatImmutablePair<>(
@@ -420,12 +421,12 @@ public class Serializer {
         }
     }
 
-    private static JsonArray fluidStackArrayToJson(List<ObjectFloatImmutablePair<FluidStack>> fluids) {
-        JsonArray arr = new JsonArray();
-        for (var pair : fluids) {
-            FluidStack fs = pair.left();
+    private static JsonArray fluidStackArrayToJson(final List<ObjectFloatImmutablePair<FluidStack>> fluids) {
+        final JsonArray arr = new JsonArray();
+        for (final var pair : fluids) {
+            final FluidStack fs = pair.left();
             if (fs == null || fs.getFluid() == null) continue;
-            JsonObject obj = new JsonObject();
+            final JsonObject obj = new JsonObject();
             obj.addProperty("fluid", FluidRegistry.getFluidName(fs.getFluid()));
             obj.addProperty("amount", fs.amount);
             obj.addProperty("chance", pair.rightFloat());
@@ -434,14 +435,15 @@ public class Serializer {
         return arr;
     }
 
-    private static void jsonArrayToFluidStacks(JsonArray arr, List<ObjectFloatImmutablePair<FluidStack>> out) {
-        for (JsonElement elem : arr) {
-            JsonObject obj = elem.getAsJsonObject();
-            String name = obj.get("fluid")
+    private static void jsonArrayToFluidStacks(final JsonArray arr,
+        final List<ObjectFloatImmutablePair<FluidStack>> out) {
+        for (final JsonElement elem : arr) {
+            final JsonObject obj = elem.getAsJsonObject();
+            final String name = obj.get("fluid")
                 .getAsString();
-            int amount = obj.get("amount")
+            final int amount = obj.get("amount")
                 .getAsInt();
-            FluidStack fs = FluidRegistry.getFluidStack(name, amount);
+            final FluidStack fs = FluidRegistry.getFluidStack(name, amount);
             if (fs != null) out.add(
                 new ObjectFloatImmutablePair<>(
                     fs,
@@ -452,9 +454,9 @@ public class Serializer {
 
     // ── Machine config ──
 
-    private static JsonObject machineConfigToJson(MachineConfig cfg) {
-        JsonObject obj = new JsonObject();
-        MachineProfile profile = cfg.getProfile();
+    private static JsonObject machineConfigToJson(final MachineConfig cfg) {
+        final JsonObject obj = new JsonObject();
+        final MachineProfile profile = cfg.getProfile();
 
         if (!MachineProfileRegistry.defaultId()
             .equals(cfg.profileId)) {
@@ -462,14 +464,14 @@ public class Serializer {
         }
 
         if (profile != null) {
-            JsonObject settingsObj = new JsonObject();
-            for (SettingDef<?> def : profile.settings()) {
-                Object val = cfg.settings.get(def.key);
+            final JsonObject settingsObj = new JsonObject();
+            for (final SettingDef<?> def : profile.settings()) {
+                final Object val = cfg.settings.get(def.key);
                 if (val == null) continue;
                 if (val.equals(def.defaultValue)) continue;
-                if (val instanceof Boolean b) settingsObj.addProperty(def.key, b);
-                else if (val instanceof Integer i) settingsObj.addProperty(def.key, i);
-                else if (val instanceof String s) settingsObj.addProperty(def.key, s);
+                if (val instanceof final Boolean b) settingsObj.addProperty(def.key, b);
+                else if (val instanceof final Integer i) settingsObj.addProperty(def.key, i);
+                else if (val instanceof final String s) settingsObj.addProperty(def.key, s);
             }
             if (!settingsObj.entrySet()
                 .isEmpty()) obj.add("settings", settingsObj);
@@ -485,16 +487,16 @@ public class Serializer {
         return obj;
     }
 
-    private static void jsonToMachineConfig(JsonObject obj, MachineConfig cfg) {
+    private static void jsonToMachineConfig(final JsonObject obj, final MachineConfig cfg) {
         if (obj.has("profile")) {
             cfg.profileId = obj.get("profile")
                 .getAsString();
             if (obj.has("settings")) {
-                JsonObject settingsObj = obj.getAsJsonObject("settings");
-                for (Map.Entry<String, JsonElement> entry : settingsObj.entrySet()) {
-                    JsonElement el = entry.getValue();
+                final JsonObject settingsObj = obj.getAsJsonObject("settings");
+                for (final Map.Entry<String, JsonElement> entry : settingsObj.entrySet()) {
+                    final JsonElement el = entry.getValue();
                     if (el.isJsonPrimitive()) {
-                        var prim = el.getAsJsonPrimitive();
+                        final var prim = el.getAsJsonPrimitive();
                         if (prim.isBoolean()) cfg.settings.put(entry.getKey(), prim.getAsBoolean());
                         else if (prim.isNumber()) cfg.settings.put(entry.getKey(), prim.getAsInt());
                         else cfg.settings.put(entry.getKey(), prim.getAsString());
@@ -515,10 +517,10 @@ public class Serializer {
 
     // ── Multiplier helpers ──
 
-    private static JsonArray multiplierArrayToJson(Map<Integer, Float> map) {
-        JsonArray arr = new JsonArray();
-        for (Map.Entry<Integer, Float> e : map.entrySet()) {
-            JsonObject entry = new JsonObject();
+    private static JsonArray multiplierArrayToJson(final Map<Integer, Float> map) {
+        final JsonArray arr = new JsonArray();
+        for (final Map.Entry<Integer, Float> e : map.entrySet()) {
+            final JsonObject entry = new JsonObject();
             entry.addProperty("index", e.getKey());
             entry.addProperty("multiplier", e.getValue());
             arr.add(entry);
@@ -526,9 +528,9 @@ public class Serializer {
         return arr;
     }
 
-    private static void jsonToMultiplierArray(JsonArray arr, Map<Integer, Float> out) {
-        for (JsonElement elem : arr) {
-            JsonObject entry = elem.getAsJsonObject();
+    private static void jsonToMultiplierArray(final JsonArray arr, final Map<Integer, Float> out) {
+        for (final JsonElement elem : arr) {
+            final JsonObject entry = elem.getAsJsonObject();
             out.put(
                 entry.get("index")
                     .getAsInt(),
@@ -540,42 +542,43 @@ public class Serializer {
     // ── Recipe property helpers ──
 
     @SuppressWarnings("unchecked")
-    private static <T> void serializeProperty(JsonObject obj, RecipeProperty<?> prop, Object value) {
+    private static <T> void serializeProperty(final JsonObject obj, final RecipeProperty<?> prop, final Object value) {
         ((RecipeProperty<T>) prop).serialize(obj, (T) value);
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void setProperty(ExtractedProperties props, RecipeProperty<?> prop, Object value) {
+    private static <T> void setProperty(final ExtractedProperties props, final RecipeProperty<?> prop,
+        final Object value) {
         props.set((RecipeProperty<T>) prop, (T) value);
     }
 
     // ── Mermaid helpers ──
 
-    private static String mermaidId(UUID uuid) {
+    private static String mermaidId(final UUID uuid) {
         return "n" + uuid.toString()
             .replace("-", "")
             .substring(0, 8);
     }
 
-    private static String escapeMermaid(String s) {
+    private static String escapeMermaid(final String s) {
         return s.replace("\"", "#quot;")
             .replace("\n", "<br/>");
     }
 
     @SuppressWarnings("unchecked")
-    private static String edgeLabel(Graph graph, Edge edge) {
-        Node src = graph.nodes.get(edge.sourceNodeId);
+    private static String edgeLabel(final Graph graph, final Edge edge) {
+        final Node src = graph.nodes.get(edge.sourceNodeId);
         if (src == null) return "";
 
-        int idx = edge.sourceOutputIndex;
+        final int idx = edge.sourceOutputIndex;
         if (idx < src.outputs.size()) {
-            ItemStack stack = src.outputs.get(idx)
+            final ItemStack stack = src.outputs.get(idx)
                 .left();
             if (stack != null) return stack.getDisplayName();
         }
-        int fluidIdx = idx - src.outputs.size();
+        final int fluidIdx = idx - src.outputs.size();
         if (fluidIdx >= 0 && fluidIdx < src.fluidOutputs.size()) {
-            FluidStack fs = src.fluidOutputs.get(fluidIdx)
+            final FluidStack fs = src.fluidOutputs.get(fluidIdx)
                 .left();
             if (fs != null && fs.getFluid() != null) return fs.getLocalizedName();
         }

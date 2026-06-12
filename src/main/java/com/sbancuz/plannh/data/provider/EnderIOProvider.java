@@ -53,35 +53,35 @@ public class EnderIOProvider implements PropertyProvider {
         try {
             f = MillRecipe.class.getDeclaredField("outputChance");
             f.setAccessible(true);
-        } catch (Exception ignored) {}
+        } catch (final Exception ignored) {}
         MILL_OUTPUT_CHANCE = f;
     }
 
     @Override
-    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!(handler instanceof TemplateRecipeHandler)) return null;
-        String overlay = handler.getOverlayIdentifier();
+        final String overlay = handler.getOverlayIdentifier();
         if (overlay != null && (overlay.startsWith("EnderIO") || overlay.equals("EIOEnchanter"))) return "enderio";
         return null;
     }
 
     @Override
-    public Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex) {
-        Map<RecipeProperty<?>, Object> props = new HashMap<>();
-        if (!(handler instanceof TemplateRecipeHandler trh)) return props;
+    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
+        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+        if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
 
-        List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
+        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
 
-        TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
+        final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
 
-        if (cached instanceof AlloySmelterRecipe r) {
+        if (cached instanceof final AlloySmelterRecipe r) {
             props.put(RF_TOTAL, r.getEnergy());
-        } else if (cached instanceof MillRecipe r) {
+        } else if (cached instanceof final MillRecipe r) {
             props.put(RF_TOTAL, r.getEnergy());
             if (MILL_OUTPUT_CHANCE != null) {
                 try {
-                    float[] chances = (float[]) MILL_OUTPUT_CHANCE.get(r);
+                    final float[] chances = (float[]) MILL_OUTPUT_CHANCE.get(r);
                     for (int i = 0; i < chances.length; i++) {
                         node.outputs.set(
                             i,
@@ -90,29 +90,30 @@ public class EnderIOProvider implements PropertyProvider {
                                     .left(),
                                 chances[i]));
                     }
-                } catch (Exception ignored) {}
+                } catch (final Exception ignored) {}
             }
-        } else if (cached instanceof SliceAndSpliceRecipe r) {
+        } else if (cached instanceof final SliceAndSpliceRecipe r) {
             props.put(RF_TOTAL, r.getEnergy());
-        } else if (cached instanceof SoulBinderRecipeNEI r) {
+        } else if (cached instanceof final SoulBinderRecipeNEI r) {
             props.put(RF_TOTAL, r.getEnergy());
             if (r.getExperience() > 0) props.put(EXPERIENCE, r.getExperience());
-        } else if (cached instanceof InnerVatRecipe r) {
+        } else if (cached instanceof final InnerVatRecipe r) {
             props.put(RF_TOTAL, r.getEnergy());
         }
 
         return props;
     }
 
-    private static MachineProfile.EffectResult enderIOEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        int rate = MachineProfile.getInt(s, Settings.RF_PER_TICK.key(), 80);
-        Integer totalEnergy = ctx.get(EnderIOProvider.RF_TOTAL);
+    private static MachineProfile.EffectResult enderIOEffect(final Map<String, Object> s,
+        final MachineProfile.RecipeContext ctx) {
+        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        final int rate = MachineProfile.getInt(s, Settings.RF_PER_TICK.key(), 80);
+        final Integer totalEnergy = ctx.get(EnderIOProvider.RF_TOTAL);
         int duration = ctx.recipeDuration();
         if (duration <= 0 && rate > 0 && totalEnergy != null && totalEnergy > 0) {
             duration = Math.max(1, totalEnergy / rate);
         }
-        long consumptionEUt = duration > 0 && totalEnergy != null ? totalEnergy / duration : 0;
+        final long consumptionEUt = duration > 0 && totalEnergy != null ? totalEnergy / duration : 0;
         return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
     }
 }

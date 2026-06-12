@@ -41,7 +41,7 @@ public class Node {
 
     public final ExtractedProperties properties = new ExtractedProperties();
 
-    public Node(IRecipeHandler handler, int recipeIndex, int x, int y) {
+    public Node(final IRecipeHandler handler, final int recipeIndex, final int x, final int y) {
         this.id = UUID.randomUUID();
         this.x = x;
         this.y = y;
@@ -52,42 +52,42 @@ public class Node {
         this.inputs = new ArrayList<>();
         this.outputs = new ArrayList<>();
 
-        List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
-        for (PositionedStack ps : ins) {
+        final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
+        for (final PositionedStack ps : ins) {
             if (ps != null && ps.item != null && ps.item.stackSize > 0) {
                 this.inputs.add(new ObjectFloatImmutablePair<>(ps.item.copy(), 1.f));
             }
         }
 
-        PositionedStack result = handler.getResultStack(recipeIndex);
+        final PositionedStack result = handler.getResultStack(recipeIndex);
         if (result != null && result.item != null) {
             this.outputs.add(new ObjectFloatImmutablePair<>(result.item.copy(), 1.f));
         }
-        List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
-        for (PositionedStack ps : others) {
+        final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
+        for (final PositionedStack ps : others) {
             if (ps != null && ps.item != null && TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
                 this.outputs.add(new ObjectFloatImmutablePair<>(ps.item.copy(), 1.f));
             }
         }
 
-        for (PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
+        for (final PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
             try {
-                Map<RecipeProperty<?>, Object> props = ex.extract(this, handler, recipeIndex);
+                final Map<RecipeProperty<?>, Object> props = ex.extract(this, handler, recipeIndex);
                 if (props != null && !props.isEmpty()) {
                     this.properties.putAll(props);
                 }
-            } catch (Exception ignored) {}
+            } catch (final Exception ignored) {}
         }
 
-        for (PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
+        for (final PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
             try {
-                String pid = ex.getProfileId(handler, recipeIndex);
+                final String pid = ex.getProfileId(handler, recipeIndex);
                 if (pid != null && !MachineProfileRegistry.defaultId()
                     .equals(pid)) {
                     this.machineConfig.profileId = pid;
                     break;
                 }
-            } catch (Exception ignored) {}
+            } catch (final Exception ignored) {}
         }
         this.machineConfig.initDefaults();
 
@@ -97,7 +97,7 @@ public class Node {
     /**
      * To be used only for serialization/deserialization
      */
-    public Node(UUID id, int x, int y) {
+    public Node(final UUID id, final int x, final int y) {
         this.id = id;
         this.x = x;
         this.y = y;

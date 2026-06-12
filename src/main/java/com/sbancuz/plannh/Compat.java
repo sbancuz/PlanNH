@@ -27,13 +27,13 @@ public enum Compat {
     private PropertyProvider extractor;
     private final Class<? extends PropertyProvider> providerFactory;
 
-    Compat(String modid, Class<? extends PropertyProvider> providerFactory) {
+    Compat(final String modid, final Class<? extends PropertyProvider> providerFactory) {
         this.modid = modid;
         this.isLoaded = Loader.isModLoaded(modid);
         this.providerFactory = providerFactory;
     }
 
-    private static <T extends PropertyProvider> PropertyProvider create(Class<T> clazz) {
+    private static <T extends PropertyProvider> PropertyProvider create(final Class<T> clazz) {
         try {
             return clazz.getDeclaredConstructor()
                 .newInstance();
@@ -42,7 +42,7 @@ public enum Compat {
     }
 
     public static void init() {
-        for (Compat mod : values()) {
+        for (final Compat mod : values()) {
             if (mod.isLoaded) {
                 mod.extractor = create(mod.providerFactory);
                 if (mod.extractor != null) {

@@ -51,7 +51,7 @@ public class GTProvider implements PropertyProvider {
         RecipePropertyAPI.registerProperty(SIEVERT_EXACT);
         RecipePropertyAPI.registerProperty(MASS);
 
-        for (MachineProfile p : PROFILES) {
+        for (final MachineProfile p : PROFILES) {
             MachineProfileRegistry.register(p);
         }
     }
@@ -129,18 +129,18 @@ public class GTProvider implements PropertyProvider {
 
         String match(String overlayId);
 
-        static ProfileMatcher keyword(String profileId, String... keywords) {
+        static ProfileMatcher keyword(final String profileId, final String... keywords) {
             return id -> {
-                for (String kw : keywords) {
+                for (final String kw : keywords) {
                     if (id.contains(kw)) return profileId;
                 }
                 return null;
             };
         }
 
-        static ProfileMatcher exact(String profileId, String... exacts) {
+        static ProfileMatcher exact(final String profileId, final String... exacts) {
             return id -> {
-                for (String ex : exacts) {
+                for (final String ex : exacts) {
                     if (id.equals(ex)) return profileId;
                 }
                 return null;
@@ -195,61 +195,61 @@ public class GTProvider implements PropertyProvider {
         ProfileMatcher.keyword("tectech:eyeofharmony", "eyeofharmony"));
 
     @Override
-    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
-        if (handler instanceof FurnaceRecipeHandler fh) {
-            List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(fh);
+    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
+        if (handler instanceof final FurnaceRecipeHandler fh) {
+            final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(fh);
             if (recipeIndex < 0 || recipeIndex >= recipes.size()) return null;
-            TemplateRecipeHandler.CachedRecipe recipe = recipes.get(recipeIndex);
+            final TemplateRecipeHandler.CachedRecipe recipe = recipes.get(recipeIndex);
             if (recipe == null) return null;
             return "gregtech:basic";
         }
-        if (!(handler instanceof GTNEIDefaultHandler gth)) return null;
-        List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
+        if (!(handler instanceof final GTNEIDefaultHandler gth)) return null;
+        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return null;
-        CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
-        GTRecipe r = cached.mRecipe;
+        final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
+        final GTRecipe r = cached.mRecipe;
         if (r == null) return null;
 
-        String id = gth.getOverlayIdentifier();
+        final String id = gth.getOverlayIdentifier();
         if (id == null) return "gregtech:basic";
-        for (ProfileMatcher m : PROFILE_MATCHERS) {
-            String p = m.match(id);
+        for (final ProfileMatcher m : PROFILE_MATCHERS) {
+            final String p = m.match(id);
             if (p != null) return p;
         }
         return "gregtech:basic";
     }
 
     @Override
-    public Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex) {
-        Map<RecipeProperty<?>, Object> props = new HashMap<>();
-        if (!(handler instanceof GTNEIDefaultHandler gth)) return props;
+    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
+        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+        if (!(handler instanceof final GTNEIDefaultHandler gth)) return props;
 
-        List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
+        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
 
-        CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
-        GTRecipe r = cached.mRecipe;
+        final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
+        final GTRecipe r = cached.mRecipe;
         if (r == null) return props;
 
-        int duration = r.mDuration;
-        int eut = r.mEUt;
+        final int duration = r.mDuration;
+        final int eut = r.mEUt;
 
         props.put(RecipePropertyAPI.DURATION_TICKS, duration);
         props.put(RecipePropertyAPI.EU_PER_TICK, (long) eut);
         props.put(RecipePropertyAPI.TOTAL_EU, (long) eut * duration);
 
-        int glassTier = r.getMetadataOrDefault(GTRecipeConstants.GLASS, 3);
+        final int glassTier = r.getMetadataOrDefault(GTRecipeConstants.GLASS, 3);
         if (glassTier != 3) {
             props.put(GLASS_TIER, glassTier);
         }
 
-        Sievert sievert = r.getMetadataOrDefault(GTRecipeConstants.SIEVERT, new Sievert(0, false));
+        final Sievert sievert = r.getMetadataOrDefault(GTRecipeConstants.SIEVERT, new Sievert(0, false));
         if (sievert.sievert > 0 || sievert.isExact) {
             props.put(SIEVERT, sievert.sievert);
             if (sievert.isExact) props.put(SIEVERT_EXACT, true);
         }
 
-        int mass = r.getMetadataOrDefault(GTRecipeConstants.MASS, 0);
+        final int mass = r.getMetadataOrDefault(GTRecipeConstants.MASS, 0);
         if (mass > 0) {
             props.put(MASS, mass);
         }
@@ -328,9 +328,10 @@ public class GTProvider implements PropertyProvider {
         }
 
         @Override
-        public MachineProfile.EffectResult compute(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-            int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
-            int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        public MachineProfile.EffectResult compute(final Map<String, Object> s,
+            final MachineProfile.RecipeContext ctx) {
+            final int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
+            final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
 
             if (ctx.recipeEUt() <= 0 || ctx.recipeDuration() <= 0
                 || MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF")
@@ -338,20 +339,20 @@ public class GTProvider implements PropertyProvider {
                 return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), parallels * machines);
             }
 
-            OverclockCalculator calc = buildGtCalc(s, ctx);
+            final OverclockCalculator calc = buildGtCalc(s, ctx);
 
             if (forcePerfectOC) calc.enablePerfectOC();
             if (forceLaserOC) calc.setLaserOC(true);
 
             if (forceHeat) {
-                int machineHeat = MachineProfile.getInt(s, Settings.MACHINE_HEAT.key(), 0);
+                final int machineHeat = MachineProfile.getInt(s, Settings.MACHINE_HEAT.key(), 0);
                 if (MachineProfile.getBool(s, Settings.HEAT_OC.key(), true) && machineHeat > 0) {
-                    int recipeHeat = MachineProfile.getInt(s, Settings.RECIPE_HEAT.key(), 0);
+                    final int recipeHeat = MachineProfile.getInt(s, Settings.RECIPE_HEAT.key(), 0);
                     calc.setHeatOC(true)
                         .setRecipeHeat(recipeHeat > 0 ? recipeHeat : machineHeat)
                         .setMachineHeat(machineHeat);
                     if (MachineProfile.getBool(s, Settings.HEAT_DISCOUNT.key(), false)) calc.setHeatDiscount(true);
-                    int hdMult = MachineProfile.getInt(s, Settings.HEAT_DISCOUNT_MULT.key(), 100);
+                    final int hdMult = MachineProfile.getInt(s, Settings.HEAT_DISCOUNT_MULT.key(), 100);
                     if (hdMult != 100) calc.setHeatDiscountMultiplier(hdMult / 100.0);
                 }
             }
@@ -363,13 +364,15 @@ public class GTProvider implements PropertyProvider {
 
     // ── GT helpers ──
 
-    private static OverclockCalculator buildGtCalc(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        long voltage = MachineProfile.tierNameToVoltage(MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF"));
-        long amp = MachineProfile.getInt(s, Settings.AMP.key(), 1);
-        int speed = MachineProfile.getInt(s, Settings.SPEED.key(), 100);
-        int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
+    private static OverclockCalculator buildGtCalc(final Map<String, Object> s,
+        final MachineProfile.RecipeContext ctx) {
+        final long voltage = MachineProfile
+            .tierNameToVoltage(MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF"));
+        final long amp = MachineProfile.getInt(s, Settings.AMP.key(), 1);
+        final int speed = MachineProfile.getInt(s, Settings.SPEED.key(), 100);
+        final int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
 
-        OverclockCalculator calc = new OverclockCalculator().setRecipeEUt(ctx.recipeEUt())
+        final OverclockCalculator calc = new OverclockCalculator().setRecipeEUt(ctx.recipeEUt())
             .setEUt(voltage)
             .setDuration(ctx.recipeDuration())
             .setAmperage(amp)
@@ -381,22 +384,22 @@ public class GTProvider implements PropertyProvider {
         if (MachineProfile.getBool(s, Settings.LASER_OC.key(), false)) calc.setLaserOC(true);
         if (MachineProfile.getBool(s, Settings.NO_OVERCLOCK.key(), false)) calc.setNoOverclock(true);
 
-        int eutDisc = MachineProfile.getInt(s, Settings.EUT_DISCOUNT.key(), 0);
+        final int eutDisc = MachineProfile.getInt(s, Settings.EUT_DISCOUNT.key(), 0);
         if (eutDisc > 0) calc.setEUtDiscount(eutDisc / 100.0);
 
-        int ocMult = MachineProfile.getInt(s, Settings.EUT_INCREASE_PER_OC.key(), 400);
+        final int ocMult = MachineProfile.getInt(s, Settings.EUT_INCREASE_PER_OC.key(), 400);
         if (ocMult != 400) calc.setEUtIncreasePerOC(ocMult / 100.0);
 
-        int durMult = MachineProfile.getInt(s, Settings.DURATION_DECREASE_PER_OC.key(), 200);
+        final int durMult = MachineProfile.getInt(s, Settings.DURATION_DECREASE_PER_OC.key(), 200);
         if (durMult != 200) calc.setDurationDecreasePerOC(durMult / 100.0);
 
-        int maxOc = MachineProfile.getInt(s, Settings.MAX_OVERCLOCKS.key(), 0);
+        final int maxOc = MachineProfile.getInt(s, Settings.MAX_OVERCLOCKS.key(), 0);
         if (maxOc > 0) calc.setMaxOverclocks(maxOc);
 
-        int maxReg = MachineProfile.getInt(s, Settings.MAX_REGULAR_OC.key(), 0);
+        final int maxReg = MachineProfile.getInt(s, Settings.MAX_REGULAR_OC.key(), 0);
         if (maxReg > 0) calc.setMaxRegularOverclocks(maxReg);
 
-        int skips = MachineProfile.getInt(s, Settings.MAX_TIER_SKIPS.key(), 0);
+        final int skips = MachineProfile.getInt(s, Settings.MAX_TIER_SKIPS.key(), 0);
         if (skips > 0) calc.setMaxTierSkips(skips);
 
         if (MachineProfile.getBool(s, Settings.UNLIMITED_SKIPS.key(), false)) calc.setUnlimitedTierSkips();

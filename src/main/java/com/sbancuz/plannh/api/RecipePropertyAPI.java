@@ -7,7 +7,8 @@ import java.util.List;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
 
-public class RecipePropertyAPI {
+public enum RecipePropertyAPI {
+    ;
 
     private static final List<RecipeProperty<?>> properties = new ArrayList<>();
     private static final List<PropertyProvider> extractors = new ArrayList<>();
@@ -24,11 +25,11 @@ public class RecipePropertyAPI {
         registerProperty(EU_PER_TICK);
     }
 
-    public static void registerProperty(RecipeProperty<?> property) {
+    public static void registerProperty(final RecipeProperty<?> property) {
         properties.add(property);
     }
 
-    public static void registerExtractor(PropertyProvider extractor) {
+    public static void registerExtractor(final PropertyProvider extractor) {
         extractors.add(extractor);
     }
 

@@ -14,11 +14,11 @@ public interface PropertyProvider {
 
     Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex);
 
-    default String getProfileId(IRecipeHandler handler, int recipeIndex) {
+    default String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         return null;
     }
 
-    default boolean canCraft(IRecipeHandler handler, int recipeIndex) {
+    default boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
         return true;
     }
 }

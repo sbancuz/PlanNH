@@ -12,21 +12,21 @@ public class Graph {
     public final Map<UUID, Note> notes = new HashMap<>();
     public final Map<UUID, Group> groups = new HashMap<>();
 
-    public void addNode(Node node) {
+    public void addNode(final Node node) {
         nodes.put(node.id, node);
     }
 
-    public void removeNode(UUID id) {
+    public void removeNode(final UUID id) {
         nodes.remove(id);
         edges.values()
             .removeIf(e -> e.sourceNodeId.equals(id) || e.targetNodeId.equals(id));
     }
 
-    public void addEdge(Edge edge) {
+    public void addEdge(final Edge edge) {
         edges.put(edge.id, edge);
     }
 
-    public void removeEdge(UUID id) {
+    public void removeEdge(final UUID id) {
         edges.remove(id);
     }
 
@@ -42,11 +42,11 @@ public class Graph {
         return edges.values();
     }
 
-    public void addGroup(Group group) {
+    public void addGroup(final Group group) {
         groups.put(group.id, group);
     }
 
-    public void removeGroup(UUID id) {
+    public void removeGroup(final UUID id) {
         groups.remove(id);
     }
 

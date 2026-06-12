@@ -21,7 +21,7 @@ public class ClientProxy extends CommonProxy {
     private static KeyBinding openFlowchartKey;
 
     @Override
-    public void init(FMLInitializationEvent event) {
+    public void init(final FMLInitializationEvent event) {
         super.init(event);
 
         Compat.init();
@@ -36,12 +36,12 @@ public class ClientProxy extends CommonProxy {
     }
 
     @SubscribeEvent
-    public void onKeyInput(InputEvent.KeyInputEvent event) {
+    public void onKeyInput(final InputEvent.KeyInputEvent event) {
         if (openFlowchartKey != null && openFlowchartKey.isPressed()) {
-            ModularContainer container = new ModularContainer();
+            final ModularContainer container = new ModularContainer();
             container.constructClientOnly();
-            FlowchartScreen screen = FlowchartScreen.create();
-            FlowchartGuiContainer wrapper = new FlowchartGuiContainer(container, screen);
+            final FlowchartScreen screen = FlowchartScreen.create();
+            final FlowchartGuiContainer wrapper = new FlowchartGuiContainer(container, screen);
             Minecraft.getMinecraft()
                 .displayGuiScreen(wrapper);
         }

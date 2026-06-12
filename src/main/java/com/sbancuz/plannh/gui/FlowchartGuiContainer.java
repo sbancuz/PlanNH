@@ -6,7 +6,7 @@ import com.cleanroommc.modularui.screen.ModularScreen;
 
 public class FlowchartGuiContainer extends GuiContainerWrapper {
 
-    public FlowchartGuiContainer(ModularContainer container, ModularScreen screen) {
+    public FlowchartGuiContainer(final ModularContainer container, final ModularScreen screen) {
         super(container, screen);
     }
 
@@ -17,7 +17,7 @@ public class FlowchartGuiContainer extends GuiContainerWrapper {
         super.initGui();
     }
 
-    public void applyNeiSizing(int width) {
+    public void applyNeiSizing(final int width) {
         this.xSize = width - 368;
         this.guiLeft = (width - this.xSize) / 2;
     }

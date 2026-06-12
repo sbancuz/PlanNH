@@ -32,25 +32,25 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     private boolean editing = false;
     private int cursorPos = 0;
 
-    public NoteWidget(Note note, CanvasWidget canvas) {
+    public NoteWidget(final Note note, final CanvasWidget canvas) {
         this.note = note;
         this.canvas = canvas;
-        float z = canvas.getZoom();
+        final float z = canvas.getZoom();
         size(Math.round(NOTE_W * z), Math.round(NOTE_H * z));
     }
 
-    public void syncTransform(float zoom, float panX, float panY) {
-        int sx = Math.round(note.x * zoom + panX);
-        int sy = Math.round(note.y * zoom + panY);
+    public void syncTransform(final float zoom, final float panX, final float panY) {
+        final int sx = Math.round(note.x * zoom + panX);
+        final int sy = Math.round(note.y * zoom + panY);
         pos(sx, sy);
         size(Math.round(NOTE_W * zoom), Math.round(NOTE_H * zoom));
     }
 
-    private int zq(float v) {
+    private int zq(final float v) {
         return GuiHelper.zq(v, canvas.getZoom());
     }
 
-    public void setEditing(boolean editing) {
+    public void setEditing(final boolean editing) {
         this.editing = editing;
         this.cursorPos = note.text.length();
         if (!editing) {
@@ -59,13 +59,13 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     }
 
     @Override
-    public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-        float z = canvas.getZoom();
-        int w = getArea().width;
-        int h = getArea().height;
+    public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
+        final float z = canvas.getZoom();
+        final int w = getArea().width;
+        final int h = getArea().height;
 
-        int bg = editing ? PlannhColors.NOTE_BG_EDITING.getColor() : PlannhColors.NOTE_BG.getColor();
-        int border = editing ? PlannhColors.NOTE_BORDER_EDIT.getColor() : PlannhColors.NOTE_BORDER.getColor();
+        final int bg = editing ? PlannhColors.NOTE_BG_EDITING.getColor() : PlannhColors.NOTE_BG.getColor();
+        final int border = editing ? PlannhColors.NOTE_BORDER_EDIT.getColor() : PlannhColors.NOTE_BORDER.getColor();
 
         GuiDraw.drawRect(0, 0, w, h, bg);
         GuiHelper.drawRectBorder(0, 0, w, h, 1, border);
@@ -78,11 +78,11 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
             PlannhColors.TEXT_WHITE.getColor());
 
         // Text
-        int pad = zq(4);
+        final int pad = zq(4);
         if (editing) {
-            String display = note.text.substring(0, Math.min(cursorPos, note.text.length()));
-            boolean blink = (Minecraft.getSystemTime() / 600) % 2 == 0;
-            String cursor = blink ? "|" : " ";
+            final String display = note.text.substring(0, Math.min(cursorPos, note.text.length()));
+            final boolean blink = (Minecraft.getSystemTime() / 600) % 2 == 0;
+            final String cursor = blink ? "|" : " ";
             GuiDraw.drawText(
                 display + cursor + note.text.substring(Math.min(cursorPos, note.text.length())),
                 pad,
@@ -102,10 +102,10 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     }
 
     @Override
-    public @NotNull Result onMousePressed(int mouseButton) {
+    public @NotNull Result onMousePressed(final int mouseButton) {
         if (mouseButton != 0) return Result.IGNORE;
-        int mx = getContext().getMouseX();
-        int my = getContext().getMouseY();
+        final int mx = getContext().getMouseX();
+        final int my = getContext().getMouseY();
 
         if (GuiHelper.isInsideCloseButton(mx, my, canvas.getZoom(), getArea().width, CLOSE_W, 0)) {
             canvas.removeNote(note.id);
@@ -126,17 +126,17 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     }
 
     @Override
-    public boolean onMouseRelease(int mouseButton) {
+    public boolean onMouseRelease(final int mouseButton) {
         dragging = false;
         return true;
     }
 
     @Override
-    public void onMouseDrag(int mouseButton, long timeSinceClick) {
+    public void onMouseDrag(final int mouseButton, final long timeSinceClick) {
         if (dragging && mouseButton == 0) {
-            int dx = getContext().getAbsMouseX() - dragStartMX;
-            int dy = getContext().getAbsMouseY() - dragStartMY;
-            float z = canvas.getZoom();
+            final int dx = getContext().getAbsMouseX() - dragStartMX;
+            final int dy = getContext().getAbsMouseY() - dragStartMY;
+            final float z = canvas.getZoom();
             note.x = noteStartX + Math.round(dx / z);
             note.y = noteStartY + Math.round(dy / z);
             syncTransform(z, canvas.getPanX(), canvas.getPanY());

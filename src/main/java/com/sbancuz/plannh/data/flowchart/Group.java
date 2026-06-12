@@ -16,7 +16,7 @@ public class Group {
     public boolean autoResize;
     public final List<UUID> nodeIds = new ArrayList<>();
 
-    public Group(UUID id, int x, int y, int width, int height, String title) {
+    public Group(final UUID id, final int x, final int y, final int width, final int height, final String title) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -25,11 +25,11 @@ public class Group {
         this.title = title;
     }
 
-    public Group(int x, int y, int width, int height, String title) {
+    public Group(final int x, final int y, final int width, final int height, final String title) {
         this(UUID.randomUUID(), x, y, width, height, title);
     }
 
-    public Group(int x, int y, String title) {
+    public Group(final int x, final int y, final String title) {
         this(x, y, 300, 200, title);
     }
 }

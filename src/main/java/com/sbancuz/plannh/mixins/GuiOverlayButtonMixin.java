@@ -18,17 +18,17 @@ import codechicken.nei.recipe.RecipeHandlerRef;
 public class GuiOverlayButtonMixin {
 
     @Inject(method = "drawItemOverlay", at = @At("HEAD"), cancellable = true, remap = false)
-    private void plannh$onDrawItemOverlay(CallbackInfo ci) {
-        GuiOverlayButton self = (GuiOverlayButton) (Object) this;
+    private void plannh$onDrawItemOverlay(final CallbackInfo ci) {
+        final GuiOverlayButton self = (GuiOverlayButton) (Object) this;
         if (self.firstGui instanceof FlowchartGuiContainer || isRecipeInGraph(self.handlerRef)) {
             ci.cancel();
         }
     }
 
-    private static boolean isRecipeInGraph(RecipeHandlerRef ref) {
-        Recipe.RecipeId currentId = Recipe.RecipeId.of(ref.handler, ref.recipeIndex);
-        Graph graph = PlanAPI.getActiveGraph();
-        for (Node node : graph.getNodes()) {
+    private static boolean isRecipeInGraph(final RecipeHandlerRef ref) {
+        final Recipe.RecipeId currentId = Recipe.RecipeId.of(ref.handler, ref.recipeIndex);
+        final Graph graph = PlanAPI.getActiveGraph();
+        for (final Node node : graph.getNodes()) {
             if (currentId.equals(node.recipeId)) {
                 return true;
             }

@@ -42,7 +42,7 @@ public class BotaniaProvider implements PropertyProvider {
     }
 
     @Override
-    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!handler.getClass()
             .getName()
             .startsWith("vazkii.botania")) return null;
@@ -50,23 +50,23 @@ public class BotaniaProvider implements PropertyProvider {
     }
 
     @Override
-    public Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex) {
-        Map<RecipeProperty<?>, Object> props = new HashMap<>();
-        if (!(handler instanceof TemplateRecipeHandler trh)) return props;
+    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
+        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+        if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
         if (!handler.getClass()
             .getName()
             .startsWith("vazkii.botania")) return props;
 
-        List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
+        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
 
-        TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
+        final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
 
-        if (cached instanceof CachedRunicAltarRecipe r) {
+        if (cached instanceof final CachedRunicAltarRecipe r) {
             if (r.manaUsage > 0) {
                 props.put(MANA_COST, r.manaUsage);
             }
-        } else if (cached instanceof CachedManaPoolRecipe r) {
+        } else if (cached instanceof final CachedManaPoolRecipe r) {
             if (r.mana > 0) {
                 props.put(MANA_COST, r.mana);
             }
@@ -75,15 +75,16 @@ public class BotaniaProvider implements PropertyProvider {
         return props;
     }
 
-    private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        int rate = MachineProfile.getInt(s, Settings.MANA_PER_TICK.key(), 10);
-        Integer totalEnergy = ctx.get(BotaniaProvider.MANA_COST);
+    private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
+        final MachineProfile.RecipeContext ctx) {
+        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        final int rate = MachineProfile.getInt(s, Settings.MANA_PER_TICK.key(), 10);
+        final Integer totalEnergy = ctx.get(BotaniaProvider.MANA_COST);
         int duration = ctx.recipeDuration();
         if (duration <= 0 && rate > 0 && totalEnergy != null && totalEnergy > 0) {
             duration = Math.max(1, totalEnergy / rate);
         }
-        long consumptionEUt = duration > 0 && totalEnergy != null ? totalEnergy / duration : 0;
+        final long consumptionEUt = duration > 0 && totalEnergy != null ? totalEnergy / duration : 0;
         return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
     }
 }

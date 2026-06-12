@@ -10,14 +10,14 @@ public class ExtractedProperties {
     private final Map<RecipeProperty<?>, Object> values = new HashMap<>();
 
     @SuppressWarnings("unchecked")
-    public <T> T get(RecipeProperty<T> property) {
+    public <T> T get(final RecipeProperty<T> property) {
         if (values.containsKey(property)) {
             return (T) values.get(property);
         }
         return property.getDefaultValue();
     }
 
-    public <T> void set(RecipeProperty<T> property, T value) {
+    public <T> void set(final RecipeProperty<T> property, final T value) {
         if (value != null && !value.equals(property.getDefaultValue())) {
             values.put(property, value);
         } else {
@@ -25,7 +25,7 @@ public class ExtractedProperties {
         }
     }
 
-    public void putAll(Map<RecipeProperty<?>, Object> map) {
+    public void putAll(final Map<RecipeProperty<?>, Object> map) {
         values.putAll(map);
     }
 

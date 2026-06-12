@@ -32,20 +32,22 @@ public class VanillaProvider implements PropertyProvider {
                 .build());
     }
 
-    private static MachineProfile.EffectResult vanillaEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+    private static MachineProfile.EffectResult vanillaEffect(final Map<String, Object> s,
+        final MachineProfile.RecipeContext ctx) {
+        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
         return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), machines);
     }
 
     @Override
-    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!(handler instanceof FurnaceRecipeHandler)) return null;
         return MachineProfileRegistry.defaultId();
     }
 
     @Override
-    public Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex) {
-        Map<RecipeProperty<?>, Object> props = new HashMap<>();
+    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
+        final int recipeIndex) {
+        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof FurnaceRecipeHandler)) return props;
         props.put(RecipePropertyAPI.DURATION_TICKS, 200);
         return props;

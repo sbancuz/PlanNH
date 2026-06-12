@@ -12,7 +12,8 @@ public class Edge {
     public int sourceOutputIndex;
     public int targetInputIndex;
 
-    public Edge(UUID id, UUID sourceNodeId, UUID targetNodeId, int sourceOutputIndex, int targetInputIndex) {
+    public Edge(final UUID id, final UUID sourceNodeId, final UUID targetNodeId, final int sourceOutputIndex,
+        final int targetInputIndex) {
         this.id = id;
         this.sourceNodeId = sourceNodeId;
         this.targetNodeId = targetNodeId;

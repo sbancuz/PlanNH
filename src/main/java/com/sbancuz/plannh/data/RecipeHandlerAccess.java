@@ -6,7 +6,7 @@ import java.util.List;
 
 import codechicken.nei.recipe.TemplateRecipeHandler;
 
-public class RecipeHandlerAccess {
+public final class RecipeHandlerAccess {
 
     private static final Field ARECIPES;
 
@@ -15,16 +15,16 @@ public class RecipeHandlerAccess {
         try {
             f = TemplateRecipeHandler.class.getDeclaredField("arecipes");
             f.setAccessible(true);
-        } catch (Exception ignored) {}
+        } catch (final Exception ignored) {}
         ARECIPES = f;
     }
 
     @SuppressWarnings("unchecked")
-    public static List<TemplateRecipeHandler.CachedRecipe> getArecipes(TemplateRecipeHandler handler) {
+    public static List<TemplateRecipeHandler.CachedRecipe> getArecipes(final TemplateRecipeHandler handler) {
         if (ARECIPES != null) {
             try {
                 return (List<TemplateRecipeHandler.CachedRecipe>) ARECIPES.get(handler);
-            } catch (Exception ignored) {}
+            } catch (final Exception ignored) {}
         }
         return Collections.emptyList();
     }

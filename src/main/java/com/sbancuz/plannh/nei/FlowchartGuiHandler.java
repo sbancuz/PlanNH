@@ -10,7 +10,7 @@ import codechicken.nei.api.INEIGuiAdapter;
 public class FlowchartGuiHandler extends INEIGuiAdapter {
 
     @Override
-    public VisiblityData modifyVisiblity(GuiContainer gui, VisiblityData currentVisibility) {
+    public VisiblityData modifyVisiblity(final GuiContainer gui, final VisiblityData currentVisibility) {
         if (gui instanceof FlowchartGuiContainer) {
             currentVisibility.showSearchSection = true;
             currentVisibility.showWidgets = true;

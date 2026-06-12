@@ -12,7 +12,8 @@ import com.sbancuz.plannh.data.flowchart.SlotSet;
 
 import codechicken.nei.NEIClientConfig;
 
-public class PlanAPI {
+public enum PlanAPI {
+    ;
 
     private static SlotSet slotSet = null;
 
@@ -33,35 +34,35 @@ public class PlanAPI {
 
     private static SlotSet loadSlotSet() {
         try {
-            File saveFile = getSaveFile();
+            final File saveFile = getSaveFile();
             if (saveFile.isFile()) {
-                String data = Files.readString(saveFile.toPath(), StandardCharsets.UTF_8);
+                final String data = Files.readString(saveFile.toPath(), StandardCharsets.UTF_8);
                 if (data.startsWith("{")) {
                     return Serializer.decodeSlotSet(data);
                 }
-                Graph graph = Serializer.decode(data);
-                SlotSet set = new SlotSet();
+                final Graph graph = Serializer.decode(data);
+                final SlotSet set = new SlotSet();
                 set.slots.add(new SlotSet.Slot("Slot 1", graph));
                 return set;
             }
-        } catch (Exception ignored) {}
-        SlotSet set = new SlotSet();
+        } catch (final Exception ignored) {}
+        final SlotSet set = new SlotSet();
         set.slots.add(new SlotSet.Slot("Slot 1", new Graph()));
         return set;
     }
 
-    private static void saveSlotSet(SlotSet set) {
+    private static void saveSlotSet(final SlotSet set) {
         try {
-            File saveFile = getSaveFile();
+            final File saveFile = getSaveFile();
             saveFile.getParentFile()
                 .mkdirs();
             Files.writeString(saveFile.toPath(), Serializer.encode(set), StandardCharsets.UTF_8);
-        } catch (Exception ignored) {}
+        } catch (final Exception ignored) {}
     }
 
     private static File getSaveFile() {
-        Minecraft mc = Minecraft.getMinecraft();
-        String worldName = NEIClientConfig.getWorldPath();
+        final Minecraft mc = Minecraft.getMinecraft();
+        final String worldName = NEIClientConfig.getWorldPath();
         if (worldName != null && !worldName.isEmpty()) {
             return new File(mc.mcDataDir, "saves/NEI/" + worldName + "/plannh/plannh.dat");
         }

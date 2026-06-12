@@ -21,19 +21,21 @@ import codechicken.nei.recipe.IRecipeHandler;
 public class FlowchartOverlayHandler implements IOverlayHandler {
 
     @Override
-    public void overlayRecipe(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, boolean maxTransfer) {
+    public void overlayRecipe(final GuiContainer firstGui, final IRecipeHandler recipe, final int recipeIndex,
+        final boolean maxTransfer) {
         addRecipe(firstGui, recipe, recipeIndex);
     }
 
     @Override
-    public int transferRecipe(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, int multiplier) {
+    public int transferRecipe(final GuiContainer firstGui, final IRecipeHandler recipe, final int recipeIndex,
+        final int multiplier) {
         addRecipe(firstGui, recipe, recipeIndex);
         return 0;
     }
 
     @Override
-    public boolean canCraft(GuiContainer firstGui, IRecipeHandler handler, int recipeIndex) {
-        for (PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
+    public boolean canCraft(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
+        for (final PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
             if (!provider.canCraft(handler, recipeIndex)) return false;
         }
 
@@ -41,27 +43,29 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
     }
 
     @Override
-    public boolean canFillCraftingGrid(GuiContainer firstGui, IRecipeHandler handler, int recipeIndex) {
+    public boolean canFillCraftingGrid(final GuiContainer firstGui, final IRecipeHandler handler,
+        final int recipeIndex) {
         return true;
     }
 
     @Override
-    public boolean craft(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, int multiplier) {
-        for (PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
+    public boolean craft(final GuiContainer firstGui, final IRecipeHandler recipe, final int recipeIndex,
+        final int multiplier) {
+        for (final PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
             if (!provider.canCraft(recipe, recipeIndex)) return false;
         }
 
         return true;
     }
 
-    private static void addRecipe(GuiContainer firstGui, IRecipeHandler handler, int recipeIndex) {
-        Node node = new Node(handler, recipeIndex, 200, 200);
-        Graph graph = PlanAPI.getActiveGraph();
+    private static void addRecipe(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
+        final Node node = new Node(handler, recipeIndex, 200, 200);
+        final Graph graph = PlanAPI.getActiveGraph();
         graph.addNode(node);
         PlanAPI.save();
 
         if (firstGui instanceof FlowchartGuiContainer) {
-            Object screen = ((FlowchartGuiContainer) firstGui).getScreen();
+            final Object screen = ((FlowchartGuiContainer) firstGui).getScreen();
             if (screen instanceof FlowchartScreen) {
                 ((FlowchartScreen) screen).canvas.rebuildNodeWidgets();
             }
@@ -69,12 +73,12 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
     }
 
     @Override
-    public List<GuiOverlayButton.ItemOverlayState> presenceOverlay(GuiContainer firstGui, IRecipeHandler recipe,
-        int recipeIndex) {
+    public List<GuiOverlayButton.ItemOverlayState> presenceOverlay(final GuiContainer firstGui,
+        final IRecipeHandler recipe, final int recipeIndex) {
         final List<GuiOverlayButton.ItemOverlayState> itemPresenceSlots = new ArrayList<>();
         final List<PositionedStack> ingredients = recipe.getIngredientStacks(recipeIndex);
 
-        for (PositionedStack stack : ingredients) {
+        for (final PositionedStack stack : ingredients) {
             itemPresenceSlots.add(new GuiOverlayButton.ItemOverlayState(stack, true));
         }
 

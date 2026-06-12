@@ -20,20 +20,20 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
     public record RecipeContext(Map<RecipeProperty<?>, Object> properties, int recipeDuration) {
 
         public long recipeEUt() {
-            Long euPerTick = get(RecipePropertyAPI.EU_PER_TICK);
+            final Long euPerTick = get(RecipePropertyAPI.EU_PER_TICK);
             if (euPerTick != null && euPerTick > 0) return euPerTick;
-            Long totalEu = get(RecipePropertyAPI.TOTAL_EU);
+            final Long totalEu = get(RecipePropertyAPI.TOTAL_EU);
             if (totalEu != null && totalEu > 0 && recipeDuration > 0) return totalEu / recipeDuration;
             return 0;
         }
 
         @SuppressWarnings("unchecked")
-        public <T> T get(RecipeProperty<T> prop) {
+        public <T> T get(final RecipeProperty<T> prop) {
             return (T) properties.get(prop);
         }
     }
 
-    public static Builder builder(String id, String displayName) {
+    public static Builder builder(final String id, final String displayName) {
         return new Builder(id, displayName);
     }
 
@@ -44,12 +44,12 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         private final List<SettingDef<?>> settings = new ArrayList<>();
         private EffectComputer effectComputer;
 
-        private Builder(String id, String displayName) {
+        private Builder(final String id, final String displayName) {
             this.id = id;
             this.displayName = displayName;
         }
 
-        public Builder addSetting(SettingDef<?> setting) {
+        public Builder addSetting(final SettingDef<?> setting) {
             settings.add(setting);
             return this;
         }
@@ -86,11 +86,11 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
             return this;
         }
 
-        public Builder setting(SettingDef<?> s) {
+        public Builder setting(final SettingDef<?> s) {
             return addSetting(s);
         }
 
-        public Builder effect(EffectComputer effect) {
+        public Builder effect(final EffectComputer effect) {
             this.effectComputer = effect;
             return this;
         }
@@ -100,36 +100,36 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         }
     }
 
-    public static int getInt(Map<String, Object> s, String key, int def) {
-        Object v = s.get(key);
-        return v instanceof Number n ? n.intValue() : def;
+    public static int getInt(final Map<String, Object> s, final String key, final int def) {
+        final Object v = s.get(key);
+        return v instanceof final Number n ? n.intValue() : def;
     }
 
-    public static boolean getBool(Map<String, Object> s, String key, boolean def) {
-        Object v = s.get(key);
-        return v instanceof Boolean b ? b : def;
+    public static boolean getBool(final Map<String, Object> s, final String key, final boolean def) {
+        final Object v = s.get(key);
+        return v instanceof final Boolean b ? b : def;
     }
 
-    public static String getString(Map<String, Object> s, String key, String def) {
-        Object v = s.get(key);
-        return v instanceof String str ? str : def;
+    public static String getString(final Map<String, Object> s, final String key, final String def) {
+        final Object v = s.get(key);
+        return v instanceof final String str ? str : def;
     }
 
-    public static long tierNameToVoltage(String name) {
+    public static long tierNameToVoltage(final String name) {
         if (name == null || name.equals("OFF")) return 0;
-        String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV",
-            "MAX" };
+        final String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV",
+            "UXV", "MAX" };
         for (int i = 0; i < names.length; i++) {
             if (names[i].equals(name)) return 8L * (long) Math.pow(4, i);
         }
         return 0;
     }
 
-    public static String voltageToTierName(long voltage) {
+    public static String voltageToTierName(final long voltage) {
         if (voltage <= 0) return "";
-        int tier = (int) Math.round(Math.log(voltage / 8.0) / Math.log(4));
-        String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV",
-            "MAX" };
+        final int tier = (int) Math.round(Math.log(voltage / 8.0) / Math.log(4));
+        final String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV",
+            "UXV", "MAX" };
         return tier >= 0 && tier < names.length ? names[tier] : "T" + tier;
     }
 }

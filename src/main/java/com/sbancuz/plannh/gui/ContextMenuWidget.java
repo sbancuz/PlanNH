@@ -23,13 +23,13 @@ public class ContextMenuWidget extends Widget<ContextMenuWidget> implements Inte
     private final List<MenuItem> items;
     private final CanvasWidget canvas;
 
-    public ContextMenuWidget(CanvasWidget canvas, List<MenuItem> items, int x, int y) {
+    public ContextMenuWidget(final CanvasWidget canvas, final List<MenuItem> items, final int x, final int y) {
         this.canvas = canvas;
         this.items = items;
-        Minecraft mc = Minecraft.getMinecraft();
+        final Minecraft mc = Minecraft.getMinecraft();
         int maxW = 80;
-        for (MenuItem item : items) {
-            int w = mc.fontRenderer.getStringWidth(item.label);
+        for (final MenuItem item : items) {
+            final int w = mc.fontRenderer.getStringWidth(item.label);
             if (w > maxW) maxW = w;
         }
         pos(x, y);
@@ -37,17 +37,17 @@ public class ContextMenuWidget extends Widget<ContextMenuWidget> implements Inte
     }
 
     @Override
-    public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-        int w = getArea().width;
-        int h = getArea().height;
-        int mx = getContext().getMouseX();
-        int my = getContext().getMouseY();
+    public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
+        final int w = getArea().width;
+        final int h = getArea().height;
+        final int mx = getContext().getMouseX();
+        final int my = getContext().getMouseY();
 
         GuiDraw.drawRect(0, 0, w, h, PlannhColors.CONTEXT_BG.getColor());
         GuiHelper.drawRectBorder(0, 0, w, h, 1, PlannhColors.CONTEXT_BORDER.getColor());
 
         for (int i = 0; i < items.size(); i++) {
-            int iy = PAD + i * ITEM_H;
+            final int iy = PAD + i * ITEM_H;
             if (mx >= PAD && mx < w - PAD && my >= iy && my < iy + ITEM_H) {
                 GuiDraw.drawRect(PAD, iy, w - PAD * 2, ITEM_H, PlannhColors.CONTEXT_HOVER.getColor());
             }
@@ -56,12 +56,12 @@ public class ContextMenuWidget extends Widget<ContextMenuWidget> implements Inte
     }
 
     @Override
-    public @NotNull Result onMousePressed(int mouseButton) {
+    public @NotNull Result onMousePressed(final int mouseButton) {
         if (mouseButton == 0) {
-            int mx = getContext().getMouseX();
-            int my = getContext().getMouseY();
+            final int mx = getContext().getMouseX();
+            final int my = getContext().getMouseY();
             for (int i = 0; i < items.size(); i++) {
-                int iy = PAD + i * ITEM_H;
+                final int iy = PAD + i * ITEM_H;
                 if (mx >= PAD && mx < getArea().width - PAD && my >= iy && my < iy + ITEM_H) {
                     items.get(i).action.run();
                     break;
@@ -74,7 +74,7 @@ public class ContextMenuWidget extends Widget<ContextMenuWidget> implements Inte
     }
 
     @Override
-    public boolean onMouseScroll(UpOrDown direction, int amount) {
+    public boolean onMouseScroll(final UpOrDown direction, final int amount) {
         return true;
     }
 }

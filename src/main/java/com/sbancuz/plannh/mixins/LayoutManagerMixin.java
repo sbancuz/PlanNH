@@ -19,7 +19,8 @@ public class LayoutManagerMixin {
     private static final Button openFlowchartButton = new OpenFlowchartButton();
 
     @Inject(method = "updateWidgetVisiblities", at = @At("TAIL"), remap = false)
-    private static void plannh$onUpdateWidgetVisiblities(GuiContainer gui, VisiblityData visiblity, CallbackInfo ci) {
+    private static void plannh$onUpdateWidgetVisiblities(final GuiContainer gui, final VisiblityData visiblity,
+        final CallbackInfo ci) {
         if (!visiblity.showNEI) return;
 
         openFlowchartButton.x = LayoutManager.bookmarksButton.x + LayoutManager.bookmarksButton.w + 2;

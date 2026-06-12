@@ -62,7 +62,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private UUID edgeHoverNodeId;
     private int edgeHoverPortIndex;
 
-    public CanvasWidget(Graph graph) {
+    public CanvasWidget(final Graph graph) {
         this.graph = graph;
         rebuildNodeWidgets();
     }
@@ -71,82 +71,82 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return Math.round(zoom * 100);
     }
 
-    public void removeNode(UUID nodeId) {
+    public void removeNode(final UUID nodeId) {
         graph.removeNode(nodeId);
-        for (Group group : graph.getGroups()) {
+        for (final Group group : graph.getGroups()) {
             group.nodeIds.remove(nodeId);
         }
         rebuildNodeWidgets();
     }
 
-    public void setGraph(Graph newGraph) {
+    public void setGraph(final Graph newGraph) {
         this.graph = newGraph;
         rebuildNodeWidgets();
         rebuildNoteWidgets();
         rebuildGroupWidgets();
     }
 
-    public void removeGroup(UUID groupId) {
+    public void removeGroup(final UUID groupId) {
         graph.removeGroup(groupId);
         rebuildGroupWidgets();
     }
 
-    public void addGroup(int x, int y) {
+    public void addGroup(final int x, final int y) {
         int n = 1;
-        for (Group g : graph.getGroups()) {
+        for (final Group g : graph.getGroups()) {
             if (g.title.startsWith("Group")) {
                 try {
-                    int num = Integer.parseInt(
+                    final int num = Integer.parseInt(
                         g.title.substring(5)
                             .trim());
                     if (num >= n) n = num + 1;
-                } catch (NumberFormatException ignored) {}
+                } catch (final NumberFormatException ignored) {}
             }
         }
-        Group group = new Group(x, y, "Group " + n);
+        final Group group = new Group(x, y, "Group " + n);
         graph.addGroup(group);
-        GroupWidget gw = new GroupWidget(group, this);
+        final GroupWidget gw = new GroupWidget(group, this);
         gw.syncTransform(zoom, panX, panY);
         groupWidgets.put(group.id, gw);
         child(gw);
     }
 
-    public void moveGroupNodes(UUID groupId, int deltaX, int deltaY) {
-        Group group = graph.groups.get(groupId);
+    public void moveGroupNodes(final UUID groupId, final int deltaX, final int deltaY) {
+        final Group group = graph.groups.get(groupId);
         if (group == null) return;
-        for (UUID nodeId : group.nodeIds) {
-            Node node = graph.nodes.get(nodeId);
+        for (final UUID nodeId : group.nodeIds) {
+            final Node node = graph.nodes.get(nodeId);
             if (node == null) continue;
             node.x += deltaX;
             node.y += deltaY;
-            RecipeNodeWidget w = nodeWidgets.get(nodeId);
+            final RecipeNodeWidget w = nodeWidgets.get(nodeId);
             if (w != null) {
                 w.syncTransform(zoom, panX, panY);
             }
         }
     }
 
-    public void setGroupNodesVisible(UUID groupId, boolean visible) {
-        Group group = graph.groups.get(groupId);
+    public void setGroupNodesVisible(final UUID groupId, final boolean visible) {
+        final Group group = graph.groups.get(groupId);
         if (group == null) return;
-        for (UUID nodeId : group.nodeIds) {
+        for (final UUID nodeId : group.nodeIds) {
             if (visible) {
                 if (nodeWidgets.containsKey(nodeId)) continue;
-                Node node = graph.nodes.get(nodeId);
+                final Node node = graph.nodes.get(nodeId);
                 if (node == null) continue;
-                RecipeNodeWidget w = new RecipeNodeWidget(node, this);
+                final RecipeNodeWidget w = new RecipeNodeWidget(node, this);
                 w.syncTransform(zoom, panX, panY);
                 nodeWidgets.put(nodeId, w);
                 child(w);
             } else {
-                RecipeNodeWidget w = nodeWidgets.remove(nodeId);
+                final RecipeNodeWidget w = nodeWidgets.remove(nodeId);
                 if (w != null) remove(w);
             }
         }
     }
 
     public void recheckMembershipAndFit() {
-        for (Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()) {
             updateNodeGroupMembership(node);
         }
         autoFitGroups();
@@ -164,8 +164,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         recheckMembershipAndFit();
     }
 
-    public Group getGroupForNode(UUID nodeId) {
-        for (Group g : graph.getGroups()) {
+    public Group getGroupForNode(final UUID nodeId) {
+        for (final Group g : graph.getGroups()) {
             if (g.nodeIds.contains(nodeId)) return g;
         }
         return null;
@@ -175,8 +175,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int NODE_W_ESTIMATE = 120;
     private static final int NODE_H_ESTIMATE = 80;
 
-    public void clampNodeToGroup(Node node) {
-        Group group = getGroupForNode(node.id);
+    public void clampNodeToGroup(final Node node) {
+        final Group group = getGroupForNode(node.id);
         if (group == null || !group.clampNodes) return;
         if (node.x < group.x + CLAMP_MARGIN) node.x = group.x + CLAMP_MARGIN;
         if (node.y < group.y + CLAMP_MARGIN + HEADER_OFFSET) node.y = group.y + CLAMP_MARGIN + HEADER_OFFSET;
@@ -187,19 +187,19 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void autoFitGroups() {
-        for (Group group : graph.getGroups()) {
+        for (final Group group : graph.getGroups()) {
             if (!group.autoResize || group.nodeIds.isEmpty()) continue;
             fitGroupToChildren(group);
         }
     }
 
-    public void fitGroupToChildren(Group group) {
+    public void fitGroupToChildren(final Group group) {
         if (group.nodeIds.isEmpty()) return;
-        int pad = 12;
+        final int pad = 12;
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
-        for (UUID nid : group.nodeIds) {
-            Node n = graph.nodes.get(nid);
+        for (final UUID nid : group.nodeIds) {
+            final Node n = graph.nodes.get(nid);
             if (n == null) continue;
             if (n.x < minX) minX = n.x;
             if (n.y < minY) minY = n.y;
@@ -211,27 +211,27 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         group.y = minY - pad;
         group.width = maxX - minX + pad * 2;
         group.height = maxY - minY + pad * 2;
-        GroupWidget gw = groupWidgets.get(group.id);
+        final GroupWidget gw = groupWidgets.get(group.id);
         if (gw != null) {
             gw.syncTransform(zoom, panX, panY);
         }
         // Move all nodes into the group if auto-sizing
-        for (UUID nid : group.nodeIds) {
-            Node n = graph.nodes.get(nid);
+        for (final UUID nid : group.nodeIds) {
+            final Node n = graph.nodes.get(nid);
             if (n == null) continue;
             clampNodeToGroup(n);
-            RecipeNodeWidget w = nodeWidgets.get(nid);
+            final RecipeNodeWidget w = nodeWidgets.get(nid);
             if (w != null) w.syncTransform(zoom, panX, panY);
         }
     }
 
-    private void updateNodeGroupMembership(Node node) {
-        for (Group group : graph.getGroups()) {
+    private void updateNodeGroupMembership(final Node node) {
+        for (final Group group : graph.getGroups()) {
             if (group.collapsed) continue;
-            boolean inside = node.x >= group.x && node.x < group.x + group.width
+            final boolean inside = node.x >= group.x && node.x < group.x + group.width
                 && node.y >= group.y
                 && node.y < group.y + group.height;
-            boolean contained = group.nodeIds.contains(node.id);
+            final boolean contained = group.nodeIds.contains(node.id);
             if (inside && !contained) {
                 group.nodeIds.add(node.id);
             } else if (!inside && contained) {
@@ -247,14 +247,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         nodeWidgets.clear();
         groupWidgets.clear();
         noteWidgets.clear();
-        for (Group group : graph.getGroups()) {
-            GroupWidget gw = new GroupWidget(group, this);
+        for (final Group group : graph.getGroups()) {
+            final GroupWidget gw = new GroupWidget(group, this);
             gw.syncTransform(zoom, panX, panY);
             groupWidgets.put(group.id, gw);
             child(gw);
         }
-        for (Node node : graph.getNodes()) {
-            RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
+        for (final Node node : graph.getNodes()) {
+            final RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
             widget.syncTransform(zoom, panX, panY);
             nodeWidgets.put(node.id, widget);
             child(widget);
@@ -264,12 +264,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildGroupWidgets() {
-        for (GroupWidget gw : groupWidgets.values()) {
+        for (final GroupWidget gw : groupWidgets.values()) {
             remove(gw);
         }
         groupWidgets.clear();
-        for (Group group : graph.getGroups()) {
-            GroupWidget gw = new GroupWidget(group, this);
+        for (final Group group : graph.getGroups()) {
+            final GroupWidget gw = new GroupWidget(group, this);
             gw.syncTransform(zoom, panX, panY);
             groupWidgets.put(group.id, gw);
             child(gw);
@@ -277,12 +277,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildNoteWidgets() {
-        for (NoteWidget nw : noteWidgets.values()) {
+        for (final NoteWidget nw : noteWidgets.values()) {
             remove(nw);
         }
         noteWidgets.clear();
-        for (Note note : graph.notes.values()) {
-            NoteWidget nw = new NoteWidget(note, this);
+        for (final Note note : graph.notes.values()) {
+            final NoteWidget nw = new NoteWidget(note, this);
             nw.syncTransform(zoom, panX, panY);
             noteWidgets.put(note.id, nw);
             child(nw);
@@ -290,15 +290,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void updatePositions() {
-        for (RecipeNodeWidget w : nodeWidgets.values()) w.syncTransform(zoom, panX, panY);
-        for (NoteWidget w : noteWidgets.values()) w.syncTransform(zoom, panX, panY);
-        for (GroupWidget w : groupWidgets.values()) w.syncTransform(zoom, panX, panY);
+        for (final RecipeNodeWidget w : nodeWidgets.values()) w.syncTransform(zoom, panX, panY);
+        for (final NoteWidget w : noteWidgets.values()) w.syncTransform(zoom, panX, panY);
+        for (final GroupWidget w : groupWidgets.values()) w.syncTransform(zoom, panX, panY);
     }
 
     @Override
-    public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
-        int aw = getArea().width;
-        int ah = getArea().height;
+    public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
+        final int aw = getArea().width;
+        final int ah = getArea().height;
         if (aw <= 0 || ah <= 0) return;
 
         super.draw(context, widgetTheme);
@@ -312,47 +312,47 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         drawHoveredPortLabels();
     }
 
-    private int widgetX(RecipeNodeWidget w) {
+    private int widgetX(final RecipeNodeWidget w) {
         return Math.round(w.getNode().x * zoom + panX);
     }
 
-    private int widgetY(RecipeNodeWidget w) {
+    private int widgetY(final RecipeNodeWidget w) {
         return Math.round(w.getNode().y * zoom + panY);
     }
 
-    private int portY(int index) {
+    private int portY(final int index) {
         return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * zoom);
     }
 
     private void drawArrows() {
-        for (Edge edge : graph.getEdges()) {
-            RecipeNodeWidget srcWidget = nodeWidgets.get(edge.sourceNodeId);
-            RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
+        for (final Edge edge : graph.getEdges()) {
+            final RecipeNodeWidget srcWidget = nodeWidgets.get(edge.sourceNodeId);
+            final RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
             if (srcWidget == null || dstWidget == null) continue;
 
-            Node srcNode = graph.nodes.get(edge.sourceNodeId);
-            boolean isFluid = srcNode != null && edge.sourceOutputIndex >= srcNode.outputs.size();
+            final Node srcNode = graph.nodes.get(edge.sourceNodeId);
+            final boolean isFluid = srcNode != null && edge.sourceOutputIndex >= srcNode.outputs.size();
 
-            int srcX = widgetX(srcWidget) + srcWidget.getArea().width;
-            int srcY = widgetY(srcWidget) + portY(edge.sourceOutputIndex);
-            int dstX = widgetX(dstWidget);
-            int dstY = widgetY(dstWidget) + portY(edge.targetInputIndex);
+            final int srcX = widgetX(srcWidget) + srcWidget.getArea().width;
+            final int srcY = widgetY(srcWidget) + portY(edge.sourceOutputIndex);
+            final int dstX = widgetX(dstWidget);
+            final int dstY = widgetY(dstWidget) + portY(edge.targetInputIndex);
 
             drawArrow(srcX, srcY, dstX, dstY, isFluid);
         }
     }
 
-    private void drawArrow(int x1, int y1, int x2, int y2, boolean fluid) {
-        float as = Math.max(4, 6 * zoom);
-        int ex = Math.round(x2 - as);
-        int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
+    private void drawArrow(final int x1, final int y1, final int x2, final int y2, final boolean fluid) {
+        final float as = Math.max(4, 6 * zoom);
+        final int ex = Math.round(x2 - as);
+        final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
         drawOrthogonalLine(x1, y1, x2, y2, ex, color, Math.max(1, 2 * zoom));
 
-        int r = Color.getRed(color);
-        int g = Color.getGreen(color);
-        int b = Color.getBlue(color);
-        int a = Color.getAlpha(color);
-        float hb = as * 0.35f;
+        final int r = Color.getRed(color);
+        final int g = Color.getGreen(color);
+        final int b = Color.getBlue(color);
+        final int a = Color.getAlpha(color);
+        final float hb = as * 0.35f;
         Platform.startDrawing(Platform.DrawMode.TRIANGLES, Platform.VertexFormat.POS_COLOR, buf -> {
             buf.pos(x2, y2, 0)
                 .color(r, g, b, a)
@@ -367,17 +367,17 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void drawPreviewLine() {
-        RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
+        final RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
         if (srcWidget == null) return;
 
-        int x1 = widgetX(srcWidget) + srcWidget.getArea().width;
-        int y1 = widgetY(srcWidget) + portY(edgeSourcePortIndex);
+        final int x1 = widgetX(srcWidget) + srcWidget.getArea().width;
+        final int y1 = widgetY(srcWidget) + portY(edgeSourcePortIndex);
 
         int x2 = edgeEndX;
         int y2 = edgeEndY;
 
         if (edgeHoverNodeId != null) {
-            RecipeNodeWidget dstWidget = nodeWidgets.get(edgeHoverNodeId);
+            final RecipeNodeWidget dstWidget = nodeWidgets.get(edgeHoverNodeId);
             if (dstWidget != null) {
                 x2 = widgetX(dstWidget);
                 y2 = widgetY(dstWidget) + portY(edgeHoverPortIndex);
@@ -387,12 +387,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         drawOrthogonalLine(x1, y1, x2, y2, x2, PREVIEW_COLOR, Math.max(1, 2 * zoom));
     }
 
-    private void drawOrthogonalLine(int x1, int y1, int x2, int y2, int xEnd, int color, float thickness) {
-        int midX = (x1 + x2) / 2;
-        int r = Color.getRed(color);
-        int g = Color.getGreen(color);
-        int b = Color.getBlue(color);
-        int a = Color.getAlpha(color);
+    private void drawOrthogonalLine(final int x1, final int y1, final int x2, final int y2, final int xEnd,
+        final int color, final float thickness) {
+        final int midX = (x1 + x2) / 2;
+        final int r = Color.getRed(color);
+        final int g = Color.getGreen(color);
+        final int b = Color.getBlue(color);
+        final int a = Color.getAlpha(color);
 
         Platform.setupDrawColor();
         GL11.glLineWidth(thickness);
@@ -413,20 +414,20 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         GL11.glLineWidth(1);
     }
 
-    private Edge getEdgeAt(int absMx, int absMy) {
-        int margin = Math.max(4, Math.round(4 * zoom));
-        int cmx = absMx - getArea().x;
-        int cmy = absMy - getArea().y;
-        for (Edge edge : graph.getEdges()) {
-            RecipeNodeWidget srcWidget = nodeWidgets.get(edge.sourceNodeId);
-            RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
+    private Edge getEdgeAt(final int absMx, final int absMy) {
+        final int margin = Math.max(4, Math.round(4 * zoom));
+        final int cmx = absMx - getArea().x;
+        final int cmy = absMy - getArea().y;
+        for (final Edge edge : graph.getEdges()) {
+            final RecipeNodeWidget srcWidget = nodeWidgets.get(edge.sourceNodeId);
+            final RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
             if (srcWidget == null || dstWidget == null) continue;
 
-            int x1 = widgetX(srcWidget) + srcWidget.getArea().width;
-            int y1 = widgetY(srcWidget) + portY(edge.sourceOutputIndex);
-            int x2 = widgetX(dstWidget);
-            int y2 = widgetY(dstWidget) + portY(edge.targetInputIndex);
-            int midX = (x1 + x2) / 2;
+            final int x1 = widgetX(srcWidget) + srcWidget.getArea().width;
+            final int y1 = widgetY(srcWidget) + portY(edge.sourceOutputIndex);
+            final int x2 = widgetX(dstWidget);
+            final int y2 = widgetY(dstWidget) + portY(edge.targetInputIndex);
+            final int midX = (x1 + x2) / 2;
 
             if (cmx >= Math.min(x1, midX) - margin && cmx <= Math.max(x1, midX) + margin
                 && cmy >= y1 - margin
@@ -441,42 +442,42 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return null;
     }
 
-    private boolean canConnect(Node srcNode, int srcOutIdx, Node dstNode, int dstInIdx) {
+    private boolean canConnect(final Node srcNode, final int srcOutIdx, final Node dstNode, final int dstInIdx) {
         if (srcNode == dstNode) return false;
         if (srcOutIdx < 0 || dstInIdx < 0) return false;
 
-        int itemOutCount = srcNode.outputs.size();
-        int itemInCount = dstNode.inputs.size();
-        int fluidOutCount = srcNode.fluidOutputs.size();
-        int fluidInCount = dstNode.fluidInputs.size();
+        final int itemOutCount = srcNode.outputs.size();
+        final int itemInCount = dstNode.inputs.size();
+        final int fluidOutCount = srcNode.fluidOutputs.size();
+        final int fluidInCount = dstNode.fluidInputs.size();
 
-        boolean srcIsFluid = srcOutIdx >= itemOutCount;
-        boolean dstIsFluid = dstInIdx >= itemInCount;
+        final boolean srcIsFluid = srcOutIdx >= itemOutCount;
+        final boolean dstIsFluid = dstInIdx >= itemInCount;
 
         if (srcIsFluid != dstIsFluid) return false;
 
         if (!srcIsFluid) {
-            ItemStack out = srcNode.outputs.get(srcOutIdx)
+            final ItemStack out = srcNode.outputs.get(srcOutIdx)
                 .left();
-            ItemStack in = dstNode.inputs.get(dstInIdx)
+            final ItemStack in = dstNode.inputs.get(dstInIdx)
                 .left();
             return out != null && in != null && out.isItemEqual(in);
         }
 
-        int srcFluidIdx = srcOutIdx - itemOutCount;
-        int dstFluidIdx = dstInIdx - itemInCount;
+        final int srcFluidIdx = srcOutIdx - itemOutCount;
+        final int dstFluidIdx = dstInIdx - itemInCount;
         if (srcFluidIdx >= fluidOutCount || dstFluidIdx >= fluidInCount) return false;
-        FluidStack out = srcNode.fluidOutputs.get(srcFluidIdx)
+        final FluidStack out = srcNode.fluidOutputs.get(srcFluidIdx)
             .left();
-        FluidStack in = dstNode.fluidInputs.get(dstFluidIdx)
+        final FluidStack in = dstNode.fluidInputs.get(dstFluidIdx)
             .left();
         return out != null && in != null && out.isFluidEqual(in);
     }
 
     @Override
-    public Result onMousePressed(int mouseButton) {
-        int absMx = getContext().getAbsMouseX();
-        int absMy = getContext().getAbsMouseY();
+    public Result onMousePressed(final int mouseButton) {
+        final int absMx = getContext().getAbsMouseX();
+        final int absMy = getContext().getAbsMouseY();
 
         // Close context menu on any click, unless it's on the menu itself
         if (contextMenu != null) {
@@ -487,12 +488,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
 
         if (mouseButton == 0) {
-            int cmx = absMx - getArea().x;
-            int cmy = absMy - getArea().y;
-            for (RecipeNodeWidget widget : nodeWidgets.values()) {
-                int localMx = cmx - widgetX(widget);
-                int localMy = cmy - widgetY(widget);
-                int port = widget.getOutputPortAt(localMx, localMy);
+            final int cmx = absMx - getArea().x;
+            final int cmy = absMy - getArea().y;
+            for (final RecipeNodeWidget widget : nodeWidgets.values()) {
+                final int localMx = cmx - widgetX(widget);
+                final int localMy = cmy - widgetY(widget);
+                final int port = widget.getOutputPortAt(localMx, localMy);
                 if (port >= 0) {
                     creatingEdge = true;
                     edgeSourceNodeId = widget.getNode().id;
@@ -506,7 +507,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
 
             if (!isMouseOverAnyNode(absMx, absMy) && !isMouseOverAnyGroup(absMx, absMy)) {
-                Edge clicked = getEdgeAt(absMx, absMy);
+                final Edge clicked = getEdgeAt(absMx, absMy);
                 if (clicked != null) {
                     graph.removeEdge(clicked.id);
                     return Interactable.Result.SUCCESS;
@@ -521,12 +522,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             return Interactable.Result.IGNORE;
         }
         if (mouseButton == 1) {
-            int cmx = absMx - getArea().x;
-            int cmy = absMy - getArea().y;
+            final int cmx = absMx - getArea().x;
+            final int cmy = absMy - getArea().y;
 
             // Check if over a group header (pass click through for its own right-click menu)
-            for (GroupWidget gw : groupWidgets.values()) {
-                Area a = gw.getArea();
+            for (final GroupWidget gw : groupWidgets.values()) {
+                final Area a = gw.getArea();
                 if (absMx >= a.x && absMx < a.x + a.width && absMy >= a.y && absMy < a.y + a.height) {
                     showGroupContextMenu(gw, cmx, cmy);
                     return Result.SUCCESS;
@@ -534,8 +535,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
 
             // Check if over a node
-            for (RecipeNodeWidget widget : nodeWidgets.values()) {
-                Area a = widget.getArea();
+            for (final RecipeNodeWidget widget : nodeWidgets.values()) {
+                final Area a = widget.getArea();
                 if (absMx >= a.x && absMx < a.x + a.width && absMy >= a.y && absMy < a.y + a.height) {
                     showNodeContextMenu(widget, cmx, cmy);
                     return Result.SUCCESS;
@@ -558,11 +559,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public boolean onMouseRelease(int mouseButton) {
+    public boolean onMouseRelease(final int mouseButton) {
         if (creatingEdge) {
             if (edgeHoverNodeId != null) {
-                Node srcNode = graph.nodes.get(edgeSourceNodeId);
-                Node dstNode = graph.nodes.get(edgeHoverNodeId);
+                final Node srcNode = graph.nodes.get(edgeSourceNodeId);
+                final Node dstNode = graph.nodes.get(edgeHoverNodeId);
                 if (srcNode != null && dstNode != null) {
                     graph.addEdge(
                         new Edge(
@@ -583,24 +584,24 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public void onMouseDrag(int mouseButton, long timeSinceClick) {
+    public void onMouseDrag(final int mouseButton, final long timeSinceClick) {
         if (creatingEdge) {
-            int cmx = getContext().getAbsMouseX() - getArea().x;
-            int cmy = getContext().getAbsMouseY() - getArea().y;
+            final int cmx = getContext().getAbsMouseX() - getArea().x;
+            final int cmy = getContext().getAbsMouseY() - getArea().y;
             edgeEndX = cmx;
             edgeEndY = cmy;
 
             edgeHoverNodeId = null;
             edgeHoverPortIndex = -1;
 
-            RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
+            final RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
             if (srcWidget == null) return;
 
-            for (RecipeNodeWidget widget : nodeWidgets.values()) {
+            for (final RecipeNodeWidget widget : nodeWidgets.values()) {
                 if (widget == srcWidget) continue;
-                int localMx = cmx - widgetX(widget);
-                int localMy = cmy - widgetY(widget);
-                int port = widget.getInputPortAt(localMx, localMy);
+                final int localMx = cmx - widgetX(widget);
+                final int localMy = cmy - widgetY(widget);
+                final int port = widget.getInputPortAt(localMx, localMy);
                 if (port >= 0 && canConnect(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode(), port)) {
                     edgeHoverNodeId = widget.getNode().id;
                     edgeHoverPortIndex = port;
@@ -608,8 +609,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 }
             }
         } else if (panning) {
-            int dx = getContext().getAbsMouseX() - panStartMouseX;
-            int dy = getContext().getAbsMouseY() - panStartMouseY;
+            final int dx = getContext().getAbsMouseX() - panStartMouseX;
+            final int dy = getContext().getAbsMouseY() - panStartMouseY;
             panX = panStartX + dx;
             panY = panStartY + dy;
             updatePositions();
@@ -617,18 +618,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public boolean onMouseScroll(UpOrDown direction, int amount) {
+    public boolean onMouseScroll(final UpOrDown direction, final int amount) {
         float delta = direction == UpOrDown.UP ? 0.15f : -0.15f;
         delta *= Math.max(1, Math.abs(amount));
-        float oldZoom = zoom;
+        final float oldZoom = zoom;
         zoom = Math.clamp(zoom + delta, 0.1f, 5.0f);
-        float ratio = zoom / oldZoom;
+        final float ratio = zoom / oldZoom;
 
-        int mx = getContext().getAbsMouseX();
-        int my = getContext().getAbsMouseY();
+        final int mx = getContext().getAbsMouseX();
+        final int my = getContext().getAbsMouseY();
 
-        float mxRel = mx - getArea().x;
-        float myRel = my - getArea().y;
+        final float mxRel = mx - getArea().x;
+        final float myRel = my - getArea().y;
 
         panX = mxRel - (mxRel - panX) * ratio;
         panY = myRel - (myRel - panY) * ratio;
@@ -637,9 +638,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return true;
     }
 
-    private boolean isMouseOverAnyGroup(int mx, int my) {
-        for (GroupWidget gw : groupWidgets.values()) {
-            Area a = gw.getArea();
+    private boolean isMouseOverAnyGroup(final int mx, final int my) {
+        for (final GroupWidget gw : groupWidgets.values()) {
+            final Area a = gw.getArea();
             if (mx >= a.x && mx <= a.x + a.width && my >= a.y && my <= a.y + a.height) {
                 return true;
             }
@@ -647,9 +648,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return false;
     }
 
-    private boolean isMouseOverAnyNode(int mx, int my) {
-        for (RecipeNodeWidget widget : nodeWidgets.values()) {
-            Area a = widget.getArea();
+    private boolean isMouseOverAnyNode(final int mx, final int my) {
+        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
+            final Area a = widget.getArea();
             if (mx >= a.x && mx <= a.x + a.width && my >= a.y && my <= a.y + a.height) {
                 return true;
             }
@@ -659,17 +660,17 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     // ── Notes ──
 
-    public void addNote(int x, int y) {
-        Note note = new Note(UUID.randomUUID(), x, y);
+    public void addNote(final int x, final int y) {
+        final Note note = new Note(UUID.randomUUID(), x, y);
         graph.notes.put(note.id, note);
-        NoteWidget nw = new NoteWidget(note, this);
+        final NoteWidget nw = new NoteWidget(note, this);
         nw.syncTransform(zoom, panX, panY);
         noteWidgets.put(note.id, nw);
         child(nw);
     }
 
-    public void removeNote(UUID noteId) {
-        NoteWidget nw = noteWidgets.remove(noteId);
+    public void removeNote(final UUID noteId) {
+        final NoteWidget nw = noteWidgets.remove(noteId);
         if (nw != null) remove(nw);
         graph.notes.remove(noteId);
     }
@@ -677,9 +678,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private UUID editingNoteId = null;
     private UUID editingGroupId = null;
 
-    public void startEditingNote(UUID noteId) {
+    public void startEditingNote(final UUID noteId) {
         editingNoteId = noteId;
-        for (NoteWidget nw : noteWidgets.values()) {
+        for (final NoteWidget nw : noteWidgets.values()) {
             nw.setEditing(nw.getNote().id.equals(noteId));
         }
     }
@@ -688,9 +689,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         editingNoteId = null;
     }
 
-    public void startEditingGroup(UUID groupId) {
+    public void startEditingGroup(final UUID groupId) {
         editingGroupId = groupId;
-        for (GroupWidget gw : groupWidgets.values()) {
+        for (final GroupWidget gw : groupWidgets.values()) {
             gw.setEditing(gw.getGroup().id.equals(groupId));
         }
     }
@@ -700,14 +701,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public Result onKeyPressed(char typedChar, int keyCode) {
+    public Result onKeyPressed(final char typedChar, final int keyCode) {
         if (editingNoteId != null) {
-            NoteWidget nw = noteWidgets.get(editingNoteId);
+            final NoteWidget nw = noteWidgets.get(editingNoteId);
             if (nw == null) {
                 editingNoteId = null;
                 return Result.IGNORE;
             }
-            Note note = nw.getNote();
+            final Note note = nw.getNote();
             if (keyCode == org.lwjgl.input.Keyboard.KEY_ESCAPE || keyCode == org.lwjgl.input.Keyboard.KEY_RETURN) {
                 nw.setEditing(false);
                 return Result.SUCCESS;
@@ -725,12 +726,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             return Result.SUCCESS;
         }
         if (editingGroupId != null) {
-            GroupWidget gw = groupWidgets.get(editingGroupId);
+            final GroupWidget gw = groupWidgets.get(editingGroupId);
             if (gw == null) {
                 editingGroupId = null;
                 return Result.IGNORE;
             }
-            Group group = gw.getGroup();
+            final Group group = gw.getGroup();
             if (keyCode == org.lwjgl.input.Keyboard.KEY_ESCAPE || keyCode == org.lwjgl.input.Keyboard.KEY_RETURN) {
                 gw.setEditing(false);
                 return Result.SUCCESS;
@@ -738,7 +739,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (keyCode == org.lwjgl.input.Keyboard.KEY_BACK) {
                 if (group.title.length() > 0) {
                     if (gw.getCursorPos() > 0) {
-                        int cp = gw.getCursorPos();
+                        final int cp = gw.getCursorPos();
                         group.title = group.title.substring(0, cp - 1) + group.title.substring(cp);
                         gw.decrementCursor();
                     }
@@ -746,7 +747,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 return Result.SUCCESS;
             }
             if (typedChar >= 32 && typedChar < 127) {
-                int cp = gw.getCursorPos();
+                final int cp = gw.getCursorPos();
                 group.title = group.title.substring(0, cp) + typedChar + group.title.substring(cp);
                 gw.incrementCursor();
                 return Result.SUCCESS;
@@ -763,7 +764,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private ContextMenuWidget contextMenu = null;
 
-    public void showContextMenu(int x, int y, List<ContextMenuWidget.MenuItem> items) {
+    public void showContextMenu(final int x, final int y, final List<ContextMenuWidget.MenuItem> items) {
         closeContextMenu();
         contextMenu = new ContextMenuWidget(this, items, x, y);
         child(contextMenu);
@@ -776,16 +777,16 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
     }
 
-    public boolean isMouseOverContextMenu(int mx, int my) {
+    public boolean isMouseOverContextMenu(final int mx, final int my) {
         return contextMenu != null && mx >= contextMenu.getArea().x
             && mx < contextMenu.getArea().x + contextMenu.getArea().width
             && my >= contextMenu.getArea().y
             && my < contextMenu.getArea().y + contextMenu.getArea().height;
     }
 
-    private void openColorPickerFor(Group group) {
-        int currentColor = group.colorOverride != 0 ? group.colorOverride : PlannhColors.titleColor(group.title);
-        ColorPickerDialog picker = new ColorPickerDialog(chosenColor -> {
+    private void openColorPickerFor(final Group group) {
+        final int currentColor = group.colorOverride != 0 ? group.colorOverride : PlannhColors.titleColor(group.title);
+        final ColorPickerDialog picker = new ColorPickerDialog(chosenColor -> {
             group.colorOverride = chosenColor;
             rebuildGroupWidgets();
         }, currentColor, false);
@@ -793,14 +794,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             .openPanel();
     }
 
-    private void contextMenuAt(int cmx, int cmy, List<ContextMenuWidget.MenuItem> items) {
-        int ax = getArea().x + cmx;
-        int ay = getArea().y + cmy;
+    private void contextMenuAt(final int cmx, final int cmy, final List<ContextMenuWidget.MenuItem> items) {
+        final int ax = getArea().x + cmx;
+        final int ay = getArea().y + cmy;
         showContextMenu(ax, ay, items);
     }
 
-    private void showCanvasContextMenu(int cmx, int cmy) {
-        List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
+    private void showCanvasContextMenu(final int cmx, final int cmy) {
+        final List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
         items.add(new ContextMenuWidget.MenuItem("Add Group", () -> {
             int gx = Math.round((cmx - panX) / zoom);
             int gy = Math.round((cmy - panY) / zoom);
@@ -818,9 +819,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         contextMenuAt(cmx, cmy, items);
     }
 
-    private void showGroupContextMenu(GroupWidget gw, int cmx, int cmy) {
-        Group group = gw.getGroup();
-        List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
+    private void showGroupContextMenu(final GroupWidget gw, final int cmx, final int cmy) {
+        final Group group = gw.getGroup();
+        final List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
         items.add(new ContextMenuWidget.MenuItem("Rename Group", () -> startEditingGroup(group.id)));
         items.add(new ContextMenuWidget.MenuItem("Customize Color", () -> openColorPickerFor(group)));
         items.add(
@@ -835,22 +836,22 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         contextMenuAt(cmx, cmy, items);
     }
 
-    private void showNodeContextMenu(RecipeNodeWidget nw, int cmx, int cmy) {
-        Node node = nw.getNode();
-        List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
-        Group currentGroup = getGroupForNode(node.id);
+    private void showNodeContextMenu(final RecipeNodeWidget nw, final int cmx, final int cmy) {
+        final Node node = nw.getNode();
+        final List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
+        final Group currentGroup = getGroupForNode(node.id);
         if (currentGroup != null) {
             items.add(
                 new ContextMenuWidget.MenuItem(
                     "Remove from \"" + currentGroup.title + "\"",
                     () -> { currentGroup.nodeIds.remove(node.id); }));
         }
-        List<Group> otherGroups = new ArrayList<>();
-        for (Group g : graph.getGroups()) {
+        final List<Group> otherGroups = new ArrayList<>();
+        for (final Group g : graph.getGroups()) {
             if (g != currentGroup) otherGroups.add(g);
         }
         if (!otherGroups.isEmpty()) {
-            for (Group g : otherGroups) {
+            for (final Group g : otherGroups) {
                 items.add(new ContextMenuWidget.MenuItem("Add to \"" + g.title + "\"", () -> g.nodeIds.add(node.id)));
             }
         }
@@ -867,17 +868,17 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int PORT_ORIGIN = 10;
 
     private void drawHoveredPortLabels() {
-        int mx = getContext().getMouseX();
-        int my = getContext().getMouseY();
-        float z = zoom;
-        int ps = Math.round(PORT_S * z);
-        int half = Math.round(PORT_HALF * z);
+        final int mx = getContext().getMouseX();
+        final int my = getContext().getMouseY();
+        final float z = zoom;
+        final int ps = Math.round(PORT_S * z);
+        final int half = Math.round(PORT_HALF * z);
 
-        for (RecipeNodeWidget w : nodeWidgets.values()) {
-            Node node = w.getNode();
-            int wx = widgetX(w);
-            int wy = widgetY(w);
-            int ww = w.getArea().width;
+        for (final RecipeNodeWidget w : nodeWidgets.values()) {
+            final Node node = w.getNode();
+            final int wx = widgetX(w);
+            final int wy = widgetY(w);
+            final int ww = w.getArea().width;
 
             if (tryPortLabel(
                 mx,
@@ -950,12 +951,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
     }
 
-    private boolean tryPortLabel(int mx, int my, float z, int ps, int half, int wx, int wy, int ww, List<?> ports,
-        int portCount, int portOffset, boolean rightSide, java.util.function.IntFunction<String> labelFn) {
+    private boolean tryPortLabel(final int mx, final int my, final float z, final int ps, final int half, final int wx,
+        final int wy, final int ww, final List<?> ports, final int portCount, final int portOffset,
+        final boolean rightSide, final java.util.function.IntFunction<String> labelFn) {
         for (int i = 0; i < portCount; i++) {
-            int fi = portOffset + i;
-            int px = rightSide ? wx + ww - ps : wx;
-            int pcY = wy + portY(fi);
+            final int fi = portOffset + i;
+            final int px = rightSide ? wx + ww - ps : wx;
+            final int pcY = wy + portY(fi);
             if (mx >= px && mx < px + ps && my >= pcY - half && my < pcY + half) {
                 drawPortLabel(labelFn.apply(i), rightSide ? wx + ww : wx, pcY, rightSide, z);
                 return true;
@@ -964,14 +966,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return false;
     }
 
-    private static void drawPortLabel(String name, int anchorX, int centerY, boolean rightSide, float z) {
+    private static void drawPortLabel(String name, final int anchorX, final int centerY, final boolean rightSide,
+        final float z) {
         if (name.length() > 20) name = name.substring(0, 19) + "\u2026";
-        int tw = Minecraft.getMinecraft().fontRenderer.getStringWidth(name);
-        int fh = Math.round(9 * z * 0.9f);
-        int gap = Math.round(PORT_GAP * z);
-        int labelX = rightSide ? anchorX + gap : anchorX - tw - gap;
-        int labelY = centerY - fh / 2;
-        int pad = Math.round(2 * z);
+        final int tw = Minecraft.getMinecraft().fontRenderer.getStringWidth(name);
+        final int fh = Math.round(9 * z * 0.9f);
+        final int gap = Math.round(PORT_GAP * z);
+        final int labelX = rightSide ? anchorX + gap : anchorX - tw - gap;
+        final int labelY = centerY - fh / 2;
+        final int pad = Math.round(2 * z);
         GuiDraw.drawRect(labelX - pad, labelY - pad, tw + pad * 2, fh + pad * 2, PlannhColors.PORT_LABEL_BG.getColor());
         GuiDraw.drawText(name, labelX, labelY, z * 0.9f, PlannhColors.TEXT_WHITE.getColor(), false);
     }

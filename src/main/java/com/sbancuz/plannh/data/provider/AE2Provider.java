@@ -44,30 +44,30 @@ public class AE2Provider implements PropertyProvider {
     }
 
     @Override
-    public String getProfileId(IRecipeHandler handler, int recipeIndex) {
+    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!(handler instanceof TemplateRecipeHandler)) return null;
         return "grindstone".equals(handler.getOverlayIdentifier()) ? "ae2:basic" : null;
     }
 
     @Override
-    public Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex) {
-        Map<RecipeProperty<?>, Object> props = new HashMap<>();
-        if (!(handler instanceof TemplateRecipeHandler trh)) return props;
+    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
+        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+        if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
 
-        List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
+        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
 
-        TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
-        List<PositionedStack> ingredients = cached.getIngredients();
+        final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
+        final List<PositionedStack> ingredients = cached.getIngredients();
         if (ingredients == null || ingredients.isEmpty()) return props;
 
-        IGrinderEntry entry = AEApi.instance()
+        final IGrinderEntry entry = AEApi.instance()
             .registries()
             .grinder()
             .getRecipeForInput(ingredients.getFirst().item);
         if (entry == null) return props;
 
-        int energy = entry.getEnergyCost();
+        final int energy = entry.getEnergyCost();
         if (energy > 0) {
             props.put(ENERGY_COST, energy);
         }
@@ -75,15 +75,16 @@ public class AE2Provider implements PropertyProvider {
         return props;
     }
 
-    private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        int rate = MachineProfile.getInt(s, Settings.ENERGY_PER_TICK.key(), 10);
-        Integer totalEnergy = ctx.get(AE2Provider.ENERGY_COST);
+    private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
+        final MachineProfile.RecipeContext ctx) {
+        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        final int rate = MachineProfile.getInt(s, Settings.ENERGY_PER_TICK.key(), 10);
+        final Integer totalEnergy = ctx.get(AE2Provider.ENERGY_COST);
         int duration = ctx.recipeDuration();
         if (duration <= 0 && rate > 0 && totalEnergy != null && totalEnergy > 0) {
             duration = Math.max(1, totalEnergy / rate);
         }
-        long consumptionEUt = duration > 0 && totalEnergy != null ? totalEnergy / duration : 0;
+        final long consumptionEUt = duration > 0 && totalEnergy != null ? totalEnergy / duration : 0;
         return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
     }
 }

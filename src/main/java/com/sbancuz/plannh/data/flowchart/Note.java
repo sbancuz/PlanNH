@@ -9,7 +9,7 @@ public class Note {
     public int y;
     public String text = "";
 
-    public Note(UUID id, int x, int y) {
+    public Note(final UUID id, final int x, final int y) {
         this.id = id;
         this.x = x;
         this.y = y;

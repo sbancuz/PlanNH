@@ -48,29 +48,30 @@ public class ForestryProvider implements PropertyProvider {
                 .build());
     }
 
-    private static MachineProfile.EffectResult simpleEffect(Map<String, Object> s, MachineProfile.RecipeContext ctx) {
-        int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        int rate = MachineProfile.getInt(s, Settings.FORESTRY_RF_PER_TICK.key(), 10);
+    private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
+        final MachineProfile.RecipeContext ctx) {
+        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        final int rate = MachineProfile.getInt(s, Settings.FORESTRY_RF_PER_TICK.key(), 10);
         return new MachineProfile.EffectResult(ctx.recipeDuration(), rate, machines);
     }
 
     @Override
-    public Map<RecipeProperty<?>, Object> extract(Node node, IRecipeHandler handler, int recipeIndex) {
-        Map<RecipeProperty<?>, Object> props = new HashMap<>();
-        if (!(handler instanceof TemplateRecipeHandler trh)) return props;
+    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
+        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+        if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
 
-        List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
+        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
 
-        TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
+        final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
 
-        if (handler instanceof NEIHandlerSqueezer && cached instanceof CachedSqueezerRecipe s) {
+        if (handler instanceof NEIHandlerSqueezer && cached instanceof final CachedSqueezerRecipe s) {
             if (s.processingTime > 0) {
                 props.put(PROCESSING_TIME, s.processingTime);
                 props.put(RecipePropertyAPI.DURATION_TICKS, s.processingTime);
             }
-        } else if (handler instanceof NEIHandlerCentrifuge && cached instanceof CachedCentrifugeRecipe c) {
-            int time = lookupCentrifugeTime(c.inputs.item);
+        } else if (handler instanceof NEIHandlerCentrifuge && cached instanceof final CachedCentrifugeRecipe c) {
+            final int time = lookupCentrifugeTime(c.inputs.item);
             if (time > 0) {
                 props.put(PROCESSING_TIME, time);
                 props.put(RecipePropertyAPI.DURATION_TICKS, time);
@@ -80,9 +81,9 @@ public class ForestryProvider implements PropertyProvider {
         return props;
     }
 
-    private static int lookupCentrifugeTime(ItemStack input) {
+    private static int lookupCentrifugeTime(final ItemStack input) {
         if (input == null) return 0;
-        for (ICentrifugeRecipe r : RecipeManagers.centrifugeManager.recipes()) {
+        for (final ICentrifugeRecipe r : RecipeManagers.centrifugeManager.recipes()) {
             if (r.getInput() != null && r.getInput()
                 .isItemEqual(input)) {
                 return r.getProcessingTime();

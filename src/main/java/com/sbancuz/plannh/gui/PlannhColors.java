@@ -3,7 +3,7 @@ package com.sbancuz.plannh.gui;
 import com.cleanroommc.modularui.utils.Color;
 import com.gtnewhorizon.gtnhlib.color.ColorResource;
 
-public class PlannhColors {
+public final class PlannhColors {
 
     private static final ColorResource.Factory C = new ColorResource.Factory("plannh");
 
@@ -104,13 +104,13 @@ public class PlannhColors {
      * Generates a deterministic title bar color from a recipe name hash.
      * Uses golden-ratio hue distribution for visual variety.
      */
-    public static int titleColor(String name) {
-        int hash = name.hashCode();
-        float hue = ((hash * 0.618033988749895f) % 1.0f + 1.0f) % 1.0f;
-        int rgb = java.awt.Color.HSBtoRGB(hue, 0.45f, 0.55f);
-        int r = (rgb >> 16) & 0xFF;
-        int g = (rgb >> 8) & 0xFF;
-        int b = rgb & 0xFF;
+    public static int titleColor(final String name) {
+        final int hash = name.hashCode();
+        final float hue = ((hash * 0.618033988749895f) % 1.0f + 1.0f) % 1.0f;
+        final int rgb = java.awt.Color.HSBtoRGB(hue, 0.45f, 0.55f);
+        final int r = (rgb >> 16) & 0xFF;
+        final int g = (rgb >> 8) & 0xFF;
+        final int b = rgb & 0xFF;
         return Color.argb(200, r, g, b);
     }
 }

@@ -14,8 +14,9 @@ public class SettingDef<T> {
     public final List<String> options;
     private final BiFunction<T, MachineConfig, String> badgeFn;
 
-    private SettingDef(String key, String label, Class<T> type, T defaultValue, int minInt, int maxInt,
-        List<String> options, BiFunction<T, MachineConfig, String> badgeFn) {
+    private SettingDef(final String key, final String label, final Class<T> type, final T defaultValue,
+        final int minInt, final int maxInt, final List<String> options,
+        final BiFunction<T, MachineConfig, String> badgeFn) {
         this.key = key;
         this.label = label;
         this.type = type;
@@ -26,22 +27,23 @@ public class SettingDef<T> {
         this.badgeFn = badgeFn;
     }
 
-    public static SettingDef<Integer> intDef(String key, String label, int def, int min, int max) {
+    public static SettingDef<Integer> intDef(final String key, final String label, final int def, final int min,
+        final int max) {
         return intDef(key, label, def, min, max, null);
     }
 
-    public static SettingDef<Integer> intDef(String key, String label, int def, int min, int max,
-        BiFunction<Integer, MachineConfig, String> badgeFn) {
+    public static SettingDef<Integer> intDef(final String key, final String label, final int def, final int min,
+        final int max, final BiFunction<Integer, MachineConfig, String> badgeFn) {
         return new SettingDef<>(key, label, Integer.class, def, min, max, null, badgeFn);
     }
 
-    public static SettingDef<Boolean> boolDef(String key, String label, boolean def,
-        BiFunction<Boolean, MachineConfig, String> badgeFn) {
+    public static SettingDef<Boolean> boolDef(final String key, final String label, final boolean def,
+        final BiFunction<Boolean, MachineConfig, String> badgeFn) {
         return new SettingDef<>(key, label, Boolean.class, def, 0, 0, null, badgeFn);
     }
 
-    public static SettingDef<String> enumDef(String key, String label, String def, List<String> options,
-        BiFunction<String, MachineConfig, String> badgeFn) {
+    public static SettingDef<String> enumDef(final String key, final String label, final String def,
+        final List<String> options, final BiFunction<String, MachineConfig, String> badgeFn) {
         return new SettingDef<>(key, label, String.class, def, 0, 0, options, badgeFn);
     }
 
@@ -50,7 +52,7 @@ public class SettingDef<T> {
     }
 
     @SuppressWarnings("unchecked")
-    public String badge(Object val, MachineConfig config) {
+    public String badge(final Object val, final MachineConfig config) {
         if (badgeFn == null) return null;
         return badgeFn.apply((T) val, config);
     }

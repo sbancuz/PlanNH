@@ -16,7 +16,7 @@ public record Summary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
         public final ItemStack stack;
         public int totalCount;
 
-        SummaryLine(ItemStack stack, int count) {
+        SummaryLine(final ItemStack stack, final int count) {
             this.stack = stack;
             this.totalCount = count;
         }
@@ -27,14 +27,14 @@ public record Summary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
         public final FluidStack fluid;
         public int totalAmount;
 
-        FluidSummaryLine(FluidStack fluid, int amount) {
+        FluidSummaryLine(final FluidStack fluid, final int amount) {
             this.fluid = fluid;
             this.totalAmount = amount;
         }
     }
 
-    static void mergeInto(List<SummaryLine> list, ItemStack stack, int count) {
-        for (SummaryLine line : list) {
+    static void mergeInto(final List<SummaryLine> list, final ItemStack stack, final int count) {
+        for (final SummaryLine line : list) {
             if (line.stack.isItemEqual(stack)) {
                 line.totalCount += count;
                 return;
@@ -43,8 +43,8 @@ public record Summary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs,
         list.add(new SummaryLine(stack, count));
     }
 
-    static void mergeFluidInto(List<FluidSummaryLine> list, FluidStack fluid, int amount) {
-        for (FluidSummaryLine line : list) {
+    static void mergeFluidInto(final List<FluidSummaryLine> list, final FluidStack fluid, final int amount) {
+        for (final FluidSummaryLine line : list) {
             if (line.fluid.isFluidEqual(fluid)) {
                 line.totalAmount += amount;
                 return;
