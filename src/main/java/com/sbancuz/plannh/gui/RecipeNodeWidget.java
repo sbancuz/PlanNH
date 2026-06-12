@@ -471,7 +471,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 return true;
             }
             dragging = false;
-            canvas.onNodeDragFinished();
+            canvas.recheckMembershipAndFit();
             return true;
         }
         return false;

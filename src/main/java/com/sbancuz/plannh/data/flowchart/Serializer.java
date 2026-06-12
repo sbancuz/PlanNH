@@ -565,7 +565,6 @@ public final class Serializer {
             .replace("\n", "<br/>");
     }
 
-    @SuppressWarnings("unchecked")
     private static String edgeLabel(final Graph graph, final Edge edge) {
         final Node src = graph.nodes.get(edge.sourceNodeId);
         if (src == null) return "";

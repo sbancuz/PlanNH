@@ -256,17 +256,6 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
         return Result.IGNORE;
     }
 
-    private boolean isInsideCloseButton(final int mx, final int my, final int pw, final float z) {
-        return GuiHelper.isInsideCloseButton(mx, my, z, pw, CLOSE_W, Math.max(1, Math.round(z)));
-    }
-
-    private boolean isInsideSwatch(final int mx, final int my, final int pw, final float z) {
-        final int ss = zq(SWATCH_W);
-        final int sx = pw - zq(CLOSE_W) - ss - zq(4) - Math.max(1, Math.round(z));
-        final int sh = Math.round(10 * z);
-        return mx >= sx && mx < sx + ss && my >= zq(4) && my < zq(4) + sh;
-    }
-
     private void openColorPicker() {
         final int currentColor = group.colorOverride != 0 ? group.colorOverride : displayColor();
         final ColorPickerDialog picker = new ColorPickerDialog(chosenColor -> {
@@ -275,12 +264,6 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
         }, currentColor, false);
         IPanelHandler.simple(getPanel(), (parent, player) -> picker, true)
             .openPanel();
-    }
-
-    private void toggleCollapse(final float z) {
-        group.collapsed = !group.collapsed;
-        size(Math.round(group.width * z), computePixelHeight(z));
-        canvas.setGroupNodesVisible(group.id, !group.collapsed);
     }
 
     private void startResize(final ResizeMode rm) {
@@ -327,12 +310,12 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
     public boolean onMouseRelease(final int mouseButton) {
         if (resizeMode != ResizeMode.NONE) {
             resizeMode = ResizeMode.NONE;
-            canvas.onGroupResizeFinished();
+            canvas.recheckMembershipAndFit();
             return true;
         }
         if (dragging) {
             dragging = false;
-            canvas.onGroupDragFinished();
+            canvas.recheckMembershipAndFit();
         }
         return true;
     }

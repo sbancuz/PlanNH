@@ -5,11 +5,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.IntFunction;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
+import org.jetbrains.annotations.NotNull;
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
@@ -36,6 +39,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int ARROW_COLOR_ITEM = PlannhColors.ARROW_ITEM.getColor();
     private static final int ARROW_COLOR_FLUID = PlannhColors.ARROW_FLUID.getColor();
     private static final int PREVIEW_COLOR = PlannhColors.PREVIEW_HIGHLIGHT.getColor();
+    private static final int CLAMP_MARGIN = 4;
+    private static final int NODE_W_ESTIMATE = 120;
+    private static final int NODE_H_ESTIMATE = 80;
     private static final int HEADER_OFFSET = 24;
 
     @Getter
@@ -152,28 +158,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         autoFitGroups();
     }
 
-    public void onGroupDragFinished() {
-        recheckMembershipAndFit();
-    }
-
-    public void onGroupResizeFinished() {
-        recheckMembershipAndFit();
-    }
-
-    public void onNodeDragFinished() {
-        recheckMembershipAndFit();
-    }
-
     public Group getGroupForNode(final UUID nodeId) {
         for (final Group g : graph.getGroups()) {
             if (g.nodeIds.contains(nodeId)) return g;
         }
         return null;
     }
-
-    private static final int CLAMP_MARGIN = 4;
-    private static final int NODE_W_ESTIMATE = 120;
-    private static final int NODE_H_ESTIMATE = 80;
 
     public void clampNodeToGroup(final Node node) {
         final Group group = getGroupForNode(node.id);
@@ -475,17 +465,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public Result onMousePressed(final int mouseButton) {
+    public @NotNull Result onMousePressed(final int mouseButton) {
         final int absMx = getContext().getAbsMouseX();
         final int absMy = getContext().getAbsMouseY();
 
         // Close context menu on any click, unless it's on the menu itself
-        if (contextMenu != null) {
-            if (isMouseOverContextMenu(absMx, absMy)) {
-                return Result.IGNORE;
-            }
-            closeContextMenu();
+        if (isMouseOverContextMenu(absMx, absMy)) {
+            return Result.IGNORE;
         }
+        closeContextMenu();
 
         if (mouseButton == 0) {
             final int cmx = absMx - getArea().x;
@@ -701,7 +689,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public Result onKeyPressed(final char typedChar, final int keyCode) {
+    public @NotNull Result onKeyPressed(final char typedChar, final int keyCode) {
         if (editingNoteId != null) {
             final NoteWidget nw = noteWidgets.get(editingNoteId);
             if (nw == null) {
@@ -709,12 +697,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 return Result.IGNORE;
             }
             final Note note = nw.getNote();
-            if (keyCode == org.lwjgl.input.Keyboard.KEY_ESCAPE || keyCode == org.lwjgl.input.Keyboard.KEY_RETURN) {
+            if (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RETURN) {
                 nw.setEditing(false);
                 return Result.SUCCESS;
             }
             if (keyCode == org.lwjgl.input.Keyboard.KEY_BACK) {
-                if (note.text.length() > 0) {
+                if (!note.text.isEmpty()) {
                     note.text = note.text.substring(0, note.text.length() - 1);
                 }
                 return Result.SUCCESS;
@@ -732,12 +720,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 return Result.IGNORE;
             }
             final Group group = gw.getGroup();
-            if (keyCode == org.lwjgl.input.Keyboard.KEY_ESCAPE || keyCode == org.lwjgl.input.Keyboard.KEY_RETURN) {
+            if (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RETURN) {
                 gw.setEditing(false);
                 return Result.SUCCESS;
             }
-            if (keyCode == org.lwjgl.input.Keyboard.KEY_BACK) {
-                if (group.title.length() > 0) {
+            if (keyCode == Keyboard.KEY_BACK) {
+                if (!group.title.isEmpty()) {
                     if (gw.getCursorPos() > 0) {
                         final int cp = gw.getCursorPos();
                         group.title = group.title.substring(0, cp - 1) + group.title.substring(cp);
@@ -755,11 +743,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             return Result.SUCCESS;
         }
         return Result.IGNORE;
-    }
-
-    public Note getNoteForEdit() {
-        if (editingNoteId == null) return null;
-        return graph.notes.get(editingNoteId);
     }
 
     private ContextMenuWidget contextMenu = null;
@@ -868,28 +851,26 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int PORT_ORIGIN = 10;
 
     private void drawHoveredPortLabels() {
-        final int mx = getContext().getMouseX();
-        final int my = getContext().getMouseY();
-        final float z = zoom;
-        final int ps = Math.round(PORT_S * z);
-        final int half = Math.round(PORT_HALF * z);
+        final int mouseX = getContext().getMouseX();
+        final int mouseY = getContext().getMouseY();
+        final int ps = Math.round(PORT_S * zoom);
+        final int half = Math.round(PORT_HALF * zoom);
 
         for (final RecipeNodeWidget w : nodeWidgets.values()) {
             final Node node = w.getNode();
-            final int wx = widgetX(w);
-            final int wy = widgetY(w);
-            final int ww = w.getArea().width;
+            final int widgetX = widgetX(w);
+            final int widgetY = widgetY(w);
+            final int widgetWidth = w.getArea().width;
 
             if (tryPortLabel(
-                mx,
-                my,
-                z,
+                mouseX,
+                mouseY,
+                zoom,
                 ps,
                 half,
-                wx,
-                wy,
-                ww,
-                node.outputs,
+                widgetX,
+                widgetY,
+                widgetWidth,
                 node.outputs.size(),
                 0,
                 true,
@@ -898,16 +879,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     .getDisplayName()))
                 return;
             if (tryPortLabel(
-                mx,
-                my,
-                z,
+                mouseX,
+                mouseY,
+                zoom,
                 ps,
                 half,
-                wx,
-                wy,
-                ww,
-                node.fluidOutputs,
-                node.outputs.size(),
+                widgetX,
+                widgetY,
+                widgetWidth,
+                node.fluidOutputs.size(),
                 node.outputs.size(),
                 true,
                 i -> node.fluidOutputs.get(i)
@@ -915,15 +895,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     .getLocalizedName()))
                 return;
             if (tryPortLabel(
-                mx,
-                my,
-                z,
+                mouseX,
+                mouseY,
+                zoom,
                 ps,
                 half,
-                wx,
-                wy,
-                ww,
-                node.inputs,
+                widgetX,
+                widgetY,
+                widgetWidth,
                 node.inputs.size(),
                 0,
                 false,
@@ -932,16 +911,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     .getDisplayName()))
                 return;
             if (tryPortLabel(
-                mx,
-                my,
-                z,
+                mouseX,
+                mouseY,
+                zoom,
                 ps,
                 half,
-                wx,
-                wy,
-                ww,
-                node.fluidInputs,
-                node.inputs.size(),
+                widgetX,
+                widgetY,
+                widgetWidth,
+                node.fluidInputs.size(),
                 node.inputs.size(),
                 false,
                 i -> node.fluidInputs.get(i)
@@ -951,15 +929,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
     }
 
-    private boolean tryPortLabel(final int mx, final int my, final float z, final int ps, final int half, final int wx,
-        final int wy, final int ww, final List<?> ports, final int portCount, final int portOffset,
-        final boolean rightSide, final java.util.function.IntFunction<String> labelFn) {
+    private boolean tryPortLabel(final int mouseX, final int mouseY, final float zoom, final int ps, final int half,
+        final int widgetX, final int widgetY, final int widgetWidth, final int portCount, final int portOffset,
+        final boolean rightSide, final IntFunction<String> labelFn) {
         for (int i = 0; i < portCount; i++) {
             final int fi = portOffset + i;
-            final int px = rightSide ? wx + ww - ps : wx;
-            final int pcY = wy + portY(fi);
-            if (mx >= px && mx < px + ps && my >= pcY - half && my < pcY + half) {
-                drawPortLabel(labelFn.apply(i), rightSide ? wx + ww : wx, pcY, rightSide, z);
+            final int px = rightSide ? widgetX + widgetWidth - ps : widgetX;
+            final int pcY = widgetY + portY(fi);
+            if (mouseX >= px && mouseX < px + ps && mouseY >= pcY - half && mouseY < pcY + half) {
+                drawPortLabel(labelFn.apply(i), rightSide ? widgetX + widgetWidth : widgetX, pcY, rightSide, zoom);
                 return true;
             }
         }
