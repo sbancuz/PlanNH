@@ -8,6 +8,9 @@ import javax.annotation.Nonnull;
 
 public class Group {
 
+    private static final int DEFAULT_W = 300;
+    private static final int DEFAULT_H = 200;
+
     @Nonnull
     public final UUID id;
     @Nonnull
@@ -35,6 +38,6 @@ public class Group {
     }
 
     public Group(final int x, final int y, final String title) {
-        this(x, y, 300, 200, title);
+        this(x, y, DEFAULT_W, DEFAULT_H, title);
     }
 }

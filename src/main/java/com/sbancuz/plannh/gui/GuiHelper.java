@@ -20,22 +20,39 @@ public final class GuiHelper {
         GuiDraw.drawRect(x + w - bw, y, bw, h, color);
     }
 
+    private static final int CLOSE_INNER_INSET = 2;
+    private static final int CLOSE_INNER_SHRINK = 4;
+    private static final int CLOSE_TEXT_Y_OFF = 1;
+    private static final int SHADOW_OFF = 1;
+    private static final int SHADOW_EXTRA = 2;
+
     public static void drawCloseButton(final float zoom, final int pw, final int closeW, final int closeMargin,
         final int color, final int textColor) {
         final int bs = zq(closeW, zoom);
         final int bx = pw - bs - zq(closeMargin, zoom);
         final int by = zq(closeMargin, zoom);
-        GuiDraw.drawRect(bx - 1, by - 1, bs + 2, bs + 2, PlannhColors.BTN_DELETE_SHADOW.getColor());
+        GuiDraw.drawRect(
+            bx - SHADOW_OFF,
+            by - SHADOW_OFF,
+            bs + SHADOW_EXTRA,
+            bs + SHADOW_EXTRA,
+            PlannhColors.BTN_DELETE_SHADOW.getColor());
         GuiDraw.drawRect(bx, by, bs, bs, color);
-        final int inset = zq(2, zoom);
+        final int inset = zq(CLOSE_INNER_INSET, zoom);
         GuiDraw.drawRect(
             bx + inset,
             by + inset,
-            bs - zq(4, zoom),
-            bs - zq(4, zoom),
+            bs - zq(CLOSE_INNER_SHRINK, zoom),
+            bs - zq(CLOSE_INNER_SHRINK, zoom),
             PlannhColors.BTN_DELETE_INNER.getColor());
         final int xw = Minecraft.getMinecraft().fontRenderer.getStringWidth("x");
-        GuiDraw.drawText("x", bx + (float) bs / 2 - (float) xw / 2, by + zq(1, zoom), 1.0f, textColor, false);
+        GuiDraw.drawText(
+            "x",
+            bx + (float) bs / 2 - (float) xw / 2,
+            by + zq(CLOSE_TEXT_Y_OFF, zoom),
+            1.0f,
+            textColor,
+            false);
     }
 
     public static boolean isInsideCloseButton(final int mx, final int my, final float zoom, final int pw,

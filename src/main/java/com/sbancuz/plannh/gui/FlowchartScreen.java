@@ -23,8 +23,15 @@ import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.SlotSet;
 import com.sbancuz.plannh.data.flowchart.Summary;
+import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
 public class FlowchartScreen extends ModularScreen {
+
+    private static final int SLOT_BAR_TOP = 18;
+    private static final int SLOT_BAR_HEIGHT = 22;
+    private static final int PANEL_RIGHT = 176;
+    private static final int CANVAS_TOP = 42;
+    private static final int CANVAS_BOTTOM = 20;
 
     @Nonnull
     public final Graph graph;
@@ -50,15 +57,15 @@ public class FlowchartScreen extends ModularScreen {
 
         panel.child(
             new SlotBarWidget(canvas).left(0)
-                .top(18)
-                .right(176)
-                .height(22));
+                .top(SLOT_BAR_TOP)
+                .right(PANEL_RIGHT)
+                .height(SLOT_BAR_HEIGHT));
 
         panel.child(
             canvas.left(0)
-                .top(42)
-                .right(176)
-                .bottom(20));
+                .top(CANVAS_TOP)
+                .right(PANEL_RIGHT)
+                .bottom(CANVAS_BOTTOM));
 
         panel.addChild(new SummaryWidget(canvas), -1);
 
@@ -93,6 +100,19 @@ public class FlowchartScreen extends ModularScreen {
         private final CanvasWidget canvas;
         private final List<ClickZone> zones = new ArrayList<>();
 
+        private static final int TEXT_Y = 4;
+        private static final int ARROW_W = 14;
+        private static final int PREV_X = 4;
+        private static final int NAME_GAP = 16;
+        private static final int NAME_EST_W = 6;
+        private static final int NAME_EST_PAD = 8;
+        private static final int ADD_BTN_RIGHT = 30;
+        private static final int DEL_BTN_RIGHT = 15;
+        private static final int MODE_BTN_RIGHT = 86;
+        private static final int SUMMARY_BTN_RIGHT = 72;
+        private static final int GROUP_BTN_RIGHT = 58;
+        private static final int NOTE_BTN_RIGHT = 44;
+
         SlotBarWidget(final CanvasWidget canvas) {
             this.canvas = canvas;
             pos(0, 0);
@@ -121,25 +141,23 @@ public class FlowchartScreen extends ModularScreen {
 
             zones.clear();
 
-            final int y = 0;
-
-            final int px = 4;
-            GuiDraw.drawText("<", px, 4, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(px, y, px + 14, y + h, () -> shiftSlot(-1)));
-            final int nameX = px + 16;
-            GuiDraw.drawText(name, nameX, 4, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
-            final int nameW = name.length() * 6 + 8;
+            final int px = PREV_X;
+            GuiDraw.drawText("<", px, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            zones.add(new ClickZone(px, 0, px + ARROW_W, h, () -> shiftSlot(-1)));
+            final int nameX = px + NAME_GAP;
+            GuiDraw.drawText(name, nameX, TEXT_Y, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
+            final int nameW = name.length() * NAME_EST_W + NAME_EST_PAD;
             final int nbx = nameX + nameW;
-            GuiDraw.drawText(">", nbx, 4, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(nbx, y, nbx + 14, y + h, () -> shiftSlot(1)));
+            GuiDraw.drawText(">", nbx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            zones.add(new ClickZone(nbx, 0, nbx + ARROW_W, h, () -> shiftSlot(1)));
 
-            final int ax = w - 30;
-            GuiDraw.drawText("+", ax, 4, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
-            zones.add(new ClickZone(ax, y, ax + 14, y + h, this::addSlot));
+            final int ax = w - ADD_BTN_RIGHT;
+            GuiDraw.drawText("+", ax, TEXT_Y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
+            zones.add(new ClickZone(ax, 0, ax + ARROW_W, h, this::addSlot));
 
-            final int dx = w - 15;
-            GuiDraw.drawText("\u00d7", dx, 4, 1.0f, PlannhColors.ACCENT_RED.getColor(), false);
-            zones.add(new ClickZone(dx, y, dx + 14, y + h, this::deleteSlot));
+            final int dx = w - DEL_BTN_RIGHT;
+            GuiDraw.drawText("\u00d7", dx, TEXT_Y, 1.0f, PlannhColors.ACCENT_RED.getColor(), false);
+            zones.add(new ClickZone(dx, 0, dx + ARROW_W, h, this::deleteSlot));
 
             final BalanceMode mode = canvas.getGraph()
                 .getBalanceMode();
@@ -153,17 +171,29 @@ public class FlowchartScreen extends ModularScreen {
                 case FORWARD -> PlannhColors.ACCENT_GREEN.getColor();
                 case BACKWARD -> PlannhColors.ACCENT_BLUE.getColor();
             };
-            final int mx = w - 72;
-            GuiDraw.drawText(modeLabel, mx, 4, 1.0f, modeColor, false);
-            zones.add(new ClickZone(mx, y, mx + 14, y + h, this::cycleBalanceMode));
+            final int mx = w - MODE_BTN_RIGHT;
+            GuiDraw.drawText(modeLabel, mx, TEXT_Y, 1.0f, modeColor, false);
+            zones.add(new ClickZone(mx, 0, mx + ARROW_W, h, this::cycleBalanceMode));
 
-            final int gx = w - 58;
-            GuiDraw.drawText("G", gx, 4, 1.0f, PlannhColors.titleColor("Group"), false);
-            zones.add(new ClickZone(gx, y, gx + 14, y + h, this::addGroup));
+            final SummaryMode sMode = set.summaryMode;
+            final String sLabel = sMode == SummaryMode.CYCLES ? "S:C" : "S:T";
+            final int sCol = sMode == SummaryMode.CYCLES ? PlannhColors.ACCENT_BLUE.getColor()
+                : PlannhColors.ACCENT_GREEN.getColor();
+            final int sx = w - SUMMARY_BTN_RIGHT;
+            GuiDraw.drawText(sLabel, sx, TEXT_Y, 1.0f, sCol, false);
+            zones.add(new ClickZone(sx, 0, sx + ARROW_W, h, () -> {
+                final SlotSet s = PlanAPI.getSlotSet();
+                s.summaryMode = s.summaryMode == SummaryMode.CYCLES ? SummaryMode.THROUGHPUT : SummaryMode.CYCLES;
+                PlanAPI.save();
+            }));
 
-            final int nx = w - 44;
-            GuiDraw.drawText("N", nx, 4, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(nx, y, nx + 14, y + h, this::addNote));
+            final int gx = w - GROUP_BTN_RIGHT;
+            GuiDraw.drawText("G", gx, TEXT_Y, 1.0f, PlannhColors.titleColor("Group"), false);
+            zones.add(new ClickZone(gx, 0, gx + ARROW_W, h, this::addGroup));
+
+            final int nx = w - NOTE_BTN_RIGHT;
+            GuiDraw.drawText("N", nx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            zones.add(new ClickZone(nx, 0, nx + ARROW_W, h, this::addNote));
         }
 
         private void shiftSlot(final int dir) {
@@ -242,6 +272,25 @@ public class FlowchartScreen extends ModularScreen {
         private static final int COLLAPSE_W = 20;
         private static final int SECTION_H = 14;
         private static final int LINE_H = 11;
+        private static final int TITLE_TEXT_X = 4;
+        private static final int TITLE_TEXT_Y = 3;
+        private static final int COLLAPSE_TEXT_Y = 4;
+        private static final int SECTION_LY_OFFSET = 4;
+        private static final int SECTION_HEADER_X = 2;
+        private static final int SECTION_HEADER_TEXT_X = 6;
+        private static final int SECTION_HEADER_TEXT_Y_OFF = 1;
+        private static final int ITEM_TEXT_X = 10;
+        private static final int SECTION_END_PAD = 4;
+        private static final int SEPARATOR_Y_OFF = 2;
+        private static final int TOTALS_TEXT_X = 6;
+        private static final int TOTALS_LINE_H = 14;
+        private static final int MODE_TEXT_X = 6;
+        private static final int MODE_LINE_H = 12;
+        private static final int HELP_SEP_Y_OFF = 4;
+        private static final int HELP_SEP_GAP = 10;
+        private static final int ZOOM_TEXT_X = 6;
+        private static final int ZOOM_LINE_H = 14;
+        private static final int HELP_LINE_H = 10;
 
         private final CanvasWidget canvas;
 
@@ -255,6 +304,14 @@ public class FlowchartScreen extends ModularScreen {
 
         private Graph graph() {
             return canvas.getGraph();
+        }
+
+        private SummaryMode summaryMode() {
+            return PlanAPI.getSlotSet().summaryMode;
+        }
+
+        private float summaryCycleSecs(final BalanceResult br) {
+            return br.totalDurationTicks() > 0 ? (float) br.totalDurationTicks() / GuiHelper.TICKS_PER_SECOND : 1f;
         }
 
         SummaryWidget(final CanvasWidget canvas) {
@@ -271,37 +328,37 @@ public class FlowchartScreen extends ModularScreen {
             if (collapsed) return TITLE_H;
             final Graph g = graph();
             final BalanceResult br = g.balance();
-            int h = TITLE_H + 4;
+            int h = TITLE_H + SECTION_LY_OFFSET;
 
             if (!br.netOutputs()
                 .isEmpty()) {
-                h += 14 + br.netOutputs()
-                    .size() * 11 + 4;
+                h += SECTION_H + br.netOutputs()
+                    .size() * LINE_H + SECTION_END_PAD;
             }
             if (!br.netInputs()
                 .isEmpty()) {
-                h += 14 + br.netInputs()
-                    .size() * 11 + 4;
+                h += SECTION_H + br.netInputs()
+                    .size() * LINE_H + SECTION_END_PAD;
             }
             if (!br.netFluidOutputs()
                 .isEmpty()) {
-                h += 14 + br.netFluidOutputs()
-                    .size() * 11 + 4;
+                h += SECTION_H + br.netFluidOutputs()
+                    .size() * LINE_H + SECTION_END_PAD;
             }
             if (!br.netFluidInputs()
                 .isEmpty()) {
-                h += 14 + br.netFluidInputs()
-                    .size() * 11 + 4;
+                h += SECTION_H + br.netFluidInputs()
+                    .size() * LINE_H + SECTION_END_PAD;
             }
             if (br.totalOperations() > 0) {
-                h += 14 + g.getNodes()
-                    .size() * 11 + 4;
+                h += SECTION_H + g.getNodes()
+                    .size() * LINE_H + SECTION_END_PAD;
             }
             if (br.totalDurationTicks() > 0) {
-                h += 14;
+                h += SECTION_H;
             }
-            h += 4 + 12 + 1 + 10;
-            h += 14 + 10 + 10 + 10 + 10 + 10;
+            h += SECTION_LY_OFFSET + TOTALS_LINE_H + 1 + HELP_LINE_H;
+            h += MODE_LINE_H + HELP_LINE_H * 5;
             return h;
         }
 
@@ -313,11 +370,11 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawRect(0, 0, w, a.height, PlannhColors.SUMMARY_BG.getColor());
             GuiDraw.drawRect(0, 0, w, TITLE_H, PlannhColors.SUMMARY_TITLE_BG.getColor());
             GuiDraw.drawRect(0, TITLE_H, w, 1, PlannhColors.SUMMARY_TITLE_LINE.getColor());
-            GuiDraw.drawText("Summary", 4, 3, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
+            GuiDraw.drawText("Summary", TITLE_TEXT_X, TITLE_TEXT_Y, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
             GuiDraw.drawText(
                 collapsed ? "[+]" : "\u2212",
                 w - COLLAPSE_W,
-                4,
+                COLLAPSE_TEXT_Y,
                 1.0f,
                 PlannhColors.TEXT_MUTED.getColor(),
                 false);
@@ -325,7 +382,10 @@ public class FlowchartScreen extends ModularScreen {
 
             final Graph g = graph();
             final BalanceResult br = g.balance();
-            int ly = TITLE_H + 4;
+            final SummaryMode sMode = summaryMode();
+            final float cycleSecs = summaryCycleSecs(br);
+            final boolean isCycle = sMode == SummaryMode.CYCLES;
+            int ly = TITLE_H + SECTION_LY_OFFSET;
 
             ly = drawSection(
                 ly,
@@ -335,7 +395,7 @@ public class FlowchartScreen extends ModularScreen {
                 PlannhColors.SECTION_PRODUCT.getColor(),
                 PlannhColors.ACCENT_AMBER.getColor(),
                 PlannhColors.ACCENT_AMBER.getColor(),
-                i -> ((Summary.SummaryLine) i).totalCount + "x " + ((Summary.SummaryLine) i).stack.getDisplayName());
+                i -> itemLabel((Summary.SummaryLine) i, cycleSecs, isCycle));
 
             ly = drawSection(
                 ly,
@@ -345,7 +405,7 @@ public class FlowchartScreen extends ModularScreen {
                 PlannhColors.SECTION_INPUT.getColor(),
                 PlannhColors.ACCENT_GREEN2.getColor(),
                 PlannhColors.TEXT_MUTED.getColor(),
-                i -> ((Summary.SummaryLine) i).totalCount + "x " + ((Summary.SummaryLine) i).stack.getDisplayName());
+                i -> itemLabel((Summary.SummaryLine) i, cycleSecs, isCycle));
 
             ly = drawFluidSection(
                 ly,
@@ -354,7 +414,8 @@ public class FlowchartScreen extends ModularScreen {
                 br.netFluidOutputs(),
                 PlannhColors.SECTION_FLUID_OUT.getColor(),
                 PlannhColors.ACCENT_CYAN2.getColor(),
-                PlannhColors.ACCENT_CYAN.getColor());
+                PlannhColors.ACCENT_CYAN.getColor(),
+                i -> fluidLabel((Summary.FluidSummaryLine) i, cycleSecs, isCycle));
 
             ly = drawFluidSection(
                 ly,
@@ -363,11 +424,23 @@ public class FlowchartScreen extends ModularScreen {
                 br.netFluidInputs(),
                 PlannhColors.SECTION_FLUID_IN.getColor(),
                 PlannhColors.ACCENT_BLUE2.getColor(),
-                PlannhColors.ACCENT_BLUE3.getColor());
+                PlannhColors.ACCENT_BLUE3.getColor(),
+                i -> fluidLabel((Summary.FluidSummaryLine) i, cycleSecs, isCycle));
 
             if (br.totalOperations() > 0) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_OPS.getColor());
-                GuiDraw.drawText("Operations", 6, ly + 1, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+                GuiDraw.drawRect(
+                    SECTION_HEADER_X,
+                    ly,
+                    w - SECTION_HEADER_X * 2,
+                    SECTION_H,
+                    PlannhColors.SECTION_OPS.getColor());
+                GuiDraw.drawText(
+                    "Operations",
+                    SECTION_HEADER_TEXT_X,
+                    ly + SECTION_HEADER_TEXT_Y_OFF,
+                    1.0f,
+                    PlannhColors.ACCENT_BLUE.getColor(),
+                    false);
                 ly += SECTION_H;
                 for (final Node node : g.getNodes()) {
                     final NodeBalance nb = br.nodeBalances()
@@ -375,14 +448,14 @@ public class FlowchartScreen extends ModularScreen {
                     if (nb == null || nb.operations <= 0) continue;
                     GuiDraw.drawText(
                         "\u00d7" + nb.operations + "  " + node.machineName,
-                        10,
+                        ITEM_TEXT_X,
                         ly,
                         0.8f,
                         PlannhColors.TEXT_LIGHT.getColor(),
                         false);
                     ly += LINE_H;
                 }
-                ly += 4;
+                ly += SECTION_END_PAD;
             }
 
             if (br.totalOperations() > 0 || br.totalDurationTicks() > 0) {
@@ -390,18 +463,25 @@ public class FlowchartScreen extends ModularScreen {
                 if (br.totalOperations() > 0) totals.append("Ops: ")
                     .append(br.totalOperations());
                 if (br.totalDurationTicks() > 0) {
-                    if (!totals.isEmpty()) totals.append("  ");
                     final float sec = (float) br.totalDurationTicks() / GuiHelper.TICKS_PER_SECOND;
-                    totals.append("Time: ")
-                        .append(br.totalDurationTicks())
-                        .append("t");
-                    if (sec > 0) totals.append(" (")
-                        .append(String.format("%.1f", sec))
-                        .append("s)");
+                    if (!totals.isEmpty()) totals.append("  ");
+                    if (isCycle) {
+                        totals.append("Time: ")
+                            .append(br.totalDurationTicks())
+                            .append("t");
+                        if (sec > 0) totals.append(" (")
+                            .append(String.format("%.1f", sec))
+                            .append("s/cycle)");
+                    } else {
+                        totals.append("Cycle: ")
+                            .append(String.format("%.1f", sec))
+                            .append("s");
+                    }
                 }
-                GuiDraw.drawRect(0, ly - 2, w, 1, PlannhColors.SEPARATOR_LIGHT.getColor());
-                GuiDraw.drawText(totals.toString(), 6, ly, 0.9f, PlannhColors.ACCENT_BLUE.getColor(), false);
-                ly += 14;
+                GuiDraw.drawRect(0, ly - SEPARATOR_Y_OFF, w, 1, PlannhColors.SEPARATOR_LIGHT.getColor());
+                GuiDraw
+                    .drawText(totals.toString(), TOTALS_TEXT_X, ly, 0.9f, PlannhColors.ACCENT_BLUE.getColor(), false);
+                ly += TOTALS_LINE_H;
             }
 
             final BalanceMode mode = g.getBalanceMode();
@@ -410,60 +490,87 @@ public class FlowchartScreen extends ModularScreen {
                 case FORWARD -> "Mode: Inputs\u2192Outputs";
                 case BACKWARD -> "Mode: Outputs\u2192Inputs";
             };
-            GuiDraw.drawText(modeStr, 6, ly, 0.9f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            ly += 12;
+            GuiDraw.drawText(modeStr, MODE_TEXT_X, ly, 0.9f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            ly += MODE_LINE_H;
 
-            GuiDraw.drawRect(2, ly + 4, w - 4, 1, PlannhColors.SEPARATOR_DIM.getColor());
-            ly += 10;
+            GuiDraw.drawRect(
+                SECTION_HEADER_X,
+                ly + HELP_SEP_Y_OFF,
+                w - SECTION_HEADER_X * 2,
+                1,
+                PlannhColors.SEPARATOR_DIM.getColor());
+            ly += HELP_SEP_GAP;
             GuiDraw.drawText(
                 "Zoom: " + canvas.getZoomPercent() + "%",
-                6,
+                ZOOM_TEXT_X,
                 ly,
                 0.9f,
                 PlannhColors.TEXT_MUTED.getColor(),
                 false);
-            ly += 14;
+            ly += ZOOM_LINE_H;
             GuiDraw.drawText("[Scroll] zoom", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
-            ly += 10;
+            ly += HELP_LINE_H;
             GuiDraw.drawText("[MMB] pan", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
-            ly += 10;
+            ly += HELP_LINE_H;
             GuiDraw.drawText("[LMB drag] move node", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
-            ly += 10;
+            ly += HELP_LINE_H;
             GuiDraw.drawText("[Double-click] open NEI", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
-            ly += 10;
+            ly += HELP_LINE_H;
             GuiDraw.drawText("[+ in NEI GUI] add recipe", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
         }
 
         private int drawSection(int ly, final int w, final String title, final List<?> items, final int headerColor,
             final int titleColor, final int itemColor, final java.util.function.Function<Object, String> labelFn) {
             if (items.isEmpty()) return ly;
-            GuiDraw.drawRect(2, ly, w - 4, 12, headerColor);
-            GuiDraw.drawText(title + " (" + items.size() + ")", 6, ly + 1, 1.0f, titleColor, false);
+            GuiDraw.drawRect(SECTION_HEADER_X, ly, w - SECTION_HEADER_X * 2, SECTION_H, headerColor);
+            GuiDraw.drawText(
+                title + " (" + items.size() + ")",
+                SECTION_HEADER_TEXT_X,
+                ly + SECTION_HEADER_TEXT_Y_OFF,
+                1.0f,
+                titleColor,
+                false);
             ly += SECTION_H;
             for (final Object item : items) {
-                GuiDraw.drawText(labelFn.apply(item), 10, ly, 0.8f, itemColor, false);
+                GuiDraw.drawText(labelFn.apply(item), ITEM_TEXT_X, ly, 0.8f, itemColor, false);
                 ly += LINE_H;
             }
-            return ly + 4;
+            return ly + SECTION_END_PAD;
         }
 
-        private static String fluidLabel(final Object item) {
-            final var line = (com.sbancuz.plannh.data.flowchart.Summary.FluidSummaryLine) item;
-            return formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
+        private static String itemLabel(final Summary.SummaryLine line, final float cycleSecs, final boolean isCycle) {
+            if (isCycle) {
+                return line.totalCount + "x " + line.stack.getDisplayName();
+            }
+            return formatRate(line.totalCount / cycleSecs) + "/s " + line.stack.getDisplayName();
         }
 
-        private int drawFluidSection(int ly, final int w, final String title,
-            final List<com.sbancuz.plannh.data.flowchart.Summary.FluidSummaryLine> items, final int headerColor,
-            final int titleColor, final int itemColor) {
+        private static String fluidLabel(final Summary.FluidSummaryLine line, final float cycleSecs,
+            final boolean isCycle) {
+            if (isCycle) {
+                return formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
+            }
+            return formatFluidAmount(line.totalAmount / cycleSecs) + "/s " + line.fluid.getLocalizedName();
+        }
+
+        private int drawFluidSection(int ly, final int w, final String title, final List<?> items,
+            final int headerColor, final int titleColor, final int itemColor,
+            final java.util.function.Function<Object, String> labelFn) {
             if (items.isEmpty()) return ly;
-            GuiDraw.drawRect(2, ly, w - 4, 12, headerColor);
-            GuiDraw.drawText(title + " (" + items.size() + ")", 6, ly + 1, 1.0f, titleColor, false);
+            GuiDraw.drawRect(SECTION_HEADER_X, ly, w - SECTION_HEADER_X * 2, SECTION_H, headerColor);
+            GuiDraw.drawText(
+                title + " (" + items.size() + ")",
+                SECTION_HEADER_TEXT_X,
+                ly + SECTION_HEADER_TEXT_Y_OFF,
+                1.0f,
+                titleColor,
+                false);
             ly += SECTION_H;
-            for (final var line : items) {
-                GuiDraw.drawText(fluidLabel(line), 10, ly, 0.8f, itemColor, false);
+            for (final Object item : items) {
+                GuiDraw.drawText(labelFn.apply(item), ITEM_TEXT_X, ly, 0.8f, itemColor, false);
                 ly += LINE_H;
             }
-            return ly + 4;
+            return ly + SECTION_END_PAD;
         }
 
         @Override
@@ -512,9 +619,16 @@ public class FlowchartScreen extends ModularScreen {
             pos(floatX, floatY);
         }
 
-        private static String formatFluidAmount(final int mb) {
-            if (mb >= 1000) return (mb / 1000) + "." + ((mb % 1000) / 100) + "B";
-            return mb + "mB";
+        private static String formatFluidAmount(final float mb) {
+            if (mb >= 1000) return (int) (mb / 1000) + "." + ((int) (mb % 1000) / 100) + "B";
+            return String.format("%.1f", mb) + "mB";
+        }
+
+        private static String formatRate(final float rate) {
+            if (rate >= 1000000) return String.format("%.1fM", rate / 1000000);
+            if (rate >= 1000) return String.format("%.0f", rate);
+            if (rate >= 1) return String.format("%.2f", rate);
+            return String.format("%.3f", rate);
         }
     }
 }

@@ -5,6 +5,8 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
+
 public class SlotSet {
 
     public static class Slot {
@@ -20,12 +22,16 @@ public class SlotSet {
         }
     }
 
+    public static final int DEFAULT_SUMMARY_X = 210;
+    public static final int DEFAULT_SUMMARY_Y = 46;
+
     @Nonnull
     public final List<Slot> slots = new ArrayList<>();
     public int activeSlot = 0;
-    public int summaryX = 210;
-    public int summaryY = 46;
+    public int summaryX = DEFAULT_SUMMARY_X;
+    public int summaryY = DEFAULT_SUMMARY_Y;
     public boolean summaryCollapsed = false;
+    public SummaryMode summaryMode = SummaryMode.CYCLES;
 
     @Nonnull
     public Graph getActiveGraph() {

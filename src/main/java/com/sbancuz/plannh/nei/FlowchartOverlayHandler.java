@@ -52,8 +52,11 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
         return true;
     }
 
+    private static final int DEFAULT_NODE_X = 200;
+    private static final int DEFAULT_NODE_Y = 200;
+
     private static void addRecipe(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
-        final Node node = new Node(handler, recipeIndex, 200, 200);
+        final Node node = new Node(handler, recipeIndex, DEFAULT_NODE_X, DEFAULT_NODE_Y);
         final Graph graph = PlanAPI.getActiveGraph();
         graph.addNode(node);
         PlanAPI.save();

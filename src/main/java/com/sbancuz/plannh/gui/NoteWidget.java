@@ -18,6 +18,9 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     private static final int NOTE_W = 140;
     private static final int NOTE_H = 60;
     private static final int CLOSE_W = 12;
+    private static final int BORDER_W = 1;
+    private static final int TEXT_PAD = 4;
+    private static final int TEXT_TOP = 8;
 
     @Nonnull
     @Getter
@@ -70,7 +73,7 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
         final int border = editing ? PlannhColors.NOTE_BORDER_EDIT.getColor() : PlannhColors.NOTE_BORDER.getColor();
 
         GuiDraw.drawRect(0, 0, w, h, bg);
-        GuiHelper.drawRectBorder(0, 0, w, h, 1, border);
+        GuiHelper.drawRectBorder(0, 0, w, h, BORDER_W, border);
         GuiHelper.drawCloseButton(
             z,
             w,
@@ -80,7 +83,7 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
             PlannhColors.TEXT_WHITE.getColor());
 
         // Text
-        final int pad = zq(4);
+        final int pad = zq(TEXT_PAD);
         if (editing) {
             final String display = note.text.substring(0, Math.min(cursorPos, note.text.length()));
             final boolean blink = (Minecraft.getSystemTime() / 600) % 2 == 0;
@@ -88,7 +91,7 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
             GuiDraw.drawText(
                 display + cursor + note.text.substring(Math.min(cursorPos, note.text.length())),
                 pad,
-                zq(8),
+                zq(TEXT_TOP),
                 z * 0.9f,
                 PlannhColors.TEXT_DARK.getColor(),
                 false);
@@ -96,7 +99,7 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
             GuiDraw.drawText(
                 note.text.isEmpty() ? "Note" : note.text,
                 pad,
-                zq(8),
+                zq(TEXT_TOP),
                 z * 0.9f,
                 PlannhColors.TEXT_NOTE.getColor(),
                 false);

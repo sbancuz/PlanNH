@@ -89,6 +89,11 @@ public final class PlannhColors {
         NOTE_CLOSE_BG     = C.argb("note_close_bg",      "0xB4C83C3C"),
         PORT_LABEL_BG     = C.argb("port_label_bg",      "0xC8141414");
 
+    // ── Grid ──
+    public static final ColorResource
+        GRID_LINE      = C.argb("grid_line",       "0x18FFFFFF"),
+        GRID_MAJOR     = C.argb("grid_major",      "0x30FFFFFF");
+
     // ── Context Menu ──
     public static final ColorResource
         CONTEXT_BG     = C.argb("context_bg",      "0xE6323237"),

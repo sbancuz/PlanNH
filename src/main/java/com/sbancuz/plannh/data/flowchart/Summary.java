@@ -13,6 +13,11 @@ import com.sbancuz.plannh.data.RecipeProperty;
 public record Summary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs, List<FluidSummaryLine> netFluidInputs,
     List<FluidSummaryLine> netFluidOutputs, Map<RecipeProperty<?>, Long> propertyTotals) {
 
+    public enum SummaryMode {
+        CYCLES,
+        THROUGHPUT
+    }
+
     public static class SummaryLine {
 
         @Nonnull

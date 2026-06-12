@@ -17,6 +17,10 @@ public class ContextMenuWidget extends Widget<ContextMenuWidget> implements Inte
 
     private static final int ITEM_H = 14;
     private static final int PAD = 3;
+    private static final int MIN_WIDTH = 80;
+    private static final int EXTRA_W = 4;
+    private static final int BORDER_W = 1;
+    private static final int TEXT_OFF = 2;
 
     public record MenuItem(String label, Runnable action) {}
 
@@ -29,13 +33,13 @@ public class ContextMenuWidget extends Widget<ContextMenuWidget> implements Inte
         this.canvas = canvas;
         this.items = items;
         final Minecraft mc = Minecraft.getMinecraft();
-        int maxW = 80;
+        int maxW = MIN_WIDTH;
         for (final MenuItem item : items) {
             final int w = mc.fontRenderer.getStringWidth(item.label);
             if (w > maxW) maxW = w;
         }
         pos(x, y);
-        size(maxW + PAD * 2 + 4, items.size() * ITEM_H + PAD * 2);
+        size(maxW + PAD * 2 + EXTRA_W, items.size() * ITEM_H + PAD * 2);
     }
 
     @Override
@@ -46,14 +50,20 @@ public class ContextMenuWidget extends Widget<ContextMenuWidget> implements Inte
         final int my = getContext().getMouseY();
 
         GuiDraw.drawRect(0, 0, w, h, PlannhColors.CONTEXT_BG.getColor());
-        GuiHelper.drawRectBorder(0, 0, w, h, 1, PlannhColors.CONTEXT_BORDER.getColor());
+        GuiHelper.drawRectBorder(0, 0, w, h, BORDER_W, PlannhColors.CONTEXT_BORDER.getColor());
 
         for (int i = 0; i < items.size(); i++) {
             final int iy = PAD + i * ITEM_H;
             if (mx >= PAD && mx < w - PAD && my >= iy && my < iy + ITEM_H) {
                 GuiDraw.drawRect(PAD, iy, w - PAD * 2, ITEM_H, PlannhColors.CONTEXT_HOVER.getColor());
             }
-            GuiDraw.drawText(items.get(i).label, PAD + 2, iy + 2, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
+            GuiDraw.drawText(
+                items.get(i).label,
+                PAD + TEXT_OFF,
+                iy + TEXT_OFF,
+                1.0f,
+                PlannhColors.TEXT_WHITE.getColor(),
+                false);
         }
     }
 

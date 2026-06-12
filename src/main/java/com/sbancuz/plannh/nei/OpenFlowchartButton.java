@@ -40,8 +40,10 @@ public class OpenFlowchartButton extends Button {
         return false;
     }
 
+    private static final int BUTTON_WIDTH = 20;
+
     @Override
     public int contentWidth() {
-        return 20;
+        return BUTTON_WIDTH;
     }
 }

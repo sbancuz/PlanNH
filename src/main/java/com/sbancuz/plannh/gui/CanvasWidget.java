@@ -38,6 +38,9 @@ import lombok.Getter;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable {
 
+    private static final int GRID_SIZE = 20;
+    private static final int GRID_MAJOR = 5;
+
     private static final int ARROW_COLOR_ITEM = PlannhColors.ARROW_ITEM.getColor();
     private static final int ARROW_COLOR_FLUID = PlannhColors.ARROW_FLUID.getColor();
     private static final int PREVIEW_COLOR = PlannhColors.PREVIEW_HIGHLIGHT.getColor();
@@ -45,6 +48,23 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int NODE_W_ESTIMATE = 120;
     private static final int NODE_H_ESTIMATE = 80;
     private static final int HEADER_OFFSET = 24;
+    private static final int PORT_S = 8;
+    private static final int PORT_HALF = 4;
+    private static final int PORT_GAP = 6;
+    private static final int PORT_SPACING = 18;
+    private static final int PORT_ORIGIN = 10;
+    private static final int MIN_GRID_SPACING = 4;
+    private static final int ARROW_SIZE = 6;
+    private static final int ARROW_MIN_SIZE = 4;
+    private static final int LINE_THICK_BASE = 2;
+    private static final int LINE_THICK_MIN = 1;
+    private static final float ARROW_HB_RATIO = 0.35f;
+    private static final int EDGE_MARGIN_BASE = 4;
+    private static final int PORT_LABEL_MAX = 20;
+    private static final int PORT_LABEL_TRUNC = 19;
+    private static final int PORT_FONT_SIZE = 9;
+    private static final float PORT_FONT_SCALE = 0.9f;
+    private static final int PORT_LABEL_PAD = 2;
 
     @Nonnull
     @Getter
@@ -295,6 +315,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int ah = getArea().height;
         if (aw <= 0 || ah <= 0) return;
 
+        drawGrid(aw, ah);
+
         super.draw(context, widgetTheme);
 
         drawArrows();
@@ -304,6 +326,28 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
 
         drawHoveredPortLabels();
+    }
+
+    private void drawGrid(final int w, final int h) {
+        final float spacing = GRID_SIZE * zoom;
+        if (spacing < MIN_GRID_SPACING) return;
+
+        final int gridColor = PlannhColors.GRID_LINE.getColor();
+        final int majorColor = PlannhColors.GRID_MAJOR.getColor();
+
+        final int firstKX = (int) Math.ceil(-panX / spacing);
+        final float startX = panX + firstKX * spacing;
+        for (float x = startX; x < w; x += spacing) {
+            final int k = firstKX + Math.round((x - startX) / spacing);
+            GuiDraw.drawRect(Math.round(x), 0, 1, h, k % GRID_MAJOR == 0 ? majorColor : gridColor);
+        }
+
+        final int firstKY = (int) Math.ceil(-panY / spacing);
+        final float startY = panY + firstKY * spacing;
+        for (float y = startY; y < h; y += spacing) {
+            final int k = firstKY + Math.round((y - startY) / spacing);
+            GuiDraw.drawRect(0, Math.round(y), w, 1, k % GRID_MAJOR == 0 ? majorColor : gridColor);
+        }
     }
 
     private int widgetX(final RecipeNodeWidget w) {
@@ -337,16 +381,16 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void drawArrow(final int x1, final int y1, final int x2, final int y2, final boolean fluid) {
-        final float as = Math.max(4, 6 * zoom);
+        final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * zoom);
         final int ex = Math.round(x2 - as);
         final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
-        drawOrthogonalLine(x1, y1, x2, y2, ex, color, Math.max(1, 2 * zoom));
+        drawOrthogonalLine(x1, y1, x2, y2, ex, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * zoom));
 
         final int r = Color.getRed(color);
         final int g = Color.getGreen(color);
         final int b = Color.getBlue(color);
         final int a = Color.getAlpha(color);
-        final float hb = as * 0.35f;
+        final float hb = as * ARROW_HB_RATIO;
         Platform.startDrawing(Platform.DrawMode.TRIANGLES, Platform.VertexFormat.POS_COLOR, buf -> {
             buf.pos(x2, y2, 0)
                 .color(r, g, b, a)
@@ -378,7 +422,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
         }
 
-        drawOrthogonalLine(x1, y1, x2, y2, x2, PREVIEW_COLOR, Math.max(1, 2 * zoom));
+        drawOrthogonalLine(x1, y1, x2, y2, x2, PREVIEW_COLOR, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * zoom));
     }
 
     private void drawOrthogonalLine(final int x1, final int y1, final int x2, final int y2, final int xEnd,
@@ -410,7 +454,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Nullable
     private Edge getEdgeAt(final int absMx, final int absMy) {
-        final int margin = Math.max(4, Math.round(4 * zoom));
+        final int margin = Math.max(EDGE_MARGIN_BASE, Math.round(EDGE_MARGIN_BASE * zoom));
         final int cmx = absMx - getArea().x;
         final int cmy = absMy - getArea().y;
         for (final Edge edge : graph.getEdges()) {
@@ -852,12 +896,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     // ── Hovered port labels ──
 
-    private static final int PORT_S = 8;
-    private static final int PORT_HALF = 4;
-    private static final int PORT_GAP = 6;
-    private static final int PORT_SPACING = 18;
-    private static final int PORT_ORIGIN = 10;
-
     private void drawHoveredPortLabels() {
         final int mouseX = getContext().getMouseX();
         final int mouseY = getContext().getMouseY();
@@ -954,13 +992,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private static void drawPortLabel(String name, final int anchorX, final int centerY, final boolean rightSide,
         final float z) {
-        if (name.length() > 20) name = name.substring(0, 19) + "\u2026";
+        if (name.length() > PORT_LABEL_MAX) name = name.substring(0, PORT_LABEL_TRUNC) + "\u2026";
         final int tw = Minecraft.getMinecraft().fontRenderer.getStringWidth(name);
-        final int fh = Math.round(9 * z * 0.9f);
+        final int fh = Math.round(PORT_FONT_SIZE * z * PORT_FONT_SCALE);
         final int gap = Math.round(PORT_GAP * z);
         final int labelX = rightSide ? anchorX + gap : anchorX - tw - gap;
         final int labelY = centerY - fh / 2;
-        final int pad = Math.round(2 * z);
+        final int pad = Math.round(PORT_LABEL_PAD * z);
         GuiDraw.drawRect(labelX - pad, labelY - pad, tw + pad * 2, fh + pad * 2, PlannhColors.PORT_LABEL_BG.getColor());
         GuiDraw.drawText(name, labelX, labelY, z * 0.9f, PlannhColors.TEXT_WHITE.getColor(), false);
     }

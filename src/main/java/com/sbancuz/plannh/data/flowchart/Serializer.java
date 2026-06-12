@@ -31,6 +31,7 @@ import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
+import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
 import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
@@ -92,6 +93,7 @@ public final class Serializer {
         root.addProperty("summaryX", set.summaryX);
         root.addProperty("summaryY", set.summaryY);
         root.addProperty("summaryCollapsed", set.summaryCollapsed);
+        root.addProperty("summaryMode", set.summaryMode.name());
         final JsonArray arr = new JsonArray();
         for (final SlotSet.Slot slot : set.slots) {
             final JsonObject slotObj = new JsonObject();
@@ -111,11 +113,18 @@ public final class Serializer {
         set.activeSlot = root.get("active")
             .getAsInt();
         set.summaryX = root.has("summaryX") ? root.get("summaryX")
-            .getAsInt() : 210;
+            .getAsInt() : SlotSet.DEFAULT_SUMMARY_X;
         set.summaryY = root.has("summaryY") ? root.get("summaryY")
-            .getAsInt() : 46;
+            .getAsInt() : SlotSet.DEFAULT_SUMMARY_Y;
         set.summaryCollapsed = root.has("summaryCollapsed") && root.get("summaryCollapsed")
             .getAsBoolean();
+        if (root.has("summaryMode")) {
+            try {
+                set.summaryMode = SummaryMode.valueOf(
+                    root.get("summaryMode")
+                        .getAsString());
+            } catch (final IllegalArgumentException ignored) {}
+        }
         final JsonArray arr = root.getAsJsonArray("slots");
         for (final JsonElement elem : arr) {
             final JsonObject obj = elem.getAsJsonObject();

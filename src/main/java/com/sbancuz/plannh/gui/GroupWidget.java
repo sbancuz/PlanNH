@@ -22,11 +22,18 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
     private static final int CLOSE_W = 12;
     private static final int COLLAPSE_W = 14;
     private static final int SWATCH_W = 10;
+    private static final int SWATCH_H = 10;
     private static final int MIN_W = 180;
     private static final int MIN_H = 60;
     private static final int RESIZE_MARGIN = 3;
     private static final int ALPHA_BORDER = 120;
     private static final int ALPHA_HEADER = 180;
+    private static final int BORDER_W = 2;
+    private static final int MIN_BORDER = 1;
+    private static final int HEADER_INSET = 4;
+    private static final int BADGE_GAP = 6;
+    private static final int CLOSE_W_GAP = 6;
+    private static final int TOOLTIP_OFF = 10;
 
     private enum ResizeMode {
 
@@ -125,7 +132,7 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
 
         GuiDraw.drawRect(0, 0, pw, ph, PlannhColors.SUMMARY_BG.getColor());
 
-        final int bw = Math.max(1, Math.round(2 * z));
+        final int bw = Math.max(MIN_BORDER, Math.round(BORDER_W * z));
         final int bc = Color
             .argb(Color.getRed(titleCol), Color.getGreen(titleCol), Color.getBlue(titleCol), ALPHA_BORDER);
         GuiHelper.drawRectBorder(0, 0, pw, ph, bw, bc);
@@ -133,23 +140,24 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
         final int hbg = Color
             .argb(Color.getRed(titleCol), Color.getGreen(titleCol), Color.getBlue(titleCol), ALPHA_HEADER);
         GuiDraw.drawRect(0, 0, pw, hh, hbg);
-        GuiDraw.drawRect(0, hh, pw, Math.max(1, Math.round(z)), bc);
+        GuiDraw.drawRect(0, hh, pw, Math.max(MIN_BORDER, Math.round(z)), bc);
 
         final String collapseIcon = group.collapsed ? "\u25b6" : "\u25bc";
-        GuiDraw.drawText(collapseIcon, zq(4), zq(4), z, PlannhColors.TEXT_LIGHT.getColor(), false);
+        GuiDraw
+            .drawText(collapseIcon, zq(HEADER_INSET), zq(HEADER_INSET), z, PlannhColors.TEXT_LIGHT.getColor(), false);
 
         drawTitle(pw, z);
 
         final int ss = zq(SWATCH_W);
-        final int sh = Math.round(10 * z);
-        final int sx = pw - zq(CLOSE_W) - ss - zq(4) - Math.max(1, Math.round(z));
-        GuiDraw.drawRect(sx, zq(4), ss, sh, titleCol);
+        final int sh = Math.round(SWATCH_H * z);
+        final int sx = pw - zq(CLOSE_W) - ss - zq(HEADER_INSET) - Math.max(MIN_BORDER, Math.round(z));
+        GuiDraw.drawRect(sx, zq(HEADER_INSET), ss, sh, titleCol);
 
         GuiHelper.drawCloseButton(
             z,
             pw,
             CLOSE_W,
-            Math.max(1, Math.round(z)),
+            Math.max(MIN_BORDER, Math.round(z)),
             PlannhColors.NOTE_CLOSE_BG.getColor(),
             PlannhColors.TEXT_WHITE.getColor());
 
@@ -158,7 +166,7 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
             final int lmy = getContext().getAbsMouseY() - getArea().y;
             final ResizeMode rm = getResizeModeAt(lmx, lmy);
             if (rm != ResizeMode.NONE && !rm.cursor.isEmpty()) {
-                GuiDraw.drawText(rm.cursor, lmx + zq(10), lmy + zq(10), z * 1.2f, titleCol, false);
+                GuiDraw.drawText(rm.cursor, lmx + zq(TOOLTIP_OFF), lmy + zq(TOOLTIP_OFF), z * 1.2f, titleCol, false);
             }
         }
     }
@@ -166,9 +174,9 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
     private void drawTitle(final int pw, final float zoom) {
         if (group.collapsed) return;
 
-        final int titleX = Math.round((COLLAPSE_W + 4) * zoom);
+        final int titleX = Math.round((COLLAPSE_W + HEADER_INSET) * zoom);
         final int swatchW = Math.round(SWATCH_W * zoom);
-        final int maxTitleW = pw - titleX - swatchW - zq(4) - Math.round((CLOSE_W + 6) * zoom);
+        final int maxTitleW = pw - titleX - swatchW - zq(HEADER_INSET) - Math.round((CLOSE_W + CLOSE_W_GAP) * zoom);
 
         if (editing) {
             final String display = group.title.substring(0, Math.min(cursorPos, group.title.length()));
@@ -183,7 +191,7 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
                     editText = editText.substring(editText.length() - maxChars);
                 }
             }
-            GuiDraw.drawText(editText, titleX, zq(4), zoom, PlannhColors.TEXT_WHITE.getColor(), false);
+            GuiDraw.drawText(editText, titleX, zq(HEADER_INSET), zoom, PlannhColors.TEXT_WHITE.getColor(), false);
         } else {
             String displayTitle = group.title;
             final int titleW = Minecraft.getMinecraft().fontRenderer.getStringWidth(displayTitle);
@@ -195,15 +203,15 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
                 }
                 displayTitle += "\u2026";
             }
-            GuiDraw.drawText(displayTitle, titleX, zq(4), zoom, PlannhColors.TEXT_WHITE.getColor(), false);
+            GuiDraw.drawText(displayTitle, titleX, zq(HEADER_INSET), zoom, PlannhColors.TEXT_WHITE.getColor(), false);
 
             final int badgeX = titleX
                 + Math.round(Minecraft.getMinecraft().fontRenderer.getStringWidth(displayTitle) * zoom)
-                + zq(6);
+                + zq(BADGE_GAP);
             GuiDraw.drawText(
                 "(" + group.nodeIds.size() + ")",
                 badgeX,
-                zq(4),
+                zq(HEADER_INSET),
                 zoom * 0.8f,
                 PlannhColors.TEXT_MUTED.getColor(),
                 false);
@@ -219,15 +227,15 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
         final int pw = getArea().width;
         final int hh = Math.round(HEADER_H * z);
 
-        if (GuiHelper.isInsideCloseButton(mx, my, z, pw, CLOSE_W, Math.max(1, Math.round(z)))) {
+        if (GuiHelper.isInsideCloseButton(mx, my, z, pw, CLOSE_W, Math.max(MIN_BORDER, Math.round(z)))) {
             canvas.removeGroup(group.id);
             return Result.SUCCESS;
         }
 
         final int ss = zq(SWATCH_W);
-        final int sx = pw - zq(CLOSE_W) - ss - zq(4) - Math.max(1, Math.round(z));
-        final int sh = Math.round(10 * z);
-        if (mx >= sx && mx < sx + ss && my >= zq(4) && my < zq(4) + sh) {
+        final int sx = pw - zq(CLOSE_W) - ss - zq(HEADER_INSET) - Math.max(MIN_BORDER, Math.round(z));
+        final int sh = Math.round(SWATCH_H * z);
+        if (mx >= sx && mx < sx + ss && my >= zq(HEADER_INSET) && my < zq(HEADER_INSET) + sh) {
             openColorPicker();
             return Result.SUCCESS;
         }
