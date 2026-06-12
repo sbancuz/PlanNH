@@ -12,6 +12,16 @@ public class Graph {
     public final Map<UUID, Note> notes = new HashMap<>();
     public final Map<UUID, Group> groups = new HashMap<>();
 
+    private Balancer.BalanceMode balanceMode = Balancer.BalanceMode.BACKWARD;
+
+    public Balancer.BalanceMode getBalanceMode() {
+        return balanceMode;
+    }
+
+    public void setBalanceMode(final Balancer.BalanceMode mode) {
+        this.balanceMode = mode;
+    }
+
     public void addNode(final Node node) {
         nodes.put(node.id, node);
     }
@@ -31,7 +41,7 @@ public class Graph {
     }
 
     public Balancer.BalanceResult balance() {
-        return Balancer.balance(this);
+        return Balancer.balance(this, balanceMode);
     }
 
     public Collection<Node> getNodes() {

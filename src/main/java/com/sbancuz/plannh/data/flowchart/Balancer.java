@@ -20,7 +20,136 @@ import com.sbancuz.plannh.data.RecipeProperty;
 
 public final class Balancer {
 
-    public static BalanceResult balance(final Graph graph) {
+    public enum BalanceMode {
+        NONE,
+        FORWARD,
+        BACKWARD
+    }
+
+    public static BalanceResult balance(final Graph graph, final BalanceMode mode) {
+        return switch (mode) {
+            case NONE -> balanceNone(graph);
+            case FORWARD -> balanceForward(graph);
+            case BACKWARD -> balanceBackward(graph);
+        };
+    }
+
+    private static BalanceResult balanceNone(final Graph graph) {
+        final Map<UUID, Integer> ops = new HashMap<>();
+        for (final Node node : graph.getNodes()) {
+            ops.put(node.id, 1);
+        }
+        final Map<UUID, Integer> throughputFactors = new HashMap<>();
+        for (final Node node : graph.getNodes()) {
+            throughputFactors.put(
+                node.id,
+                node.machineConfig.computeEffect(node.properties.asMap(), node.durationTicks)
+                    .throughputFactor());
+        }
+        return buildResult(graph, ops, throughputFactors);
+    }
+
+    private static BalanceResult balanceForward(final Graph graph) {
+        final Map<UUID, List<Edge>> outEdges = new HashMap<>();
+        final Map<UUID, List<Edge>> inEdges = new HashMap<>();
+        for (final Node node : graph.getNodes()) {
+            outEdges.put(node.id, new ArrayList<>());
+            inEdges.put(node.id, new ArrayList<>());
+        }
+        for (final Edge edge : graph.getEdges()) {
+            outEdges.get(edge.sourceNodeId)
+                .add(edge);
+            inEdges.get(edge.targetNodeId)
+                .add(edge);
+        }
+
+        final List<UUID> topoOrder = topologicalSort(graph, inEdges);
+        if (topoOrder == null) {
+            return balanceNone(graph);
+        }
+
+        final Map<UUID, Integer> ops = new HashMap<>();
+        for (final Node node : graph.getNodes()) {
+            ops.put(node.id, inEdges.get(node.id)
+                .isEmpty() ? 1 : 0);
+        }
+
+        final Map<UUID, Integer> throughputFactors = new HashMap<>();
+        for (final Node node : graph.getNodes()) {
+            final MachineConfig cfg = node.machineConfig;
+            final var eff = cfg.computeEffect(node.properties.asMap(), node.durationTicks);
+            throughputFactors.put(node.id, eff.throughputFactor());
+        }
+
+        for (final UUID nodeId : topoOrder) {
+            final Node node = graph.nodes.get(nodeId);
+            if (node == null) continue;
+
+            final int currentOps = ops.get(nodeId);
+            if (currentOps <= 0) continue;
+
+            for (final Edge edge : outEdges.get(nodeId)) {
+                final Node target = graph.nodes.get(edge.targetNodeId);
+                if (target == null) continue;
+
+                int myOutputCount = 0;
+                float outputChance = 1.f;
+                if (edge.sourceOutputIndex >= 0 && edge.sourceOutputIndex < node.outputs.size()) {
+                    final ItemStack stack = node.outputs.get(edge.sourceOutputIndex)
+                        .left();
+                    if (stack != null) {
+                        myOutputCount = stack.stackSize;
+                        outputChance = node.outputs.get(edge.sourceOutputIndex)
+                            .rightFloat();
+                    }
+                }
+                if (myOutputCount <= 0) continue;
+
+                int targetInputCount = 0;
+                float inputChance = 1.f;
+                if (edge.targetInputIndex >= 0 && edge.targetInputIndex < target.inputs.size()) {
+                    final ItemStack stack = target.inputs.get(edge.targetInputIndex)
+                        .left();
+                    if (stack != null) {
+                        targetInputCount = stack.stackSize;
+                        inputChance = target.inputs.get(edge.targetInputIndex)
+                            .rightFloat();
+                    }
+                }
+                if (targetInputCount <= 0) continue;
+
+                final MachineConfig cfg = node.machineConfig;
+                final MachineConfig tgtCfg = target.machineConfig;
+                final int srcThroughput = throughputFactors.get(nodeId);
+                final int tgtThroughput = throughputFactors.get(edge.targetNodeId);
+
+                final float yield = currentOps * myOutputCount * outputChance
+                    * cfg.outputMultiplier(edge.sourceOutputIndex)
+                    * srcThroughput;
+
+                final float demandPerOp = targetInputCount * inputChance
+                    * tgtCfg.inputMultiplier(edge.targetInputIndex)
+                    * tgtThroughput;
+
+                if (demandPerOp <= 0) continue;
+
+                final int needed = (int) Math.ceil(yield / demandPerOp);
+                final int existing = ops.get(edge.targetNodeId);
+                if (needed > existing) {
+                    ops.put(edge.targetNodeId, needed);
+                }
+            }
+        }
+
+        for (final Node node : graph.getNodes()) {
+            final int v = ops.get(node.id);
+            if (v <= 0) ops.put(node.id, 1);
+        }
+
+        return buildResult(graph, ops, throughputFactors);
+    }
+
+    private static BalanceResult balanceBackward(final Graph graph) {
         final Map<UUID, List<Edge>> outEdges = new HashMap<>();
         final Map<UUID, List<Edge>> inEdges = new HashMap<>();
         for (final Node node : graph.getNodes()) {

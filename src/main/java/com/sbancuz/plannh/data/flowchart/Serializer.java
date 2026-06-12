@@ -28,6 +28,7 @@ import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.SettingDef;
+import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 
 import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
@@ -167,6 +168,9 @@ public final class Serializer {
     private static JsonObject graphToJson(final Graph graph) {
         final JsonObject root = new JsonObject();
 
+        root.addProperty("balanceMode", graph.getBalanceMode()
+            .name());
+
         final JsonArray nodesArray = new JsonArray();
         for (final Node node : graph.getNodes()) {
             final JsonObject obj = new JsonObject();
@@ -248,6 +252,14 @@ public final class Serializer {
 
     private static Graph jsonToGraph(final JsonObject root) {
         final Graph graph = new Graph();
+
+        if (root.has("balanceMode")) {
+            try {
+                graph.setBalanceMode(BalanceMode.valueOf(root.get("balanceMode")
+                    .getAsString()));
+            } catch (final IllegalArgumentException ignored) {
+            }
+        }
 
         final JsonArray nodesArray = root.getAsJsonArray("nodes");
         for (final JsonElement elem : nodesArray) {

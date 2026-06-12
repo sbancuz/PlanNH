@@ -108,7 +108,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int calcInfoHeight() {
-        final int lines = node.inputs.size() + node.outputs.size() + node.fluidInputs.size() + node.fluidOutputs.size();
+        final int lines = 1 + node.inputs.size() + node.outputs.size() + node.fluidInputs.size() + node.fluidOutputs.size();
         return lines * LINE_H + 6;
     }
 
@@ -231,14 +231,28 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 PlannhColors.TEXT_LIGHT.getColor(),
                 false);
 
+            final NodeBalance simpleNb = getNodeBalance();
+            final int simpleOps = simpleNb != null ? simpleNb.operations : 1;
+            final int simpleDurPerOp = simpleNb != null ? simpleNb.durationPerOp : node.durationTicks;
+            final StringBuilder simpleTiming = new StringBuilder();
+            simpleTiming.append("\u00d7").append(simpleOps);
+            if (simpleDurPerOp > 0) {
+                simpleTiming.append("  ")
+                    .append(simpleDurPerOp)
+                    .append("t (")
+                    .append(String.format("%.1f", (float) simpleDurPerOp / GuiHelper.TICKS_PER_SECOND))
+                    .append("s)");
+            }
+            final Object rawVoltage = node.machineConfig.settings.get("voltage");
+            if (rawVoltage instanceof final String v && !"OFF".equals(v)) {
+                simpleTiming.append("  ").append(v);
+            }
             GuiDraw.drawText(
-                node.durationTicks + "t ("
-                    + String.format("%.1f", (float) node.durationTicks / GuiHelper.TICKS_PER_SECOND)
-                    + "s)",
+                simpleTiming.toString(),
                 zq(4),
                 h - zq(12),
                 z,
-                PlannhColors.TEXT_DIM.getColor(),
+                PlannhColors.ACCENT_BLUE.getColor(),
                 false);
 
             if (!node.outputs.isEmpty()) {
@@ -355,6 +369,19 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             ? node.machineConfig.computeEffect(node.properties.asMap(), node.durationTicks)
                 .throughputFactor()
             : 1;
+
+        final int durPerOp = nb != null ? nb.durationPerOp : node.durationTicks;
+        final StringBuilder opsLine = new StringBuilder();
+        opsLine.append("\u00d7").append(ops);
+        if (durPerOp > 0) {
+            opsLine.append("  ")
+                .append(durPerOp)
+                .append("t (")
+                .append(String.format("%.2f", (float) durPerOp / GuiHelper.TICKS_PER_SECOND))
+                .append("s)");
+        }
+        GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+        y += LINE_H;
 
         y = drawIOList(x, y, node.inputs, i -> {
             final var pair = node.inputs.get(i);

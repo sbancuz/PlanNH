@@ -16,6 +16,7 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Graph;
@@ -138,13 +139,29 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawText("\u00d7", dx, 4, 1.0f, PlannhColors.ACCENT_RED.getColor(), false);
             zones.add(new ClickZone(dx, y, dx + 14, y + h, this::deleteSlot));
 
-            final int nx = w - 44;
-            GuiDraw.drawText("N", nx, 4, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(nx, y, nx + 14, y + h, this::addNote));
+            final BalanceMode mode = canvas.getGraph()
+                .getBalanceMode();
+            final String modeLabel = switch (mode) {
+                case NONE -> "M:-";
+                case FORWARD -> "M:F";
+                case BACKWARD -> "M:B";
+            };
+            final int modeColor = switch (mode) {
+                case NONE -> PlannhColors.TEXT_MUTED.getColor();
+                case FORWARD -> PlannhColors.ACCENT_GREEN.getColor();
+                case BACKWARD -> PlannhColors.ACCENT_BLUE.getColor();
+            };
+            final int mx = w - 72;
+            GuiDraw.drawText(modeLabel, mx, 4, 1.0f, modeColor, false);
+            zones.add(new ClickZone(mx, y, mx + 14, y + h, this::cycleBalanceMode));
 
             final int gx = w - 58;
             GuiDraw.drawText("G", gx, 4, 1.0f, PlannhColors.titleColor("Group"), false);
             zones.add(new ClickZone(gx, y, gx + 14, y + h, this::addGroup));
+
+            final int nx = w - 44;
+            GuiDraw.drawText("N", nx, 4, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            zones.add(new ClickZone(nx, y, nx + 14, y + h, this::addNote));
         }
 
         private void shiftSlot(final int dir) {
@@ -188,6 +205,17 @@ public class FlowchartScreen extends ModularScreen {
             if (cx < 0) cx = 0;
             if (cy < 0) cy = 0;
             canvas.addGroup(cx, cy);
+        }
+
+        private void cycleBalanceMode() {
+            final Graph g = canvas.getGraph();
+            final BalanceMode next = switch (g.getBalanceMode()) {
+                case NONE -> BalanceMode.FORWARD;
+                case FORWARD -> BalanceMode.BACKWARD;
+                case BACKWARD -> BalanceMode.NONE;
+            };
+            g.setBalanceMode(next);
+            PlanAPI.save();
         }
 
         @Override
@@ -270,7 +298,7 @@ public class FlowchartScreen extends ModularScreen {
             if (br.totalDurationTicks() > 0) {
                 h += 14;
             }
-            h += 4 + 1 + 10;
+            h += 4 + 12 + 1 + 10;
             h += 14 + 10 + 10 + 10 + 10 + 10;
             return h;
         }
@@ -373,6 +401,15 @@ public class FlowchartScreen extends ModularScreen {
                 GuiDraw.drawText(totals.toString(), 6, ly, 0.9f, PlannhColors.ACCENT_BLUE.getColor(), false);
                 ly += 14;
             }
+
+            final BalanceMode mode = g.getBalanceMode();
+            final String modeStr = switch (mode) {
+                case NONE -> "Mode: Normal";
+                case FORWARD -> "Mode: Inputs\u2192Outputs";
+                case BACKWARD -> "Mode: Outputs\u2192Inputs";
+            };
+            GuiDraw.drawText(modeStr, 6, ly, 0.9f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            ly += 12;
 
             GuiDraw.drawRect(2, ly + 4, w - 4, 1, PlannhColors.SEPARATOR_DIM.getColor());
             ly += 10;
