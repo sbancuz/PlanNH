@@ -2,9 +2,9 @@ package com.sbancuz.plannh.gui;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
-import com.cleanroommc.modularui.api.UpOrDown;
+import org.jetbrains.annotations.NotNull;
+
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -84,8 +84,6 @@ public class FlowchartScreen extends ModularScreen {
         }
         return super.onKeyPressed(typedChar, keyCode);
     }
-
-    // ─────────────────────────── slot bar ───────────────────────────
 
     private static class SlotBarWidget extends Widget<SlotBarWidget> implements Interactable {
 
@@ -192,7 +190,7 @@ public class FlowchartScreen extends ModularScreen {
         }
 
         @Override
-        public Result onMousePressed(int mouseButton) {
+        public @NotNull Result onMousePressed(int mouseButton) {
             if (mouseButton != 0) return Result.IGNORE;
             int mx = getContext().getMouseX();
             int my = getContext().getMouseY();
@@ -206,13 +204,13 @@ public class FlowchartScreen extends ModularScreen {
         }
     }
 
-    // ─────────────────────────── summary ───────────────────────────
-
     private static class SummaryWidget extends Widget<SummaryWidget> implements Interactable {
 
         private static final int WIDTH = 200;
         private static final int TITLE_H = 18;
         private static final int COLLAPSE_W = 20;
+        private static final int SECTION_H = 14;
+        private static final int LINE_H = 11;
 
         private final CanvasWidget canvas;
 
@@ -241,7 +239,7 @@ public class FlowchartScreen extends ModularScreen {
         private int computeHeight() {
             if (collapsed) return TITLE_H;
             Graph g = graph();
-            BalanceResult br = safeBalance(g);
+            BalanceResult br = g.balance();
             int h = TITLE_H + 4;
 
             if (!br.netOutputs()
@@ -276,29 +274,12 @@ public class FlowchartScreen extends ModularScreen {
             return h;
         }
 
-        private static BalanceResult safeBalance(Graph g) {
-            try {
-                return g.balance();
-            } catch (Exception e) {
-                return new BalanceResult(
-                    Map.of(),
-                    java.util.List.of(),
-                    java.util.List.of(),
-                    java.util.List.of(),
-                    java.util.List.of(),
-                    Map.of(),
-                    0,
-                    0);
-            }
-        }
-
         @Override
         public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
             Area a = getArea();
             int w = a.width;
-            int h = a.height;
 
-            GuiDraw.drawRect(0, 0, w, h, PlannhColors.SUMMARY_BG.getColor());
+            GuiDraw.drawRect(0, 0, w, a.height, PlannhColors.SUMMARY_BG.getColor());
             GuiDraw.drawRect(0, 0, w, TITLE_H, PlannhColors.SUMMARY_TITLE_BG.getColor());
             GuiDraw.drawRect(0, TITLE_H, w, 1, PlannhColors.SUMMARY_TITLE_LINE.getColor());
             GuiDraw.drawText("Summary", 4, 3, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
@@ -309,107 +290,54 @@ public class FlowchartScreen extends ModularScreen {
                 1.0f,
                 PlannhColors.TEXT_MUTED.getColor(),
                 false);
-
             if (collapsed) return;
 
             Graph g = graph();
-            BalanceResult br = safeBalance(g);
+            BalanceResult br = g.balance();
             int ly = TITLE_H + 4;
 
-            if (!br.netOutputs()
-                .isEmpty()) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_PRODUCT.getColor());
-                GuiDraw.drawText(
-                    "Products (" + br.netOutputs()
-                        .size() + ")",
-                    6,
-                    ly + 1,
-                    1.0f,
-                    PlannhColors.ACCENT_AMBER.getColor(),
-                    false);
-                ly += 14;
-                for (Summary.SummaryLine line : br.netOutputs()) {
-                    GuiDraw.drawText(
-                        line.totalCount + "x " + line.stack.getDisplayName(),
-                        10,
-                        ly,
-                        0.8f,
-                        PlannhColors.ACCENT_AMBER.getColor(),
-                        false);
-                    ly += 11;
-                }
-                ly += 4;
-            }
+            ly = drawSection(
+                ly,
+                w,
+                "Products",
+                br.netOutputs(),
+                PlannhColors.SECTION_PRODUCT.getColor(),
+                PlannhColors.ACCENT_AMBER.getColor(),
+                PlannhColors.ACCENT_AMBER.getColor(),
+                i -> ((Summary.SummaryLine) i).totalCount + "x " + ((Summary.SummaryLine) i).stack.getDisplayName());
 
-            if (!br.netInputs()
-                .isEmpty()) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_INPUT.getColor());
-                GuiDraw.drawText(
-                    "External Inputs (" + br.netInputs()
-                        .size() + ")",
-                    6,
-                    ly + 1,
-                    1.0f,
-                    PlannhColors.ACCENT_GREEN2.getColor(),
-                    false);
-                ly += 14;
-                for (Summary.SummaryLine line : br.netInputs()) {
-                    GuiDraw.drawText(
-                        line.totalCount + "x " + line.stack.getDisplayName(),
-                        10,
-                        ly,
-                        0.8f,
-                        PlannhColors.TEXT_MUTED.getColor(),
-                        false);
-                    ly += 11;
-                }
-                ly += 4;
-            }
+            ly = drawSection(
+                ly,
+                w,
+                "External Inputs",
+                br.netInputs(),
+                PlannhColors.SECTION_INPUT.getColor(),
+                PlannhColors.ACCENT_GREEN2.getColor(),
+                PlannhColors.TEXT_MUTED.getColor(),
+                i -> ((Summary.SummaryLine) i).totalCount + "x " + ((Summary.SummaryLine) i).stack.getDisplayName());
 
-            if (!br.netFluidOutputs()
-                .isEmpty()) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_FLUID_OUT.getColor());
-                GuiDraw.drawText(
-                    "Fluid Products (" + br.netFluidOutputs()
-                        .size() + ")",
-                    6,
-                    ly + 1,
-                    1.0f,
-                    PlannhColors.ACCENT_CYAN2.getColor(),
-                    false);
-                ly += 14;
-                for (var line : br.netFluidOutputs()) {
-                    String label = formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
-                    GuiDraw.drawText(label, 10, ly, 0.8f, PlannhColors.ACCENT_CYAN.getColor(), false);
-                    ly += 11;
-                }
-                ly += 4;
-            }
+            ly = drawFluidSection(
+                ly,
+                w,
+                "Fluid Products",
+                br.netFluidOutputs(),
+                PlannhColors.SECTION_FLUID_OUT.getColor(),
+                PlannhColors.ACCENT_CYAN2.getColor(),
+                PlannhColors.ACCENT_CYAN.getColor());
 
-            if (!br.netFluidInputs()
-                .isEmpty()) {
-                GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_FLUID_IN.getColor());
-                GuiDraw.drawText(
-                    "Fluid Inputs (" + br.netFluidInputs()
-                        .size() + ")",
-                    6,
-                    ly + 1,
-                    1.0f,
-                    PlannhColors.ACCENT_BLUE2.getColor(),
-                    false);
-                ly += 14;
-                for (var line : br.netFluidInputs()) {
-                    String label = formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
-                    GuiDraw.drawText(label, 10, ly, 0.8f, PlannhColors.ACCENT_BLUE3.getColor(), false);
-                    ly += 11;
-                }
-                ly += 4;
-            }
+            ly = drawFluidSection(
+                ly,
+                w,
+                "Fluid Inputs",
+                br.netFluidInputs(),
+                PlannhColors.SECTION_FLUID_IN.getColor(),
+                PlannhColors.ACCENT_BLUE2.getColor(),
+                PlannhColors.ACCENT_BLUE3.getColor());
 
             if (br.totalOperations() > 0) {
                 GuiDraw.drawRect(2, ly, w - 4, 12, PlannhColors.SECTION_OPS.getColor());
                 GuiDraw.drawText("Operations", 6, ly + 1, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-                ly += 14;
+                ly += SECTION_H;
                 for (Node node : g.getNodes()) {
                     NodeBalance nb = br.nodeBalances()
                         .get(node.id);
@@ -421,7 +349,7 @@ public class FlowchartScreen extends ModularScreen {
                         0.8f,
                         PlannhColors.TEXT_LIGHT.getColor(),
                         false);
-                    ly += 11;
+                    ly += LINE_H;
                 }
                 ly += 4;
             }
@@ -431,8 +359,8 @@ public class FlowchartScreen extends ModularScreen {
                 if (br.totalOperations() > 0) totals.append("Ops: ")
                     .append(br.totalOperations());
                 if (br.totalDurationTicks() > 0) {
-                    if (totals.length() > 0) totals.append("  ");
-                    float sec = br.totalDurationTicks() / 20f;
+                    if (!totals.isEmpty()) totals.append("  ");
+                    float sec = (float) br.totalDurationTicks() / GuiHelper.TICKS_PER_SECOND;
                     totals.append("Time: ")
                         .append(br.totalDurationTicks())
                         .append("t");
@@ -466,8 +394,40 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawText("[+ in NEI GUI] add recipe", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
         }
 
+        private int drawSection(int ly, int w, String title, List<?> items, int headerColor, int titleColor,
+            int itemColor, java.util.function.Function<Object, String> labelFn) {
+            if (items.isEmpty()) return ly;
+            GuiDraw.drawRect(2, ly, w - 4, 12, headerColor);
+            GuiDraw.drawText(title + " (" + items.size() + ")", 6, ly + 1, 1.0f, titleColor, false);
+            ly += SECTION_H;
+            for (Object item : items) {
+                GuiDraw.drawText(labelFn.apply(item), 10, ly, 0.8f, itemColor, false);
+                ly += LINE_H;
+            }
+            return ly + 4;
+        }
+
+        private static String fluidLabel(Object item) {
+            var line = (com.sbancuz.plannh.data.flowchart.Summary.FluidSummaryLine) item;
+            return formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
+        }
+
+        private int drawFluidSection(int ly, int w, String title,
+            List<com.sbancuz.plannh.data.flowchart.Summary.FluidSummaryLine> items, int headerColor, int titleColor,
+            int itemColor) {
+            if (items.isEmpty()) return ly;
+            GuiDraw.drawRect(2, ly, w - 4, 12, headerColor);
+            GuiDraw.drawText(title + " (" + items.size() + ")", 6, ly + 1, 1.0f, titleColor, false);
+            ly += SECTION_H;
+            for (var line : items) {
+                GuiDraw.drawText(fluidLabel(line), 10, ly, 0.8f, itemColor, false);
+                ly += LINE_H;
+            }
+            return ly + 4;
+        }
+
         @Override
-        public Result onMousePressed(int mouseButton) {
+        public @NotNull Result onMousePressed(int mouseButton) {
             if (mouseButton != 0) return Result.IGNORE;
             int mx = getContext().getMouseX();
             int my = getContext().getMouseY();
@@ -510,11 +470,6 @@ public class FlowchartScreen extends ModularScreen {
             floatX = dragStartX + (getContext().getAbsMouseX() - dragAbsMX);
             floatY = dragStartY + (getContext().getAbsMouseY() - dragAbsMY);
             pos(floatX, floatY);
-        }
-
-        @Override
-        public boolean onMouseScroll(UpOrDown direction, int amount) {
-            return false;
         }
 
         private static String formatFluidAmount(int mb) {

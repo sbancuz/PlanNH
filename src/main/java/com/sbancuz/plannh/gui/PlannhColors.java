@@ -87,6 +87,12 @@ public class PlannhColors {
         NOTE_CLOSE_BG     = C.argb("note_close_bg",      "0xB4C83C3C"),
         PORT_LABEL_BG     = C.argb("port_label_bg",      "0xC8141414");
 
+    // ── Context Menu ──
+    public static final ColorResource
+        CONTEXT_BG     = C.argb("context_bg",      "0xE6323237"),
+        CONTEXT_BORDER = C.argb("context_border",  "0x9064A0DC"),
+        CONTEXT_HOVER  = C.argb("context_hover",   "0x3C64C864");
+
     // ── Setting States (opaque) ──
     public static final ColorResource
         SETTING_ON  = C.rgb("setting_on",  "0x88FF88"),

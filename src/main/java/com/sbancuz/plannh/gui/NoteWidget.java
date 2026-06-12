@@ -2,7 +2,8 @@ package com.sbancuz.plannh.gui;
 
 import net.minecraft.client.Minecraft;
 
-import com.cleanroommc.modularui.api.UpOrDown;
+import org.jetbrains.annotations.NotNull;
+
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -10,24 +11,24 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.data.flowchart.Note;
 
+import lombok.Getter;
+
 public class NoteWidget extends Widget<NoteWidget> implements Interactable {
 
     private static final int NOTE_W = 140;
     private static final int NOTE_H = 60;
-    private static final int CLOSE_W = 10;
+    private static final int CLOSE_W = 12;
 
+    @Getter
     private final Note note;
     private final CanvasWidget canvas;
-
-    public Note getNote() {
-        return note;
-    }
 
     private boolean dragging = false;
     private int dragStartMX, dragStartMY;
     private int noteStartX, noteStartY;
-    private long lastClickTime = 0;
+    private final GuiHelper.DoubleClickDetector doubleClick = new GuiHelper.DoubleClickDetector();
 
+    @Getter
     private boolean editing = false;
     private int cursorPos = 0;
 
@@ -45,8 +46,8 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
         size(Math.round(NOTE_W * zoom), Math.round(NOTE_H * zoom));
     }
 
-    public boolean isEditing() {
-        return editing;
+    private int zq(float v) {
+        return GuiHelper.zq(v, canvas.getZoom());
     }
 
     public void setEditing(boolean editing) {
@@ -67,29 +68,25 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
         int border = editing ? PlannhColors.NOTE_BORDER_EDIT.getColor() : PlannhColors.NOTE_BORDER.getColor();
 
         GuiDraw.drawRect(0, 0, w, h, bg);
-        GuiDraw.drawRect(0, 0, w, 1, border);
-        GuiDraw.drawRect(0, h - 1, w, 1, border);
-        GuiDraw.drawRect(0, 0, 1, h, border);
-        GuiDraw.drawRect(w - 1, 0, 1, h, border);
-
-        // Close button
-        int cx = w - Math.round(CLOSE_W * z);
-        GuiDraw
-            .drawRect(cx, 0, Math.round(CLOSE_W * z), Math.round(CLOSE_W * z), PlannhColors.NOTE_CLOSE_BG.getColor());
-        int cw = Minecraft.getMinecraft().fontRenderer.getStringWidth("x");
-        int txtX = cx + (Math.round(CLOSE_W * z) - cw) / 2;
-        GuiDraw.drawText("x", txtX, 2, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
+        GuiHelper.drawRectBorder(0, 0, w, h, 1, border);
+        GuiHelper.drawCloseButton(
+            z,
+            w,
+            CLOSE_W,
+            0,
+            PlannhColors.NOTE_CLOSE_BG.getColor(),
+            PlannhColors.TEXT_WHITE.getColor());
 
         // Text
-        int pad = Math.round(4 * z);
+        int pad = zq(4);
         if (editing) {
             String display = note.text.substring(0, Math.min(cursorPos, note.text.length()));
-            boolean blink = (System.currentTimeMillis() / 600) % 2 == 0;
+            boolean blink = (Minecraft.getSystemTime() / 600) % 2 == 0;
             String cursor = blink ? "|" : " ";
             GuiDraw.drawText(
                 display + cursor + note.text.substring(Math.min(cursorPos, note.text.length())),
                 pad,
-                Math.round(8 * z),
+                zq(8),
                 z * 0.9f,
                 PlannhColors.TEXT_DARK.getColor(),
                 false);
@@ -97,7 +94,7 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
             GuiDraw.drawText(
                 note.text.isEmpty() ? "Note" : note.text,
                 pad,
-                Math.round(8 * z),
+                zq(8),
                 z * 0.9f,
                 PlannhColors.TEXT_NOTE.getColor(),
                 false);
@@ -105,24 +102,20 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     }
 
     @Override
-    public Result onMousePressed(int mouseButton) {
+    public @NotNull Result onMousePressed(int mouseButton) {
         if (mouseButton != 0) return Result.IGNORE;
         int mx = getContext().getMouseX();
         int my = getContext().getMouseY();
 
-        int cx = getArea().width - Math.round(CLOSE_W * canvas.getZoom());
-        if (mx >= cx && my < Math.round(CLOSE_W * canvas.getZoom())) {
+        if (GuiHelper.isInsideCloseButton(mx, my, canvas.getZoom(), getArea().width, CLOSE_W, 0)) {
             canvas.removeNote(note.id);
             return Result.SUCCESS;
         }
 
-        long now = Minecraft.getSystemTime();
-        if (now - lastClickTime < 300) {
-            lastClickTime = 0;
+        if (doubleClick.check()) {
             canvas.startEditingNote(note.id);
             return Result.SUCCESS;
         }
-        lastClickTime = now;
 
         dragging = true;
         dragStartMX = getContext().getAbsMouseX();
@@ -148,10 +141,5 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
             note.y = noteStartY + Math.round(dy / z);
             syncTransform(z, canvas.getPanX(), canvas.getPanY());
         }
-    }
-
-    @Override
-    public boolean onMouseScroll(UpOrDown direction, int amount) {
-        return false;
     }
 }
