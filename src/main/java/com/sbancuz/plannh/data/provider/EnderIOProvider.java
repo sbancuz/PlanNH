@@ -45,6 +45,7 @@ public class EnderIOProvider implements PropertyProvider {
             MachineProfile.builder("enderio", "EnderIO")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.RF_PER_TICK.def())
+                .setting(Settings.TICK_MODIFIER.def())
                 .effect(EnderIOProvider::enderIOEffect)
                 .build());
 

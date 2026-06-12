@@ -16,6 +16,7 @@ public enum Settings {
     // ── int settings ──
     AMP("amp", "Amp", 1, 1, 64, (v, c) -> "A" + v),
     SPEED("speed", "Speed", 100, 10, 10000, (v, c) -> "\u23F1" + v + "%"),
+    TICK_MODIFIER("tickModifier", "Accel", 100, 10, 10000, (v, c) -> "\u23E9" + v + "%"),
     PARALLELS("parallels", "Par", 1, 1, 4096, (v, c) -> "\u2225" + v),
     MACHINES("machines", "Mach", 1, 1, 4096, (v, c) -> "\u00D7" + v),
 

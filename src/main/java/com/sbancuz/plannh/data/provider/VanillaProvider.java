@@ -27,6 +27,7 @@ public class VanillaProvider implements PropertyProvider {
         MachineProfileRegistry.register(
             MachineProfile.builder("minecraft", "Default")
                 .setting(Settings.MACHINES.def())
+                .setting(Settings.TICK_MODIFIER.def())
                 .effect(VanillaProvider::vanillaEffect)
                 .build());
     }

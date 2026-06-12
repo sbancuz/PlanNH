@@ -36,6 +36,7 @@ public class BotaniaProvider implements PropertyProvider {
             MachineProfile.builder("botania:basic", "Botania")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.MANA_PER_TICK.def())
+                .setting(Settings.TICK_MODIFIER.def())
                 .effect(BotaniaProvider::simpleEffect)
                 .build());
     }

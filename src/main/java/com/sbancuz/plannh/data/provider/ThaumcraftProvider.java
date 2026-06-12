@@ -62,11 +62,13 @@ public class ThaumcraftProvider implements PropertyProvider {
             MachineProfile.builder("thaumcraft:arcane", "Arcane Workbench")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.VIS_PER_TICK.def())
+                .setting(Settings.TICK_MODIFIER.def())
                 .effect(ThaumcraftProvider::arcaneEffect)
                 .build());
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:infusion", "Infusion Altar")
                 .setting(Settings.MACHINES.def())
+                .setting(Settings.TICK_MODIFIER.def())
                 .effect(ThaumcraftProvider::infusionEffect)
                 .build());
     }

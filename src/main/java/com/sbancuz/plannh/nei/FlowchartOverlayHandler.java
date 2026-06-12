@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.nei;
 
+import codechicken.nei.PositionedStack;
+import codechicken.nei.recipe.GuiOverlayButton;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.util.ChatComponentText;
@@ -14,6 +16,9 @@ import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class FlowchartOverlayHandler implements IOverlayHandler {
 
@@ -37,7 +42,28 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
         return true;
     }
 
+    @Override
+    public boolean canFillCraftingGrid(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex) {
+        for (PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
+            if (!provider.canCraft(recipe, recipeIndex)) return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean craft(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, int multiplier) {
+        for (PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
+            if (!provider.canCraft(recipe, recipeIndex)) return false;
+        }
+
+        return true;
+    }
+
     private static void addRecipe(GuiContainer firstGui, IRecipeHandler handler, int recipeIndex) {
+        for (PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
+            if (!provider.canCraft(handler, recipeIndex)) return;
+        }
         Node node = new Node(handler, recipeIndex, 200, 200);
         Graph graph = PlanAPI.getActiveGraph();
         graph.addNode(node);
@@ -51,4 +77,15 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
         }
     }
 
+    @Override
+    public List<GuiOverlayButton.ItemOverlayState> presenceOverlay(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex) {
+        final List<GuiOverlayButton.ItemOverlayState> itemPresenceSlots = new ArrayList<>();
+        final List<PositionedStack> ingredients = recipe.getIngredientStacks(recipeIndex);
+
+        for (PositionedStack stack : ingredients) {
+            itemPresenceSlots.add(new GuiOverlayButton.ItemOverlayState(stack, true));
+        }
+
+        return itemPresenceSlots;
+    }
 }

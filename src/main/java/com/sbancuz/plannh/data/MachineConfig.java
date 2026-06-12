@@ -53,8 +53,16 @@ public class MachineConfig {
     public MachineProfile.EffectResult computeEffect(Map<RecipeProperty<?>, Object> properties, int recipeDuration) {
         MachineProfile profile = getProfile();
         if (profile == null) return new MachineProfile.EffectResult(0, 0, 1);
-        return profile.effectComputer()
+        MachineProfile.EffectResult result = profile.effectComputer()
             .compute(settings, new MachineProfile.RecipeContext(properties, recipeDuration));
+        int tickMod = MachineProfile.getInt(settings, Settings.TICK_MODIFIER.key(), 100);
+        if (tickMod > 0 && tickMod != 100) {
+            double factor = 100.0 / tickMod;
+            int newDuration = Math.max(1, (int) Math.round(result.durationTicks() * factor));
+            long newEnergyPerT = Math.round(result.energyPerT() / factor);
+            result = new MachineProfile.EffectResult(newDuration, newEnergyPerT, result.throughputFactor());
+        }
+        return result;
     }
 
     public float inputMultiplier(int inputIndex) {

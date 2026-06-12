@@ -43,6 +43,7 @@ public class ForestryProvider implements PropertyProvider {
             MachineProfile.builder("forestry:basic", "Forestry")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.FORESTRY_RF_PER_TICK.def())
+                .setting(Settings.TICK_MODIFIER.def())
                 .effect(ForestryProvider::simpleEffect)
                 .build());
     }

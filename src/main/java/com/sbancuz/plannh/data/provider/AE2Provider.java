@@ -38,6 +38,7 @@ public class AE2Provider implements PropertyProvider {
             MachineProfile.builder("ae2:basic", "AE2 Grinder")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.ENERGY_PER_TICK.def())
+                .setting(Settings.TICK_MODIFIER.def())
                 .effect(AE2Provider::simpleEffect)
                 .build());
     }
