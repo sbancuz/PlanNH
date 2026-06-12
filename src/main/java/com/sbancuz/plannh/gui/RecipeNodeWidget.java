@@ -14,12 +14,14 @@ import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
+import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 
 import codechicken.nei.drawable.DrawableBuilder;
@@ -181,6 +183,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 GuiDraw.drawText(badge, 8, 7, 1.0f, PlannhColors.TEXT_BADGE.getColor(), false);
             }
 
+            Group grp = canvas.getGroupForNode(node.id);
+            if (grp != null) {
+                int gc = grp.colorOverride != 0 ? grp.colorOverride : PlannhColors.titleColor(grp.title);
+                String gl = "\u229f " + grp.title;
+                int glW = Minecraft.getMinecraft().fontRenderer.getStringWidth(gl);
+                GuiDraw.drawText(gl, cw - glW - 16, 7, 1.0f, gc, false);
+            }
+
             GuiDraw.drawText(
                 "⚙",
                 cw - 14,
@@ -197,6 +207,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             glPopMatrix();
             drawCloseButtonPixel(getArea().width, getArea().height);
             drawPorts();
+            drawGroupMembershipBar();
             glPopAttrib();
             glTranslatef(0, 0, -400);
         } else {
@@ -224,8 +235,15 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 }
             }
 
+            Group grp2 = canvas.getGroupForNode(node.id);
+            if (grp2 != null) {
+                int gc2 = grp2.colorOverride != 0 ? grp2.colorOverride : PlannhColors.titleColor(grp2.title);
+                GuiDraw.drawText("\u229f " + grp2.title, zq(4), zq(16), z, gc2, false);
+            }
+
             drawCloseButtonPixel(w, h);
             drawPorts();
+            drawGroupMembershipBar();
         }
     }
 
@@ -281,6 +299,19 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             }
         }
         return -1;
+    }
+
+    private void drawGroupMembershipBar() {
+        Group group = canvas.getGroupForNode(node.id);
+        if (group == null) return;
+        int groupCol = group.colorOverride != 0 ? group.colorOverride : PlannhColors.titleColor(group.title);
+        int barW = zq(4);
+        GuiDraw.drawRect(
+            0,
+            0,
+            barW,
+            getArea().height,
+            Color.argb(Color.getRed(groupCol), Color.getGreen(groupCol), Color.getBlue(groupCol), 180));
     }
 
     private void drawPorts() {
@@ -474,6 +505,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 return true;
             }
             dragging = false;
+            canvas.onNodeDragFinished();
             return true;
         }
         return false;
@@ -487,6 +519,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             float z = canvas.getZoom();
             node.x = nodeStartX + Math.round(dx / z);
             node.y = nodeStartY + Math.round(dy / z);
+            canvas.clampNodeToGroup(node);
             syncTransform(z, canvas.getPanX(), canvas.getPanY());
         }
     }

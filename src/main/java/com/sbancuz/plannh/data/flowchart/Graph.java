@@ -10,6 +10,7 @@ public class Graph {
     public final Map<UUID, Node> nodes = new HashMap<>();
     public final Map<UUID, Edge> edges = new HashMap<>();
     public final Map<UUID, Note> notes = new HashMap<>();
+    public final Map<UUID, Group> groups = new HashMap<>();
 
     public void addNode(Node node) {
         nodes.put(node.id, node);
@@ -39,5 +40,17 @@ public class Graph {
 
     public Collection<Edge> getEdges() {
         return edges.values();
+    }
+
+    public void addGroup(Group group) {
+        groups.put(group.id, group);
+    }
+
+    public void removeGroup(UUID id) {
+        groups.remove(id);
+    }
+
+    public Collection<Group> getGroups() {
+        return groups.values();
     }
 }

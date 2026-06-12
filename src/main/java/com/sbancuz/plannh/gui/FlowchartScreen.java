@@ -142,6 +142,10 @@ public class FlowchartScreen extends ModularScreen {
             int nx = w - 44;
             GuiDraw.drawText("N", nx, 4, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
             zones.add(new ClickZone(nx, y, nx + 14, y + h, this::addNote));
+
+            int gx = w - 58;
+            GuiDraw.drawText("G", gx, 4, 1.0f, PlannhColors.titleColor("Group"), false);
+            zones.add(new ClickZone(gx, y, gx + 14, y + h, this::addGroup));
         }
 
         private void shiftSlot(int dir) {
@@ -177,6 +181,14 @@ public class FlowchartScreen extends ModularScreen {
             if (cx < 0) cx = 0;
             if (cy < 0) cy = 0;
             canvas.addNote(cx, cy);
+        }
+
+        private void addGroup() {
+            int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
+            int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
+            if (cx < 0) cx = 0;
+            if (cy < 0) cy = 0;
+            canvas.addGroup(cx, cy);
         }
 
         @Override
