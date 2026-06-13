@@ -1,23 +1,5 @@
 package com.sbancuz.plannh.gui;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.IntFunction;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
-
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.GL11;
-
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.widget.IWidget;
@@ -32,13 +14,19 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ColorPickerDialog;
-import com.sbancuz.plannh.data.flowchart.Edge;
-import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Group;
-import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.data.flowchart.Note;
-
+import com.sbancuz.plannh.data.flowchart.*;
 import lombok.Getter;
+import net.minecraft.client.Minecraft;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GL11;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.function.IntFunction;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable {
 
@@ -78,6 +66,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     // Orthogonal arrow routing (world-space units).
     private static final int ROUTE_CELL = 6;
     private static final int ROUTE_MARGIN = 12;
+    private static final long ROUTE_HASH_SEED = 1125899906842597L;
     private static final ArrowRouter ARROW_ROUTER = new ArrowRouter(ROUTE_CELL, ROUTE_MARGIN);
 
     @Nonnull
@@ -105,9 +94,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private UUID edgeHoverNodeId;
     private int edgeHoverPortIndex;
 
-    /** Cached arrow routes (world-space waypoints) keyed by edge id, plus the layout they were built for. */
+    /**
+     * Cached arrow routes (world-space waypoints) keyed by edge id, plus the layout they were built for.
+     */
     private final Map<UUID, List<int[]>> edgeRoutes = new HashMap<>();
-    private String routeSignature = "";
+    private long routeSignature = Long.MIN_VALUE;
 
     public CanvasWidget(final Graph graph) {
         this.graph = graph;
@@ -147,7 +138,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                         g.title.substring(5)
                             .trim());
                     if (num >= n) n = num + 1;
-                } catch (final NumberFormatException ignored) {}
+                } catch (final NumberFormatException ignored) {
+                }
             }
         }
         final Group group = new Group(x, y, "Group " + n);
@@ -383,25 +375,31 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * zoom);
     }
 
-    /** World-space (un-zoomed) Y of a port relative to the node's top-left corner. */
+    /**
+     * World-space (un-zoomed) Y of a port relative to the node's top-left corner.
+     */
     private static int portWorldY(final int index) {
         return (index + 1) * PORT_SPACING + PORT_ORIGIN;
     }
 
     private int worldWidth(final RecipeNodeWidget w) {
-        return Math.round(w.getArea().width / zoom);
+        return w.getWorldWidth();
     }
 
     private int worldHeight(final RecipeNodeWidget w) {
-        return Math.round(w.getArea().height / zoom);
+        return w.getWorldHeight();
     }
 
-    /** Converts a canvas-space X coordinate to world space, clamped to >= 0. */
+    /**
+     * Converts a canvas-space X coordinate to world space, clamped to >= 0.
+     */
     private int toWorldX(final int cx) {
         return Math.max(0, Math.round((cx - panX) / zoom));
     }
 
-    /** Converts a canvas-space Y coordinate to world space, clamped to >= 0. */
+    /**
+     * Converts a canvas-space Y coordinate to world space, clamped to >= 0.
+     */
     private int toWorldY(final int cy) {
         return Math.max(0, Math.round((cy - panY) / zoom));
     }
@@ -410,45 +408,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return mx >= a.x && mx < a.x + a.width && my >= a.y && my < a.y + a.height;
     }
 
+    private static boolean containsPointInclusive(final Area a, final int mx, final int my) {
+        return mx >= a.x && mx <= a.x + a.width && my >= a.y && my <= a.y + a.height;
+    }
+
     /**
-     * Recomputes orthogonal arrow routes when the layout (node positions/sizes, edges or zoom) changes.
+     * Recomputes orthogonal arrow routes when the graph layout changes.
      * Routes are stored in world space so panning does not invalidate them.
      */
     private void ensureRoutes() {
-        final StringBuilder sig = new StringBuilder();
-        sig.append('z')
-            .append(Math.round(zoom * 100))
-            .append(';');
-        for (final Edge edge : graph.getEdges()) {
-            final RecipeNodeWidget src = nodeWidgets.get(edge.sourceNodeId);
-            final RecipeNodeWidget dst = nodeWidgets.get(edge.targetNodeId);
-            if (src == null || dst == null) continue;
-            sig.append(edge.id)
-                .append(':')
-                .append(edge.sourceOutputIndex)
-                .append('>')
-                .append(edge.targetInputIndex)
-                .append('|')
-                .append(src.getNode().x)
-                .append(',')
-                .append(src.getNode().y)
-                .append(',')
-                .append(worldWidth(src))
-                .append(',')
-                .append(worldHeight(src))
-                .append('|')
-                .append(dst.getNode().x)
-                .append(',')
-                .append(dst.getNode().y)
-                .append(',')
-                .append(worldWidth(dst))
-                .append(',')
-                .append(worldHeight(dst))
-                .append(';');
-        }
-        final String s = sig.toString();
-        if (s.equals(routeSignature)) return;
-        routeSignature = s;
+        final long signature = computeRouteSignature();
+        if (signature == routeSignature) return;
+        routeSignature = signature;
 
         edgeRoutes.clear();
         final List<ArrowRouter.Rect> obstacles = new ArrayList<>();
@@ -467,10 +438,33 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             requests.add(new ArrowRouter.Request(edge.id, sx, sy, dx, dy));
         }
 
-        final Map<Object, List<int[]>> routed = ARROW_ROUTER.route(obstacles, requests);
-        for (final Map.Entry<Object, List<int[]>> e : routed.entrySet()) {
-            edgeRoutes.put((UUID) e.getKey(), e.getValue());
+        edgeRoutes.putAll(ARROW_ROUTER.route(obstacles, requests));
+    }
+
+    private long computeRouteSignature() {
+        long sig = ROUTE_HASH_SEED;
+        for (final Edge edge : graph.getEdges()) {
+            final RecipeNodeWidget src = nodeWidgets.get(edge.sourceNodeId);
+            final RecipeNodeWidget dst = nodeWidgets.get(edge.targetNodeId);
+            if (src == null || dst == null) continue;
+            sig = mixRouteHash(sig, edge.id.getMostSignificantBits());
+            sig = mixRouteHash(sig, edge.id.getLeastSignificantBits());
+            sig = mixRouteHash(sig, edge.sourceOutputIndex);
+            sig = mixRouteHash(sig, edge.targetInputIndex);
+            sig = mixRouteHash(sig, src.getNode().x);
+            sig = mixRouteHash(sig, src.getNode().y);
+            sig = mixRouteHash(sig, worldWidth(src));
+            sig = mixRouteHash(sig, worldHeight(src));
+            sig = mixRouteHash(sig, dst.getNode().x);
+            sig = mixRouteHash(sig, dst.getNode().y);
+            sig = mixRouteHash(sig, worldWidth(dst));
+            sig = mixRouteHash(sig, worldHeight(dst));
         }
+        return sig;
+    }
+
+    private static long mixRouteHash(final long hash, final long value) {
+        return hash * 31 + value;
     }
 
     private void drawArrows() {
@@ -498,7 +492,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
     }
 
-    /** Draws a multi-segment orthogonal arrow from cached world-space waypoints. */
+    /**
+     * Draws a multi-segment orthogonal arrow from cached world-space waypoints.
+     */
     private void drawRoutedArrow(final List<int[]> route, final boolean fluid) {
         final int n = route.size();
         final int[] sx = new int[n];
@@ -550,9 +546,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void drawOrthogonalLine(final int x1, final int y1, final int x2, final int y2, final int xEnd,
-        final int color, final float thickness) {
+                                    final int color, final float thickness) {
         final int midX = (x1 + x2) / 2;
-        drawLineStrip(new int[] { x1, midX, midX, xEnd }, new int[] { y1, y1, y2, y2 }, color, thickness);
+        drawLineStrip(new int[]{x1, midX, midX, xEnd}, new int[]{y1, y1, y2, y2}, color, thickness);
     }
 
     private static void drawLineStrip(final int[] xs, final int[] ys, final int color, final float thickness) {
@@ -571,7 +567,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private static void drawArrowHead(final int tipX, final int tipY, final int baseX, final float halfBase,
-        final int color) {
+                                      final int color) {
         final int r = Color.getRed(color);
         final int g = Color.getGreen(color);
         final int b = Color.getBlue(color);
@@ -585,7 +581,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private static void addColoredVertex(final BufferBuilder buf, final int x, final int y, final int r, final int g,
-        final int b, final int a) {
+                                         final int b, final int a) {
         buf.pos(x, y, 0)
             .color(r, g, b, a)
             .endVertex();
@@ -813,7 +809,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean isMouseOverAnyGroup(final int mx, final int my) {
         for (final GroupWidget gw : groupWidgets.values()) {
             final Area a = gw.getArea();
-            if (containsPoint(a, mx, my)) {
+            if (containsPointInclusive(a, mx, my)) {
                 return true;
             }
         }
@@ -823,7 +819,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean isMouseOverAnyNode(final int mx, final int my) {
         for (final RecipeNodeWidget widget : nodeWidgets.values()) {
             final Area a = widget.getArea();
-            if (containsPoint(a, mx, my)) {
+            if (containsPointInclusive(a, mx, my)) {
                 return true;
             }
         }
@@ -958,7 +954,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             .simple(
                 getPanel(),
                 (@SuppressWarnings("unused") final ModularPanel parentPanel,
-                    @SuppressWarnings("unused") final EntityPlayer player) -> picker,
+                 @SuppressWarnings("unused") final EntityPlayer player) -> picker,
                 true)
             .openPanel();
     }
@@ -1021,7 +1017,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private void drawHoveredPortLabels() {
         final int mouseX = getContext().getMouseX();
         final int mouseY = getContext().getMouseY();
-        final int ps = Math.round(PORT_S * zoom);
+        final int ps = Math.max(1, Math.round(PORT_S * zoom));
         final int half = Math.round(PORT_HALF * zoom);
 
         for (final RecipeNodeWidget w : nodeWidgets.values()) {
@@ -1042,10 +1038,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 node.outputs.size(),
                 0,
                 true,
-                i -> node.outputs.get(i)
-                    .left()
-                    .getDisplayName()))
+                i -> {
+                    final ItemStack stack = node.outputs.get(i)
+                        .left();
+                    return stack == null ? null : stack.getDisplayName();
+                })) {
                 return;
+            }
             if (tryPortLabel(
                 mouseX,
                 mouseY,
@@ -1058,10 +1057,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 node.fluidOutputs.size(),
                 node.outputs.size(),
                 true,
-                i -> node.fluidOutputs.get(i)
-                    .left()
-                    .getLocalizedName()))
+                i -> {
+                    final FluidStack stack = node.fluidOutputs.get(i)
+                        .left();
+                    return stack == null ? null : stack.getLocalizedName();
+                })) {
                 return;
+            }
             if (tryPortLabel(
                 mouseX,
                 mouseY,
@@ -1074,10 +1076,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 node.inputs.size(),
                 0,
                 false,
-                i -> node.inputs.get(i)
-                    .left()
-                    .getDisplayName()))
+                i -> {
+                    final ItemStack stack = node.inputs.get(i)
+                        .left();
+                    return stack == null ? null : stack.getDisplayName();
+                })) {
                 return;
+            }
             if (tryPortLabel(
                 mouseX,
                 mouseY,
@@ -1090,22 +1095,29 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 node.fluidInputs.size(),
                 node.inputs.size(),
                 false,
-                i -> node.fluidInputs.get(i)
-                    .left()
-                    .getLocalizedName()))
+                i -> {
+                    final FluidStack stack = node.fluidInputs.get(i)
+                        .left();
+                    return stack == null ? null : stack.getLocalizedName();
+                })) {
                 return;
+            }
         }
     }
 
     private boolean tryPortLabel(final int mouseX, final int mouseY, final float zoom, final int ps, final int half,
-        final int widgetX, final int widgetY, final int widgetWidth, final int portCount, final int portOffset,
-        final boolean rightSide, final IntFunction<String> labelFn) {
+                                 final int widgetX, final int widgetY, final int widgetWidth, final int portCount, final int portOffset,
+                                 final boolean rightSide, final IntFunction<String> labelFn) {
         for (int i = 0; i < portCount; i++) {
             final int fi = portOffset + i;
             final int px = rightSide ? widgetX + widgetWidth - ps : widgetX;
             final int pcY = widgetY + portY(fi);
-            if (mouseX >= px && mouseX < px + ps && mouseY >= pcY - half && mouseY < pcY + half) {
-                drawPortLabel(labelFn.apply(i), rightSide ? widgetX + widgetWidth : widgetX, pcY, rightSide, zoom);
+            final int py = pcY - half;
+            if (mouseX >= px && mouseX < px + ps && mouseY >= py && mouseY < py + ps) {
+                final String label = labelFn.apply(i);
+                if (label != null) {
+                    drawPortLabel(label, rightSide ? widgetX + widgetWidth : widgetX, pcY, rightSide, zoom);
+                }
                 return true;
             }
         }
@@ -1113,7 +1125,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private static void drawPortLabel(String name, final int anchorX, final int centerY, final boolean rightSide,
-        final float z) {
+                                      final float z) {
         if (name.length() > PORT_LABEL_MAX) name = name.substring(0, PORT_LABEL_TRUNC) + "…";
         final int tw = Minecraft.getMinecraft().fontRenderer.getStringWidth(name);
         final int fh = Math.round(PORT_FONT_SIZE * z * PORT_FONT_SCALE);

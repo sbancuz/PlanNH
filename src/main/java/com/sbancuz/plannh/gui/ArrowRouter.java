@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.UUID;
 
 /**
  * Orthogonal connector router. Routes arrows between recipe-node ports using only 90-degree segments,
@@ -45,7 +46,7 @@ public final class ArrowRouter {
     public record Rect(int x, int y, int w, int h) {}
 
     /** A single arrow to route, from a source output port to a target input port. */
-    public record Request(Object key, int sx, int sy, int dx, int dy) {}
+    public record Request(UUID key, int sx, int sy, int dx, int dy) {}
 
     private final int baseCell;
     private final int margin;
@@ -65,8 +66,8 @@ public final class ArrowRouter {
      *
      * @return a map from {@link Request#key()} to a list of {@code {x, y}} world-space waypoints
      */
-    public Map<Object, List<int[]>> route(final List<Rect> obstacles, final List<Request> requests) {
-        final Map<Object, List<int[]>> result = new HashMap<>();
+    public Map<UUID, List<int[]>> route(final List<Rect> obstacles, final List<Request> requests) {
+        final Map<UUID, List<int[]>> result = new HashMap<>();
         if (requests.isEmpty()) return result;
 
         // ── Bounding region ──
@@ -133,6 +134,10 @@ public final class ArrowRouter {
         final int originX, originY, cols, rows, cell, stub;
         final boolean[] blocked;
         final int[] occupancy;
+        final int[] gScore;
+        final int[] cameFrom;
+        final int[] scoreRun;
+        int runId = 1;
 
         Grid(final int originX, final int originY, final int cols, final int rows, final int cell, final int stub) {
             this.originX = originX;
@@ -143,6 +148,10 @@ public final class ArrowRouter {
             this.stub = stub;
             this.blocked = new boolean[cols * rows];
             this.occupancy = new int[cols * rows];
+            final int states = cols * rows * 4;
+            this.gScore = new int[states];
+            this.cameFrom = new int[states];
+            this.scoreRun = new int[states];
         }
 
         int gx(final int wx) {
@@ -190,17 +199,11 @@ public final class ArrowRouter {
         List<int[]> search(final Request q) {
             final int sgx = gx(q.sx + stub), sgy = gy(q.sy);
             final int ggx = gx(q.dx - stub), ggy = gy(q.dy);
-
-            final int n = cols * rows;
-            final int states = n * 4;
-            final int[] gScore = new int[states];
-            Arrays.fill(gScore, Integer.MAX_VALUE);
-            final int[] cameFrom = new int[states];
-            Arrays.fill(cameFrom, -1);
+            final int run = nextRun();
 
             // Start heading +x (direction 0) so the arrow leaves the output port to the right.
             final int startState = ((sgy * cols + sgx) * 4);
-            gScore[startState] = 0;
+            setScore(startState, 0, -1, run);
 
             final PriorityQueue<int[]> open = new PriorityQueue<>(Comparator.comparingInt((int[] a) -> a[0]));
             open.add(new int[] { heuristic(sgx, sgy, ggx, ggy), startState, 0 });
@@ -209,7 +212,7 @@ public final class ArrowRouter {
                 final int[] top = open.poll();
                 final int state = top[1];
                 final int g = top[2];
-                if (g > gScore[state]) continue;
+                if (g > score(state, run)) continue;
 
                 final int idx = state >> 2;
                 final int dir = state & 3;
@@ -232,9 +235,8 @@ public final class ArrowRouter {
                     final int cost = STEP + (nd != dir ? TURN : 0) + occupancy[nIdx];
                     final int ng = g + cost;
                     final int nState = nIdx * 4 + nd;
-                    if (ng < gScore[nState]) {
-                        gScore[nState] = ng;
-                        cameFrom[nState] = state;
+                    if (ng < score(nState, run)) {
+                        setScore(nState, ng, state, run);
                         open.add(new int[] { ng + heuristic(nx, ny, ggx, ggy), nState, ng });
                     }
                 }
@@ -242,8 +244,27 @@ public final class ArrowRouter {
             return null;
         }
 
+        /** Manhattan lower bound used by A* to prefer cells closer to the target. */
         private static int heuristic(final int x, final int y, final int gx, final int gy) {
             return (Math.abs(x - gx) + Math.abs(y - gy)) * STEP;
+        }
+
+        private int nextRun() {
+            if (runId == Integer.MAX_VALUE) {
+                Arrays.fill(scoreRun, 0);
+                runId = 1;
+            }
+            return runId++;
+        }
+
+        private int score(final int state, final int run) {
+            return scoreRun[state] == run ? gScore[state] : Integer.MAX_VALUE;
+        }
+
+        private void setScore(final int state, final int score, final int previousState, final int run) {
+            scoreRun[state] = run;
+            gScore[state] = score;
+            cameFrom[state] = previousState;
         }
 
         private List<int[]> reconstruct(final int[] cameFrom, final int goalState) {

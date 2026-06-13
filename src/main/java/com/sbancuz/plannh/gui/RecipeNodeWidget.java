@@ -146,6 +146,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         size(Math.round(BASE_W * z), Math.round(BASE_H * z));
     }
 
+    int getWorldWidth() {
+        if (handlerRef != null && neiWidget != null) {
+            return neiWidget.w + NEI_PAD_W + NEI_BORDER;
+        }
+        return BASE_W;
+    }
+
+    int getWorldHeight() {
+        if (handlerRef != null && neiWidget != null) {
+            return neiWidget.h + NEI_PAD_H + calcInfoHeight() + computeConfigPanelHeight() + NEI_BORDER;
+        }
+        return BASE_H;
+    }
+
     public void syncTransform(final float zoom, final float panX, final float panY) {
         final int sx = Math.round(node.x * zoom + panX);
         final int sy = Math.round(node.y * zoom + panY);
