@@ -1,5 +1,23 @@
 package com.sbancuz.plannh.gui;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.IntFunction;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
+
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GL11;
+
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.widget.IWidget;
@@ -14,19 +32,13 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ColorPickerDialog;
-import com.sbancuz.plannh.data.flowchart.*;
-import lombok.Getter;
-import net.minecraft.client.Minecraft;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.GL11;
+import com.sbancuz.plannh.data.flowchart.Edge;
+import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Note;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.*;
-import java.util.function.IntFunction;
+import lombok.Getter;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable {
 
@@ -138,8 +150,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                         g.title.substring(5)
                             .trim());
                     if (num >= n) n = num + 1;
-                } catch (final NumberFormatException ignored) {
-                }
+                } catch (final NumberFormatException ignored) {}
             }
         }
         final Group group = new Group(x, y, "Group " + n);
@@ -546,9 +557,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void drawOrthogonalLine(final int x1, final int y1, final int x2, final int y2, final int xEnd,
-                                    final int color, final float thickness) {
+        final int color, final float thickness) {
         final int midX = (x1 + x2) / 2;
-        drawLineStrip(new int[]{x1, midX, midX, xEnd}, new int[]{y1, y1, y2, y2}, color, thickness);
+        drawLineStrip(new int[] { x1, midX, midX, xEnd }, new int[] { y1, y1, y2, y2 }, color, thickness);
     }
 
     private static void drawLineStrip(final int[] xs, final int[] ys, final int color, final float thickness) {
@@ -567,7 +578,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private static void drawArrowHead(final int tipX, final int tipY, final int baseX, final float halfBase,
-                                      final int color) {
+        final int color) {
         final int r = Color.getRed(color);
         final int g = Color.getGreen(color);
         final int b = Color.getBlue(color);
@@ -581,7 +592,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private static void addColoredVertex(final BufferBuilder buf, final int x, final int y, final int r, final int g,
-                                         final int b, final int a) {
+        final int b, final int a) {
         buf.pos(x, y, 0)
             .color(r, g, b, a)
             .endVertex();
@@ -954,7 +965,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             .simple(
                 getPanel(),
                 (@SuppressWarnings("unused") final ModularPanel parentPanel,
-                 @SuppressWarnings("unused") final EntityPlayer player) -> picker,
+                    @SuppressWarnings("unused") final EntityPlayer player) -> picker,
                 true)
             .openPanel();
     }
@@ -1106,8 +1117,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private boolean tryPortLabel(final int mouseX, final int mouseY, final float zoom, final int ps, final int half,
-                                 final int widgetX, final int widgetY, final int widgetWidth, final int portCount, final int portOffset,
-                                 final boolean rightSide, final IntFunction<String> labelFn) {
+        final int widgetX, final int widgetY, final int widgetWidth, final int portCount, final int portOffset,
+        final boolean rightSide, final IntFunction<String> labelFn) {
         for (int i = 0; i < portCount; i++) {
             final int fi = portOffset + i;
             final int px = rightSide ? widgetX + widgetWidth - ps : widgetX;
@@ -1125,7 +1136,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private static void drawPortLabel(String name, final int anchorX, final int centerY, final boolean rightSide,
-                                      final float z) {
+        final float z) {
         if (name.length() > PORT_LABEL_MAX) name = name.substring(0, PORT_LABEL_TRUNC) + "…";
         final int tw = Minecraft.getMinecraft().fontRenderer.getStringWidth(name);
         final int fh = Math.round(PORT_FONT_SIZE * z * PORT_FONT_SCALE);
