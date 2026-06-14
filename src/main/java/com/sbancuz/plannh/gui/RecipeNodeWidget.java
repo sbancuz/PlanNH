@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
@@ -22,8 +23,11 @@ import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
+import com.sbancuz.plannh.data.flowchart.FluidPort;
 import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.ItemPort;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Port;
 
 import codechicken.nei.drawable.DrawableBuilder;
 import codechicken.nei.drawable.DrawableResource;
@@ -184,10 +188,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int calcInfoHeight() {
-        final int lines = 1 + node.inputs.size()
-            + node.outputs.size()
-            + node.fluidInputs.size()
-            + node.fluidOutputs.size();
+        final int lines = 1 + node.inputs.size() + node.outputs.size();
         return lines * LINE_H + 6;
     }
 
@@ -335,13 +336,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 PlannhColors.ACCENT_BLUE.getColor(),
                 false);
 
-            if (!node.outputs.isEmpty()) {
-                final ItemStack primary = node.outputs.getFirst()
-                    .left();
-                if (primary != null) {
-                    final int is = zq(ICON_SIZE);
-                    GuiDraw.drawItem(primary, w - is - zq(ICON_RMARGIN), zq(ICON_Y), is, is, context.getCurrentDrawingZ());
-                }
+            final ItemStack primary = getFirstItemOutput();
+            if (primary != null) {
+                final int is = zq(ICON_SIZE);
+                GuiDraw.drawItem(primary, w - is - zq(ICON_RMARGIN), zq(ICON_Y), is, is, context.getCurrentDrawingZ());
             }
 
             final Group grp2 = canvas.getGroupForNode(node.id);
@@ -369,13 +367,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final int half = zq(PORT_HALF);
         final int px = getArea().width - zq(PORT_SIZE);
         for (int i = 0; i < node.outputs.size(); i++) {
-            final int py = portTopY(i, 0) - half;
+            final int py = portTopY(i) - half;
             if (mx >= px && mx < px + zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
-        }
-        for (int i = 0; i < node.fluidOutputs.size(); i++) {
-            final int py = portTopY(i, node.outputs.size()) - half;
-            if (mx >= px && mx < px + zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE))
-                return node.outputs.size() + i;
         }
         return -1;
     }
@@ -383,12 +376,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public int getInputPortAt(final int mx, final int my) {
         final int half = zq(PORT_HALF);
         for (int i = 0; i < node.inputs.size(); i++) {
-            final int py = portTopY(i, 0) - half;
+            final int py = portTopY(i) - half;
             if (mx >= 0 && mx < zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
-        }
-        for (int i = 0; i < node.fluidInputs.size(); i++) {
-            final int py = portTopY(i, node.inputs.size()) - half;
-            if (mx >= 0 && mx < zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return node.inputs.size() + i;
         }
         return -1;
     }
@@ -405,9 +394,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             Color.argb(Color.getRed(gc), Color.getGreen(gc), Color.getBlue(gc), ALPHA_BAR));
     }
 
-    private int portTopY(final int i, final int totalBefore) {
+    private int portTopY(final int index) {
         final float z = canvas.getZoom();
-        return Math.round(((totalBefore + i + 1) * PORT_SPACING + PORT_ORIGIN) * z);
+        return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * z);
     }
 
     private void drawPorts() {
@@ -415,25 +404,26 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final int half = zq(PORT_HALF);
 
         for (int i = 0; i < node.outputs.size(); i++) {
-            final int py = portTopY(i, 0) - half;
-            GuiDraw
-                .drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_OUTPUT_HOVER.getColor());
-            GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_OUTPUT.getColor());
+            final int py = portTopY(i) - half;
+            final Port port = node.outputs.get(i);
+            if (port instanceof FluidPort) {
+                GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_OUT_H.getColor());
+                GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_FLUID_OUT.getColor());
+            } else {
+                GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_OUTPUT_HOVER.getColor());
+                GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_OUTPUT.getColor());
+            }
         }
         for (int i = 0; i < node.inputs.size(); i++) {
-            final int py = portTopY(i, 0) - half;
-            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_INPUT_HOVER.getColor());
-            GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_INPUT.getColor());
-        }
-        for (int i = 0; i < node.fluidOutputs.size(); i++) {
-            final int py = portTopY(i, node.outputs.size()) - half;
-            GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_OUT_H.getColor());
-            GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_FLUID_OUT.getColor());
-        }
-        for (int i = 0; i < node.fluidInputs.size(); i++) {
-            final int py = portTopY(i, node.inputs.size()) - half;
-            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_IN_H.getColor());
-            GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_FLUID_IN.getColor());
+            final int py = portTopY(i) - half;
+            final Port port = node.inputs.get(i);
+            if (port instanceof FluidPort) {
+                GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_IN_H.getColor());
+                GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_FLUID_IN.getColor());
+            } else {
+                GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_INPUT_HOVER.getColor());
+                GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_INPUT.getColor());
+            }
         }
     }
 
@@ -467,55 +457,59 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
         y += LINE_H;
 
-        y = drawIOList(x, y, node.inputs, i -> {
-            final var pair = node.inputs.get(i);
-            if (pair.left() == null) return null;
-            final float total = nb != null && nb.effectiveInputs.containsKey(i) ? nb.effectiveInputs.get(i)
-                : pair.left().stackSize;
-            return formatRate(total / sec) + "/s "
-                + pair.left()
-                    .getDisplayName();
-        }, PlannhColors.TEXT_MUTED.getColor(), false);
-
-        y = drawIOList(x, y, node.outputs, i -> {
-            final var pair = node.outputs.get(i);
-            if (pair.left() == null) return null;
-            final float total = nb != null && nb.effectiveOutputs.containsKey(i) ? nb.effectiveOutputs.get(i)
-                : pair.left().stackSize;
-            String label = formatRate(total / sec) + "/s "
-                + pair.left()
-                    .getDisplayName();
-            final float chance = pair.rightFloat();
-            if (chance < 0.999f) label += " (" + Math.round(chance * 100) + "%)";
-            return label;
-        }, PlannhColors.ACCENT_YELLOW.getColor(), true);
-
-        y = drawIOList(x, y, node.fluidInputs, i -> {
-            final var fs = node.fluidInputs.get(i);
-            final float total = ops * fs.left().amount * fs.rightFloat() * throughput;
-            return formatRate(total / sec) + "/s "
-                + fs.left()
-                    .getLocalizedName();
-        }, PlannhColors.ACCENT_BLUE3.getColor(), false);
-
-        drawIOList(x, y, node.fluidOutputs, i -> {
-            final var fs = node.fluidOutputs.get(i);
-            final float total = ops * fs.left().amount * fs.rightFloat() * throughput;
-            return formatRate(total / sec) + "/s "
-                + fs.left()
-                    .getLocalizedName();
-        }, PlannhColors.ACCENT_CYAN.getColor(), true);
+        y = drawPortList(x, y, node.inputs, nb, sec, ops, throughput, false);
+        drawPortList(x, y, node.outputs, nb, sec, ops, throughput, true);
     }
 
-    private int drawIOList(final int x, int y, final List<?> items,
-        final java.util.function.IntFunction<String> labelFn, final int color, final boolean indented) {
-        for (int i = 0; i < items.size(); i++) {
-            final String label = labelFn.apply(i);
+    private int drawPortList(final int x, int y, final List<Port> ports, final NodeBalance nb,
+        final float sec, final int ops, final int throughput, final boolean output) {
+        for (int i = 0; i < ports.size(); i++) {
+            final Port port = ports.get(i);
+            final String label = portLabel(port, i, nb, sec, ops, throughput, output);
             if (label == null) continue;
-            GuiDraw.drawText(label, x + (indented ? LIST_INDENT : 0), y, 1.0f, color, false);
+            final int color = portColor(port, output);
+            GuiDraw.drawText(label, x + (output ? LIST_INDENT : 0), y, 1.0f, color, false);
             y += LINE_H;
         }
         return y;
+    }
+
+    @Nullable
+    private String portLabel(final Port port, final int index, final NodeBalance nb,
+        final float sec, final int ops, final int throughput, final boolean output) {
+        if (port instanceof ItemPort ip) {
+            final ItemStack stack = ip.getStack();
+            if (stack == null || stack.stackSize <= 0) return null;
+            final float total = nb != null && (output ? nb.effectiveOutputs : nb.effectiveInputs).containsKey(index)
+                ? (output ? nb.effectiveOutputs.get(index) : nb.effectiveInputs.get(index))
+                : stack.stackSize;
+            String label = formatRate(total / sec) + "/s " + stack.getDisplayName();
+            if (output && ip.getChance() < 0.999f) {
+                label += " (" + Math.round(ip.getChance() * 100) + "%)";
+            }
+            return label;
+        }
+        if (port instanceof FluidPort fp) {
+            final FluidStack fs = fp.getStack();
+            if (fs == null || fs.amount <= 0) return null;
+            final float total;
+            if (output) {
+                total = ops * (float) fs.amount * fp.getChance() * throughput;
+            } else {
+                total = nb != null && nb.effectiveInputs.containsKey(index)
+                    ? nb.effectiveInputs.get(index)
+                    : (float) fs.amount;
+            }
+            return formatRate(total / sec) + "/s " + fs.getLocalizedName();
+        }
+        return null;
+    }
+
+    private static int portColor(final Port port, final boolean output) {
+        if (port instanceof FluidPort) {
+            return output ? PlannhColors.ACCENT_CYAN.getColor() : PlannhColors.ACCENT_BLUE3.getColor();
+        }
+        return output ? PlannhColors.ACCENT_YELLOW.getColor() : PlannhColors.TEXT_MUTED.getColor();
     }
 
     private static String formatRate(final float rate) {
@@ -728,11 +722,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         resizeForZoom(canvas.getZoom());
     }
 
+    @Nullable
+    private ItemStack getFirstItemOutput() {
+        for (final Port port : node.outputs) {
+            if (port instanceof ItemPort ip) return ip.getStack();
+        }
+        return null;
+    }
+
     private void openNeiRecipe() {
-        if (!node.outputs.isEmpty()) {
-            final ItemStack stack = node.outputs.getFirst()
-                .left();
-            GuiCraftingRecipe.openRecipeGui("item", stack);
+        for (final Port port : node.outputs) {
+            if (port instanceof ItemPort ip && ip.getStack() != null) {
+                GuiCraftingRecipe.openRecipeGui("item", ip.getStack());
+                return;
+            }
         }
     }
 }

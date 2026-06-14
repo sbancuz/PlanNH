@@ -27,7 +27,9 @@ import gregtech.api.util.recipe.Sievert;
 import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
-import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
+import com.sbancuz.plannh.data.flowchart.FluidPort;
+import com.sbancuz.plannh.data.flowchart.ItemPort;
+import com.sbancuz.plannh.data.flowchart.Port;
 
 public class GTProvider implements PropertyProvider {
 
@@ -265,47 +267,41 @@ public class GTProvider implements PropertyProvider {
         }
 
         if (r.mInputChances != null) {
-            for (int i = 0; i < r.mInputs.length; i++) {
-                node.inputs.set(
-                    i,
-                    new ObjectFloatImmutablePair<>(
-                        node.inputs.get(i)
-                            .left(),
-                        r.mInputChances[i] / 10000.0f));
+            for (int i = 0; i < r.mInputs.length && i < node.inputs.size(); i++) {
+                final Port port = node.inputs.get(i);
+                if (port instanceof final ItemPort ip) {
+                    ip.setChance(r.mInputChances[i] / 10000.0f);
+                }
             }
         }
         if (r.mOutputChances != null) {
-            for (int i = 0; i < r.mOutputs.length; i++) {
-                node.outputs.set(
-                    i,
-                    new ObjectFloatImmutablePair<>(
-                        node.outputs.get(i)
-                            .left(),
-                        r.mOutputChances[i] / 10000.0f));
+            for (int i = 0; i < r.mOutputs.length && i < node.outputs.size(); i++) {
+                final Port port = node.outputs.get(i);
+                if (port instanceof final ItemPort ip) {
+                    ip.setChance(r.mOutputChances[i] / 10000.0f);
+                }
             }
         }
 
         for (int i = 0; i < r.mFluidInputs.length; i++) {
-            node.fluidInputs.add(
-                i,
-                new ObjectFloatImmutablePair<>(
+            node.inputs.add(
+                new FluidPort(
                     r.mFluidInputs[i],
                     r.mFluidInputChances != null ? r.mFluidInputChances[i] / 10000.0f : 1.f));
         }
         for (int i = 0; i < r.mFluidOutputs.length; i++) {
-            node.fluidOutputs.add(
-                i,
-                new ObjectFloatImmutablePair<>(
+            node.outputs.add(
+                new FluidPort(
                     r.mFluidOutputs[i],
                     r.mFluidOutputChances != null ? r.mFluidOutputChances[i] / 10000.0f : 1.f));
         }
 
         node.inputs.removeIf(
-            p -> p.left()
-                .getItem() instanceof ItemFluidDisplay);
+            p -> p instanceof final ItemPort ip && ip.getStack() != null
+                && ip.getStack().getItem() instanceof ItemFluidDisplay);
         node.outputs.removeIf(
-            p -> p.left()
-                .getItem() instanceof ItemFluidDisplay);
+            p -> p instanceof final ItemPort ip && ip.getStack() != null
+                && ip.getStack().getItem() instanceof ItemFluidDisplay);
 
         return props;
     }

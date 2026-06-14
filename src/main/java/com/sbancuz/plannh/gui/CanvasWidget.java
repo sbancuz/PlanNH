@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.IntFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -33,10 +32,13 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ColorPickerDialog;
 import com.sbancuz.plannh.data.flowchart.Edge;
+import com.sbancuz.plannh.data.flowchart.FluidPort;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.ItemPort;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
+import com.sbancuz.plannh.data.flowchart.Port;
 
 import lombok.Getter;
 
@@ -486,7 +488,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (srcWidget == null || dstWidget == null) continue;
 
             final Node srcNode = graph.nodes.get(edge.sourceNodeId);
-            final boolean isFluid = srcNode != null && edge.sourceOutputIndex >= srcNode.outputs.size();
+            final boolean isFluid = srcNode != null && edge.sourceOutputIndex >= 0
+                && edge.sourceOutputIndex < srcNode.outputs.size()
+                && srcNode.outputs.get(edge.sourceOutputIndex) instanceof FluidPort;
 
             final List<int[]> route = edgeRoutes.get(edge.id);
             if (route != null && route.size() >= 2) {
@@ -626,33 +630,26 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean canConnect(final Node srcNode, final int srcOutIdx, final Node dstNode, final int dstInIdx) {
         if (srcNode == dstNode) return false;
         if (srcOutIdx < 0 || dstInIdx < 0) return false;
+        if (srcOutIdx >= srcNode.outputs.size() || dstInIdx >= dstNode.inputs.size()) return false;
 
-        final int itemOutCount = srcNode.outputs.size();
-        final int itemInCount = dstNode.inputs.size();
-        final int fluidOutCount = srcNode.fluidOutputs.size();
-        final int fluidInCount = dstNode.fluidInputs.size();
+        final Port srcPort = srcNode.outputs.get(srcOutIdx);
+        final Port dstPort = dstNode.inputs.get(dstInIdx);
 
-        final boolean srcIsFluid = srcOutIdx >= itemOutCount;
-        final boolean dstIsFluid = dstInIdx >= itemInCount;
+        if (!srcPort.getPortType().equals(dstPort.getPortType())) return false;
 
-        if (srcIsFluid != dstIsFluid) return false;
-
-        if (!srcIsFluid) {
-            final ItemStack out = srcNode.outputs.get(srcOutIdx)
-                .left();
-            final ItemStack in = dstNode.inputs.get(dstInIdx)
-                .left();
+        if (srcPort instanceof ItemPort srcIp && dstPort instanceof ItemPort dstIp) {
+            final ItemStack out = srcIp.getStack();
+            final ItemStack in = dstIp.getStack();
             return out != null && in != null && out.isItemEqual(in);
         }
 
-        final int srcFluidIdx = srcOutIdx - itemOutCount;
-        final int dstFluidIdx = dstInIdx - itemInCount;
-        if (srcFluidIdx >= fluidOutCount || dstFluidIdx >= fluidInCount) return false;
-        final FluidStack out = srcNode.fluidOutputs.get(srcFluidIdx)
-            .left();
-        final FluidStack in = dstNode.fluidInputs.get(dstFluidIdx)
-            .left();
-        return out != null && in != null && out.isFluidEqual(in);
+        if (srcPort instanceof FluidPort srcFp && dstPort instanceof FluidPort dstFp) {
+            final FluidStack out = srcFp.getStack();
+            final FluidStack in = dstFp.getStack();
+            return out != null && in != null && out.isFluidEqual(in);
+        }
+
+        return false;
     }
 
     @Override
@@ -1037,95 +1034,19 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final int widgetY = widgetY(w);
             final int widgetWidth = w.getArea().width;
 
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                zoom,
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.outputs.size(),
-                0,
-                true,
-                i -> {
-                    final ItemStack stack = node.outputs.get(i)
-                        .left();
-                    return stack == null ? null : stack.getDisplayName();
-                })) {
-                return;
-            }
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                zoom,
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.fluidOutputs.size(),
-                node.outputs.size(),
-                true,
-                i -> {
-                    final FluidStack stack = node.fluidOutputs.get(i)
-                        .left();
-                    return stack == null ? null : stack.getLocalizedName();
-                })) {
-                return;
-            }
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                zoom,
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.inputs.size(),
-                0,
-                false,
-                i -> {
-                    final ItemStack stack = node.inputs.get(i)
-                        .left();
-                    return stack == null ? null : stack.getDisplayName();
-                })) {
-                return;
-            }
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                zoom,
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.fluidInputs.size(),
-                node.inputs.size(),
-                false,
-                i -> {
-                    final FluidStack stack = node.fluidInputs.get(i)
-                        .left();
-                    return stack == null ? null : stack.getLocalizedName();
-                })) {
-                return;
-            }
+            if (tryPortLabel(mouseX, mouseY, zoom, ps, half, widgetX, widgetY, widgetWidth, node.outputs, true)) return;
+            if (tryPortLabel(mouseX, mouseY, zoom, ps, half, widgetX, widgetY, widgetWidth, node.inputs, false)) return;
         }
     }
 
     private boolean tryPortLabel(final int mouseX, final int mouseY, final float zoom, final int ps, final int half,
-        final int widgetX, final int widgetY, final int widgetWidth, final int portCount, final int portOffset,
-        final boolean rightSide, final IntFunction<String> labelFn) {
-        for (int i = 0; i < portCount; i++) {
-            final int fi = portOffset + i;
+        final int widgetX, final int widgetY, final int widgetWidth, final List<Port> ports, final boolean rightSide) {
+        for (int i = 0; i < ports.size(); i++) {
             final int px = rightSide ? widgetX + widgetWidth - ps : widgetX;
-            final int pcY = widgetY + portY(fi);
+            final int pcY = widgetY + portY(i);
             final int py = pcY - half;
             if (mouseX >= px && mouseX < px + ps && mouseY >= py && mouseY < py + ps) {
-                final String label = labelFn.apply(i);
+                final String label = portLabel(ports.get(i));
                 if (label != null) {
                     drawPortLabel(label, rightSide ? widgetX + widgetWidth : widgetX, pcY, rightSide, zoom);
                 }
@@ -1133,6 +1054,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
         }
         return false;
+    }
+
+    @Nullable
+    private static String portLabel(final Port port) {
+        if (port instanceof final ItemPort ip && ip.getStack() != null) return ip.getStack().getDisplayName();
+        if (port instanceof final FluidPort fp && fp.getStack() != null && fp.getStack().getFluid() != null) {
+            return fp.getStack().getLocalizedName();
+        }
+        return null;
     }
 
     private static void drawPortLabel(String name, final int anchorX, final int centerY, final boolean rightSide,

@@ -100,31 +100,13 @@ public final class Balancer {
                 final Node target = graph.nodes.get(edge.targetNodeId);
                 if (target == null) continue;
 
-                int myOutputCount = 0;
-                float outputChance = 1.f;
-                if (edge.sourceOutputIndex >= 0 && edge.sourceOutputIndex < node.outputs.size()) {
-                    final ItemStack stack = node.outputs.get(edge.sourceOutputIndex)
-                        .left();
-                    if (stack != null) {
-                        myOutputCount = stack.stackSize;
-                        outputChance = node.outputs.get(edge.sourceOutputIndex)
-                            .rightFloat();
-                    }
-                }
+                final int myOutputCount = getPortStackSize(node, edge.sourceOutputIndex, true);
                 if (myOutputCount <= 0) continue;
+                final float outputChance = getPortChance(node, edge.sourceOutputIndex, true);
 
-                int targetInputCount = 0;
-                float inputChance = 1.f;
-                if (edge.targetInputIndex >= 0 && edge.targetInputIndex < target.inputs.size()) {
-                    final ItemStack stack = target.inputs.get(edge.targetInputIndex)
-                        .left();
-                    if (stack != null) {
-                        targetInputCount = stack.stackSize;
-                        inputChance = target.inputs.get(edge.targetInputIndex)
-                            .rightFloat();
-                    }
-                }
+                final int targetInputCount = getPortStackSize(target, edge.targetInputIndex, false);
                 if (targetInputCount <= 0) continue;
+                final float inputChance = getPortChance(target, edge.targetInputIndex, false);
 
                 final MachineConfig cfg = node.machineConfig;
                 final MachineConfig tgtCfg = target.machineConfig;
@@ -216,31 +198,13 @@ public final class Balancer {
                 final int targetOps = ops.get(edge.targetNodeId);
                 if (targetOps <= 0) continue;
 
-                int targetInputCount = 0;
-                float inputChance = 1.f;
-                if (edge.targetInputIndex >= 0 && edge.targetInputIndex < target.inputs.size()) {
-                    final ItemStack stack = target.inputs.get(edge.targetInputIndex)
-                        .left();
-                    if (stack != null) {
-                        targetInputCount = stack.stackSize;
-                        inputChance = target.inputs.get(edge.targetInputIndex)
-                            .rightFloat();
-                    }
-                }
+                final int targetInputCount = getPortStackSize(target, edge.targetInputIndex, false);
                 if (targetInputCount <= 0) continue;
+                final float inputChance = getPortChance(target, edge.targetInputIndex, false);
 
-                int myOutputCount = 0;
-                float outputChance = 1.f;
-                if (edge.sourceOutputIndex >= 0 && edge.sourceOutputIndex < node.outputs.size()) {
-                    final ItemStack stack = node.outputs.get(edge.sourceOutputIndex)
-                        .left();
-                    if (stack != null) {
-                        myOutputCount = stack.stackSize;
-                        outputChance = node.outputs.get((edge.sourceOutputIndex))
-                            .rightFloat();
-                    }
-                }
+                final int myOutputCount = getPortStackSize(node, edge.sourceOutputIndex, true);
                 if (myOutputCount <= 0) continue;
+                final float outputChance = getPortChance(node, edge.sourceOutputIndex, true);
 
                 final MachineConfig cfg = node.machineConfig;
                 final MachineConfig tgtCfg = target.machineConfig;
@@ -280,6 +244,22 @@ public final class Balancer {
         }
 
         return buildResult(graph, ops, throughputFactors);
+    }
+
+    private static int getPortStackSize(final Node node, final int index, final boolean output) {
+        final List<Port> ports = output ? node.outputs : node.inputs;
+        if (index < 0 || index >= ports.size()) return 0;
+        return ports.get(index).getAmount();
+    }
+
+    private static float getPortChance(final Node node, final int index, final boolean output) {
+        final List<Port> ports = output ? node.outputs : node.inputs;
+        if (index < 0 || index >= ports.size()) return 0;
+        return ports.get(index).getChance();
+    }
+
+    private static String key(final UUID nodeId, final int portIndex) {
+        return nodeId + ":" + portIndex;
     }
 
     @Nullable
@@ -342,7 +322,7 @@ public final class Balancer {
 
     @Nonnull
     private static BalanceResult buildResult(final Graph graph, final Map<UUID, Integer> ops,
-                                             final Map<UUID, Integer> throughputFactors) {
+                                              final Map<UUID, Integer> throughputFactors) {
         final Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
         final Map<RecipeProperty<?>, Long> propertyTotals = new HashMap<>();
         int totalOps = 0;
@@ -366,21 +346,20 @@ public final class Balancer {
 
             final Map<Integer, Float> effOuts = new HashMap<>();
             for (int i = 0; i < node.outputs.size(); i++) {
-                final var pair = node.outputs.get(i);
-                if (pair == null || pair.left() == null || pair.left().stackSize <= 0) continue;
-                final float total = opCount * pair.left().stackSize
-                    * pair.rightFloat()
-                    * cfg.outputMultiplier(i)
-                    * throughputFactor;
+                final int stackSize = getPortStackSize(node, i, true);
+                if (stackSize <= 0) continue;
+                final float chance = getPortChance(node, i, true);
+                final float total = opCount * stackSize * chance * cfg.outputMultiplier(i) * throughputFactor;
                 if (total > 0) effOuts.put(i, total);
             }
 
             final Map<Integer, Integer> effIns = new HashMap<>();
             for (int i = 0; i < node.inputs.size(); i++) {
-                final var pair = node.inputs.get(i);
-                if (pair == null || pair.left() == null || pair.left().stackSize <= 0) continue;
+                final int stackSize = getPortStackSize(node, i, false);
+                if (stackSize <= 0) continue;
+                final float chance = getPortChance(node, i, false);
                 final int total = Math.round(
-                    opCount * pair.left().stackSize * pair.rightFloat() * cfg.inputMultiplier(i) * throughputFactor);
+                    opCount * stackSize * chance * cfg.inputMultiplier(i) * throughputFactor);
                 if (total > 0) effIns.put(i, total);
             }
 
@@ -401,8 +380,8 @@ public final class Balancer {
         final Set<String> fulfilledInputs = new HashSet<>();
         final Set<String> consumedOutputs = new HashSet<>();
         for (final Edge edge : graph.getEdges()) {
-            fulfilledInputs.add(edge.targetNodeId + ":" + edge.targetInputIndex);
-            consumedOutputs.add(edge.sourceNodeId + ":" + edge.sourceOutputIndex);
+            fulfilledInputs.add(key(edge.targetNodeId, edge.targetInputIndex));
+            consumedOutputs.add(key(edge.sourceNodeId, edge.sourceOutputIndex));
         }
 
         final List<Summary.SummaryLine> netInputs = new ArrayList<>();
@@ -417,54 +396,46 @@ public final class Balancer {
             final int throughputFactor = throughputFactors.getOrDefault(node.id, 1);
 
             for (int i = 0; i < node.inputs.size(); i++) {
-                final ItemStack stack = node.inputs.get(i)
-                    .left();
-                if (stack == null || stack.stackSize <= 0) continue;
-                if (fulfilledInputs.contains(node.id + ":" + i)) continue;
-                final Integer totalCount = nb.effectiveInputs.get(i);
-                if (totalCount != null && totalCount > 0) {
-                    Summary.mergeInto(netInputs, stack, totalCount);
-                }
-            }
-            for (int i = 0; i < node.outputs.size(); i++) {
-                final ItemStack stack = node.outputs.get(i)
-                    .left();
-                if (stack == null || stack.stackSize <= 0) continue;
-                if (consumedOutputs.contains(node.id + ":" + i)) continue;
-                final Float totalCount = nb.effectiveOutputs.get(i);
-                if (totalCount != null && totalCount > 0) {
-                    Summary.mergeInto(netOutputs, stack, (int) Math.ceil(totalCount));
+                final Port port = node.inputs.get(i);
+                if (port instanceof final ItemPort ip) {
+                    final ItemStack stack = ip.getStack();
+                    if (stack == null || stack.stackSize <= 0) continue;
+                    if (fulfilledInputs.contains(key(node.id, i))) continue;
+                    final Integer totalCount = nb.effectiveInputs.get(i);
+                    if (totalCount != null && totalCount > 0) {
+                        Summary.mergeInto(netInputs, stack, totalCount);
+                    }
+                } else if (port instanceof final FluidPort fp) {
+                    final FluidStack fs = fp.getStack();
+                    if (fs == null || fs.amount <= 0) continue;
+                    if (fulfilledInputs.contains(key(node.id, i))) continue;
+                    final int total = Math.round(
+                        nodeOps * fs.amount * fp.getChance() * throughputFactor);
+                    if (total > 0) {
+                        Summary.mergeFluidInto(netFluidInputs, fs, total);
+                    }
                 }
             }
 
-            for (int i = 0; i < node.fluidInputs.size(); i++) {
-                final FluidStack fs = node.fluidInputs.get(i)
-                    .left();
-                if (fs == null || fs.amount <= 0) continue;
-                final int combinedIdx = node.inputs.size() + i;
-                if (fulfilledInputs.contains(node.id + ":" + combinedIdx)) continue;
-                final int total = Math.round(
-                    nodeOps * fs.amount
-                        * node.fluidInputs.get(i)
-                            .rightFloat()
-                        * throughputFactor);
-                if (total > 0) {
-                    Summary.mergeFluidInto(netFluidInputs, fs, total);
-                }
-            }
-            for (int i = 0; i < node.fluidOutputs.size(); i++) {
-                final FluidStack fs = node.fluidOutputs.get(i)
-                    .left();
-                if (fs == null || fs.amount <= 0) continue;
-                final int combinedIdx = node.outputs.size() + i;
-                if (consumedOutputs.contains(node.id + ":" + combinedIdx)) continue;
-                final int total = Math.round(
-                    nodeOps * fs.amount
-                        * node.fluidOutputs.get(i)
-                            .rightFloat()
-                        * throughputFactor);
-                if (total > 0) {
-                    Summary.mergeFluidInto(netFluidOutputs, fs, total);
+            for (int i = 0; i < node.outputs.size(); i++) {
+                final Port port = node.outputs.get(i);
+                if (port instanceof final ItemPort ip) {
+                    final ItemStack stack = ip.getStack();
+                    if (stack == null || stack.stackSize <= 0) continue;
+                    if (consumedOutputs.contains(key(node.id, i))) continue;
+                    final Float totalCount = nb.effectiveOutputs.get(i);
+                    if (totalCount != null && totalCount > 0) {
+                        Summary.mergeInto(netOutputs, stack, (int) Math.ceil(totalCount));
+                    }
+                } else if (port instanceof final FluidPort fp) {
+                    final FluidStack fs = fp.getStack();
+                    if (fs == null || fs.amount <= 0) continue;
+                    if (consumedOutputs.contains(key(node.id, i))) continue;
+                    final int total = Math.round(
+                        nodeOps * fs.amount * fp.getChance() * throughputFactor);
+                    if (total > 0) {
+                        Summary.mergeFluidInto(netFluidOutputs, fs, total);
+                    }
                 }
             }
         }

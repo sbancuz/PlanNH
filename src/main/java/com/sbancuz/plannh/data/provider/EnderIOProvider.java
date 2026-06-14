@@ -25,7 +25,8 @@ import crazypants.enderio.nei.SagMillRecipeHandler.MillRecipe;
 import crazypants.enderio.nei.SliceAndSpliceRecipeHandler.SliceAndSpliceRecipe;
 import crazypants.enderio.nei.SoulBinderRecipeHandler.SoulBinderRecipeNEI;
 import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
-import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
+import com.sbancuz.plannh.data.flowchart.ItemPort;
+import com.sbancuz.plannh.data.flowchart.Port;
 
 public class EnderIOProvider implements PropertyProvider {
 
@@ -89,13 +90,11 @@ public class EnderIOProvider implements PropertyProvider {
             if (MILL_OUTPUT_CHANCE != null) {
                 try {
                     final float[] chances = (float[]) MILL_OUTPUT_CHANCE.get(r);
-                    for (int i = 0; i < chances.length; i++) {
-                        node.outputs.set(
-                            i,
-                            new ObjectFloatImmutablePair<>(
-                                node.outputs.get(i)
-                                    .left(),
-                                chances[i]));
+                    for (int i = 0; i < chances.length && i < node.outputs.size(); i++) {
+                        final Port port = node.outputs.get(i);
+                        if (port instanceof final ItemPort ip) {
+                            ip.setChance(chances[i]);
+                        }
                     }
                 } catch (final Exception ignored) {}
             }
