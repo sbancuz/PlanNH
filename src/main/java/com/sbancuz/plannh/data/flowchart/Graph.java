@@ -32,6 +32,7 @@ public class Graph {
     public Collection<Node> getNodes() {
         return nodes.values();
     }
+
     public void addNode(final Node node) {
         nodes.put(node.id, node);
     }
@@ -39,9 +40,11 @@ public class Graph {
     public Collection<Edge> getEdges() {
         return edges.values();
     }
+
     public void addEdge(final Edge edge) {
         edges.put(edge.id, edge);
     }
+
     public void removeEdge(final UUID id) {
         edges.remove(id);
     }
@@ -49,6 +52,7 @@ public class Graph {
     public void addGroup(final Group group) {
         groups.put(group.id, group);
     }
+
     public void removeGroup(final UUID id) {
         groups.remove(id);
     }

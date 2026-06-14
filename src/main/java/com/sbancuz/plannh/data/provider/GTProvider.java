@@ -15,7 +15,10 @@ import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.flowchart.FluidPort;
+import com.sbancuz.plannh.data.flowchart.ItemPort;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Port;
 
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
@@ -27,9 +30,6 @@ import gregtech.api.util.recipe.Sievert;
 import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
-import com.sbancuz.plannh.data.flowchart.FluidPort;
-import com.sbancuz.plannh.data.flowchart.ItemPort;
-import com.sbancuz.plannh.data.flowchart.Port;
 
 public class GTProvider implements PropertyProvider {
 

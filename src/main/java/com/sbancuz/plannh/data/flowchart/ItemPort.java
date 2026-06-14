@@ -1,9 +1,8 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import javax.annotation.Nullable;
+import net.minecraft.item.ItemStack;
 
 import lombok.Getter;
-import net.minecraft.item.ItemStack;
 
 @Getter
 public final class ItemPort extends Port {
@@ -24,4 +23,5 @@ public final class ItemPort extends Port {
     public int getAmount() {
         return stack.stackSize;
     }
+
 }

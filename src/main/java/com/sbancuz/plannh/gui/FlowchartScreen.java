@@ -16,6 +16,7 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
@@ -328,26 +329,22 @@ public class FlowchartScreen extends ModularScreen {
             if (collapsed) return TITLE_H;
             final Graph g = graph();
             final BalanceResult br = g.balance();
+            final Summary s = Summary.compute(br, g);
             int h = TITLE_H + SECTION_LY_OFFSET;
 
-            if (!br.netOutputs()
+            if (!s.outputs()
                 .isEmpty()) {
-                h += SECTION_H + br.netOutputs()
+                h += SECTION_H + s.outputs()
                     .size() * LINE_H + SECTION_END_PAD;
             }
-            if (!br.netInputs()
+            if (!s.inputs()
                 .isEmpty()) {
-                h += SECTION_H + br.netInputs()
+                h += SECTION_H + s.inputs()
                     .size() * LINE_H + SECTION_END_PAD;
             }
-            if (!br.netFluidOutputs()
+            if (!s.properties()
                 .isEmpty()) {
-                h += SECTION_H + br.netFluidOutputs()
-                    .size() * LINE_H + SECTION_END_PAD;
-            }
-            if (!br.netFluidInputs()
-                .isEmpty()) {
-                h += SECTION_H + br.netFluidInputs()
+                h += SECTION_H + s.properties()
                     .size() * LINE_H + SECTION_END_PAD;
             }
             if (br.totalOperations() > 0) {
@@ -382,6 +379,7 @@ public class FlowchartScreen extends ModularScreen {
 
             final Graph g = graph();
             final BalanceResult br = g.balance();
+            final Summary s = Summary.compute(br, g);
             final SummaryMode sMode = summaryMode();
             final float cycleSecs = summaryCycleSecs(br);
             final boolean isCycle = sMode == SummaryMode.CYCLES;
@@ -391,41 +389,47 @@ public class FlowchartScreen extends ModularScreen {
                 ly,
                 w,
                 "Products",
-                br.netOutputs(),
+                s.outputs(),
                 PlannhColors.SECTION_PRODUCT.getColor(),
                 PlannhColors.ACCENT_AMBER.getColor(),
                 PlannhColors.ACCENT_AMBER.getColor(),
-                i -> itemLabel((Summary.SummaryLine) i, cycleSecs, isCycle));
+                i -> lineLabel((Summary.Line) i, cycleSecs, isCycle));
 
             ly = drawSection(
                 ly,
                 w,
                 "External Inputs",
-                br.netInputs(),
+                s.inputs(),
                 PlannhColors.SECTION_INPUT.getColor(),
                 PlannhColors.ACCENT_GREEN2.getColor(),
                 PlannhColors.TEXT_MUTED.getColor(),
-                i -> itemLabel((Summary.SummaryLine) i, cycleSecs, isCycle));
+                i -> lineLabel((Summary.Line) i, cycleSecs, isCycle));
 
-            ly = drawFluidSection(
-                ly,
-                w,
-                "Fluid Products",
-                br.netFluidOutputs(),
-                PlannhColors.SECTION_FLUID_OUT.getColor(),
-                PlannhColors.ACCENT_CYAN2.getColor(),
-                PlannhColors.ACCENT_CYAN.getColor(),
-                i -> fluidLabel((Summary.FluidSummaryLine) i, cycleSecs, isCycle));
-
-            ly = drawFluidSection(
-                ly,
-                w,
-                "Fluid Inputs",
-                br.netFluidInputs(),
-                PlannhColors.SECTION_FLUID_IN.getColor(),
-                PlannhColors.ACCENT_BLUE2.getColor(),
-                PlannhColors.ACCENT_BLUE3.getColor(),
-                i -> fluidLabel((Summary.FluidSummaryLine) i, cycleSecs, isCycle));
+            if (!s.properties().isEmpty()) {
+                GuiDraw.drawRect(SECTION_HEADER_X, ly, w - SECTION_HEADER_X * 2, SECTION_H,
+                    PlannhColors.SECTION_OPS.getColor());
+                GuiDraw.drawText(
+                    "Properties (" + s.properties().size() + ")",
+                    SECTION_HEADER_TEXT_X,
+                    ly + SECTION_HEADER_TEXT_Y_OFF,
+                    1.0f,
+                    PlannhColors.ACCENT_BLUE.getColor(),
+                    false);
+                ly += SECTION_H;
+                for (final Summary.Line pl : s.properties()) {
+                    final String propName = pl.resource instanceof final RecipeProperty<?> p
+                        ? p.getDisplayName() : pl.resource.toString();
+                    GuiDraw.drawText(
+                        propName + ": " + (int) pl.count,
+                        ITEM_TEXT_X,
+                        ly,
+                        0.8f,
+                        PlannhColors.TEXT_LIGHT.getColor(),
+                        false);
+                    ly += LINE_H;
+                }
+                ly += SECTION_END_PAD;
+            }
 
             if (br.totalOperations() > 0) {
                 GuiDraw.drawRect(
@@ -538,39 +542,27 @@ public class FlowchartScreen extends ModularScreen {
             return ly + SECTION_END_PAD;
         }
 
-        private static String itemLabel(final Summary.SummaryLine line, final float cycleSecs, final boolean isCycle) {
-            if (isCycle) {
-                return line.totalCount + "x " + line.stack.getDisplayName();
+        private static String lineLabel(final Summary.Line line, final float cycleSecs, final boolean isCycle) {
+            final String name;
+            if (line.resource instanceof final net.minecraft.item.ItemStack stack) {
+                name = stack.getDisplayName();
+            } else if (line.resource instanceof final net.minecraftforge.fluids.FluidStack stack) {
+                name = stack.getLocalizedName();
+            } else {
+                name = line.resource.toString();
             }
-            return formatRate(line.totalCount / cycleSecs) + "/s " + line.stack.getDisplayName();
-        }
 
-        private static String fluidLabel(final Summary.FluidSummaryLine line, final float cycleSecs,
-            final boolean isCycle) {
             if (isCycle) {
-                return formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
+                if (line.type.equals("fluid")) {
+                    return formatFluidAmount(line.count) + " " + name;
+                }
+                return (int) line.count + "x " + name;
             }
-            return formatFluidAmount(line.totalAmount / cycleSecs) + "/s " + line.fluid.getLocalizedName();
-        }
 
-        private int drawFluidSection(int ly, final int w, final String title, final List<?> items,
-            final int headerColor, final int titleColor, final int itemColor,
-            final java.util.function.Function<Object, String> labelFn) {
-            if (items.isEmpty()) return ly;
-            GuiDraw.drawRect(SECTION_HEADER_X, ly, w - SECTION_HEADER_X * 2, SECTION_H, headerColor);
-            GuiDraw.drawText(
-                title + " (" + items.size() + ")",
-                SECTION_HEADER_TEXT_X,
-                ly + SECTION_HEADER_TEXT_Y_OFF,
-                1.0f,
-                titleColor,
-                false);
-            ly += SECTION_H;
-            for (final Object item : items) {
-                GuiDraw.drawText(labelFn.apply(item), ITEM_TEXT_X, ly, 0.8f, itemColor, false);
-                ly += LINE_H;
+            if (line.type.equals("fluid")) {
+                return formatFluidAmount(line.count / cycleSecs) + "/s " + name;
             }
-            return ly + SECTION_END_PAD;
+            return formatRate(line.count / cycleSecs) + "/s " + name;
         }
 
         @Override

@@ -1,9 +1,8 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import javax.annotation.Nullable;
+import net.minecraftforge.fluids.FluidStack;
 
 import lombok.Getter;
-import net.minecraftforge.fluids.FluidStack;
 
 @Getter
 public final class FluidPort extends Port {
@@ -24,4 +23,5 @@ public final class FluidPort extends Port {
     public int getAmount() {
         return stack.amount;
     }
+
 }

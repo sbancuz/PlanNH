@@ -14,9 +14,6 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
-
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeProperty;
@@ -44,14 +41,7 @@ public final class Balancer {
         for (final Node node : graph.getNodes()) {
             ops.put(node.id, 1);
         }
-        final Map<UUID, Integer> throughputFactors = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
-            throughputFactors.put(
-                node.id,
-                node.machineConfig.computeEffect(node.properties.asMap(), node.durationTicks)
-                    .throughputFactor());
-        }
-        return buildResult(graph, ops, throughputFactors);
+        return buildResult(graph, ops);
     }
 
     @Nonnull
@@ -100,13 +90,17 @@ public final class Balancer {
                 final Node target = graph.nodes.get(edge.targetNodeId);
                 if (target == null) continue;
 
-                final int myOutputCount = getPortStackSize(node, edge.sourceOutputIndex, true);
+                final int myOutputCount = node.outputs.get(edge.sourceOutputIndex)
+                    .getAmount();
                 if (myOutputCount <= 0) continue;
-                final float outputChance = getPortChance(node, edge.sourceOutputIndex, true);
+                final float outputChance = node.outputs.get(edge.sourceOutputIndex)
+                    .getChance();
 
-                final int targetInputCount = getPortStackSize(target, edge.targetInputIndex, false);
+                final int targetInputCount = target.inputs.get(edge.targetInputIndex)
+                    .getAmount();
                 if (targetInputCount <= 0) continue;
-                final float inputChance = getPortChance(target, edge.targetInputIndex, false);
+                final float inputChance = target.inputs.get(edge.targetInputIndex)
+                    .getChance();
 
                 final MachineConfig cfg = node.machineConfig;
                 final MachineConfig tgtCfg = target.machineConfig;
@@ -137,7 +131,7 @@ public final class Balancer {
             if (v <= 0) ops.put(node.id, 1);
         }
 
-        return buildResult(graph, ops, throughputFactors);
+        return buildResult(graph, ops);
     }
 
     @Nonnull
@@ -198,13 +192,17 @@ public final class Balancer {
                 final int targetOps = ops.get(edge.targetNodeId);
                 if (targetOps <= 0) continue;
 
-                final int targetInputCount = getPortStackSize(target, edge.targetInputIndex, false);
+                final int targetInputCount = target.inputs.get(edge.targetInputIndex)
+                    .getAmount();
                 if (targetInputCount <= 0) continue;
-                final float inputChance = getPortChance(target, edge.targetInputIndex, false);
+                final float inputChance = target.inputs.get(edge.targetInputIndex)
+                    .getChance();
 
-                final int myOutputCount = getPortStackSize(node, edge.sourceOutputIndex, true);
+                final int myOutputCount = node.outputs.get(edge.sourceOutputIndex)
+                    .getAmount();
                 if (myOutputCount <= 0) continue;
-                final float outputChance = getPortChance(node, edge.sourceOutputIndex, true);
+                final float outputChance = node.outputs.get(edge.sourceOutputIndex)
+                    .getChance();
 
                 final MachineConfig cfg = node.machineConfig;
                 final MachineConfig tgtCfg = target.machineConfig;
@@ -243,23 +241,7 @@ public final class Balancer {
             }
         }
 
-        return buildResult(graph, ops, throughputFactors);
-    }
-
-    private static int getPortStackSize(final Node node, final int index, final boolean output) {
-        final List<Port> ports = output ? node.outputs : node.inputs;
-        if (index < 0 || index >= ports.size()) return 0;
-        return ports.get(index).getAmount();
-    }
-
-    private static float getPortChance(final Node node, final int index, final boolean output) {
-        final List<Port> ports = output ? node.outputs : node.inputs;
-        if (index < 0 || index >= ports.size()) return 0;
-        return ports.get(index).getChance();
-    }
-
-    private static String key(final UUID nodeId, final int portIndex) {
-        return nodeId + ":" + portIndex;
+        return buildResult(graph, ops);
     }
 
     @Nullable
@@ -310,19 +292,11 @@ public final class Balancer {
         for (final Node node : graph.getNodes()) {
             ops.put(node.id, 1);
         }
-        final Map<UUID, Integer> throughputFactors = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
-            throughputFactors.put(
-                node.id,
-                node.machineConfig.computeEffect(node.properties.asMap(), node.durationTicks)
-                    .throughputFactor());
-        }
-        return buildResult(graph, ops, throughputFactors);
+        return buildResult(graph, ops);
     }
 
     @Nonnull
-    private static BalanceResult buildResult(final Graph graph, final Map<UUID, Integer> ops,
-                                              final Map<UUID, Integer> throughputFactors) {
+    private static BalanceResult buildResult(final Graph graph, final Map<UUID, Integer> ops) {
         final Map<UUID, NodeBalance> nodeBalances = new HashMap<>();
         final Map<RecipeProperty<?>, Long> propertyTotals = new HashMap<>();
         int totalOps = 0;
@@ -346,21 +320,22 @@ public final class Balancer {
 
             final Map<Integer, Float> effOuts = new HashMap<>();
             for (int i = 0; i < node.outputs.size(); i++) {
-                final int stackSize = getPortStackSize(node, i, true);
+                final int stackSize = node.outputs.get(i).getAmount();
                 if (stackSize <= 0) continue;
-                final float chance = getPortChance(node, i, true);
+                final float chance = node.outputs.get(i).getChance();
                 final float total = opCount * stackSize * chance * cfg.outputMultiplier(i) * throughputFactor;
-                if (total > 0) effOuts.put(i, total);
+                if (total <= 0) continue;
+                effOuts.put(i, total);
             }
 
-            final Map<Integer, Integer> effIns = new HashMap<>();
+            final Map<Integer, Float> effIns = new HashMap<>();
             for (int i = 0; i < node.inputs.size(); i++) {
-                final int stackSize = getPortStackSize(node, i, false);
+                final int stackSize = node.inputs.get(i).getAmount();
                 if (stackSize <= 0) continue;
-                final float chance = getPortChance(node, i, false);
-                final int total = Math.round(
-                    opCount * stackSize * chance * cfg.inputMultiplier(i) * throughputFactor);
-                if (total > 0) effIns.put(i, total);
+                final float chance = node.inputs.get(i).getChance();
+                final float total = opCount * stackSize * chance * cfg.inputMultiplier(i) * throughputFactor;
+                if (total <= 0) continue;
+                effIns.put(i, total);
             }
 
             nodeBalances.put(
@@ -377,75 +352,8 @@ public final class Balancer {
             }
         }
 
-        final Set<String> fulfilledInputs = new HashSet<>();
-        final Set<String> consumedOutputs = new HashSet<>();
-        for (final Edge edge : graph.getEdges()) {
-            fulfilledInputs.add(key(edge.targetNodeId, edge.targetInputIndex));
-            consumedOutputs.add(key(edge.sourceNodeId, edge.sourceOutputIndex));
-        }
-
-        final List<Summary.SummaryLine> netInputs = new ArrayList<>();
-        final List<Summary.SummaryLine> netOutputs = new ArrayList<>();
-        final List<Summary.FluidSummaryLine> netFluidInputs = new ArrayList<>();
-        final List<Summary.FluidSummaryLine> netFluidOutputs = new ArrayList<>();
-
-        for (final Node node : graph.getNodes()) {
-            final NodeBalance nb = nodeBalances.get(node.id);
-
-            final int nodeOps = ops.get(node.id);
-            final int throughputFactor = throughputFactors.getOrDefault(node.id, 1);
-
-            for (int i = 0; i < node.inputs.size(); i++) {
-                final Port port = node.inputs.get(i);
-                if (port instanceof final ItemPort ip) {
-                    final ItemStack stack = ip.getStack();
-                    if (stack == null || stack.stackSize <= 0) continue;
-                    if (fulfilledInputs.contains(key(node.id, i))) continue;
-                    final Integer totalCount = nb.effectiveInputs.get(i);
-                    if (totalCount != null && totalCount > 0) {
-                        Summary.mergeInto(netInputs, stack, totalCount);
-                    }
-                } else if (port instanceof final FluidPort fp) {
-                    final FluidStack fs = fp.getStack();
-                    if (fs == null || fs.amount <= 0) continue;
-                    if (fulfilledInputs.contains(key(node.id, i))) continue;
-                    final int total = Math.round(
-                        nodeOps * fs.amount * fp.getChance() * throughputFactor);
-                    if (total > 0) {
-                        Summary.mergeFluidInto(netFluidInputs, fs, total);
-                    }
-                }
-            }
-
-            for (int i = 0; i < node.outputs.size(); i++) {
-                final Port port = node.outputs.get(i);
-                if (port instanceof final ItemPort ip) {
-                    final ItemStack stack = ip.getStack();
-                    if (stack == null || stack.stackSize <= 0) continue;
-                    if (consumedOutputs.contains(key(node.id, i))) continue;
-                    final Float totalCount = nb.effectiveOutputs.get(i);
-                    if (totalCount != null && totalCount > 0) {
-                        Summary.mergeInto(netOutputs, stack, (int) Math.ceil(totalCount));
-                    }
-                } else if (port instanceof final FluidPort fp) {
-                    final FluidStack fs = fp.getStack();
-                    if (fs == null || fs.amount <= 0) continue;
-                    if (consumedOutputs.contains(key(node.id, i))) continue;
-                    final int total = Math.round(
-                        nodeOps * fs.amount * fp.getChance() * throughputFactor);
-                    if (total > 0) {
-                        Summary.mergeFluidInto(netFluidOutputs, fs, total);
-                    }
-                }
-            }
-        }
-
         return new BalanceResult(
             nodeBalances,
-            netInputs,
-            netOutputs,
-            netFluidInputs,
-            netFluidOutputs,
             propertyTotals,
             totalOps,
             totalDuration);
@@ -458,10 +366,10 @@ public final class Balancer {
         public final long totalEnergy;
         public final int durationPerOp;
         public final Map<Integer, Float> effectiveOutputs;
-        public final Map<Integer, Integer> effectiveInputs;
+        public final Map<Integer, Float> effectiveInputs;
 
         NodeBalance(final int operations, final int totalDurationTicks, final long totalEnergy, final int durationPerOp,
-            final Map<Integer, Float> effectiveOutputs, final Map<Integer, Integer> effectiveInputs) {
+            final Map<Integer, Float> effectiveOutputs, final Map<Integer, Float> effectiveInputs) {
             this.operations = operations;
             this.totalDurationTicks = totalDurationTicks;
             this.totalEnergy = totalEnergy;
@@ -471,8 +379,6 @@ public final class Balancer {
         }
     }
 
-    public record BalanceResult(Map<UUID, NodeBalance> nodeBalances, List<Summary.SummaryLine> netInputs,
-        List<Summary.SummaryLine> netOutputs, List<Summary.FluidSummaryLine> netFluidInputs,
-        List<Summary.FluidSummaryLine> netFluidOutputs, Map<RecipeProperty<?>, Long> propertyTotals,
+    public record BalanceResult(Map<UUID, NodeBalance> nodeBalances, Map<RecipeProperty<?>, Long> propertyTotals,
         int totalOperations, int totalDurationTicks) {}
 }

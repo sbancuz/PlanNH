@@ -435,30 +435,42 @@ public final class Serializer {
     private static void jsonArrayToPorts(final JsonArray arr, final List<Port> out) {
         for (final JsonElement elem : arr) {
             final JsonObject obj = elem.getAsJsonObject();
-            final String type = obj.has("type") ? obj.get("type").getAsString() : "item";
+            final String type = obj.has("type") ? obj.get("type")
+                .getAsString() : "item";
             if ("fluid".equals(type)) {
-                final String name = obj.get("fluid").getAsString();
-                final int amount = obj.get("amount").getAsInt();
+                final String name = obj.get("fluid")
+                    .getAsString();
+                final int amount = obj.get("amount")
+                    .getAsInt();
                 final FluidStack fs = FluidRegistry.getFluidStack(name, amount);
                 if (fs != null) {
-                    out.add(new FluidPort(fs, obj.get("chance").getAsFloat()));
+                    out.add(
+                        new FluidPort(
+                            fs,
+                            obj.get("chance")
+                                .getAsFloat()));
                 }
             } else {
-                final String itemId = obj.get("id").getAsString();
-                final int size = obj.get("size").getAsInt();
-                final int meta = obj.get("meta").getAsInt();
-                final ItemStack stack = new ItemStack(
-                    (Item) Item.itemRegistry.getObject(itemId),
-                    size,
-                    meta);
+                final String itemId = obj.get("id")
+                    .getAsString();
+                final int size = obj.get("size")
+                    .getAsInt();
+                final int meta = obj.get("meta")
+                    .getAsInt();
+                final ItemStack stack = new ItemStack((Item) Item.itemRegistry.getObject(itemId), size, meta);
                 if (obj.has("nbt")) {
                     try {
                         stack.setTagCompound(
                             (NBTTagCompound) JsonToNBT.func_150315_a(
-                                obj.get("nbt").getAsString()));
+                                obj.get("nbt")
+                                    .getAsString()));
                     } catch (final net.minecraft.nbt.NBTException ignored) {}
                 }
-                out.add(new ItemPort(stack, obj.get("chance").getAsFloat()));
+                out.add(
+                    new ItemPort(
+                        stack,
+                        obj.get("chance")
+                            .getAsFloat()));
             }
         }
     }

@@ -635,7 +635,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final Port srcPort = srcNode.outputs.get(srcOutIdx);
         final Port dstPort = dstNode.inputs.get(dstInIdx);
 
-        if (!srcPort.getPortType().equals(dstPort.getPortType())) return false;
+        if (!srcPort.getPortType()
+            .equals(dstPort.getPortType())) return false;
 
         if (srcPort instanceof ItemPort srcIp && dstPort instanceof ItemPort dstIp) {
             final ItemStack out = srcIp.getStack();

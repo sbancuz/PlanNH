@@ -16,7 +16,9 @@ import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.flowchart.ItemPort;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Port;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -25,8 +27,6 @@ import crazypants.enderio.nei.SagMillRecipeHandler.MillRecipe;
 import crazypants.enderio.nei.SliceAndSpliceRecipeHandler.SliceAndSpliceRecipe;
 import crazypants.enderio.nei.SoulBinderRecipeHandler.SoulBinderRecipeNEI;
 import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
-import com.sbancuz.plannh.data.flowchart.ItemPort;
-import com.sbancuz.plannh.data.flowchart.Port;
 
 public class EnderIOProvider implements PropertyProvider {
 

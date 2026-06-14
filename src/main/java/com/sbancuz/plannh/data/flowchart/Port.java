@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public sealed abstract class Port permits ItemPort, FluidPort {
+public sealed abstract class Port permits ItemPort,FluidPort {
 
     private float chance;
 
@@ -16,4 +16,6 @@ public sealed abstract class Port permits ItemPort, FluidPort {
     public abstract String getPortType();
 
     public abstract int getAmount();
+
+    public abstract Object getStack();
 }

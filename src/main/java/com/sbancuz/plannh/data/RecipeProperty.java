@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.data;
 
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -13,6 +14,7 @@ import lombok.Getter;
 
 public class RecipeProperty<T> {
 
+    @Getter
     private final String key;
     @Getter
     private final String displayName;
@@ -113,5 +115,17 @@ public class RecipeProperty<T> {
                 .getAsInt();
             return result;
         });
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        final RecipeProperty<?> that = (RecipeProperty<?>) o;
+        return Objects.equals(key, that.key);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(key);
     }
 }

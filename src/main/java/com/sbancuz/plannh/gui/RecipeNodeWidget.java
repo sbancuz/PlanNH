@@ -407,10 +407,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             final int py = portTopY(i) - half;
             final Port port = node.outputs.get(i);
             if (port instanceof FluidPort) {
-                GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_OUT_H.getColor());
+                GuiDraw.drawRect(
+                    getArea().width - ps - 1,
+                    py - 1,
+                    ps + 2,
+                    ps + 2,
+                    PlannhColors.PIN_FLUID_OUT_H.getColor());
                 GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_FLUID_OUT.getColor());
             } else {
-                GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_OUTPUT_HOVER.getColor());
+                GuiDraw.drawRect(
+                    getArea().width - ps - 1,
+                    py - 1,
+                    ps + 2,
+                    ps + 2,
+                    PlannhColors.PIN_OUTPUT_HOVER.getColor());
                 GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_OUTPUT.getColor());
             }
         }
@@ -461,8 +471,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         drawPortList(x, y, node.outputs, nb, sec, ops, throughput, true);
     }
 
-    private int drawPortList(final int x, int y, final List<Port> ports, final NodeBalance nb,
-        final float sec, final int ops, final int throughput, final boolean output) {
+    private int drawPortList(final int x, int y, final List<Port> ports, final NodeBalance nb, final float sec,
+        final int ops, final int throughput, final boolean output) {
         for (int i = 0; i < ports.size(); i++) {
             final Port port = ports.get(i);
             final String label = portLabel(port, i, nb, sec, ops, throughput, output);
@@ -475,13 +485,13 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     @Nullable
-    private String portLabel(final Port port, final int index, final NodeBalance nb,
-        final float sec, final int ops, final int throughput, final boolean output) {
+    private String portLabel(final Port port, final int index, final NodeBalance nb, final float sec, final int ops,
+        final int throughput, final boolean output) {
         if (port instanceof ItemPort ip) {
             final ItemStack stack = ip.getStack();
             if (stack == null || stack.stackSize <= 0) return null;
-            final float total = nb != null && (output ? nb.effectiveOutputs : nb.effectiveInputs).containsKey(index)
-                ? (output ? nb.effectiveOutputs.get(index) : nb.effectiveInputs.get(index))
+            final float total = (output ? nb.effectiveOutputs : nb.effectiveInputs).containsKey(index)
+                ? output ? nb.effectiveOutputs.get(index) : nb.effectiveInputs.get(index)
                 : stack.stackSize;
             String label = formatRate(total / sec) + "/s " + stack.getDisplayName();
             if (output && ip.getChance() < 0.999f) {
@@ -496,8 +506,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             if (output) {
                 total = ops * (float) fs.amount * fp.getChance() * throughput;
             } else {
-                total = nb != null && nb.effectiveInputs.containsKey(index)
-                    ? nb.effectiveInputs.get(index)
+                total = nb != null && nb.effectiveInputs.containsKey(index) ? nb.effectiveInputs.get(index)
                     : (float) fs.amount;
             }
             return formatRate(total / sec) + "/s " + fs.getLocalizedName();
