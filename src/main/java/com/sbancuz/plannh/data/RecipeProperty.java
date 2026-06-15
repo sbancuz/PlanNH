@@ -11,6 +11,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
 import lombok.Getter;
+import org.jetbrains.annotations.UnknownNullability;
 
 public class RecipeProperty<T> {
 
@@ -32,8 +33,9 @@ public class RecipeProperty<T> {
         this.deserializer = deserializer;
     }
 
-    public void serialize(final JsonObject obj, final T value) {
-        serializer.accept(obj, value);
+    @SuppressWarnings("unchecked")
+    public void serialize(final JsonObject obj, final Object value) {
+        serializer.accept(obj, (T) value);
     }
 
     public T deserialize(final JsonObject obj) {

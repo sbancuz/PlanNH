@@ -18,14 +18,13 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
-import com.sbancuz.plannh.data.flowchart.FluidPort;
 import com.sbancuz.plannh.data.flowchart.Group;
-import com.sbancuz.plannh.data.flowchart.ItemPort;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 
@@ -406,7 +405,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         for (int i = 0; i < node.outputs.size(); i++) {
             final int py = portTopY(i) - half;
             final Port port = node.outputs.get(i);
-            if (port instanceof FluidPort) {
+            if (port.getType() == RecipePropertyAPI.FLUID) {
                 GuiDraw.drawRect(
                     getArea().width - ps - 1,
                     py - 1,
@@ -427,7 +426,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         for (int i = 0; i < node.inputs.size(); i++) {
             final int py = portTopY(i) - half;
             final Port port = node.inputs.get(i);
-            if (port instanceof FluidPort) {
+            if (port.getType() == RecipePropertyAPI.FLUID) {
                 GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_IN_H.getColor());
                 GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_FLUID_IN.getColor());
             } else {
@@ -485,37 +484,36 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     @Nullable
-    private String portLabel(final Port port, final int index, final NodeBalance nb, final float sec, final int ops,
+    private String portLabel(final Port<?> port, final int index, final NodeBalance nb, final float sec, final int ops,
         final int throughput, final boolean output) {
-        if (port instanceof ItemPort ip) {
-            final ItemStack stack = ip.getStack();
+        if (port.getType() == RecipePropertyAPI.ITEM) {
+            final ItemStack stack = (ItemStack) port.getValue();
             if (stack == null || stack.stackSize <= 0) return null;
             final float total = (output ? nb.effectiveOutputs : nb.effectiveInputs).containsKey(index)
                 ? output ? nb.effectiveOutputs.get(index) : nb.effectiveInputs.get(index)
                 : stack.stackSize;
             String label = formatRate(total / sec) + "/s " + stack.getDisplayName();
-            if (output && ip.getChance() < 0.999f) {
-                label += " (" + Math.round(ip.getChance() * 100) + "%)";
+            if (output && port.getChance() < 0.999f) {
+                label += " (" + Math.round(port.getChance() * 100) + "%)";
             }
             return label;
         }
-        if (port instanceof FluidPort fp) {
-            final FluidStack fs = fp.getStack();
+        if (port.getType() == RecipePropertyAPI.FLUID) {
+            final FluidStack fs = (FluidStack) port.getValue();
             if (fs == null || fs.amount <= 0) return null;
             final float total;
             if (output) {
-                total = ops * (float) fs.amount * fp.getChance() * throughput;
+                total = ops * (float) fs.amount * port.getChance() * throughput;
             } else {
-                total = nb != null && nb.effectiveInputs.containsKey(index) ? nb.effectiveInputs.get(index)
-                    : (float) fs.amount;
+                total = nb.effectiveInputs.containsKey(index) ? nb.effectiveInputs.get(index) : (float) fs.amount;
             }
             return formatRate(total / sec) + "/s " + fs.getLocalizedName();
         }
         return null;
     }
 
-    private static int portColor(final Port port, final boolean output) {
-        if (port instanceof FluidPort) {
+    private static int portColor(final Port<?> port, final boolean output) {
+        if (port.getType() == RecipePropertyAPI.FLUID) {
             return output ? PlannhColors.ACCENT_CYAN.getColor() : PlannhColors.ACCENT_BLUE3.getColor();
         }
         return output ? PlannhColors.ACCENT_YELLOW.getColor() : PlannhColors.TEXT_MUTED.getColor();
@@ -733,16 +731,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     @Nullable
     private ItemStack getFirstItemOutput() {
-        for (final Port port : node.outputs) {
-            if (port instanceof ItemPort ip) return ip.getStack();
+        for (final Port<?> port : node.outputs) {
+            if (port.getType() == RecipePropertyAPI.ITEM) return (ItemStack) port.getValue();
         }
         return null;
     }
 
     private void openNeiRecipe() {
-        for (final Port port : node.outputs) {
-            if (port instanceof ItemPort ip && ip.getStack() != null) {
-                GuiCraftingRecipe.openRecipeGui("item", ip.getStack());
+        for (final Port<?> port : node.outputs) {
+            if (port.getType() == RecipePropertyAPI.ITEM && port.getValue() != null) {
+                GuiCraftingRecipe.openRecipeGui("item", port.getValue());
                 return;
             }
         }

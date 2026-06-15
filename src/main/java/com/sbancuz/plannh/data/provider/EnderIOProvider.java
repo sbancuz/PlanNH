@@ -16,7 +16,6 @@ import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.Settings;
-import com.sbancuz.plannh.data.flowchart.ItemPort;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 
@@ -92,8 +91,8 @@ public class EnderIOProvider implements PropertyProvider {
                     final float[] chances = (float[]) MILL_OUTPUT_CHANCE.get(r);
                     for (int i = 0; i < chances.length && i < node.outputs.size(); i++) {
                         final Port port = node.outputs.get(i);
-                        if (port instanceof final ItemPort ip) {
-                            ip.setChance(chances[i]);
+                        if (port.getType() == RecipePropertyAPI.ITEM) {
+                            port.setChance(chances[i]);
                         }
                     }
                 } catch (final Exception ignored) {}

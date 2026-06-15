@@ -14,13 +14,6 @@ import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.Nonnull;
 
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.JsonToNBT;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -32,6 +25,7 @@ import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.RecipeResource;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
@@ -402,76 +396,36 @@ public final class Serializer {
     // ── Port helpers ──
 
     @Nonnull
-    private static JsonArray portListToJson(final List<Port> ports) {
+    private static JsonArray portListToJson(final List<Port<?>> ports) {
         final JsonArray arr = new JsonArray();
-        for (final Port port : ports) {
-            if (port instanceof final ItemPort ip) {
-                if (ip.getStack() == null) continue;
-                final ItemStack stack = ip.getStack();
-                final JsonObject obj = new JsonObject();
-                obj.addProperty("type", "item");
-                obj.addProperty("id", Item.itemRegistry.getNameForObject(stack.getItem()));
-                obj.addProperty("size", stack.stackSize);
-                obj.addProperty("meta", stack.getItemDamage());
-                if (stack.hasTagCompound()) {
-                    obj.addProperty("nbt", stack.getTagCompound().toString());
-                }
-                obj.addProperty("chance", ip.getChance());
-                arr.add(obj);
-            } else if (port instanceof final FluidPort fp) {
-                final FluidStack fs = fp.getStack();
-                if (fs == null || fs.getFluid() == null) continue;
-                final JsonObject obj = new JsonObject();
-                obj.addProperty("type", "fluid");
-                obj.addProperty("fluid", FluidRegistry.getFluidName(fs.getFluid()));
-                obj.addProperty("amount", fs.amount);
-                obj.addProperty("chance", fp.getChance());
-                arr.add(obj);
-            }
+        for (final Port<?> port : ports) {
+            final JsonObject obj = new JsonObject();
+            obj.addProperty(
+                "type",
+                port.getType()
+                    .getKey());
+            port.getType()
+                .serialize(obj, port.getValue());
+            obj.addProperty("chance", port.getChance());
+            arr.add(obj);
         }
         return arr;
     }
 
-    private static void jsonArrayToPorts(final JsonArray arr, final List<Port> out) {
+    @SuppressWarnings("unchecked")
+    private static void jsonArrayToPorts(final JsonArray arr, final List<Port<?>> out) {
         for (final JsonElement elem : arr) {
             final JsonObject obj = elem.getAsJsonObject();
-            final String type = obj.has("type") ? obj.get("type")
+            final String key = obj.has("type") ? obj.get("type")
                 .getAsString() : "item";
-            if ("fluid".equals(type)) {
-                final String name = obj.get("fluid")
-                    .getAsString();
-                final int amount = obj.get("amount")
-                    .getAsInt();
-                final FluidStack fs = FluidRegistry.getFluidStack(name, amount);
-                if (fs != null) {
-                    out.add(
-                        new FluidPort(
-                            fs,
-                            obj.get("chance")
-                                .getAsFloat()));
-                }
-            } else {
-                final String itemId = obj.get("id")
-                    .getAsString();
-                final int size = obj.get("size")
-                    .getAsInt();
-                final int meta = obj.get("meta")
-                    .getAsInt();
-                final ItemStack stack = new ItemStack((Item) Item.itemRegistry.getObject(itemId), size, meta);
-                if (obj.has("nbt")) {
-                    try {
-                        stack.setTagCompound(
-                            (NBTTagCompound) JsonToNBT.func_150315_a(
-                                obj.get("nbt")
-                                    .getAsString()));
-                    } catch (final net.minecraft.nbt.NBTException ignored) {}
-                }
-                out.add(
-                    new ItemPort(
-                        stack,
-                        obj.get("chance")
-                            .getAsFloat()));
-            }
+            final RecipeResource<?> res = RecipePropertyAPI.resourceForKey(key);
+            if (res == null) continue;
+            final Object value = res.deserialize(obj);
+            if (value == null) continue;
+            final float chance = obj.get("chance")
+                .getAsFloat();
+            final RecipeResource<Object> resource = (RecipeResource<Object>) res;
+            out.add(new Port<>(resource, value, chance));
         }
     }
 
@@ -598,12 +552,7 @@ public final class Serializer {
         final int idx = edge.sourceOutputIndex;
         if (idx >= 0 && idx < src.outputs.size()) {
             final Port port = src.outputs.get(idx);
-            if (port instanceof final ItemPort ip && ip.getStack() != null) {
-                return ip.getStack().getDisplayName();
-            }
-            if (port instanceof final FluidPort fp && fp.getStack() != null && fp.getStack().getFluid() != null) {
-                return fp.getStack().getLocalizedName();
-            }
+            return port.getDisplayName();
         }
         return "";
     }

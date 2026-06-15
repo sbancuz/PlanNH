@@ -34,7 +34,10 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
     private record LineKey(String type, Object resource) {
 
         LineKey(final Port port) {
-            this(port.getPortType(), port.getStack());
+            this(
+                port.getType()
+                    .getKey(),
+                port.getValue());
         }
 
         LineKey(final RecipeProperty<?> prop) {

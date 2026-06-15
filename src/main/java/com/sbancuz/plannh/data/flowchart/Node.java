@@ -24,8 +24,8 @@ public class Node {
     public int x;
     public int y;
 
-    public final List<Port> inputs;
-    public final List<Port> outputs;
+    public final List<Port<?>> inputs;
+    public final List<Port<?>> outputs;
 
     public String machineName;
     public int durationTicks;
@@ -50,18 +50,18 @@ public class Node {
         final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
         for (final PositionedStack ps : ins) {
             if (ps != null && ps.item != null && ps.item.stackSize > 0) {
-                this.inputs.add(new ItemPort(ps.item.copy(), 1.f));
+                this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
             }
         }
 
         final PositionedStack result = handler.getResultStack(recipeIndex);
         if (result != null && result.item != null) {
-            this.outputs.add(new ItemPort(result.item.copy(), 1.f));
+            this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, result.item.copy(), 1.f));
         }
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (final PositionedStack ps : others) {
             if (ps != null && ps.item != null && TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
-                this.outputs.add(new ItemPort(ps.item.copy(), 1.f));
+                this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
             }
         }
 

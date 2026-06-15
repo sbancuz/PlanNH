@@ -11,8 +11,6 @@ import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
@@ -31,11 +29,10 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ColorPickerDialog;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Edge;
-import com.sbancuz.plannh.data.flowchart.FluidPort;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
-import com.sbancuz.plannh.data.flowchart.ItemPort;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -490,7 +487,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final Node srcNode = graph.nodes.get(edge.sourceNodeId);
             final boolean isFluid = srcNode != null && edge.sourceOutputIndex >= 0
                 && edge.sourceOutputIndex < srcNode.outputs.size()
-                && srcNode.outputs.get(edge.sourceOutputIndex) instanceof FluidPort;
+                && srcNode.outputs.get(edge.sourceOutputIndex)
+                    .getType() == RecipePropertyAPI.FLUID;
 
             final List<int[]> route = edgeRoutes.get(edge.id);
             if (route != null && route.size() >= 2) {
@@ -631,26 +629,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (srcNode == dstNode) return false;
         if (srcOutIdx < 0 || dstInIdx < 0) return false;
         if (srcOutIdx >= srcNode.outputs.size() || dstInIdx >= dstNode.inputs.size()) return false;
-
-        final Port srcPort = srcNode.outputs.get(srcOutIdx);
-        final Port dstPort = dstNode.inputs.get(dstInIdx);
-
-        if (!srcPort.getPortType()
-            .equals(dstPort.getPortType())) return false;
-
-        if (srcPort instanceof ItemPort srcIp && dstPort instanceof ItemPort dstIp) {
-            final ItemStack out = srcIp.getStack();
-            final ItemStack in = dstIp.getStack();
-            return out != null && in != null && out.isItemEqual(in);
-        }
-
-        if (srcPort instanceof FluidPort srcFp && dstPort instanceof FluidPort dstFp) {
-            final FluidStack out = srcFp.getStack();
-            final FluidStack in = dstFp.getStack();
-            return out != null && in != null && out.isFluidEqual(in);
-        }
-
-        return false;
+        return srcNode.outputs.get(srcOutIdx)
+            .canConnect(dstNode.inputs.get(dstInIdx));
     }
 
     @Override
@@ -1059,11 +1039,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Nullable
     private static String portLabel(final Port port) {
-        if (port instanceof final ItemPort ip && ip.getStack() != null) return ip.getStack().getDisplayName();
-        if (port instanceof final FluidPort fp && fp.getStack() != null && fp.getStack().getFluid() != null) {
-            return fp.getStack().getLocalizedName();
-        }
-        return null;
+        final String name = port.getDisplayName();
+        return name.isEmpty() ? null : name;
     }
 
     private static void drawPortLabel(String name, final int anchorX, final int centerY, final boolean rightSide,

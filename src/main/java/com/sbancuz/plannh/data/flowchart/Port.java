@@ -1,21 +1,42 @@
 package com.sbancuz.plannh.data.flowchart;
 
+import com.sbancuz.plannh.data.RecipeResource;
+
 import lombok.Getter;
 import lombok.Setter;
 
 @Setter
 @Getter
-public sealed abstract class Port permits ItemPort,FluidPort {
+public class Port<T> {
 
+    private final RecipeResource<T> type;
+    private final T value;
     private float chance;
 
-    protected Port(final float chance) {
+    public Port(final RecipeResource<T> type, final T value, final float chance) {
+        this.type = type;
+        this.value = value;
         this.chance = chance;
     }
 
-    public abstract String getPortType();
+    @SuppressWarnings("unchecked")
+    public T getValue() {
+        return value;
+    }
 
-    public abstract int getAmount();
+    @SuppressWarnings("unchecked")
+    public int getAmount() {
+        return type.extractAmount(value);
+    }
 
-    public abstract Object getStack();
+    @SuppressWarnings("unchecked")
+    public String getDisplayName() {
+        return type.formatDisplayName(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    public boolean canConnect(final Port<?> other) {
+        if (!type.equals(other.type)) return false;
+        return ((RecipeResource<Object>) type).canConnect(value, other.value);
+    }
 }
