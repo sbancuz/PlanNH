@@ -268,7 +268,7 @@ public class GTProvider implements PropertyProvider {
 
         if (r.mInputChances != null) {
             for (int i = 0; i < r.mInputs.length && i < node.inputs.size(); i++) {
-                final Port port = node.inputs.get(i);
+                final Port<?> port = node.inputs.get(i);
                 if (port.getType() == RecipePropertyAPI.ITEM) {
                     // TODO: This feels wrong
                     port.setChance(r.mInputChances[i] / 10000.0f);
@@ -299,8 +299,8 @@ public class GTProvider implements PropertyProvider {
                     r.mFluidOutputChances != null ? r.mFluidOutputChances[i] / 10000.0f : 1.f));
         }
 
-        node.inputs.removeIf( p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
-        node.inputs.removeIf( p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
+        node.inputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
+        node.outputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
 
         return props;
     }

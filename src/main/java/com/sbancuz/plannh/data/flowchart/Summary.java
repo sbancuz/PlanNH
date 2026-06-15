@@ -5,10 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
-
 import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.RecipeResource;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 
 public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properties) {
@@ -31,42 +29,35 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
         }
     }
 
-    private record LineKey(String type, Object resource) {
+    @SuppressWarnings("rawtypes")
+    private record LineKey(RecipeProperty<?> type, Object resource) {
 
         LineKey(final Port port) {
-            this(
-                port.getType()
-                    .getKey(),
-                port.getValue());
+            this(port.getType(), port.getValue());
         }
 
         LineKey(final RecipeProperty<?> prop) {
-            this(prop.getKey(), prop);
+            this(prop, prop);
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public boolean equals(final Object o) {
-            if (!(o instanceof LineKey(final String type1, final Object resource1))) return false;
-            if (!type.equals(type1)) return false;
-            return switch (type) {
-                case "item" -> ((ItemStack) resource).isItemEqual((ItemStack) resource1);
-                case "fluid" -> ((FluidStack) resource).isFluidEqual((FluidStack) resource1);
-                default -> resource.equals(resource1);
-            };
+            if (!(o instanceof LineKey(final RecipeProperty<?> type1, final Object resource1))) return false;
+            if (type != type1) return false;
+            if (type instanceof final RecipeResource r) {
+                return r.canConnect(resource, resource1);
+            }
+            return resource.equals(resource1);
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public int hashCode() {
-            return switch (type) {
-                case "item" -> {
-                    final ItemStack s = (ItemStack) resource;
-                    yield 31 * s.getItem()
-                        .hashCode() + s.getItemDamage();
-                }
-                case "fluid" -> ((FluidStack) resource).getFluid()
-                    .hashCode();
-                default -> resource.hashCode();
-            };
+            if (type instanceof final RecipeResource r) {
+                return r.hashValue(resource);
+            }
+            return resource.hashCode();
         }
     }
 
@@ -114,7 +105,7 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
         final List<Line> result = new ArrayList<>();
         for (final var entry : map.entrySet()) {
             if (entry.getValue() <= 0) continue;
-            result.add(new Line(entry.getKey().type, entry.getKey().resource, entry.getValue()));
+            result.add(new Line(entry.getKey().type.getKey(), entry.getKey().resource, entry.getValue()));
         }
         return result;
     }

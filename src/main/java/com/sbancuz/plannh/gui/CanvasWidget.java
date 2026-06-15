@@ -1021,7 +1021,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private boolean tryPortLabel(final int mouseX, final int mouseY, final float zoom, final int ps, final int half,
-        final int widgetX, final int widgetY, final int widgetWidth, final List<Port> ports, final boolean rightSide) {
+        final int widgetX, final int widgetY, final int widgetWidth, final List<Port<?>> ports,
+        final boolean rightSide) {
         for (int i = 0; i < ports.size(); i++) {
             final int px = rightSide ? widgetX + widgetWidth - ps : widgetX;
             final int pcY = widgetY + portY(i);

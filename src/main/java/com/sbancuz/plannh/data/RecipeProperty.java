@@ -11,7 +11,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
 import lombok.Getter;
-import org.jetbrains.annotations.UnknownNullability;
 
 public class RecipeProperty<T> {
 

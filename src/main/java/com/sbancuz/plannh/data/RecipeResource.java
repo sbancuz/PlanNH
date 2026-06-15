@@ -7,22 +7,22 @@ import java.util.function.ToIntFunction;
 
 import com.google.gson.JsonObject;
 
-import lombok.Builder;
-
 public class RecipeResource<T> extends RecipeProperty<T> {
 
     private final Function<T, String> displayFormatter;
     private final ToIntFunction<T> amountExtractor;
     private final BiPredicate<T, T> connectionChecker;
+    private final ToIntFunction<T> hashCodeExtractor;
 
     RecipeResource(final String key, final String displayName, final T defaultValue,
         final BiConsumer<JsonObject, T> serializer, final Function<JsonObject, T> deserializer,
         final Function<T, String> displayFormatter, final ToIntFunction<T> amountExtractor,
-        final BiPredicate<T, T> connectionChecker) {
+        final BiPredicate<T, T> connectionChecker, final ToIntFunction<T> hashCodeExtractor) {
         super(key, displayName, defaultValue, serializer, deserializer);
         this.displayFormatter = displayFormatter;
         this.amountExtractor = amountExtractor;
         this.connectionChecker = connectionChecker;
+        this.hashCodeExtractor = hashCodeExtractor;
     }
 
     public String formatDisplayName(final T value) {
@@ -35,6 +35,10 @@ public class RecipeResource<T> extends RecipeProperty<T> {
 
     public boolean canConnect(final T a, final T b) {
         return connectionChecker.test(a, b);
+    }
+
+    public int hashValue(final T value) {
+        return hashCodeExtractor.applyAsInt(value);
     }
 
     public static <T> Builder<T> builder(final String key, final String displayName, final T defaultValue) {
@@ -51,6 +55,7 @@ public class RecipeResource<T> extends RecipeProperty<T> {
         private Function<T, String> displayFormatter;
         private ToIntFunction<T> amountExtractor = v -> 1;
         private BiPredicate<T, T> connectionChecker = (a, b) -> true;
+        private ToIntFunction<T> hashCodeExtractor = Object::hashCode;
 
         Builder(final String key, final String displayName, final T defaultValue) {
             this.key = key;
@@ -84,6 +89,11 @@ public class RecipeResource<T> extends RecipeProperty<T> {
             return this;
         }
 
+        public Builder<T> hashCodeExtractor(final ToIntFunction<T> hashCodeExtractor) {
+            this.hashCodeExtractor = hashCodeExtractor;
+            return this;
+        }
+
         public RecipeResource<T> build() {
             return new RecipeResource<>(
                 key,
@@ -93,7 +103,8 @@ public class RecipeResource<T> extends RecipeProperty<T> {
                 deserializer,
                 displayFormatter,
                 amountExtractor,
-                connectionChecker);
+                connectionChecker,
+                hashCodeExtractor);
         }
     }
 }

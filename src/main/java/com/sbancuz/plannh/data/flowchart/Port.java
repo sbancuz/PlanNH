@@ -19,17 +19,10 @@ public class Port<T> {
         this.chance = chance;
     }
 
-    @SuppressWarnings("unchecked")
-    public T getValue() {
-        return value;
-    }
-
-    @SuppressWarnings("unchecked")
     public int getAmount() {
         return type.extractAmount(value);
     }
 
-    @SuppressWarnings("unchecked")
     public String getDisplayName() {
         return type.formatDisplayName(value);
     }

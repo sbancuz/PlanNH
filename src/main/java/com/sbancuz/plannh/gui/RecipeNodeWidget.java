@@ -470,7 +470,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         drawPortList(x, y, node.outputs, nb, sec, ops, throughput, true);
     }
 
-    private int drawPortList(final int x, int y, final List<Port> ports, final NodeBalance nb, final float sec,
+    private int drawPortList(final int x, int y, final List<Port<?>> ports, final NodeBalance nb, final float sec,
         final int ops, final int throughput, final boolean output) {
         for (int i = 0; i < ports.size(); i++) {
             final Port port = ports.get(i);
