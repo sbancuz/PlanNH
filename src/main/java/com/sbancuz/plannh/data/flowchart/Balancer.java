@@ -76,7 +76,7 @@ public final class Balancer {
         final Map<UUID, Integer> throughputFactors = new HashMap<>();
         for (final Node node : graph.getNodes()) {
             final MachineConfig cfg = node.machineConfig;
-            final var eff = cfg.computeEffect(node.properties.asMap(), node.durationTicks);
+            final var eff = cfg.computeEffect(node.properties, node.durationTicks);
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
@@ -174,7 +174,7 @@ public final class Balancer {
         final Map<UUID, Integer> throughputFactors = new HashMap<>();
         for (final Node node : graph.getNodes()) {
             final MachineConfig cfg = node.machineConfig;
-            final var eff = cfg.computeEffect(node.properties.asMap(), node.durationTicks);
+            final var eff = cfg.computeEffect(node.properties, node.durationTicks);
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
@@ -310,7 +310,7 @@ public final class Balancer {
             final MachineConfig cfg = node.machineConfig;
 
             final int recipeDuration = node.durationTicks;
-            final var eff = cfg.computeEffect(node.properties.asMap(), recipeDuration);
+            final var eff = cfg.computeEffect(node.properties, recipeDuration);
             final long eutPerOp = eff.energyPerT();
             final int durPerOp = eff.durationTicks();
             final int throughputFactor = eff.throughputFactor();
