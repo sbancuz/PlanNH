@@ -1,7 +1,5 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import static com.sbancuz.plannh.data.provider.gregtech.GTProvider.EU_PER_TICK;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -346,7 +344,6 @@ public final class Balancer {
             for (final Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
                 final RecipeProperty<?> prop = entry.getKey();
                 final Object val = entry.getValue();
-                if (prop == EU_PER_TICK) continue;
                 if (val instanceof final Number num) {
                     propertyTotals.merge(prop, num.longValue() * opCount, Long::sum);
                 }
