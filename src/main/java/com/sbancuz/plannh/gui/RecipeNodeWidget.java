@@ -447,10 +447,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             ? (float) nb.totalDurationTicks / GuiHelper.TICKS_PER_SECOND
             : node.durationTicks > 0 ? (float) node.durationTicks / GuiHelper.TICKS_PER_SECOND : 1f;
         final int ops = nb != null ? nb.operations : 1;
-        final int throughput = nb != null
-            ? node.machineConfig.computeEffect(node.properties, node.durationTicks)
-                .throughputFactor()
-            : 1;
+        final int throughput = nb != null ? node.machineConfig.computeEffect(node.properties, node.durationTicks)
+            .throughputFactor() : 1;
 
         final int durPerOp = nb != null ? nb.durationPerOp : node.durationTicks;
         final StringBuilder opsLine = new StringBuilder();
