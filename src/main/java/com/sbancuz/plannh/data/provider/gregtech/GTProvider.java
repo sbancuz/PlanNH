@@ -7,15 +7,18 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.data.ProfileMatcher;
 import net.minecraft.item.ItemStack;
+
+import org.jetbrains.annotations.NotNull;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.ProfileMatcher;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 
@@ -29,7 +32,6 @@ import gregtech.api.util.recipe.Sievert;
 import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
-import org.jetbrains.annotations.NotNull;
 
 public class GTProvider implements PropertyProvider {
 
@@ -65,79 +67,89 @@ public class GTProvider implements PropertyProvider {
         }
     }
 
+    public static void base(MachineProfile.Builder b) {
+        b.setting(Settings.VOLTAGE.def());
+        b.setting(Settings.AMP.def());
+        b.setting(Settings.SPEED.def());
+        b.setting(Settings.PARALLELS.def());
+        b.setting(Settings.MACHINES.def());
+        b.setting(Settings.PERFECT_OC.def());
+    }
+
+    public static void heat(MachineProfile.Builder b) {
+        b.setting(Settings.MACHINE_HEAT.def());
+        b.setting(Settings.RECIPE_HEAT.def());
+        b.setting(Settings.HEAT_OC.def());
+        b.setting(Settings.HEAT_DISCOUNT.def());
+        b.setting(Settings.HEAT_DISCOUNT_MULT.def());
+    }
+
+    public static void advanced(MachineProfile.Builder b) {
+        b.setting(Settings.LASER_OC.def());
+        b.setting(Settings.EUT_DISCOUNT.def());
+        b.setting(Settings.EUT_INCREASE_PER_OC.def());
+        b.setting(Settings.DURATION_DECREASE_PER_OC.def());
+        b.setting(Settings.MAX_OVERCLOCKS.def());
+        b.setting(Settings.MAX_REGULAR_OC.def());
+        b.setting(Settings.MAX_TIER_SKIPS.def());
+        b.setting(Settings.UNLIMITED_SKIPS.def());
+        b.setting(Settings.NO_OVERCLOCK.def());
+    }
+
     private static final List<MachineProfile> PROFILES = List.of(
         MachineProfile.builder("gregtech:basic", "GT Basic")
-            .baseSettings()
-            .advancedSettings()
+            .settings(GTProvider::base)
             .effect(new GTEffect())
             .build(),
         MachineProfile.builder("gregtech:ebf", "GT EBF")
-            .baseSettings()
-            .advancedSettings()
-            .heatSettings()
+            .settings(GTProvider::base)
+            .settings(GTProvider::heat)
             .effect(new GTEffect().withHeat())
             .build(),
         MachineProfile.builder("gregtech:laser", "GT Laser")
-            .baseSettings()
-            .advancedSettings()
+            .settings(GTProvider::base)
+            .settings(GTProvider::advanced)
             .effect(new GTEffect().withLaserOC())
             .build(),
         MachineProfile.builder("gregtech:fusion", "GT Fusion")
-            .baseSettings()
-            .advancedSettings()
+            .settings(GTProvider::base)
+            .settings(GTProvider::advanced)
             .effect(new GTEffect().withPerfectOC())
             .build(),
         MachineProfile.builder("gregtech:plasmaforge", "GT Plasma Forge")
-            .baseSettings()
-            .advancedSettings()
-            .heatSettings()
+            .settings(GTProvider::base)
+            .settings(GTProvider::advanced)
+            .settings(GTProvider::heat)
             .effect(new GTEffect().withHeat())
             .build(),
         MachineProfile.builder("gregtech:cracker", "GT Cracker")
-            .baseSettings()
-            .advancedSettings()
+            .settings(GTProvider::base)
+            .settings(GTProvider::advanced)
             .effect(new GTEffect())
             .build(),
         MachineProfile.builder("gregtech:lcr", "GT LCR")
-            .baseSettings()
-            .advancedSettings()
+            .settings(GTProvider::base)
+            .settings(GTProvider::advanced)
             .effect(new GTEffect())
             .build(),
         MachineProfile.builder("gregtech:distillationtower", "GT Distillation Tower")
-            .baseSettings()
-            .advancedSettings()
+            .settings(GTProvider::base)
+            .settings(GTProvider::advanced)
             .effect(new GTEffect())
             .build(),
-//        MachineProfile.builder("gregtech:generator", "GT Generator")
-//            .setting(Settings.FUEL_EFFICIENCY.def())
-//            .setting(Settings.PARALLELS.def())
-//            .setting(Settings.MACHINES.def())
-//            .effect((s, ctx) -> {
-//                int p = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
-//                int m = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-//                int eff = MachineProfile.getInt(s, Settings.FUEL_EFFICIENCY.key(), 100);
-//                int dur = Math.max(1, Math.round(ctx.recipeDuration() * 100.0f / eff));
-//                return new MachineProfile.EffectResult(dur, recipeEUt(ctx), p * m);
-//            })
-//            .build(),
         MachineProfile.builder("gregtech:fake", "GT Fake (pass-through)")
             .effect(new GTEffect())
             .build(),
         MachineProfile.builder("tectech:eyeofharmony", "Eye of Harmony")
-            .baseSettings()
-            .advancedSettings()
+            .settings(GTProvider::base)
+            .settings(GTProvider::advanced)
             .effect(new GTEffect().withPerfectOC())
             .build());
 
+    // spotless:off
     private static final List<ProfileMatcher> PROFILE_MATCHERS = List.of(
-        ProfileMatcher.keyword(
-            "gregtech:ebf",
-            "blastfurnace",
-            "vacfurnace",
-            "alloyblastsmelter",
-            "vacuumfurnace",
-            "digester",
-            "nanochip"),
+        ProfileMatcher.keyword( "gregtech:ebf",
+            "blastfurnace", "vacfurnace", "alloyblastsmelter", "vacuumfurnace", "digester", "nanochip"),
         ProfileMatcher.keyword("gregtech:basic", "furnace", "alloysmelter"),
         ProfileMatcher.keyword("gregtech:plasmaforge", "plasmaforge", "fog_"),
         ProfileMatcher.keyword("gregtech:fusion", "fusion"),
@@ -146,34 +158,13 @@ public class GTProvider implements PropertyProvider {
         ProfileMatcher.keyword("gregtech:lcr", "largechemicalreactor"),
         ProfileMatcher.keyword("gregtech:distillationtower", "distillationtower"),
         ProfileMatcher.exact("gregtech:generator", "gt.recipe.create-condensate"),
-        ProfileMatcher.keyword(
-            "gregtech:generator",
-            "fuel",
-            "generator",
-            "turbine",
-            "boiler",
-            "RTG",
-            "rocketengine",
-            "htgr",
-            "solartower",
-            "lftr",
-            "condensate"),
-        ProfileMatcher.keyword(
-            "gregtech:fake",
-            "scanner",
-            "massfab",
-            "fake",
-            "assemblyline",
-            "research",
-            "upgrade",
-            "nuke",
-            "computer",
-            "foundry_module",
-            "spaceProject",
-            "nanoforge",
-            "pcbfactory",
-            "purification"),
+        ProfileMatcher.keyword( "gregtech:generator",
+            "fuel", "generator", "turbine", "boiler", "RTG", "rocketengine", "htgr", "solartower", "lftr", "condensate"),
+        ProfileMatcher.keyword( "gregtech:fake",
+            "scanner", "massfab", "fake", "assemblyline", "research", "upgrade", "nuke",
+            "computer", "foundry_module", "spaceProject", "nanoforge", "pcbfactory", "purification"),
         ProfileMatcher.keyword("tectech:eyeofharmony", "eyeofharmony"));
+    // spotless:on
 
     @Override
     @Nullable

@@ -33,7 +33,7 @@ public class Node {
     public Recipe.RecipeId recipeId;
     public int handlerRecipeIndex;
 
-    public final MachineConfig machineConfig = new MachineConfig();
+    public final MachineConfig machineConfig;
     public final Map<RecipeProperty<?>, Object> properties = new HashMap<>();
 
     public Node(final IRecipeHandler handler, final int recipeIndex, final int x, final int y) {
@@ -76,10 +76,11 @@ public class Node {
         final String pid = ex.getProfileId(handler, recipeIndex);
         if (pid != null && !MachineProfileRegistry.defaultId()
             .equals(pid)) {
-            this.machineConfig.profileId = pid;
+            this.machineConfig = new MachineConfig(MachineProfileRegistry.get(pid));
+        } else {
+            this.machineConfig = new MachineConfig();
         }
 
-        this.machineConfig.initDefaults();
         this.durationTicks = (int) (Integer) this.properties.get(RecipePropertyAPI.DURATION_TICKS);
     }
 
@@ -92,5 +93,6 @@ public class Node {
         this.y = y;
         this.inputs = new ArrayList<>();
         this.outputs = new ArrayList<>();
+        this.machineConfig = new MachineConfig();
     }
 }

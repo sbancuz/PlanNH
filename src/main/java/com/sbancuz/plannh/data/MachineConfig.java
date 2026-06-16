@@ -7,10 +7,21 @@ import javax.annotation.Nonnull;
 
 public class MachineConfig {
 
-    public String profileId = MachineProfileRegistry.defaultId();
+    public String profileId;
     public final Map<String, Object> settings = new HashMap<>();
     public final Map<Integer, Float> inputConsumption = new HashMap<>();
     public final Map<Integer, Float> outputProductivity = new HashMap<>();
+
+    public MachineConfig() {
+        this(MachineProfileRegistry.get(MachineProfileRegistry.defaultId()));
+    }
+
+    public MachineConfig(final MachineProfile profile) {
+        this.profileId = profile.id();
+        for (final SettingDef<?> def : profile.settings()) {
+            settings.putIfAbsent(def.key, def.defaultValue);
+        }
+    }
 
     @Nonnull
     public MachineProfile getProfile() {
@@ -43,13 +54,6 @@ public class MachineConfig {
 
     public void setString(final String key, final String value) {
         settings.put(key, value);
-    }
-
-    public void initDefaults() {
-        final MachineProfile p = getProfile();
-        for (final SettingDef<?> def : p.settings()) {
-            settings.putIfAbsent(def.key, def.defaultValue);
-        }
     }
 
     @Nonnull

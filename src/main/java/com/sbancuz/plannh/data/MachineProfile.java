@@ -3,6 +3,7 @@ package com.sbancuz.plannh.data;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,40 +50,13 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
             return this;
         }
 
-        public Builder baseSettings() {
-            settings.add(Settings.VOLTAGE.def());
-            settings.add(Settings.AMP.def());
-            settings.add(Settings.SPEED.def());
-            settings.add(Settings.PARALLELS.def());
-            settings.add(Settings.MACHINES.def());
-            settings.add(Settings.PERFECT_OC.def());
-            return this;
-        }
-
-        public Builder heatSettings() {
-            settings.add(Settings.MACHINE_HEAT.def());
-            settings.add(Settings.RECIPE_HEAT.def());
-            settings.add(Settings.HEAT_OC.def());
-            settings.add(Settings.HEAT_DISCOUNT.def());
-            settings.add(Settings.HEAT_DISCOUNT_MULT.def());
-            return this;
-        }
-
-        public Builder advancedSettings() {
-            settings.add(Settings.LASER_OC.def());
-            settings.add(Settings.EUT_DISCOUNT.def());
-            settings.add(Settings.EUT_INCREASE_PER_OC.def());
-            settings.add(Settings.DURATION_DECREASE_PER_OC.def());
-            settings.add(Settings.MAX_OVERCLOCKS.def());
-            settings.add(Settings.MAX_REGULAR_OC.def());
-            settings.add(Settings.MAX_TIER_SKIPS.def());
-            settings.add(Settings.UNLIMITED_SKIPS.def());
-            settings.add(Settings.NO_OVERCLOCK.def());
-            return this;
-        }
-
         public Builder setting(final SettingDef<?> s) {
             return addSetting(s);
+        }
+
+        public Builder settings(final Consumer<Builder> consumer) {
+            consumer.accept(this);
+            return this;
         }
 
         public Builder effect(final EffectComputer effect) {
@@ -109,15 +83,5 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
     public static String getString(final Map<String, Object> s, final String key, final String def) {
         final Object v = s.get(key);
         return v instanceof final String str ? str : def;
-    }
-
-    public static long tierNameToVoltage(@Nullable final String name) {
-        if (name == null || name.equals("OFF")) return 0;
-        final String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV",
-            "UXV", "MAX" };
-        for (int i = 0; i < names.length; i++) {
-            if (names[i].equals(name)) return 8L * (long) Math.pow(4, i);
-        }
-        return 0;
     }
 }

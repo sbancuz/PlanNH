@@ -494,8 +494,6 @@ public final class Serializer {
             }
         }
 
-        cfg.initDefaults();
-
         if (obj.has("inMul")) {
             jsonToMultiplierArray(obj.getAsJsonArray("inMul"), cfg.inputConsumption);
         }

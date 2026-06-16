@@ -1,15 +1,19 @@
 package com.sbancuz.plannh.data.provider.gregtech;
 
-import com.gtnewhorizons.angelica.shadow.javax.annotation.Nonnull;
-import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.Settings;
-import gregtech.api.util.OverclockCalculator;
-import org.jetbrains.annotations.NotNull;
+import static com.sbancuz.plannh.data.provider.gregtech.GTProvider.EU_PER_TICK;
+import static com.sbancuz.plannh.data.provider.gregtech.GTProvider.TOTAL_EU;
 
 import java.util.Map;
 
-import static com.sbancuz.plannh.data.provider.gregtech.GTProvider.EU_PER_TICK;
-import static com.sbancuz.plannh.data.provider.gregtech.GTProvider.TOTAL_EU;
+import javax.annotation.Nullable;
+
+import org.jetbrains.annotations.NotNull;
+
+import com.gtnewhorizons.angelica.shadow.javax.annotation.Nonnull;
+import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.Settings;
+
+import gregtech.api.util.OverclockCalculator;
 
 public class GTEffect implements MachineProfile.EffectComputer {
 
@@ -37,13 +41,14 @@ public class GTEffect implements MachineProfile.EffectComputer {
 
     @Override
     @Nonnull
-    public MachineProfile.EffectResult compute(final @NotNull Map<String, Object> s, final MachineProfile.@NotNull RecipeContext ctx) {
+    public MachineProfile.EffectResult compute(final @NotNull Map<String, Object> s,
+        final MachineProfile.@NotNull RecipeContext ctx) {
         final int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
 
         if (recipeEUt(ctx) <= 0 || ctx.recipeDuration() <= 0
             || MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF")
-            .equals("OFF")) {
+                .equals("OFF")) {
             return new MachineProfile.EffectResult(ctx.recipeDuration(), recipeEUt(ctx), parallels * machines);
         }
 
@@ -69,11 +74,20 @@ public class GTEffect implements MachineProfile.EffectComputer {
         return new MachineProfile.EffectResult(calc.getDuration(), calc.getConsumption(), parallels * machines);
     }
 
+    public static long tierNameToVoltage(@Nullable final String name) {
+        if (name == null || name.equals("OFF")) return 0;
+        final String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV",
+            "UXV", "MAX" };
+        for (int i = 0; i < names.length; i++) {
+            if (names[i].equals(name)) return 8L * (long) Math.pow(4, i);
+        }
+        return 0;
+    }
+
     @Nonnull
     private static OverclockCalculator buildGtCalc(final Map<String, Object> s,
-                                           final MachineProfile.RecipeContext ctx) {
-        final long voltage = MachineProfile
-            .tierNameToVoltage(MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF"));
+        final MachineProfile.RecipeContext ctx) {
+        final long voltage = tierNameToVoltage(MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF"));
         final long amp = MachineProfile.getInt(s, Settings.AMP.key(), 1);
         final int speed = MachineProfile.getInt(s, Settings.SPEED.key(), 100);
         final int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);

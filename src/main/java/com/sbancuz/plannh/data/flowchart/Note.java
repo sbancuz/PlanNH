@@ -2,8 +2,6 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.UUID;
 
-import javax.annotation.Nonnull;
-
 public class Note {
 
     public final UUID id;

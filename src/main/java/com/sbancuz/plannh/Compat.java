@@ -7,8 +7,8 @@ import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.provider.BotaniaProvider;
 import com.sbancuz.plannh.data.provider.EnderIOProvider;
 import com.sbancuz.plannh.data.provider.ForestryProvider;
-import com.sbancuz.plannh.data.provider.gregtech.GTProvider;
 import com.sbancuz.plannh.data.provider.ThaumcraftProvider;
+import com.sbancuz.plannh.data.provider.gregtech.GTProvider;
 
 import cpw.mods.fml.common.Loader;
 import lombok.Getter;
