@@ -1,6 +1,6 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import static com.sbancuz.plannh.data.provider.GTProvider.EU_PER_TICK;
+import static com.sbancuz.plannh.data.provider.gregtech.GTProvider.EU_PER_TICK;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

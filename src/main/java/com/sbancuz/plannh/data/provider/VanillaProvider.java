@@ -34,7 +34,7 @@ public class VanillaProvider implements PropertyProvider {
     private static MachineProfile.EffectResult vanillaEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), machines);
+        return new MachineProfile.EffectResult(ctx.recipeDuration(), 0, machines);
     }
 
     @Override

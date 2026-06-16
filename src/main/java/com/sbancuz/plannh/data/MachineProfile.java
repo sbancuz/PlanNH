@@ -1,8 +1,5 @@
 package com.sbancuz.plannh.data;
 
-import static com.sbancuz.plannh.data.provider.GTProvider.EU_PER_TICK;
-import static com.sbancuz.plannh.data.provider.GTProvider.TOTAL_EU;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,14 +20,6 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
 
     public record RecipeContext(Map<RecipeProperty<?>, Object> properties, int recipeDuration) {
 
-        public long recipeEUt() {
-            final Long euPerTick = get(EU_PER_TICK);
-            if (euPerTick != null && euPerTick > 0) return euPerTick;
-            final Long totalEu = get(TOTAL_EU);
-            if (totalEu != null && totalEu > 0 && recipeDuration > 0) return totalEu / recipeDuration;
-            return 0;
-        }
-
         @SuppressWarnings("unchecked")
         @Nullable
         public <T> T get(final RecipeProperty<T> prop) {
@@ -48,7 +37,7 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         private final String id;
         private final String displayName;
         private final List<SettingDef<?>> settings = new ArrayList<>();
-        private EffectComputer effectComputer = (s, ctx) -> new EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), 1);
+        private EffectComputer effectComputer = (s, ctx) -> new EffectResult(ctx.recipeDuration(), 0, 1);
 
         private Builder(final String id, final String displayName) {
             this.id = id;
