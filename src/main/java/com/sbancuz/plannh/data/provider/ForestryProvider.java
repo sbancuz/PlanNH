@@ -23,9 +23,8 @@ import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import forestry.api.recipes.ICentrifugeRecipe;
 import forestry.api.recipes.RecipeManagers;
-import forestry.factory.recipes.nei.NEIHandlerCentrifuge;
+import forestry.factory.recipes.nei.*;
 import forestry.factory.recipes.nei.NEIHandlerCentrifuge.CachedCentrifugeRecipe;
-import forestry.factory.recipes.nei.NEIHandlerSqueezer;
 import forestry.factory.recipes.nei.NEIHandlerSqueezer.CachedSqueezerRecipe;
 
 public class ForestryProvider implements PropertyProvider {
@@ -41,8 +40,17 @@ public class ForestryProvider implements PropertyProvider {
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerExtractor(new NEIHandlerBottler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new NEIHandlerCarpenter().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new NEIHandlerCentrifuge().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new NEIHandlerFabricator().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new NEIHandlerFermenter().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new NEIHandlerMoistener().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new NEIHandlerSqueezer().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new NEIHandlerStill().getOverlayIdentifier(), this);
+
         RecipePropertyAPI.registerProperty(PROCESSING_TIME);
+
         MachineProfileRegistry.register(
             MachineProfile.builder("forestry:basic", "Forestry")
                 .setting(Settings.MACHINES.def())

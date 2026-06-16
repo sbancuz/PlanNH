@@ -21,6 +21,7 @@ import com.sbancuz.plannh.data.flowchart.Port;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import crazypants.enderio.nei.*;
 import crazypants.enderio.nei.AlloySmelterRecipeHandler.AlloySmelterRecipe;
 import crazypants.enderio.nei.SagMillRecipeHandler.MillRecipe;
 import crazypants.enderio.nei.SliceAndSpliceRecipeHandler.SliceAndSpliceRecipe;
@@ -43,9 +44,16 @@ public class EnderIOProvider implements PropertyProvider {
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerExtractor(new AlloySmelterRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new SagMillRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new VatRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new EnchanterRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new SliceAndSpliceRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new SoulBinderRecipeHandler().getOverlayIdentifier(), this);
+
         RecipePropertyAPI.registerProperty(RF_TOTAL);
         RecipePropertyAPI.registerProperty(EXPERIENCE);
+
         MachineProfileRegistry.register(
             MachineProfile.builder("enderio", "EnderIO")
                 .setting(Settings.MACHINES.def())

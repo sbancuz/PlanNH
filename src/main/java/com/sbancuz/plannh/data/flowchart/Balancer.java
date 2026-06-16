@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.data.flowchart;
 
+import static com.sbancuz.plannh.data.provider.GTProvider.EU_PER_TICK;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,7 +16,6 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeProperty;
 
@@ -345,7 +346,7 @@ public final class Balancer {
             for (final Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
                 final RecipeProperty<?> prop = entry.getKey();
                 final Object val = entry.getValue();
-                if (prop == RecipePropertyAPI.EU_PER_TICK) continue;
+                if (prop == EU_PER_TICK) continue;
                 if (val instanceof final Number num) {
                     propertyTotals.merge(prop, num.longValue() * opCount, Long::sum);
                 }

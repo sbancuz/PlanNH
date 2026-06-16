@@ -65,27 +65,21 @@ public class Node {
             }
         }
 
-        for (final PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
-            try {
-                final Map<RecipeProperty<?>, Object> props = ex.extract(this, handler, recipeIndex);
-                if (props != null && !props.isEmpty()) {
-                    this.properties.putAll(props);
-                }
-            } catch (final Exception ignored) {}
+        final PropertyProvider ex = RecipePropertyAPI.getExtractor(handler.getOverlayIdentifier());
+        assert ex != null;
+
+        final Map<RecipeProperty<?>, Object> props = ex.extract(this, handler, recipeIndex);
+        if (props != null && !props.isEmpty()) {
+            this.properties.putAll(props);
         }
 
-        for (final PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
-            try {
-                final String pid = ex.getProfileId(handler, recipeIndex);
-                if (pid != null && !MachineProfileRegistry.defaultId()
-                    .equals(pid)) {
-                    this.machineConfig.profileId = pid;
-                    break;
-                }
-            } catch (final Exception ignored) {}
+        final String pid = ex.getProfileId(handler, recipeIndex);
+        if (pid != null && !MachineProfileRegistry.defaultId()
+            .equals(pid)) {
+            this.machineConfig.profileId = pid;
         }
+
         this.machineConfig.initDefaults();
-
         this.durationTicks = this.properties.get(RecipePropertyAPI.DURATION_TICKS);
     }
 

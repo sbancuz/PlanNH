@@ -27,8 +27,9 @@ public class ClientProxy extends CommonProxy {
     public void init(final FMLInitializationEvent event) {
         super.init(event);
 
-        Compat.init();
+        // Vanilla has to go first since the furnace handler is likely to be overwritten
         new VanillaProvider().register();
+        Compat.init();
 
         ClientRegistry.registerKeyBinding(openFlowchartKey);
 

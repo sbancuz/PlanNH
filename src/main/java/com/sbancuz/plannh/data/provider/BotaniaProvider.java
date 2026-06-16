@@ -19,6 +19,7 @@ import com.sbancuz.plannh.data.flowchart.Node;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import vazkii.botania.client.integration.nei.recipe.*;
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerManaPool.CachedManaPoolRecipe;
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar.CachedRunicAltarRecipe;
 
@@ -34,8 +35,17 @@ public class BotaniaProvider implements PropertyProvider {
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerFloatingFlowers().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerPetalApothecary().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerRunicAltar().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerManaPool().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerElvenTrade().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerBrewery().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerPureDaisy().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerLexicaBotania().getOverlayIdentifier(), this);
+
         RecipePropertyAPI.registerProperty(MANA_COST);
+
         MachineProfileRegistry.register(
             MachineProfile.builder("botania:basic", "Botania")
                 .setting(Settings.MACHINES.def())

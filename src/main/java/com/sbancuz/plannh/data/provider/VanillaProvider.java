@@ -27,7 +27,7 @@ public class VanillaProvider implements PropertyProvider {
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerExtractor(new FurnaceRecipeHandler().getOverlayIdentifier(), this);
         MachineProfileRegistry.register(
             MachineProfile.builder("minecraft", "Default")
                 .setting(Settings.MACHINES.def())

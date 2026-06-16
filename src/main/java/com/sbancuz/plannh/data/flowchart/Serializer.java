@@ -204,9 +204,16 @@ public final class Serializer {
             }
 
             if (!node.properties.isEmpty()) {
-                final JsonObject propsObj = new JsonObject();
+                final JsonArray propsObj = new JsonArray();
                 for (final Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
-                    serializeProperty(propsObj, entry.getKey(), entry.getValue());
+                    final JsonObject e = new JsonObject();
+                    e.addProperty(
+                        "key",
+                        entry.getKey()
+                            .getKey());
+                    entry.getKey()
+                        .serialize(e, entry.getValue());
+                    propsObj.add(e);
                 }
                 obj.add("properties", propsObj);
             }
@@ -304,9 +311,16 @@ public final class Serializer {
             }
 
             if (obj.has("properties")) {
-                final JsonObject propsObj = obj.getAsJsonObject("properties");
-                for (final RecipeProperty<?> prop : RecipePropertyAPI.getProperties()) {
-                    final Object value = prop.deserialize(propsObj);
+                final JsonArray propsObj = obj.getAsJsonArray("properties");
+                for (int i = 0; i < propsObj.size(); i++) {
+                    final JsonObject o = propsObj.get(i)
+                        .getAsJsonObject();
+                    final RecipeProperty<?> prop = RecipePropertyAPI.getProperty(
+                        o.get("key")
+                            .getAsString());
+                    assert prop != null;
+
+                    final Object value = prop.deserialize(o);
                     if (value != null && !value.equals(prop.getDefaultValue())) {
                         setProperty(node.properties, prop, value);
                     }
@@ -418,7 +432,7 @@ public final class Serializer {
             final JsonObject obj = elem.getAsJsonObject();
             final String key = obj.has("type") ? obj.get("type")
                 .getAsString() : "item";
-            final RecipeResource<?> res = RecipePropertyAPI.resourceForKey(key);
+            final RecipeResource<?> res = (RecipeResource<?>) RecipePropertyAPI.getProperty(key);
             if (res == null) continue;
             final Object value = res.deserialize(obj);
             if (value == null) continue;
@@ -514,13 +528,6 @@ public final class Serializer {
                 entry.get("multiplier")
                     .getAsFloat());
         }
-    }
-
-    // ── Recipe property helpers ──
-
-    @SuppressWarnings("unchecked")
-    private static <T> void serializeProperty(final JsonObject obj, final RecipeProperty<?> prop, final Object value) {
-        ((RecipeProperty<T>) prop).serialize(obj, (T) value);
     }
 
     @SuppressWarnings("unchecked")

@@ -9,6 +9,13 @@ import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 
+import com.gtnewhorizons.aspectrecipeindex.nei.AlchemyRecipeHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.AspectCombinationHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.InfusionRecipeHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.ItemsContainingAspectHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.ShapedArcaneRecipeHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.ShapelessArcaneRecipeHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.WandRecipeHandler;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -56,12 +63,20 @@ public class ThaumcraftProvider implements PropertyProvider {
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerExtractor(ItemsContainingAspectHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(AspectCombinationHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(ShapedArcaneRecipeHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(WandRecipeHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(ShapelessArcaneRecipeHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(AlchemyRecipeHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(InfusionRecipeHandler.OVERLAY, this);
+
         RecipePropertyAPI.registerProperty(VIS_COST);
         RecipePropertyAPI.registerProperty(INSTABILITY);
         RecipePropertyAPI.registerProperty(TOTAL_VIS);
         RecipePropertyAPI.registerProperty(RESEARCH_KEY);
         RecipePropertyAPI.registerProperty(NUM_COMPONENTS);
+
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:arcane", "Arcane Workbench")
                 .setting(Settings.MACHINES.def())

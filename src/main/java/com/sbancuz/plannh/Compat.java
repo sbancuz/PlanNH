@@ -4,7 +4,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.data.PropertyProvider;
-import com.sbancuz.plannh.data.provider.AE2Provider;
 import com.sbancuz.plannh.data.provider.BotaniaProvider;
 import com.sbancuz.plannh.data.provider.EnderIOProvider;
 import com.sbancuz.plannh.data.provider.ForestryProvider;
@@ -16,7 +15,6 @@ import lombok.Getter;
 
 public enum Compat {
 
-    AE2("appliedenergistics2", AE2Provider.class),
     BOTANIA("Botania", BotaniaProvider.class),
     ENDERIO("EnderIO", EnderIOProvider.class),
     FORESTRY("Forestry", ForestryProvider.class),

@@ -23,6 +23,7 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import gregtech.api.recipe.RecipeMap;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTRecipeConstants;
 import gregtech.api.util.OverclockCalculator;
@@ -42,6 +43,9 @@ public class GTProvider implements PropertyProvider {
         .boolProperty("bartworks.sievertExact", "Exact Sievert", false);
     public static final RecipeProperty<Integer> MASS = RecipeProperty.intProperty("bartworks.mass", "Mass", 0);
 
+    public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.longProperty("totalEu", "Total EU", 0L);
+    public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.longProperty("euPerTick", "EU/t", 0L);
+
     @Override
     @Nonnull
     public String getModId() {
@@ -50,19 +54,23 @@ public class GTProvider implements PropertyProvider {
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        // Add all recipes, even the furnace ones
+        RecipePropertyAPI.registerExtractor(new FurnaceRecipeHandler().getOverlayIdentifier(), this);
+        RecipeMap.ALL_RECIPE_MAPS.keySet()
+            .forEach(key -> RecipePropertyAPI.registerExtractor(key, this));
+
         RecipePropertyAPI.registerProperty(SPECIAL_VALUE);
         RecipePropertyAPI.registerProperty(GLASS_TIER);
         RecipePropertyAPI.registerProperty(SIEVERT);
         RecipePropertyAPI.registerProperty(SIEVERT_EXACT);
         RecipePropertyAPI.registerProperty(MASS);
+        RecipePropertyAPI.registerProperty(TOTAL_EU);
+        RecipePropertyAPI.registerProperty(EU_PER_TICK);
 
         for (final MachineProfile p : PROFILES) {
             MachineProfileRegistry.register(p);
         }
     }
-
-    // ── declarative profile definition ──
 
     private static final List<MachineProfile> PROFILES = List.of(
         MachineProfile.builder("gregtech:basic", "GT Basic")
@@ -243,8 +251,8 @@ public class GTProvider implements PropertyProvider {
         final int eut = r.mEUt;
 
         props.put(RecipePropertyAPI.DURATION_TICKS, duration);
-        props.put(RecipePropertyAPI.EU_PER_TICK, (long) eut);
-        props.put(RecipePropertyAPI.TOTAL_EU, (long) eut * duration);
+        props.put(EU_PER_TICK, (long) eut);
+        props.put(TOTAL_EU, (long) eut * duration);
 
         final int glassTier = r.getMetadataOrDefault(GTRecipeConstants.GLASS, 3);
         if (glassTier != 3) {

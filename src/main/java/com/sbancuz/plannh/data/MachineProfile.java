@@ -1,13 +1,14 @@
 package com.sbancuz.plannh.data;
 
+import static com.sbancuz.plannh.data.provider.GTProvider.EU_PER_TICK;
+import static com.sbancuz.plannh.data.provider.GTProvider.TOTAL_EU;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 
 public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings,
     EffectComputer effectComputer) {
@@ -23,9 +24,9 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
     public record RecipeContext(Map<RecipeProperty<?>, Object> properties, int recipeDuration) {
 
         public long recipeEUt() {
-            final Long euPerTick = get(RecipePropertyAPI.EU_PER_TICK);
+            final Long euPerTick = get(EU_PER_TICK);
             if (euPerTick != null && euPerTick > 0) return euPerTick;
-            final Long totalEu = get(RecipePropertyAPI.TOTAL_EU);
+            final Long totalEu = get(TOTAL_EU);
             if (totalEu != null && totalEu > 0 && recipeDuration > 0) return totalEu / recipeDuration;
             return 0;
         }
