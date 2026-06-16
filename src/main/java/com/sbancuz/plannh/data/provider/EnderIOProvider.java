@@ -8,7 +8,6 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -40,12 +39,6 @@ public class EnderIOProvider implements PropertyProvider {
 
     @Nullable
     private static Field MILL_OUTPUT_CHANCE;
-
-    @Override
-    @Nonnull
-    public String getModId() {
-        return Compat.ENDERIO.modid;
-    }
 
     @Override
     public void register() {

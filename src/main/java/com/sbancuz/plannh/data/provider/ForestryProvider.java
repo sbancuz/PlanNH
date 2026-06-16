@@ -9,7 +9,6 @@ import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -38,12 +37,6 @@ public class ForestryProvider implements PropertyProvider {
 
     public static final RecipeProperty<Integer> PROCESSING_TIME = RecipeProperty
         .intProperty("forestry.processingTime", "Processing Time", 0);
-
-    @Override
-    @Nonnull
-    public String getModId() {
-        return Compat.FORESTRY.modid;
-    }
 
     @Override
     public void register() {

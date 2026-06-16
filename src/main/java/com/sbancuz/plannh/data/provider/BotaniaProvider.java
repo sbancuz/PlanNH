@@ -7,7 +7,6 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -33,12 +32,6 @@ import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar.Cach
 public class BotaniaProvider implements PropertyProvider {
 
     public static final RecipeProperty<Integer> MANA_COST = RecipeProperty.intProperty("manaCost", "Mana Cost", 0);
-
-    @Override
-    @Nonnull
-    public String getModId() {
-        return Compat.BOTANIA.modid;
-    }
 
     @Override
     public void register() {

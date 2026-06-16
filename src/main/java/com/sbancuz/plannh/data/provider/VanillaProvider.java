@@ -20,12 +20,6 @@ import codechicken.nei.recipe.IRecipeHandler;
 public class VanillaProvider implements PropertyProvider {
 
     @Override
-    @Nonnull
-    public String getModId() {
-        return "minecraft";
-    }
-
-    @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(new FurnaceRecipeHandler().getOverlayIdentifier(), this);
         MachineProfileRegistry.register(

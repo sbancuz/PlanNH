@@ -10,8 +10,6 @@ import codechicken.nei.recipe.IRecipeHandler;
 
 public interface PropertyProvider {
 
-    String getModId();
-
     void register();
 
     @Nullable

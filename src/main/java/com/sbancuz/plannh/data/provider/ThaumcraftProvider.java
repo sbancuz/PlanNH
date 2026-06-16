@@ -16,7 +16,6 @@ import com.gtnewhorizons.aspectrecipeindex.nei.ItemsContainingAspectHandler;
 import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.ShapedArcaneRecipeHandler;
 import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.ShapelessArcaneRecipeHandler;
 import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.WandRecipeHandler;
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -54,12 +53,6 @@ public class ThaumcraftProvider implements PropertyProvider {
         .intProperty("numComponents", "Components", 0);
 
     private static final String[] PRIMAL_TAGS = { "aer", "terra", "ignis", "aqua", "ordo", "perditio" };
-
-    @Override
-    @Nonnull
-    public String getModId() {
-        return Compat.THAUMCRAFT.modid;
-    }
 
     @Override
     public void register() {

@@ -9,7 +9,6 @@ import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -45,12 +44,6 @@ public class GTProvider implements PropertyProvider {
 
     public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.longProperty("totalEu", "Total EU", 0L);
     public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.longProperty("euPerTick", "EU/t", 0L);
-
-    @Override
-    @Nonnull
-    public String getModId() {
-        return Compat.GREGTECH.modid;
-    }
 
     @Override
     public void register() {
