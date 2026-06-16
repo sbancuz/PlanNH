@@ -1,6 +1,7 @@
 package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -8,7 +9,6 @@ import java.util.UUID;
 import net.minecraft.tileentity.TileEntityFurnace;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.ExtractedProperties;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.PropertyProvider;
@@ -34,7 +34,7 @@ public class Node {
     public int handlerRecipeIndex;
 
     public final MachineConfig machineConfig = new MachineConfig();
-    public final ExtractedProperties properties = new ExtractedProperties();
+    public final Map<RecipeProperty<?>, Object> properties = new HashMap<>();
 
     public Node(final IRecipeHandler handler, final int recipeIndex, final int x, final int y) {
         this.id = UUID.randomUUID();
@@ -80,7 +80,7 @@ public class Node {
         }
 
         this.machineConfig.initDefaults();
-        this.durationTicks = this.properties.get(RecipePropertyAPI.DURATION_TICKS);
+        this.durationTicks = (int) (Integer) this.properties.get(RecipePropertyAPI.DURATION_TICKS);
     }
 
     /**

@@ -20,7 +20,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.ExtractedProperties;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -322,7 +321,7 @@ public final class Serializer {
 
                     final Object value = prop.deserialize(o);
                     if (value != null && !value.equals(prop.getDefaultValue())) {
-                        setProperty(node.properties, prop, value);
+                        node.properties.put(prop, value);
                     }
                 }
             }
@@ -528,12 +527,6 @@ public final class Serializer {
                 entry.get("multiplier")
                     .getAsFloat());
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> void setProperty(final ExtractedProperties props, final RecipeProperty<?> prop,
-        final Object value) {
-        props.set((RecipeProperty<T>) prop, (T) value);
     }
 
     // ── Mermaid helpers ──
