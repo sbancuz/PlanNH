@@ -237,6 +237,7 @@ public class GTProvider implements PropertyProvider {
         node.outputs.clear();
 
         for (int i = 0; i < r.mInputs.length; i++) {
+            if (r.mInputs[i].stackSize <= 0) continue;
             node.inputs.add(
                 new Port<>(
                     RecipePropertyAPI.ITEM,
@@ -251,6 +252,7 @@ public class GTProvider implements PropertyProvider {
                     r.mOutputChances != null ? r.mOutputChances[i] / 100.0f : 1.f));
         }
         for (int i = 0; i < r.mFluidInputs.length; i++) {
+            if (r.mFluidInputs[i].amount <= 0) continue;
             node.inputs.add(
                 new Port<>(
                     RecipePropertyAPI.FLUID,
