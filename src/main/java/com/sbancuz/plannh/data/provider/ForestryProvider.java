@@ -23,9 +23,16 @@ import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import forestry.api.recipes.ICentrifugeRecipe;
 import forestry.api.recipes.RecipeManagers;
-import forestry.factory.recipes.nei.*;
+import forestry.factory.recipes.nei.NEIHandlerBottler;
+import forestry.factory.recipes.nei.NEIHandlerCarpenter;
+import forestry.factory.recipes.nei.NEIHandlerCentrifuge;
 import forestry.factory.recipes.nei.NEIHandlerCentrifuge.CachedCentrifugeRecipe;
+import forestry.factory.recipes.nei.NEIHandlerFabricator;
+import forestry.factory.recipes.nei.NEIHandlerFermenter;
+import forestry.factory.recipes.nei.NEIHandlerMoistener;
+import forestry.factory.recipes.nei.NEIHandlerSqueezer;
 import forestry.factory.recipes.nei.NEIHandlerSqueezer.CachedSqueezerRecipe;
+import forestry.factory.recipes.nei.NEIHandlerStill;
 
 public class ForestryProvider implements PropertyProvider {
 

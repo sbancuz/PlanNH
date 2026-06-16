@@ -21,11 +21,16 @@ import com.sbancuz.plannh.data.flowchart.Port;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
-import crazypants.enderio.nei.*;
+import crazypants.enderio.nei.AlloySmelterRecipeHandler;
 import crazypants.enderio.nei.AlloySmelterRecipeHandler.AlloySmelterRecipe;
+import crazypants.enderio.nei.EnchanterRecipeHandler;
+import crazypants.enderio.nei.SagMillRecipeHandler;
 import crazypants.enderio.nei.SagMillRecipeHandler.MillRecipe;
+import crazypants.enderio.nei.SliceAndSpliceRecipeHandler;
 import crazypants.enderio.nei.SliceAndSpliceRecipeHandler.SliceAndSpliceRecipe;
+import crazypants.enderio.nei.SoulBinderRecipeHandler;
 import crazypants.enderio.nei.SoulBinderRecipeHandler.SoulBinderRecipeNEI;
+import crazypants.enderio.nei.VatRecipeHandler;
 import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
 
 public class EnderIOProvider implements PropertyProvider {

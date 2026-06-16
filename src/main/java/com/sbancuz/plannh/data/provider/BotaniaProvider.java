@@ -19,8 +19,15 @@ import com.sbancuz.plannh.data.flowchart.Node;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
-import vazkii.botania.client.integration.nei.recipe.*;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerBrewery;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerElvenTrade;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerFloatingFlowers;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerLexicaBotania;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerManaPool;
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerManaPool.CachedManaPoolRecipe;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerPetalApothecary;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerPureDaisy;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar;
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar.CachedRunicAltarRecipe;
 
 public class BotaniaProvider implements PropertyProvider {
