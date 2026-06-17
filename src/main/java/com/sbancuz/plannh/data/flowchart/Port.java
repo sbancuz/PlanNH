@@ -32,4 +32,10 @@ public class Port<T> {
         if (!type.equals(other.type)) return false;
         return ((RecipeResource<Object>) type).canConnect(value, other.value);
     }
+
+    public void merge(final Port<?> other) {
+        final int newAmount = getAmount() + other.getAmount();
+        this.chance = (this.getAmount() * this.chance + other.getAmount() * other.chance) / newAmount;
+        type.setAmount(value, newAmount);
+    }
 }

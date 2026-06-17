@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.data;
 
+import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -14,6 +15,7 @@ public class RecipeResource<T> extends RecipeProperty<T> {
 
     @lombok.Builder.Default
     private final ToIntFunction<T> amountExtractor = (v) -> 1;
+    private final BiConsumer<T, Integer> amountUpdater;
 
     @lombok.Builder.Default
     private final BiPredicate<T, T> connectionChecker = (a, b) -> true;
@@ -30,6 +32,10 @@ public class RecipeResource<T> extends RecipeProperty<T> {
 
     public int extractAmount(final T value) {
         return amountExtractor.applyAsInt(value);
+    }
+
+    public void setAmount(final T value, final int newAmount) {
+        amountUpdater.accept(value, newAmount);
     }
 
     public boolean canConnect(final T a, final T b) {

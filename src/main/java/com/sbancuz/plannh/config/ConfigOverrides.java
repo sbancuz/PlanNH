@@ -9,5 +9,6 @@ public class ConfigOverrides {
 
     @Config.LangKey("plannh.config.overrides.show_burnable")
     @Config.DefaultBoolean(false)
+    @Config.RequiresMcRestart
     public static boolean alwaysShowBurnableSetting;
 }

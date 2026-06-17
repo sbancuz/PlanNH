@@ -29,8 +29,8 @@ public class Node {
     public int x;
     public int y;
 
-    public final List<Port<?>> inputs = new ArrayList<>();
-    public final List<Port<?>> outputs = new ArrayList<>();
+    public final List<Port<?>> inputs = new PortList();
+    public final List<Port<?>> outputs = new PortList();
 
     public String machineName;
     public int durationTicks = 0;
@@ -175,5 +175,33 @@ public class Node {
         this.x = x;
         this.y = y;
         this.machineConfig = new MachineConfig(this);
+    }
+
+    /**
+     * This list automatically aggregates all the ports, so that there is only one single input/output type
+     */
+    private static class PortList extends ArrayList<Port<?>> {
+
+        @Override
+        public boolean add(final Port<?> port) {
+            for (final Port<?> existing : this) {
+                if (existing.canConnect(port)) {
+                    existing.merge(port);
+                    return true;
+                }
+            }
+            return super.add(port);
+        }
+
+        @Override
+        public void add(final int index, final Port<?> port) {
+            for (final Port<?> existing : this) {
+                if (existing.canConnect(port)) {
+                    existing.merge(port);
+                    return;
+                }
+            }
+            super.add(index, port);
+        }
     }
 }

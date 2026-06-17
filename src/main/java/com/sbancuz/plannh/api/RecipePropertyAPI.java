@@ -55,6 +55,7 @@ public final class RecipePropertyAPI {
             return String.format("%.3f", rate);
         })
         .amountExtractor(stack -> stack.stackSize)
+        .amountUpdater((stack, newAmount) -> stack.stackSize = newAmount)
         .connectionChecker(ItemStack::isItemEqual)
         .hashCodeExtractor(
             s -> 31 * s.getItem()
@@ -80,6 +81,7 @@ public final class RecipePropertyAPI {
             return mB >= 1000 ? String.format("%.1fB", mB / 1000f) : mB + "mB";
         })
         .amountExtractor(fs -> fs.amount)
+        .amountUpdater((fs, newAmount) -> fs.amount = newAmount)
         .connectionChecker(FluidStack::isFluidEqual)
         .hashCodeExtractor(
             fs -> fs.getFluid()
