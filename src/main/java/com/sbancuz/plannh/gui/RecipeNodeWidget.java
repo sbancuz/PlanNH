@@ -632,7 +632,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final MachineProfile profile = node.machineConfig.getProfile();
         int panelH = profile.settings()
             .size() * LINE_H + 4;
-        if (node.getAvailableExtractors().size() > 1) panelH += LINE_H;
+        if (node.getAvailableExtractors()
+            .size() > 1) panelH += LINE_H;
         GuiDraw.drawRect(
             x - CONFIG_PANEL_INSET,
             y0 - CONFIG_PANEL_INSET,
@@ -647,7 +648,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             y = drawSetting(x, y, def, c);
         }
 
-        if (node.getAvailableExtractors().size() > 1) {
+        if (node.getAvailableExtractors()
+            .size() > 1) {
             final String label = "[\u00AB] " + node.getExtractor()
                 .getExtractorName() + " [\u00BB]";
             GuiDraw.drawText(label, x, y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
@@ -710,7 +712,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final MachineProfile profile = node.machineConfig.getProfile();
         int h = profile.settings()
             .size() * LINE_H + 8;
-        if (node.getAvailableExtractors().size() > 1) h += LINE_H;
+        if (node.getAvailableExtractors()
+            .size() > 1) h += LINE_H;
         return h;
     }
 

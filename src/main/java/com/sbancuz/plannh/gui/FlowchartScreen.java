@@ -422,7 +422,7 @@ public class FlowchartScreen extends ModularScreen {
 
                 for (final Summary.Line pl : s.properties()) {
                     GuiDraw.drawText(
-                        pl.label + ": " + pl.amount,
+                        pl.label() + ": " + pl.amount(),
                         ITEM_TEXT_X,
                         ly,
                         0.8f,
@@ -539,7 +539,7 @@ public class FlowchartScreen extends ModularScreen {
                 false);
             ly += SECTION_H;
             for (final var item : items) {
-                final String text = item.amount + (isCycle ? " x " : "/s ") + item.label;
+                final String text = item.amount() + (isCycle ? " x " : "/s ") + item.label();
 
                 GuiDraw.drawText(text, ITEM_TEXT_X, ly, 0.8f, itemColor, false);
                 ly += LINE_H;

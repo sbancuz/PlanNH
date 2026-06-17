@@ -16,16 +16,7 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
         THROUGHPUT
     }
 
-    public static class Line {
-
-        public final String label;
-        public final String amount;
-
-        public Line(final String label, final String amount) {
-            this.label = label;
-            this.amount = amount;
-        }
-    }
+    public record Line(String label, String amount) {}
 
     @SuppressWarnings("rawtypes")
     private record LineKey(RecipeProperty<?> type, Object resource) {

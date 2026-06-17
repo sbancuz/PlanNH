@@ -303,8 +303,9 @@ public final class Serializer {
                     .getAsJsonObject());
             node.handlerRecipeIndex = obj.has("handlerRecipeIndex") ? obj.get("handlerRecipeIndex")
                 .getAsInt() : 0;
-            node.setExtractorIndex(obj.has("extractorIndex") ? obj.get("extractorIndex")
-                .getAsInt() : 0);
+            node.setExtractorIndex(
+                obj.has("extractorIndex") ? obj.get("extractorIndex")
+                    .getAsInt() : 0);
             node.initExtractor();
             jsonArrayToPorts(obj.getAsJsonArray("inputs"), node.inputs);
             jsonArrayToPorts(obj.getAsJsonArray("outputs"), node.outputs);

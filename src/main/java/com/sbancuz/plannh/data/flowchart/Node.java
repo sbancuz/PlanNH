@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.tileentity.TileEntityFurnace;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -22,6 +20,8 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.RecipeHandlerRef;
+import lombok.Getter;
+import lombok.Setter;
 
 public class Node {
 
@@ -164,9 +164,7 @@ public class Node {
         if (this.extractorIndex >= this.availableExtractors.size()) {
             this.extractorIndex = 0;
         }
-        this.extractor = this.availableExtractors.isEmpty()
-            ? null
-            : this.availableExtractors.get(this.extractorIndex);
+        this.extractor = this.availableExtractors.isEmpty() ? null : this.availableExtractors.get(this.extractorIndex);
     }
 
     /**
