@@ -45,10 +45,9 @@ public class NoteWidget extends Widget<NoteWidget> implements Interactable {
     }
 
     public void syncTransform(final float zoom, final float panX, final float panY) {
-        final int sx = Math.round(note.x * zoom + panX);
-        final int sy = Math.round(note.y * zoom + panY);
+        final int sx = note.x;
+        final int sy = note.y;
         pos(sx, sy);
-        size(Math.round(NOTE_W * zoom), Math.round(NOTE_H * zoom));
     }
 
     private int zq(final float v) {
