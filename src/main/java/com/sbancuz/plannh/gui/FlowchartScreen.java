@@ -418,7 +418,7 @@ public class FlowchartScreen extends ModularScreen {
                 ly += SECTION_H;
                 for (final Summary.Line pl : s.properties()) {
                     final String propName = pl.resource instanceof final RecipeProperty<?> p
-                        ? p.getDisplayName() : pl.resource.toString();
+                        ? p.displayName() : pl.resource.toString();
                     GuiDraw.drawText(
                         propName + ": " + (int) pl.count,
                         ITEM_TEXT_X,

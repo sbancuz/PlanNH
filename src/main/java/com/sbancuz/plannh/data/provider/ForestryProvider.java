@@ -36,7 +36,7 @@ import forestry.factory.recipes.nei.NEIHandlerStill;
 public class ForestryProvider implements PropertyProvider {
 
     public static final RecipeProperty<Integer> PROCESSING_TIME = RecipeProperty
-        .intProperty("forestry.processingTime", "Processing Time", 0);
+        .intProperty("forestry.processingTime", 0);
 
     @Override
     public void register() {
@@ -54,7 +54,7 @@ public class ForestryProvider implements PropertyProvider {
         MachineProfileRegistry.register(
             MachineProfile.builder("forestry:basic", "Forestry")
                 .setting(Settings.MACHINES.def())
-                .setting(Settings.FORESTRY_RF_PER_TICK.def())
+                .setting(Settings.RF_PER_TICK.def())
                 .setting(Settings.TICK_MODIFIER.def())
                 .effect(ForestryProvider::simpleEffect)
                 .build());
@@ -64,7 +64,7 @@ public class ForestryProvider implements PropertyProvider {
     private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        final int rate = MachineProfile.getInt(s, Settings.FORESTRY_RF_PER_TICK.key(), 10);
+        final int rate = MachineProfile.getInt(s, Settings.RF_PER_TICK.key(), 10);
         return new MachineProfile.EffectResult(ctx.recipeDuration(), rate, machines);
     }
 

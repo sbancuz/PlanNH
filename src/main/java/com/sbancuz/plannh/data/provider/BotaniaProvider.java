@@ -31,7 +31,7 @@ import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar.Cach
 
 public class BotaniaProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> MANA_COST = RecipeProperty.intProperty("manaCost", "Mana Cost", 0);
+    public static final RecipeProperty<Integer> MANA_COST = RecipeProperty.intProperty("manaCost", 0);
 
     @Override
     public void register() {

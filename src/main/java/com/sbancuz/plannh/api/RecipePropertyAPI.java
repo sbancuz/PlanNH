@@ -23,12 +23,10 @@ public final class RecipePropertyAPI {
     private static final Map<String, PropertyProvider> extractors = new HashMap<>();
 
     // Built-in property constants (scalar metadata)
-    public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty
-        .intProperty("durationTicks", "Duration", 0);
+    public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.intProperty("durationTicks", 0);
 
     // Built-in resource constants (flow resources used by Port)
-    public static final RecipeResource<ItemStack> ITEM = RecipeResource
-        .builder("item", "Item", new ItemStack(Blocks.dirt))
+    public static final RecipeResource<ItemStack> ITEM = RecipeResource.builder("item", new ItemStack(Blocks.dirt))
         .serialize((obj, stack) -> {
             if (stack == null) return;
             NBTTagCompound nbt = new NBTTagCompound();
@@ -54,7 +52,7 @@ public final class RecipePropertyAPI {
                 .hashCode() + s.getItemDamage())
         .build();
 
-    public static final RecipeResource<FluidStack> FLUID = RecipeResource.<FluidStack>builder("fluid", "Fluid", null)
+    public static final RecipeResource<FluidStack> FLUID = RecipeResource.<FluidStack>builder("fluid", null)
         .serialize((obj, stack) -> {
             obj.addProperty("fluid", FluidRegistry.getFluidName(stack.getFluid()));
             obj.addProperty("amount", stack.amount);

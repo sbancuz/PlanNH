@@ -6,6 +6,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.util.StatCollector;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -16,20 +18,23 @@ public class RecipeProperty<T> {
 
     @Getter
     private final String key;
-    @Getter
     private final String displayName;
     @Getter
     private final T defaultValue;
     private final BiConsumer<JsonObject, T> serializer;
     private final Function<JsonObject, T> deserializer;
 
-    public RecipeProperty(final String key, final String displayName, final T defaultValue,
-        final BiConsumer<JsonObject, T> serializer, final Function<JsonObject, T> deserializer) {
+    public RecipeProperty(final String key, final T defaultValue, final BiConsumer<JsonObject, T> serializer,
+        final Function<JsonObject, T> deserializer) {
         this.key = key;
-        this.displayName = displayName;
+        this.displayName = StatCollector.translateToLocal("plannh.properties." + key);
         this.defaultValue = defaultValue;
         this.serializer = serializer;
         this.deserializer = deserializer;
+    }
+
+    public String displayName() {
+        return displayName;
     }
 
     @SuppressWarnings("unchecked")
@@ -42,11 +47,9 @@ public class RecipeProperty<T> {
     }
 
     @Nonnull
-    public static RecipeProperty<Long> longProperty(final String key, final String displayName,
-        final long defaultValue) {
+    public static RecipeProperty<Long> longProperty(final String key, final long defaultValue) {
         return new RecipeProperty<>(
             key,
-            displayName,
             defaultValue,
             (obj, val) -> obj.addProperty(key, val),
             obj -> obj.has(key) ? obj.get(key)
@@ -54,11 +57,9 @@ public class RecipeProperty<T> {
     }
 
     @Nonnull
-    public static RecipeProperty<Integer> intProperty(final String key, final String displayName,
-        final int defaultValue) {
+    public static RecipeProperty<Integer> intProperty(final String key, final int defaultValue) {
         return new RecipeProperty<>(
             key,
-            displayName,
             defaultValue,
             (obj, val) -> obj.addProperty(key, val),
             obj -> obj.has(key) ? obj.get(key)
@@ -66,11 +67,9 @@ public class RecipeProperty<T> {
     }
 
     @Nonnull
-    public static RecipeProperty<String> stringProperty(final String key, final String displayName,
-        final String defaultValue) {
+    public static RecipeProperty<String> stringProperty(final String key, final String defaultValue) {
         return new RecipeProperty<>(
             key,
-            displayName,
             defaultValue,
             (obj, val) -> obj.addProperty(key, val),
             obj -> obj.has(key) ? obj.get(key)
@@ -78,11 +77,9 @@ public class RecipeProperty<T> {
     }
 
     @Nonnull
-    public static RecipeProperty<Float> floatProperty(final String key, final String displayName,
-        final float defaultValue) {
+    public static RecipeProperty<Float> floatProperty(final String key, final float defaultValue) {
         return new RecipeProperty<>(
             key,
-            displayName,
             defaultValue,
             (obj, val) -> obj.addProperty(key, val),
             obj -> obj.has(key) ? obj.get(key)
@@ -90,11 +87,9 @@ public class RecipeProperty<T> {
     }
 
     @Nonnull
-    public static RecipeProperty<Boolean> boolProperty(final String key, final String displayName,
-        final boolean defaultValue) {
+    public static RecipeProperty<Boolean> boolProperty(final String key, final boolean defaultValue) {
         return new RecipeProperty<>(
             key,
-            displayName,
             defaultValue,
             (obj, val) -> obj.addProperty(key, val),
             obj -> obj.has(key) ? obj.get(key)
@@ -102,9 +97,8 @@ public class RecipeProperty<T> {
     }
 
     @Nonnull
-    public static RecipeProperty<int[]> intArrayProperty(final String key, final String displayName,
-        final int[] defaultValue) {
-        return new RecipeProperty<>(key, displayName, defaultValue, (obj, val) -> {
+    public static RecipeProperty<int[]> intArrayProperty(final String key, final int[] defaultValue) {
+        return new RecipeProperty<>(key, defaultValue, (obj, val) -> {
             final JsonArray arr = new JsonArray();
             for (final int v : val) arr.add(new JsonPrimitive(v));
             obj.add(key, arr);

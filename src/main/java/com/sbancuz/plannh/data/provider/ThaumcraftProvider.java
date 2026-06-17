@@ -38,19 +38,15 @@ import thaumcraft.api.crafting.ShapelessArcaneRecipe;
 
 public class ThaumcraftProvider implements PropertyProvider {
 
-    public static final RecipeProperty<int[]> VIS_COST = RecipeProperty
-        .intArrayProperty("visCost", "Vis Cost", new int[6]);
+    public static final RecipeProperty<int[]> VIS_COST = RecipeProperty.intArrayProperty("visCost", new int[6]);
 
-    public static final RecipeProperty<Integer> INSTABILITY = RecipeProperty
-        .intProperty("instability", "Instability", 0);
+    public static final RecipeProperty<Integer> INSTABILITY = RecipeProperty.intProperty("instability", 0);
 
-    public static final RecipeProperty<Integer> TOTAL_VIS = RecipeProperty.intProperty("totalVis", "Total Vis", 0);
+    public static final RecipeProperty<Integer> TOTAL_VIS = RecipeProperty.intProperty("totalVis", 0);
 
-    public static final RecipeProperty<String> RESEARCH_KEY = RecipeProperty
-        .stringProperty("researchKey", "Research Key", "");
+    public static final RecipeProperty<String> RESEARCH_KEY = RecipeProperty.stringProperty("researchKey", "");
 
-    public static final RecipeProperty<Integer> NUM_COMPONENTS = RecipeProperty
-        .intProperty("numComponents", "Components", 0);
+    public static final RecipeProperty<Integer> NUM_COMPONENTS = RecipeProperty.intProperty("numComponents", 0);
 
     private static final String[] PRIMAL_TAGS = { "aer", "terra", "ignis", "aqua", "ordo", "perditio" };
 

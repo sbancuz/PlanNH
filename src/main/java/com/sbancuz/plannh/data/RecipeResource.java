@@ -14,15 +14,20 @@ public class RecipeResource<T> extends RecipeProperty<T> {
     private final BiPredicate<T, T> connectionChecker;
     private final ToIntFunction<T> hashCodeExtractor;
 
-    RecipeResource(final String key, final String displayName, final T defaultValue,
-        final BiConsumer<JsonObject, T> serializer, final Function<JsonObject, T> deserializer,
-        final Function<T, String> displayFormatter, final ToIntFunction<T> amountExtractor,
-        final BiPredicate<T, T> connectionChecker, final ToIntFunction<T> hashCodeExtractor) {
-        super(key, displayName, defaultValue, serializer, deserializer);
+    RecipeResource(final String key, final T defaultValue, final BiConsumer<JsonObject, T> serializer,
+        final Function<JsonObject, T> deserializer, final Function<T, String> displayFormatter,
+        final ToIntFunction<T> amountExtractor, final BiPredicate<T, T> connectionChecker,
+        final ToIntFunction<T> hashCodeExtractor) {
+        super(key, defaultValue, serializer, deserializer);
         this.displayFormatter = displayFormatter;
         this.amountExtractor = amountExtractor;
         this.connectionChecker = connectionChecker;
         this.hashCodeExtractor = hashCodeExtractor;
+    }
+
+    @Override
+    public String displayName() {
+        return getKey();
     }
 
     public String formatDisplayName(final T value) {
@@ -41,14 +46,13 @@ public class RecipeResource<T> extends RecipeProperty<T> {
         return hashCodeExtractor.applyAsInt(value);
     }
 
-    public static <T> Builder<T> builder(final String key, final String displayName, final T defaultValue) {
-        return new Builder<>(key, displayName, defaultValue);
+    public static <T> Builder<T> builder(final String key, final T defaultValue) {
+        return new Builder<>(key, defaultValue);
     }
 
     public static class Builder<T> {
 
         private final String key;
-        private final String displayName;
         private final T defaultValue;
         private BiConsumer<JsonObject, T> serializer;
         private Function<JsonObject, T> deserializer;
@@ -57,11 +61,10 @@ public class RecipeResource<T> extends RecipeProperty<T> {
         private BiPredicate<T, T> connectionChecker = (a, b) -> true;
         private ToIntFunction<T> hashCodeExtractor = Object::hashCode;
 
-        Builder(final String key, final String displayName, final T defaultValue) {
+        Builder(final String key, final T defaultValue) {
             this.key = key;
-            this.displayName = displayName;
             this.defaultValue = defaultValue;
-            this.displayFormatter = v -> displayName;
+            this.displayFormatter = v -> key;
         }
 
         public Builder<T> serialize(final BiConsumer<JsonObject, T> serializer) {
@@ -97,7 +100,6 @@ public class RecipeResource<T> extends RecipeProperty<T> {
         public RecipeResource<T> build() {
             return new RecipeResource<>(
                 key,
-                displayName,
                 defaultValue,
                 serializer,
                 deserializer,

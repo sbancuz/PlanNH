@@ -34,8 +34,8 @@ import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
 
 public class EnderIOProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.intProperty("rfTotal", "RF Total", 0);
-    public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.intProperty("experience", "Experience", 0);
+    public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.intProperty("rfTotal", 0);
+    public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.intProperty("experience", 0);
 
     @Nullable
     private static Field MILL_OUTPUT_CHANCE;

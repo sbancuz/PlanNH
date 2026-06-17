@@ -1,0 +1,68 @@
+## Settings
+## Settings - General
+plannh.settings.tickModifier=Accel
+plannh.settings.machines=Mach
+
+## Settings - GT
+plannh.settings.voltage=Tier
+plannh.settings.amp=Amp
+plannh.settings.speed=Speed
+plannh.settings.parallels=Par
+plannh.settings.machineHeat=M. Heat
+plannh.settings.recipeHeat=R. Heat
+plannh.settings.heatDiscountMult=HD Mult.%
+plannh.settings.eutDiscount=EU Disc.%
+plannh.settings.eutIncreasePerOC=EU%/OC
+plannh.settings.durationDecreasePerOC=Spd%/OC
+plannh.settings.maxOverclocks=Max OC
+plannh.settings.maxRegularOc=Max Reg OC
+plannh.settings.maxTierSkips=Max Skips
+plannh.settings.fuelEfficiency=Fuel Eff.%
+plannh.settings.perfectOC=Perfect OC
+plannh.settings.heatOC=Heat OC
+plannh.settings.heatDiscount=Heat Disc.
+plannh.settings.laserOC=Laser OC
+plannh.settings.unlimitedSkips=Unl. Skips
+plannh.settings.noOverclock=No OC
+
+## Settings - Botania
+plannh.settings.manaPerTick=Mana/t
+
+## Settings - Thaumcraft (and friends)
+plannh.settings.visPerTick=Vis/t
+
+## Settings - Cofh core
+plannh.settings.rfPerTick=RF/t
+
+## Properties
+## Properties - General
+plannh.properties.durationTicks=Duration
+plannh.properties.numComponents=Components
+
+## Properties - GT (and friends)
+plannh.properties.specialValue=Special Value
+plannh.properties.bartworks.glassTier=Glass Tier
+plannh.properties.bartworks.sievert=Sievert
+plannh.properties.bartworks.sievertExact=Exact Sievert
+plannh.properties.bartworks.mass=Mass
+plannh.properties.totalEu=Total EU
+plannh.properties.euPerTick=EU/t
+
+## Properties - Botania
+plannh.properties.manaCost=Mana Cost
+
+## Properties - Thaumcraft (and friends)
+plannh.properties.visCost=Vis Cost
+plannh.properties.instability=Instability
+plannh.properties.totalVis=Total Vis
+plannh.properties.researchKey=Research Key
+
+## Properties - Forestry
+plannh.properties.forestry.processingTime=Processing Time
+
+## Properties - Cofh core
+plannh.properties.rfTotal=RF Total
+
+## Properties - Ender IO
+plannh.properties.experience=Experience
+

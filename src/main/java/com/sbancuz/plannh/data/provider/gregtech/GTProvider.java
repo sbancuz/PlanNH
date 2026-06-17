@@ -35,17 +35,15 @@ import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 
 public class GTProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty
-        .intProperty("specialValue", "Special Value", 0);
-    static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty
-        .intProperty("bartworks.glassTier", "Glass Tier", 3);
-    public static final RecipeProperty<Integer> SIEVERT = RecipeProperty.intProperty("bartworks.sievert", "Sievert", 0);
+    public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.intProperty("specialValue", 0);
+    static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty.intProperty("bartworks.glassTier", 3);
+    public static final RecipeProperty<Integer> SIEVERT = RecipeProperty.intProperty("bartworks.sievert", 0);
     public static final RecipeProperty<Boolean> SIEVERT_EXACT = RecipeProperty
-        .boolProperty("bartworks.sievertExact", "Exact Sievert", false);
-    public static final RecipeProperty<Integer> MASS = RecipeProperty.intProperty("bartworks.mass", "Mass", 0);
+        .boolProperty("bartworks.sievertExact", false);
+    public static final RecipeProperty<Integer> MASS = RecipeProperty.intProperty("bartworks.mass", 0);
 
-    public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.longProperty("totalEu", "Total EU", 0L);
-    public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.longProperty("euPerTick", "EU/t", 0L);
+    public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.longProperty("totalEu", 0L);
+    public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.longProperty("euPerTick", 0L);
 
     @Override
     public void register() {
