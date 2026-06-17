@@ -25,7 +25,7 @@ public final class RecipePropertyAPI {
     private static final Map<String, RecipeProperty<?>> properties = new HashMap<>();
     private static final Map<String, List<PropertyProvider>> extractors = new HashMap<>();
 
-    public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.intBuilder("durationTicks", 0)
+    public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.intBuilder("duration_ticks", 0)
         .build();
 
     public static final RecipeResource<ItemStack> ITEM = RecipeResource.builder("item", new ItemStack(Blocks.dirt))

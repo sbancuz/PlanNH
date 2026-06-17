@@ -35,21 +35,21 @@ import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 
 public class GTProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.intBuilder("specialValue", 0)
+    public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.intBuilder("special_value", 0)
         .build();
-    static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty.intBuilder("bartworks.glassTier", 3)
+    static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty.intBuilder("bartworks.glass_tier", 3)
         .build();
     public static final RecipeProperty<Integer> SIEVERT = RecipeProperty.intBuilder("bartworks.sievert", 0)
         .build();
     public static final RecipeProperty<Boolean> SIEVERT_EXACT = RecipeProperty
-        .boolBuilder("bartworks.sievertExact", false)
+        .boolBuilder("bartworks.sievert_exact", false)
         .build();
     public static final RecipeProperty<Integer> MASS = RecipeProperty.intBuilder("bartworks.mass", 0)
         .build();
 
-    public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.longBuilder("totalEu", 0L)
+    public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.longBuilder("total_eu", 0L)
         .build();
-    public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.longBuilder("euPerTick", 0L)
+    public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.longBuilder("eu_per_tick", 0L)
         .build();
 
     @Override

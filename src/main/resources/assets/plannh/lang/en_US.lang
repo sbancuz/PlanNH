@@ -4,7 +4,7 @@ plannh.config.overrides.show_burnable.tooltip=Hide/Show burnable setting overrid
 
 ## Settings
 ## Settings - General
-plannh.settings.tickModifier=Accel
+plannh.settings.tick_modifier=Accel
 plannh.settings.machines=Mach
 plannh.settings.burnable_override=Burnable
 
@@ -13,61 +13,60 @@ plannh.settings.voltage=Tier
 plannh.settings.amp=Amp
 plannh.settings.speed=Speed
 plannh.settings.parallels=Par
-plannh.settings.machineHeat=M. Heat
-plannh.settings.recipeHeat=R. Heat
-plannh.settings.heatDiscountMult=HD Mult.%
-plannh.settings.eutDiscount=EU Disc.%
-plannh.settings.eutIncreasePerOC=EU%/OC
-plannh.settings.durationDecreasePerOC=Spd%/OC
-plannh.settings.maxOverclocks=Max OC
-plannh.settings.maxRegularOc=Max Reg OC
-plannh.settings.maxTierSkips=Max Skips
-plannh.settings.fuelEfficiency=Fuel Eff.%
-plannh.settings.perfectOC=Perfect OC
-plannh.settings.heatOC=Heat OC
-plannh.settings.heatDiscount=Heat Disc.
-plannh.settings.laserOC=Laser OC
-plannh.settings.unlimitedSkips=Unl. Skips
-plannh.settings.noOverclock=No OC
+plannh.settings.machine_heat=M. Heat
+plannh.settings.recipe_heat=R. Heat
+plannh.settings.heat_discount_mult=HD Mult.%
+plannh.settings.eut_discount=EU Disc.%
+plannh.settings.eut_increase_per_oc=EU%/OC
+plannh.settings.duration_decrease_per_oc=Spd%/OC
+plannh.settings.max_overclocks=Max OC
+plannh.settings.max_regular_oc=Max Reg OC
+plannh.settings.max_tier_skips=Max Skips
+plannh.settings.fuel_efficiency=Fuel Eff.%
+plannh.settings.perfect_oc=Perfect OC
+plannh.settings.heat_oc=Heat OC
+plannh.settings.heat_discount=Heat Disc.
+plannh.settings.laser_oc=Laser OC
+plannh.settings.unlimited_skips=Unl. Skips
+plannh.settings.no_overclock=No OC
 
 ## Settings - Botania
-plannh.settings.manaPerTick=Mana/t
+plannh.settings.mana_per_tick=Mana/t
 
 ## Settings - Thaumcraft (and friends)
-plannh.settings.visPerTick=Vis/t
+plannh.settings.vis_per_tick=Vis/t
 
 ## Settings - Cofh core
-plannh.settings.rfPerTick=RF/t
+plannh.settings.rf_per_tick=RF/t
 
 ## Properties
 ## Properties - General
-plannh.properties.durationTicks=Duration
-plannh.properties.numComponents=Components
+plannh.properties.duration_ticks=Duration
+plannh.properties.num_components=Components
 
 ## Properties - GT (and friends)
-plannh.properties.specialValue=Special Value
-plannh.properties.bartworks.glassTier=Glass Tier
+plannh.properties.special_value=Special Value
+plannh.properties.bartworks.glass_tier=Glass Tier
 plannh.properties.bartworks.sievert=Sievert
-plannh.properties.bartworks.sievertExact=Exact Sievert
+plannh.properties.bartworks.sievert_exact=Exact Sievert
 plannh.properties.bartworks.mass=Mass
-plannh.properties.totalEu=Total EU
-plannh.properties.euPerTick=EU/t
+plannh.properties.total_eu=Total EU
+plannh.properties.eu_per_tick=EU/t
 
 ## Properties - Botania
-plannh.properties.manaCost=Mana Cost
+plannh.properties.mana_cost=Mana Cost
 
 ## Properties - Thaumcraft (and friends)
-plannh.properties.visCost=Vis Cost
+plannh.properties.vis_cost=Vis Cost
 plannh.properties.instability=Instability
-plannh.properties.totalVis=Total Vis
-plannh.properties.researchKey=Research Key
+plannh.properties.total_vis=Total Vis
+plannh.properties.research_key=Research Key
 
 ## Properties - Forestry
-plannh.properties.forestry.processingTime=Processing Time
+plannh.properties.forestry.processing_time=Processing Time
 
 ## Properties - Cofh core
-plannh.properties.rfTotal=RF Total
+plannh.properties.rf_total=RF Total
 
 ## Properties - Ender IO
 plannh.properties.experience=Experience
-
