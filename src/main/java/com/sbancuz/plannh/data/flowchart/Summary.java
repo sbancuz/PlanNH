@@ -18,14 +18,12 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
 
     public static class Line {
 
-        public final String type;
-        public final Object resource;
-        public float count;
+        public final String label;
+        public final String amount;
 
-        public Line(final String type, final Object resource, final float count) {
-            this.type = type;
-            this.resource = resource;
-            this.count = count;
+        public Line(final String label, final String amount) {
+            this.label = label;
+            this.amount = amount;
         }
     }
 
@@ -101,11 +99,22 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
         return new Summary(flatten(outputMap), flatten(inputMap), flatten(propertyMap));
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private static List<Line> flatten(final Map<LineKey, Float> map) {
         final List<Line> result = new ArrayList<>();
         for (final var entry : map.entrySet()) {
             if (entry.getValue() <= 0) continue;
-            result.add(new Line(entry.getKey().type.getKey(), entry.getKey().resource, entry.getValue()));
+
+            if (entry.getKey().type instanceof RecipeResource resource) {
+                result.add(new Line(resource.formatDisplayName(entry.getKey().resource), resource.formatAmount(entry.getValue())));
+            } else {
+                result.add(
+                    new Line(
+                        entry.getKey().type.displayName(),
+                        entry.getValue()
+                            .toString()));
+            }
+
         }
         return result;
     }

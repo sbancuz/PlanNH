@@ -16,7 +16,6 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
-import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
@@ -393,7 +392,8 @@ public class FlowchartScreen extends ModularScreen {
                 PlannhColors.SECTION_PRODUCT.getColor(),
                 PlannhColors.ACCENT_AMBER.getColor(),
                 PlannhColors.ACCENT_AMBER.getColor(),
-                i -> lineLabel((Summary.Line) i, cycleSecs, isCycle));
+                cycleSecs,
+                isCycle);
 
             ly = drawSection(
                 ly,
@@ -403,24 +403,26 @@ public class FlowchartScreen extends ModularScreen {
                 PlannhColors.SECTION_INPUT.getColor(),
                 PlannhColors.ACCENT_GREEN2.getColor(),
                 PlannhColors.TEXT_MUTED.getColor(),
-                i -> lineLabel((Summary.Line) i, cycleSecs, isCycle));
+                cycleSecs,
+                isCycle);
 
-            if (!s.properties().isEmpty()) {
-                GuiDraw.drawRect(SECTION_HEADER_X, ly, w - SECTION_HEADER_X * 2, SECTION_H,
-                    PlannhColors.SECTION_OPS.getColor());
-                GuiDraw.drawText(
-                    "Properties (" + s.properties().size() + ")",
-                    SECTION_HEADER_TEXT_X,
-                    ly + SECTION_HEADER_TEXT_Y_OFF,
-                    1.0f,
+            if (!s.properties()
+                .isEmpty()) {
+
+                ly = drawSection(
+                    ly,
+                    w,
+                    "Properties",
+                    s.properties(),
+                    PlannhColors.SECTION_OPS.getColor(),
+                    PlannhColors.SECTION_OPS.getColor(),
                     PlannhColors.ACCENT_BLUE.getColor(),
-                    false);
-                ly += SECTION_H;
+                    cycleSecs,
+                    isCycle);
+
                 for (final Summary.Line pl : s.properties()) {
-                    final String propName = pl.resource instanceof final RecipeProperty<?> p
-                        ? p.displayName() : pl.resource.toString();
                     GuiDraw.drawText(
-                        propName + ": " + (int) pl.count,
+                        pl.label + ": " + pl.amount,
                         ITEM_TEXT_X,
                         ly,
                         0.8f,
@@ -523,8 +525,9 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawText("[+ in NEI GUI] add recipe", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
         }
 
-        private int drawSection(int ly, final int w, final String title, final List<?> items, final int headerColor,
-            final int titleColor, final int itemColor, final java.util.function.Function<Object, String> labelFn) {
+        private int drawSection(int ly, final int w, final String title, final List<Summary.Line> items,
+            final int headerColor, final int titleColor, final int itemColor, final float cycleSecs,
+            final boolean isCycle) {
             if (items.isEmpty()) return ly;
             GuiDraw.drawRect(SECTION_HEADER_X, ly, w - SECTION_HEADER_X * 2, SECTION_H, headerColor);
             GuiDraw.drawText(
@@ -535,34 +538,13 @@ public class FlowchartScreen extends ModularScreen {
                 titleColor,
                 false);
             ly += SECTION_H;
-            for (final Object item : items) {
-                GuiDraw.drawText(labelFn.apply(item), ITEM_TEXT_X, ly, 0.8f, itemColor, false);
+            for (final var item : items) {
+                final String text = item.amount + (isCycle ? " x " : "/s ") + item.label;
+
+                GuiDraw.drawText(text, ITEM_TEXT_X, ly, 0.8f, itemColor, false);
                 ly += LINE_H;
             }
             return ly + SECTION_END_PAD;
-        }
-
-        private static String lineLabel(final Summary.Line line, final float cycleSecs, final boolean isCycle) {
-            final String name;
-            if (line.resource instanceof final net.minecraft.item.ItemStack stack) {
-                name = stack.getDisplayName();
-            } else if (line.resource instanceof final net.minecraftforge.fluids.FluidStack stack) {
-                name = stack.getLocalizedName();
-            } else {
-                name = line.resource.toString();
-            }
-
-            if (isCycle) {
-                if (line.type.equals("fluid")) {
-                    return formatFluidAmount(line.count) + " " + name;
-                }
-                return (int) line.count + "x " + name;
-            }
-
-            if (line.type.equals("fluid")) {
-                return formatFluidAmount(line.count / cycleSecs) + "/s " + name;
-            }
-            return formatRate(line.count / cycleSecs) + "/s " + name;
         }
 
         @Override
@@ -609,18 +591,6 @@ public class FlowchartScreen extends ModularScreen {
             floatX = dragStartX + (getContext().getAbsMouseX() - dragAbsMX);
             floatY = dragStartY + (getContext().getAbsMouseY() - dragAbsMY);
             pos(floatX, floatY);
-        }
-
-        private static String formatFluidAmount(final float mb) {
-            if (mb >= 1000) return (int) (mb / 1000) + "." + ((int) (mb % 1000) / 100) + "B";
-            return String.format("%.1f", mb) + "mB";
-        }
-
-        private static String formatRate(final float rate) {
-            if (rate >= 1000000) return String.format("%.1fM", rate / 1000000);
-            if (rate >= 1000) return String.format("%.0f", rate);
-            if (rate >= 1) return String.format("%.2f", rate);
-            return String.format("%.3f", rate);
         }
     }
 }

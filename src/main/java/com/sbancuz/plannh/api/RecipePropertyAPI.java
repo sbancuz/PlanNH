@@ -22,18 +22,17 @@ public final class RecipePropertyAPI {
     private static final Map<String, RecipeProperty<?>> properties = new HashMap<>();
     private static final Map<String, PropertyProvider> extractors = new HashMap<>();
 
-    // Built-in property constants (scalar metadata)
-    public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.intProperty("durationTicks", 0);
+    public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.intBuilder("durationTicks", 0)
+        .build();
 
-    // Built-in resource constants (flow resources used by Port)
     public static final RecipeResource<ItemStack> ITEM = RecipeResource.builder("item", new ItemStack(Blocks.dirt))
-        .serialize((obj, stack) -> {
+        .serializer((obj, stack) -> {
             if (stack == null) return;
             NBTTagCompound nbt = new NBTTagCompound();
             stack.writeToNBT(nbt);
             obj.addProperty("itemStack", nbt.toString());
         })
-        .deserialize(obj -> {
+        .deserializer(obj -> {
             if (!obj.has("itemStack")) return null;
             try {
                 NBTTagCompound nbt = (NBTTagCompound) JsonToNBT.func_150315_a(
@@ -45,6 +44,13 @@ public final class RecipePropertyAPI {
             }
         })
         .displayFormatter(ItemStack::getDisplayName)
+        .amountFormatter((rate) -> {
+            if (rate >= 1000000000f) return String.format("%.1fB", rate / 1000000000f);
+            if (rate >= 1000000f) return String.format("%.1fM", rate / 1000000f);
+            if (rate >= 1000f) return String.format("%.0f", rate);
+            if (rate >= 1f) return String.format("%.2f", rate);
+            return String.format("%.3f", rate);
+        })
         .amountExtractor(stack -> stack.stackSize)
         .connectionChecker(ItemStack::isItemEqual)
         .hashCodeExtractor(
@@ -52,12 +58,13 @@ public final class RecipePropertyAPI {
                 .hashCode() + s.getItemDamage())
         .build();
 
-    public static final RecipeResource<FluidStack> FLUID = RecipeResource.<FluidStack>builder("fluid", null)
-        .serialize((obj, stack) -> {
+    public static final RecipeResource<FluidStack> FLUID = RecipeResource
+        .<FluidStack>builder("fluid", new FluidStack(FluidRegistry.WATER, 0, null))
+        .serializer((obj, stack) -> {
             obj.addProperty("fluid", FluidRegistry.getFluidName(stack.getFluid()));
             obj.addProperty("amount", stack.amount);
         })
-        .deserialize(obj -> {
+        .deserializer(obj -> {
             final String name = obj.get("fluid")
                 .getAsString();
             final int amount = obj.get("amount")
@@ -65,6 +72,11 @@ public final class RecipePropertyAPI {
             return FluidRegistry.getFluidStack(name, amount);
         })
         .displayFormatter(FluidStack::getLocalizedName)
+        .amountFormatter(amount -> {
+            final int mB = Math.round(amount);
+            return mB >= 1000 ? String.format("%.1fB", mB / 1000f)
+                : mB + "mB";
+        })
         .amountExtractor(fs -> fs.amount)
         .connectionChecker(FluidStack::isFluidEqual)
         .hashCodeExtractor(

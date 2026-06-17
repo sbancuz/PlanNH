@@ -13,28 +13,28 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
+@SuperBuilder(builderMethodName = "emptyBuilder")
 public class RecipeProperty<T> {
 
     @Getter
     private final String key;
-    private final String displayName;
+
     @Getter
     private final T defaultValue;
     private final BiConsumer<JsonObject, T> serializer;
     private final Function<JsonObject, T> deserializer;
 
-    public RecipeProperty(final String key, final T defaultValue, final BiConsumer<JsonObject, T> serializer,
-        final Function<JsonObject, T> deserializer) {
-        this.key = key;
-        this.displayName = StatCollector.translateToLocal("plannh.properties." + key);
-        this.defaultValue = defaultValue;
-        this.serializer = serializer;
-        this.deserializer = deserializer;
-    }
+    @lombok.Builder.Default
+    private final Function<Float, String> amountFormatter = Objects::toString;
 
     public String displayName() {
-        return displayName;
+        return StatCollector.translateToLocal("plannh.properties." + key);
+    }
+
+    public String formatAmount(final float value) {
+        return amountFormatter.apply(value);
     }
 
     @SuppressWarnings("unchecked")
@@ -46,70 +46,74 @@ public class RecipeProperty<T> {
         return deserializer.apply(obj);
     }
 
-    @Nonnull
-    public static RecipeProperty<Long> longProperty(final String key, final long defaultValue) {
-        return new RecipeProperty<>(
-            key,
-            defaultValue,
-            (obj, val) -> obj.addProperty(key, val),
-            obj -> obj.has(key) ? obj.get(key)
-                .getAsLong() : defaultValue);
+    public static <B> RecipePropertyBuilder<B, ?, ?> builder(final String key, final B defaultValue) {
+        return RecipeProperty.<B>emptyBuilder()
+            .key(key)
+            .defaultValue(defaultValue);
+    }
+
+    public static RecipePropertyBuilder<Long, ?, ?> longBuilder(final String key, final Long defaultValue) {
+        return RecipeProperty.builder(key, defaultValue)
+            .serializer((obj, val) -> obj.addProperty(key, val))
+            .deserializer(
+                obj -> obj.has(key) ? obj.get(key)
+                    .getAsLong() : defaultValue);
     }
 
     @Nonnull
-    public static RecipeProperty<Integer> intProperty(final String key, final int defaultValue) {
-        return new RecipeProperty<>(
-            key,
-            defaultValue,
-            (obj, val) -> obj.addProperty(key, val),
-            obj -> obj.has(key) ? obj.get(key)
-                .getAsInt() : defaultValue);
+    public static RecipePropertyBuilder<Integer, ?, ?> intBuilder(final String key, final int defaultValue) {
+        return RecipeProperty.builder(key, defaultValue)
+            .serializer((obj, val) -> obj.addProperty(key, val))
+            .deserializer(
+                obj -> obj.has(key) ? obj.get(key)
+                    .getAsInt() : defaultValue);
     }
 
     @Nonnull
-    public static RecipeProperty<String> stringProperty(final String key, final String defaultValue) {
-        return new RecipeProperty<>(
-            key,
-            defaultValue,
-            (obj, val) -> obj.addProperty(key, val),
-            obj -> obj.has(key) ? obj.get(key)
-                .getAsString() : defaultValue);
+    public static RecipePropertyBuilder<String, ?, ?> stringBuilder(final String key, final String defaultValue) {
+        return RecipeProperty.builder(key, defaultValue)
+            .serializer((obj, val) -> obj.addProperty(key, val))
+            .deserializer(
+                obj -> obj.has(key) ? obj.get(key)
+                    .getAsString() : defaultValue);
     }
 
     @Nonnull
-    public static RecipeProperty<Float> floatProperty(final String key, final float defaultValue) {
-        return new RecipeProperty<>(
-            key,
-            defaultValue,
-            (obj, val) -> obj.addProperty(key, val),
-            obj -> obj.has(key) ? obj.get(key)
-                .getAsFloat() : defaultValue);
+    public static RecipePropertyBuilder<Float, ?, ?> floatBuilder(final String key, final float defaultValue) {
+        return RecipeProperty.builder(key, defaultValue)
+            .serializer((obj, val) -> obj.addProperty(key, val))
+            .deserializer(
+                obj -> obj.has(key) ? obj.get(key)
+                    .getAsFloat() : defaultValue);
     }
 
     @Nonnull
-    public static RecipeProperty<Boolean> boolProperty(final String key, final boolean defaultValue) {
-        return new RecipeProperty<>(
-            key,
-            defaultValue,
-            (obj, val) -> obj.addProperty(key, val),
-            obj -> obj.has(key) ? obj.get(key)
-                .getAsBoolean() : defaultValue);
+    public static RecipePropertyBuilder<Boolean, ?, ?> boolBuilder(final String key, final boolean defaultValue) {
+        return RecipeProperty.builder(key, defaultValue)
+            .serializer((obj, val) -> obj.addProperty(key, val))
+            .deserializer(
+                obj -> obj.has(key) ? obj.get(key)
+                    .getAsBoolean() : defaultValue);
     }
 
     @Nonnull
-    public static RecipeProperty<int[]> intArrayProperty(final String key, final int[] defaultValue) {
-        return new RecipeProperty<>(key, defaultValue, (obj, val) -> {
-            final JsonArray arr = new JsonArray();
-            for (final int v : val) arr.add(new JsonPrimitive(v));
-            obj.add(key, arr);
-        }, obj -> {
-            if (!obj.has(key)) return defaultValue.clone();
-            final JsonArray arr = obj.getAsJsonArray(key);
-            final int[] result = new int[arr.size()];
-            for (int i = 0; i < result.length; i++) result[i] = arr.get(i)
-                .getAsInt();
-            return result;
-        });
+    public static RecipePropertyBuilder<int[], ?, ?> intArrayBuilder(final String key, final int[] defaultValue) {
+        return RecipeProperty.builder(key, defaultValue)
+            .serializer((obj, val) -> {
+                final JsonArray arr = new JsonArray();
+                for (final int v : val) arr.add(new JsonPrimitive(v));
+                obj.add(key, arr);
+            })
+            .deserializer(obj -> {
+                if (!obj.has(key)) return defaultValue.clone();
+                final JsonArray arr = obj.getAsJsonArray(key);
+                final int[] result = new int[arr.size()];
+                for (int i = 0; i < result.length; i++) {
+                    result[i] = arr.get(i)
+                        .getAsInt();
+                }
+                return result;
+            });
     }
 
     @Override
