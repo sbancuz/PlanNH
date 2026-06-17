@@ -99,14 +99,17 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
         return new Summary(flatten(outputMap), flatten(inputMap), flatten(propertyMap));
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private static List<Line> flatten(final Map<LineKey, Float> map) {
         final List<Line> result = new ArrayList<>();
         for (final var entry : map.entrySet()) {
             if (entry.getValue() <= 0) continue;
 
             if (entry.getKey().type instanceof RecipeResource resource) {
-                result.add(new Line(resource.formatDisplayName(entry.getKey().resource), resource.formatAmount(entry.getValue())));
+                result.add(
+                    new Line(
+                        resource.formatDisplayName(entry.getKey().resource),
+                        resource.formatAmount(entry.getValue())));
             } else {
                 result.add(
                     new Line(

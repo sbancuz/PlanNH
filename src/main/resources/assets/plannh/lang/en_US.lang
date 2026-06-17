@@ -1,7 +1,12 @@
+## Mod Settings
+plannh.config.overrides.show_burnable=Show burnable setting
+plannh.config.overrides.show_burnable.tooltip=Hide/Show burnable setting override in recipe configs (may help if some items don't show when a recipes has multiple outputs)
+
 ## Settings
 ## Settings - General
 plannh.settings.tickModifier=Accel
 plannh.settings.machines=Mach
+plannh.settings.burnable_override=Burnable
 
 ## Settings - GT
 plannh.settings.voltage=Tier

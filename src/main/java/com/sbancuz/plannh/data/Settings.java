@@ -48,6 +48,7 @@ public enum Settings {
             if ("OFF".equals(v)) return null;
             return c.getBoolean(PERFECT_OC.key()) ? v + "P" : v;
         }),
+    BURNABLE_OVERRIDE("burnable_override", "OFF", List.of("OFF", "IN", "OUT"), (_, _) -> null),
 
     //
     ;

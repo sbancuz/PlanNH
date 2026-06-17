@@ -74,8 +74,7 @@ public final class RecipePropertyAPI {
         .displayFormatter(FluidStack::getLocalizedName)
         .amountFormatter(amount -> {
             final int mB = Math.round(amount);
-            return mB >= 1000 ? String.format("%.1fB", mB / 1000f)
-                : mB + "mB";
+            return mB >= 1000 ? String.format("%.1fB", mB / 1000f) : mB + "mB";
         })
         .amountExtractor(fs -> fs.amount)
         .connectionChecker(FluidStack::isFluidEqual)

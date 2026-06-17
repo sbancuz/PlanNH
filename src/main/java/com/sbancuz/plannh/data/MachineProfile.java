@@ -8,6 +8,8 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.config.ConfigOverrides;
+
 public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings,
     EffectComputer effectComputer) {
 
@@ -43,6 +45,9 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         private Builder(final String id, final String displayName) {
             this.id = id;
             this.displayName = displayName;
+            if (ConfigOverrides.alwaysShowBurnableSetting) {
+                addSetting(Settings.BURNABLE_OVERRIDE.def());
+            }
         }
 
         public Builder addSetting(final SettingDef<?> setting) {

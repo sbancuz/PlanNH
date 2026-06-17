@@ -1,5 +1,7 @@
 package com.sbancuz.plannh;
 
+import com.sbancuz.plannh.config.ConfigMain;
+
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
@@ -11,6 +13,7 @@ public class CommonProxy {
     // GameRegistry." (Remove if not needed)
     public void preInit(final FMLPreInitializationEvent event) {
         Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
+        ConfigMain.registerPlanNHConfigs();
     }
 
     // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
