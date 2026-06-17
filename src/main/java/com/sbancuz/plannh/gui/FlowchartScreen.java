@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -12,8 +13,11 @@ import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
+import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
@@ -27,11 +31,10 @@ import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
 public class FlowchartScreen extends ModularScreen {
 
-    private static final int SLOT_BAR_TOP = 18;
-    private static final int SLOT_BAR_HEIGHT = 22;
-    private static final int PANEL_RIGHT = 176;
-    private static final int CANVAS_TOP = 42;
-    private static final int CANVAS_BOTTOM = 20;
+    private static final int LEFT_MARGIN = 5;
+    private static final int RIGHT_MARGIN = 190;
+    private static final int TOP_MARGIN = 30;
+    private static final int BOTTOM_MARGIN = 30;
 
     @Nonnull
     public final Graph graph;
@@ -52,22 +55,33 @@ public class FlowchartScreen extends ModularScreen {
         final Graph graph = PlanAPI.getActiveGraph();
         final CanvasWidget canvas = new CanvasWidget(graph);
 
-        final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main");
-        panel.fullScreenInvisible();
+        final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main")
+            .fullScreenInvisible()
+            .margin(LEFT_MARGIN, RIGHT_MARGIN, TOP_MARGIN, BOTTOM_MARGIN);
 
-        panel.child(
-            new SlotBarWidget(canvas).left(0)
-                .top(SLOT_BAR_TOP)
-                .right(PANEL_RIGHT)
-                .height(SLOT_BAR_HEIGHT));
+        final Flow mainColumn = Flow.column()
+            .full();
 
-        panel.child(
-            canvas.left(0)
-                .top(CANVAS_TOP)
-                .right(PANEL_RIGHT)
-                .bottom(CANVAS_BOTTOM));
+        mainColumn.child(
+            Flow.row()
+                .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
+                .coverChildrenHeight()
+                .fullWidth()
+                .child(
+                    Flow.row()
+                        .coverChildren()
+                        .childPadding(2)
+                        .child(new ButtonWidget<>())
+                        .child(
+                            IKey.str("Slot x")
+                                .asWidget())
+                        .child(new ButtonWidget<>())))
+            .child(canvas);
 
-        panel.addChild(new SummaryWidget(canvas), -1);
+        canvas.child(new NoteWidget2(canvas));
+
+        panel.child(mainColumn);
+        panel.child(new SummaryWidget(canvas));
 
         return new FlowchartScreen(panel, graph, canvas);
     }

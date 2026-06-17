@@ -7,23 +7,26 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntFunction;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.UpOrDown;
+import com.cleanroommc.modularui.api.layout.IViewport;
+import com.cleanroommc.modularui.api.layout.IViewportStack;
+import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.BufferBuilder;
 import com.cleanroommc.modularui.drawable.GuiDraw;
+import com.cleanroommc.modularui.drawable.Stencil;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
@@ -40,7 +43,7 @@ import com.sbancuz.plannh.data.flowchart.Note;
 
 import lombok.Getter;
 
-public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable {
+public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable, IViewport, IDraggable {
 
     private static final int GRID_SIZE = 20;
     private static final int GRID_MAJOR = 5;
@@ -81,7 +84,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final long ROUTE_HASH_SEED = 1125899906842597L;
     private static final ArrowRouter ARROW_ROUTER = new ArrowRouter(ROUTE_CELL, ROUTE_MARGIN);
 
-    @Nonnull
+    @NotNull
     @Getter
     private Graph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
@@ -115,6 +118,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public CanvasWidget(final Graph graph) {
         this.graph = graph;
         rebuildNodeWidgets();
+        full();
+        marginBottom(18);
     }
 
     public int getZoomPercent() {
@@ -308,29 +313,23 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private void addGroupWidget(final Group group) {
         final GroupWidget gw = new GroupWidget(group, this);
-        gw.syncTransform(zoom, panX, panY);
+        // gw.syncTransform(zoom, panX, panY);
         groupWidgets.put(group.id, gw);
         child(gw);
     }
 
     private void addNodeWidget(final Node node) {
         final RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
-        widget.syncTransform(zoom, panX, panY);
+        // widget.syncTransform(zoom, panX, panY);
         nodeWidgets.put(node.id, widget);
         child(widget);
     }
 
     private void addNoteWidget(final Note note) {
         final NoteWidget nw = new NoteWidget(note, this);
-        nw.syncTransform(zoom, panX, panY);
+        // nw.syncTransform(zoom, panX, panY);
         noteWidgets.put(note.id, nw);
         child(nw);
-    }
-
-    private void updatePositions() {
-        for (final RecipeNodeWidget w : nodeWidgets.values()) w.syncTransform(zoom, panX, panY);
-        for (final NoteWidget w : noteWidgets.values()) w.syncTransform(zoom, panX, panY);
-        for (final GroupWidget w : groupWidgets.values()) w.syncTransform(zoom, panX, panY);
     }
 
     @Override
@@ -656,7 +655,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public @Nonnull Result onMousePressed(final int mouseButton) {
+    public @NotNull Result onMousePressed(final int mouseButton) {
         final int absMx = getContext().getAbsMouseX();
         final int absMy = getContext().getAbsMouseY();
 
@@ -691,12 +690,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     graph.removeEdge(clicked.id);
                     return Interactable.Result.SUCCESS;
                 }
-                panning = true;
-                panStartMouseX = absMx;
-                panStartMouseY = absMy;
-                panStartX = panX;
-                panStartY = panY;
-                return Interactable.Result.SUCCESS;
+                return Result.ACCEPT;
             }
             return Interactable.Result.IGNORE;
         }
@@ -727,12 +721,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             return Result.SUCCESS;
         }
         if (mouseButton == 2) {
-            panning = true;
-            panStartMouseX = getContext().getAbsMouseX();
-            panStartMouseY = getContext().getAbsMouseY();
-            panStartX = panX;
-            panStartY = panY;
-            return Interactable.Result.SUCCESS;
+            return Result.ACCEPT;
         }
         return Interactable.Result.IGNORE;
     }
@@ -758,7 +747,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             edgeHoverPortIndex = -1;
             return true;
         }
-        panning = false;
         return true;
     }
 
@@ -787,12 +775,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     break;
                 }
             }
-        } else if (panning) {
-            final int dx = getContext().getAbsMouseX() - panStartMouseX;
-            final int dy = getContext().getAbsMouseY() - panStartMouseY;
-            panX = panStartX + dx;
-            panY = panStartY + dy;
-            updatePositions();
         }
     }
 
@@ -813,7 +795,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         panX = mxRel - (mxRel - panX) * ratio;
         panY = myRel - (myRel - panY) * ratio;
 
-        updatePositions();
+        // updatePositions();
         return true;
     }
 
@@ -879,7 +861,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     @Override
-    public @Nonnull Result onKeyPressed(final char typedChar, final int keyCode) {
+    public @NotNull Result onKeyPressed(final char typedChar, final int keyCode) {
         if (editingNoteId != null) {
             final NoteWidget nw = noteWidgets.get(editingNoteId);
             if (nw == null) {
@@ -1146,5 +1128,71 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int pad = Math.round(PORT_LABEL_PAD * z);
         GuiDraw.drawRect(labelX - pad, labelY - pad, tw + pad * 2, fh + pad * 2, PlannhColors.PORT_LABEL_BG.getColor());
         GuiDraw.drawText(name, labelX, labelY, z * 0.9f, PlannhColors.TEXT_WHITE.getColor(), false);
+    }
+
+    @Override
+    public void transformChildren(IViewportStack stack) {
+        stack.translate(panX, panY);
+        stack.scale(zoom, zoom);
+    }
+
+    @Override
+    public void preDraw(ModularGuiContext context, boolean transformed) {
+        if (!transformed) {
+            Stencil.applyAtZero(getArea(), context);
+        }
+    }
+
+    @Override
+    public void postDraw(ModularGuiContext context, boolean transformed) {
+        if (!transformed) {
+            Stencil.remove();
+        }
+    }
+
+    @Override
+    public void drawMovingState(ModularGuiContext context, float partialTicks) {}
+
+    @Override
+    public boolean onDragStart(int button) {
+        if (button == 0 || button == 2) {
+            panStartX = panX;
+            panStartY = panY;
+            panStartMouseX = getContext().getAbsMouseX();
+            panStartMouseY = getContext().getAbsMouseY();
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void onDragEnd(boolean successful) {
+        if (!successful) {
+            panX = panStartX;
+            panY = panStartY;
+        }
+    }
+
+    @Override
+    public void onDrag(int mouseButton, long timeSinceLastClick) {
+        final int dx = getContext().getAbsMouseX() - panStartMouseX;
+        final int dy = getContext().getAbsMouseY() - panStartMouseY;
+        panX = panStartX + dx;
+        panY = panStartY + dy;
+    }
+
+    @Override
+    public @Nullable Area getMovingArea() {
+        return null;
+    }
+
+    @Override
+    public boolean isMoving() {
+        return panning;
+    }
+
+    @Override
+    public void setMoving(boolean moving) {
+        panning = moving;
     }
 }
