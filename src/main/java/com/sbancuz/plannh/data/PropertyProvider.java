@@ -2,6 +2,7 @@ package com.sbancuz.plannh.data;
 
 import java.util.Map;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -22,5 +23,10 @@ public interface PropertyProvider {
 
     default boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
         return true;
+    }
+
+    @Nonnull
+    default String getExtractorName() {
+        return getClass().getSimpleName();
     }
 }

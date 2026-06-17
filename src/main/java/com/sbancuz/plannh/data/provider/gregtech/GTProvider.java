@@ -201,6 +201,11 @@ public class GTProvider implements PropertyProvider {
     @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final @NotNull Node node, final @NotNull IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+        if ((handler instanceof FurnaceRecipeHandler)) {
+            props.put(RecipePropertyAPI.DURATION_TICKS, 200);
+            return props;
+        }
+
         if (!(handler instanceof final GTNEIDefaultHandler gth)) return props;
 
         final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);

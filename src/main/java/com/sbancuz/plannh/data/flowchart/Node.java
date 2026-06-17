@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.minecraft.tileentity.TileEntityFurnace;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -39,6 +41,14 @@ public class Node {
     public final MachineConfig machineConfig;
     public final Map<RecipeProperty<?>, Object> properties = new HashMap<>();
 
+    @Getter
+    private transient PropertyProvider extractor;
+    @Getter
+    private transient List<PropertyProvider> availableExtractors = List.of();
+    @Getter
+    @Setter
+    private int extractorIndex;
+
     public Node(final IRecipeHandler handler, final int recipeIndex, final int x, final int y) {
         this.id = UUID.randomUUID();
         this.x = x;
@@ -47,11 +57,18 @@ public class Node {
         this.machineName = handler.getRecipeName()
             .trim();
         this.recipeId = Recipe.RecipeId.of(handler, recipeIndex);
+        this.handlerRecipeIndex = recipeIndex;
 
-        final PropertyProvider ex = RecipePropertyAPI.getExtractor(handler.getOverlayIdentifier());
-        assert ex != null;
+        this.availableExtractors = RecipePropertyAPI.getExtractors(handler.getOverlayIdentifier());
+        if (availableExtractors.isEmpty()) {
+            this.extractor = null;
+            this.machineConfig = new MachineConfig(this);
+            return;
+        }
+        this.extractorIndex = 0;
+        this.extractor = pickBestExtractor(handler, recipeIndex);
 
-        final String pid = ex.getProfileId(handler, recipeIndex);
+        final String pid = this.extractor.getProfileId(handler, recipeIndex);
         if (pid != null && !MachineProfileRegistry.defaultId()
             .equals(pid)) {
             this.machineConfig = new MachineConfig(this, MachineProfileRegistry.get(pid));
@@ -63,14 +80,12 @@ public class Node {
     }
 
     public void refresh() {
+        if (extractor == null) return;
         final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
         final IRecipeHandler handler = ref.handler;
         final int recipeIndex = ref.recipeIndex;
         inputs.clear();
         outputs.clear();
-
-        final PropertyProvider ex = RecipePropertyAPI.getExtractor(handler.getOverlayIdentifier());
-        assert ex != null;
 
         final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
         for (final PositionedStack ps : ins) {
@@ -85,8 +100,6 @@ public class Node {
         }
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (final PositionedStack ps : others) {
-            // Some mods (GT *coff* *coff*) with recipes that output multiple things put the results in otherStacks even
-            // if by documentation only fuels and such should go there
             if (ps != null && ps.item != null) {
                 if (ConfigOverrides.alwaysShowBurnableSetting) {
                     if (this.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
@@ -102,7 +115,7 @@ public class Node {
             }
         }
 
-        final Map<RecipeProperty<?>, Object> props = ex.extract(this, handler, recipeIndex);
+        final Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
         if (props != null && !props.isEmpty()) {
             for (final var entry : props.entrySet()) {
                 this.properties.putIfAbsent(entry.getKey(), entry.getValue());
@@ -112,6 +125,48 @@ public class Node {
         if (this.properties.containsKey(RecipePropertyAPI.DURATION_TICKS)) {
             this.durationTicks = (int) this.properties.get(RecipePropertyAPI.DURATION_TICKS);
         }
+    }
+
+    public void switchExtractor() {
+        if (availableExtractors.size() < 2) return;
+        extractorIndex = (extractorIndex + 1) % availableExtractors.size();
+        this.extractor = availableExtractors.get(extractorIndex);
+
+        final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
+        if (ref != null) {
+            final String pid = extractor.getProfileId(ref.handler, ref.recipeIndex);
+            if (pid != null && !MachineProfileRegistry.defaultId()
+                .equals(pid)) {
+                this.machineConfig.profileId = pid;
+            } else {
+                this.machineConfig.profileId = MachineProfileRegistry.defaultId();
+            }
+        }
+
+        refresh();
+    }
+
+    private PropertyProvider pickBestExtractor(final IRecipeHandler handler, final int recipeIndex) {
+        for (final PropertyProvider p : availableExtractors) {
+            if (p.canCraft(handler, recipeIndex)) return p;
+        }
+        return availableExtractors.getFirst();
+    }
+
+    public void initExtractor() {
+        final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
+        if (ref == null) {
+            this.extractor = null;
+            this.availableExtractors = List.of();
+            return;
+        }
+        this.availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getOverlayIdentifier());
+        if (this.extractorIndex >= this.availableExtractors.size()) {
+            this.extractorIndex = 0;
+        }
+        this.extractor = this.availableExtractors.isEmpty()
+            ? null
+            : this.availableExtractors.get(this.extractorIndex);
     }
 
     /**

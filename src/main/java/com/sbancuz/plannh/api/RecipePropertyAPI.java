@@ -1,8 +1,11 @@
 package com.sbancuz.plannh.api;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraft.init.Blocks;
@@ -20,7 +23,7 @@ import com.sbancuz.plannh.data.RecipeResource;
 public final class RecipePropertyAPI {
 
     private static final Map<String, RecipeProperty<?>> properties = new HashMap<>();
-    private static final Map<String, PropertyProvider> extractors = new HashMap<>();
+    private static final Map<String, List<PropertyProvider>> extractors = new HashMap<>();
 
     public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.intBuilder("durationTicks", 0)
         .build();
@@ -94,7 +97,13 @@ public final class RecipePropertyAPI {
     }
 
     public static void registerExtractor(String overlayId, final PropertyProvider extractor) {
-        extractors.put(overlayId, extractor);
+        extractors.computeIfAbsent(overlayId, k -> new ArrayList<>())
+            .add(extractor);
+    }
+
+    @Nonnull
+    public static List<PropertyProvider> getExtractors(String overlayId) {
+        return extractors.getOrDefault(overlayId, List.of());
     }
 
     public static @Nullable RecipeProperty<?> getProperty(String key) {
@@ -102,6 +111,7 @@ public final class RecipePropertyAPI {
     }
 
     public static @Nullable PropertyProvider getExtractor(String overlayId) {
-        return extractors.get(overlayId);
+        final List<PropertyProvider> list = extractors.get(overlayId);
+        return list != null && !list.isEmpty() ? list.get(0) : null;
     }
 }

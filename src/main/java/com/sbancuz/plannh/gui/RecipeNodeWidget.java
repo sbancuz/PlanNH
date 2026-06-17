@@ -104,6 +104,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static final int SETTING_DEC_X = 80;
     private static final int SETTING_BTN_W = 22;
     private static final int SETTING_INC_X = SETTING_DEC_X + SETTING_BTN_W;
+    private static final int EXTRACTOR_BTN_W = 100;
 
     private static final DrawableResource BG_TEXTURE = new DrawableBuilder(
         "nei:textures/gui/recipebg.png",
@@ -629,8 +630,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final int x = LEFT_CONTENT_X;
         final int y0 = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + calcInfoHeight();
         final MachineProfile profile = node.machineConfig.getProfile();
-        final int panelH = profile.settings()
+        int panelH = profile.settings()
             .size() * LINE_H + 4;
+        if (node.getAvailableExtractors().size() > 1) panelH += LINE_H;
         GuiDraw.drawRect(
             x - CONFIG_PANEL_INSET,
             y0 - CONFIG_PANEL_INSET,
@@ -643,6 +645,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         for (final SettingDef<?> def : profile.settings()) {
             y = drawSetting(x, y, def, c);
+        }
+
+        if (node.getAvailableExtractors().size() > 1) {
+            final String label = "[\u00AB] " + node.getExtractor()
+                .getExtractorName() + " [\u00BB]";
+            GuiDraw.drawText(label, x, y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
+            configZones.add(new ClickZone(x, y, x + EXTRACTOR_BTN_W, y + CLICK_H, () -> {
+                node.switchExtractor();
+                onConfigChanged();
+            }));
         }
     }
 
@@ -696,8 +708,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private int computeConfigPanelHeight() {
         if (!configOpen) return 0;
         final MachineProfile profile = node.machineConfig.getProfile();
-        return profile.settings()
+        int h = profile.settings()
             .size() * LINE_H + 8;
+        if (node.getAvailableExtractors().size() > 1) h += LINE_H;
+        return h;
     }
 
     private int drawConfigIntField(final int x, final int y, final String label, final int value, final int min,
