@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.nei;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
@@ -45,5 +47,10 @@ public class OpenFlowchartButton extends Button {
     @Override
     public int contentWidth() {
         return BUTTON_WIDTH;
+    }
+
+    @Override
+    public void addTooltips(List<String> tooltip) {
+        tooltip.add("Open / Close flowchart");
     }
 }
