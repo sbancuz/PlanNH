@@ -19,35 +19,34 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
     public record Line(String label, String amount) {}
 
     @SuppressWarnings("rawtypes")
-    private record LineKey(RecipeProperty<?> type, Object resource) {
+    private sealed interface LineKey permits LineKey.ResourceKey,LineKey.PropertyKey {
 
-        LineKey(final Port port) {
-            this(port.getType(), port.getValue());
-        }
+        record ResourceKey<T> (RecipeResource<T> type, T resource) implements LineKey {
 
-        LineKey(final RecipeProperty<?> prop) {
-            this(prop, prop);
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public boolean equals(final Object o) {
-            if (!(o instanceof LineKey(final RecipeProperty<?> type1, final Object resource1))) return false;
-            if (type != type1) return false;
-            if (type instanceof final RecipeResource r) {
-                return r.canConnect(resource, resource1);
+            @SuppressWarnings("unchecked")
+            static ResourceKey<Object> of(final Port port) {
+                return new ResourceKey<>((RecipeResource<Object>) port.getType(), port.getValue());
             }
-            return resource.equals(resource1);
+
+            Line toLine(final float amount) {
+                return new Line(type.formatDisplayName(resource), type.formatAmount(amount));
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public boolean equals(final Object o) {
+                return o instanceof ResourceKey<?>(RecipeResource<?> type1, Object resource1)
+                    && type == type1
+                    && type.canConnect(resource, (T) resource1);
+            }
+
+            @Override
+            public int hashCode() {
+                return type.hashValue(resource);
+            }
         }
 
-        @Override
-        @SuppressWarnings("unchecked")
-        public int hashCode() {
-            if (type instanceof final RecipeResource r) {
-                return r.hashValue(resource);
-            }
-            return resource.hashCode();
-        }
+        record PropertyKey(RecipeProperty<?> prop) implements LineKey {}
     }
 
     public static Summary compute(final BalanceResult balance, final Graph graph) {
@@ -55,6 +54,7 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
         final Map<LineKey, Float> inputMap = new HashMap<>();
         final Map<LineKey, Float> propertyMap = new HashMap<>();
 
+        // Pass 1: accumulate all node outputs before any netting.
         for (final Node node : graph.getNodes()) {
             final var nb = balance.nodeBalances()
                 .get(node.id);
@@ -63,13 +63,20 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
             for (int i = 0; i < node.outputs.size(); i++) {
                 final Float total = nb.effectiveOutputs.get(i);
                 if (total == null || total <= 0) continue;
-                outputMap.merge(new LineKey(node.outputs.get(i)), total, Float::sum);
+                outputMap.merge(LineKey.ResourceKey.of(node.outputs.get(i)), total, Float::sum);
             }
+        }
+
+        // Pass 2: net inputs against the fully-populated output map.
+        for (final Node node : graph.getNodes()) {
+            final var nb = balance.nodeBalances()
+                .get(node.id);
+            if (nb == null) continue;
 
             for (int i = 0; i < node.inputs.size(); i++) {
                 final Float total = nb.effectiveInputs.get(i);
                 if (total == null || total <= 0) continue;
-                final LineKey key = new LineKey(node.inputs.get(i));
+                final LineKey key = LineKey.ResourceKey.of(node.inputs.get(i));
                 final float existing = outputMap.getOrDefault(key, 0f);
                 final float consumed = Math.min(existing, total);
                 if (consumed > 0) {
@@ -81,34 +88,18 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
                 if (deficit > 0) inputMap.merge(key, deficit, Float::sum);
             }
         }
-
-        for (final var entry : balance.propertyTotals()
-            .entrySet()) {
-            propertyMap.merge(new LineKey(entry.getKey()), (float) entry.getValue(), Float::sum);
-        }
-
         return new Summary(flatten(outputMap), flatten(inputMap), flatten(propertyMap));
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
     private static List<Line> flatten(final Map<LineKey, Float> map) {
         final List<Line> result = new ArrayList<>();
         for (final var entry : map.entrySet()) {
             if (entry.getValue() <= 0) continue;
-
-            if (entry.getKey().type instanceof RecipeResource resource) {
-                result.add(
-                    new Line(
-                        resource.formatDisplayName(entry.getKey().resource),
-                        resource.formatAmount(entry.getValue())));
-            } else {
-                result.add(
-                    new Line(
-                        entry.getKey().type.displayName(),
-                        entry.getValue()
-                            .toString()));
-            }
-
+            final Line line = switch (entry.getKey()) {
+                case LineKey.ResourceKey<?> rk -> rk.toLine(entry.getValue());
+                case LineKey.PropertyKey pk   -> new Line(pk.prop().displayName(), pk.prop.formatAmount(entry.getValue()));
+            };
+            result.add(line);
         }
         return result;
     }
