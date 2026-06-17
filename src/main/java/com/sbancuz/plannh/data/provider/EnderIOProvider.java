@@ -98,7 +98,7 @@ public class EnderIOProvider implements PropertyProvider {
                 try {
                     final float[] chances = (float[]) MILL_OUTPUT_CHANCE.get(r);
                     for (int i = 0; i < chances.length && i < node.outputs.size(); i++) {
-                        final Port port = node.outputs.get(i);
+                        final Port<?> port = node.outputs.get(i);
                         if (port.getType() == RecipePropertyAPI.ITEM) {
                             port.setChance(chances[i]);
                         }

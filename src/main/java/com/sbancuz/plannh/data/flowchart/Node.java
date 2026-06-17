@@ -29,8 +29,8 @@ public class Node {
     public int x;
     public int y;
 
-    public final List<Port<?>> inputs = new PortList();
-    public final List<Port<?>> outputs = new PortList();
+    public final List<Port<?>> inputs = new ArrayList<>();
+    public final List<Port<?>> outputs = new ArrayList<>();
 
     public String machineName;
     public int durationTicks = 0;
@@ -125,6 +125,27 @@ public class Node {
         if (this.properties.containsKey(RecipePropertyAPI.DURATION_TICKS)) {
             this.durationTicks = (int) this.properties.get(RecipePropertyAPI.DURATION_TICKS);
         }
+
+        deduplicate(inputs);
+        deduplicate(outputs);
+    }
+
+    private static void deduplicate(final List<Port<?>> ports) {
+        final List<Port<?>> aggregate = new ArrayList<>(ports);
+        for (int i = 0; i < aggregate.size(); i++) {
+            for (int j = i + 1; j < aggregate.size(); j++) { // 1. Start at i + 1 to avoid self-merging
+                if (aggregate.get(i)
+                    .canConnect(aggregate.get(j))) {
+                    aggregate.get(i)
+                        .merge(aggregate.get(j));
+                    aggregate.remove(j);
+                    j--;
+                }
+            }
+        }
+
+        ports.clear();
+        ports.addAll(aggregate);
     }
 
     public void switchExtractor() {
@@ -175,33 +196,5 @@ public class Node {
         this.x = x;
         this.y = y;
         this.machineConfig = new MachineConfig(this);
-    }
-
-    /**
-     * This list automatically aggregates all the ports, so that there is only one single input/output type
-     */
-    private static class PortList extends ArrayList<Port<?>> {
-
-        @Override
-        public boolean add(final Port<?> port) {
-            for (final Port<?> existing : this) {
-                if (existing.canConnect(port)) {
-                    existing.merge(port);
-                    return true;
-                }
-            }
-            return super.add(port);
-        }
-
-        @Override
-        public void add(final int index, final Port<?> port) {
-            for (final Port<?> existing : this) {
-                if (existing.canConnect(port)) {
-                    existing.merge(port);
-                    return;
-                }
-            }
-            super.add(index, port);
-        }
     }
 }
