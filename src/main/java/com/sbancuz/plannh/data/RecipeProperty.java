@@ -27,10 +27,17 @@ public class RecipeProperty<T> {
     private final Function<JsonObject, T> deserializer;
 
     @lombok.Builder.Default
+    private final Function<T, String> displayFormatter = null;
+    @lombok.Builder.Default
     private final Function<Float, String> amountFormatter = Objects::toString;
 
     public String displayName() {
         return StatCollector.translateToLocal("plannh.properties." + key);
+    }
+
+    public String formatDisplayName(final T value) {
+        if (displayFormatter == null) return displayName();
+        return displayFormatter.apply(value);
     }
 
     public String formatAmount(final float value) {

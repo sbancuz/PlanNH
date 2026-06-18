@@ -2,16 +2,12 @@ package com.sbancuz.plannh.data;
 
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder(builderMethodName = "emptyBuilder")
 public class RecipeResource<T> extends RecipeProperty<T> {
-
-    @lombok.Builder.Default
-    private final Function<T, String> displayFormatter = Object::toString;
 
     @lombok.Builder.Default
     private final ToIntFunction<T> amountExtractor = (v) -> 1;
@@ -24,10 +20,6 @@ public class RecipeResource<T> extends RecipeProperty<T> {
     @Override
     public String displayName() {
         return getKey();
-    }
-
-    public String formatDisplayName(final T value) {
-        return displayFormatter.apply(value);
     }
 
     public int extractAmount(final T value) {

@@ -9,14 +9,24 @@ import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipeResource;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 
-public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properties) {
+public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>> properties) {
 
     public enum SummaryMode {
         CYCLES,
         THROUGHPUT
     }
 
-    public record Line(String label, String amount) {}
+    public record Line<T> (RecipeProperty<T> label, T resource, float amount) {
+
+        public String displayName() {
+            return label.formatDisplayName(resource);
+        }
+
+        public String displayAmount(float amount) {
+            return label.formatAmount(amount);
+        }
+
+    }
 
     @SuppressWarnings("rawtypes")
     private sealed interface LineKey permits LineKey.ResourceKey,LineKey.PropertyKey {
@@ -28,8 +38,8 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
                 return new ResourceKey<>((RecipeResource<Object>) port.getType(), port.getValue());
             }
 
-            Line toLine(final float amount) {
-                return new Line(type.formatDisplayName(resource), type.formatAmount(amount));
+            Line<?> toLine(final float amount) {
+                return new Line<>(type, resource, amount);
             }
 
             @Override
@@ -88,16 +98,23 @@ public record Summary(List<Line> outputs, List<Line> inputs, List<Line> properti
                 if (deficit > 0) inputMap.merge(key, deficit, Float::sum);
             }
         }
+
+        for (final var entry : balance.propertyTotals()
+            .entrySet()) {
+            propertyMap.merge(new LineKey.PropertyKey(entry.getKey()), (float) entry.getValue(), Float::sum);
+        }
+
         return new Summary(flatten(outputMap), flatten(inputMap), flatten(propertyMap));
     }
 
-    private static List<Line> flatten(final Map<LineKey, Float> map) {
-        final List<Line> result = new ArrayList<>();
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static List<Line<?>> flatten(final Map<LineKey, Float> map) {
+        final List<Line<?>> result = new ArrayList<>();
         for (final var entry : map.entrySet()) {
             if (entry.getValue() <= 0) continue;
-            final Line line = switch (entry.getKey()) {
-                case LineKey.ResourceKey<?> rk -> rk.toLine(entry.getValue());
-                case LineKey.PropertyKey pk   -> new Line(pk.prop().displayName(), pk.prop.formatAmount(entry.getValue()));
+            final Line<?> line = switch (entry.getKey()) {
+                case LineKey.ResourceKey rk -> rk.toLine(entry.getValue());
+                case LineKey.PropertyKey pk   -> new Line(pk.prop(), pk.prop().getDefaultValue(), entry.getValue());
             };
             result.add(line);
         }

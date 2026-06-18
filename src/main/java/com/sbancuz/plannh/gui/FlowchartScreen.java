@@ -419,18 +419,6 @@ public class FlowchartScreen extends ModularScreen {
                     PlannhColors.ACCENT_BLUE.getColor(),
                     cycleSecs,
                     isCycle);
-
-                for (final Summary.Line pl : s.properties()) {
-                    GuiDraw.drawText(
-                        pl.label() + ": " + pl.amount(),
-                        ITEM_TEXT_X,
-                        ly,
-                        0.8f,
-                        PlannhColors.TEXT_LIGHT.getColor(),
-                        false);
-                    ly += LINE_H;
-                }
-                ly += SECTION_END_PAD;
             }
 
             if (br.totalOperations() > 0) {
@@ -525,7 +513,7 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawText("[+ in NEI GUI] add recipe", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
         }
 
-        private int drawSection(int ly, final int w, final String title, final List<Summary.Line> items,
+        private int drawSection(int ly, final int w, final String title, final List<Summary.Line<?>> items,
             final int headerColor, final int titleColor, final int itemColor, final float cycleSecs,
             final boolean isCycle) {
             if (items.isEmpty()) return ly;
@@ -539,7 +527,9 @@ public class FlowchartScreen extends ModularScreen {
                 false);
             ly += SECTION_H;
             for (final var item : items) {
-                final String text = item.amount() + (isCycle ? " x " : "/s ") + item.label();
+                final String text = item.displayAmount(isCycle ? item.amount() : item.amount() / cycleSecs)
+                    + (isCycle ? " x " : "/s ")
+                    + item.displayName();
 
                 GuiDraw.drawText(text, ITEM_TEXT_X, ly, 0.8f, itemColor, false);
                 ly += LINE_H;
