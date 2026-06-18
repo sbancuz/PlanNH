@@ -8,7 +8,6 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -17,35 +16,44 @@ import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Port;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import crazypants.enderio.nei.AlloySmelterRecipeHandler;
 import crazypants.enderio.nei.AlloySmelterRecipeHandler.AlloySmelterRecipe;
+import crazypants.enderio.nei.EnchanterRecipeHandler;
+import crazypants.enderio.nei.SagMillRecipeHandler;
 import crazypants.enderio.nei.SagMillRecipeHandler.MillRecipe;
+import crazypants.enderio.nei.SliceAndSpliceRecipeHandler;
 import crazypants.enderio.nei.SliceAndSpliceRecipeHandler.SliceAndSpliceRecipe;
+import crazypants.enderio.nei.SoulBinderRecipeHandler;
 import crazypants.enderio.nei.SoulBinderRecipeHandler.SoulBinderRecipeNEI;
+import crazypants.enderio.nei.VatRecipeHandler;
 import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
-import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
 public class EnderIOProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.intProperty("rfTotal", "RF Total", 0);
-    public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.intProperty("experience", "Experience", 0);
+    public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.intBuilder("rf_total", 0)
+        .build();
+    public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.intBuilder("experience", 0)
+        .build();
 
     @Nullable
     private static Field MILL_OUTPUT_CHANCE;
 
     @Override
-    @Nonnull
-    public String getModId() {
-        return Compat.ENDERIO.modid;
-    }
-
-    @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerExtractor(new AlloySmelterRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new SagMillRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new VatRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new EnchanterRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new SliceAndSpliceRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new SoulBinderRecipeHandler().getOverlayIdentifier(), this);
+
         RecipePropertyAPI.registerProperty(RF_TOTAL);
         RecipePropertyAPI.registerProperty(EXPERIENCE);
+
         MachineProfileRegistry.register(
             MachineProfile.builder("enderio", "EnderIO")
                 .setting(Settings.MACHINES.def())
@@ -89,13 +97,11 @@ public class EnderIOProvider implements PropertyProvider {
             if (MILL_OUTPUT_CHANCE != null) {
                 try {
                     final float[] chances = (float[]) MILL_OUTPUT_CHANCE.get(r);
-                    for (int i = 0; i < chances.length; i++) {
-                        node.outputs.set(
-                            i,
-                            new ObjectFloatImmutablePair<>(
-                                node.outputs.get(i)
-                                    .left(),
-                                chances[i]));
+                    for (int i = 0; i < chances.length && i < node.outputs.size(); i++) {
+                        final Port<?> port = node.outputs.get(i);
+                        if (port.getType() == RecipePropertyAPI.ITEM) {
+                            port.setChance(chances[i]);
+                        }
                     }
                 } catch (final Exception ignored) {}
             }

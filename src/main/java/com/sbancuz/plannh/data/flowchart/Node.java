@@ -1,57 +1,53 @@
 package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntityFurnace;
-import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.ExtractedProperties;
+import com.sbancuz.plannh.config.ConfigOverrides;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.Settings;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
-import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
+import codechicken.nei.recipe.RecipeHandlerRef;
+import lombok.Getter;
+import lombok.Setter;
 
 public class Node {
 
-    @Nonnull
     public final UUID id;
     public int x;
     public int y;
 
-    /// These fields also store their resource consumption percentage
-    @Nonnull
-    public final List<ObjectFloatImmutablePair<ItemStack>> inputs;
-    @Nonnull
-    public final List<ObjectFloatImmutablePair<ItemStack>> outputs;
-    @Nonnull
-    public final List<ObjectFloatImmutablePair<FluidStack>> fluidInputs = new ArrayList<>();
-    @Nonnull
-    public final List<ObjectFloatImmutablePair<FluidStack>> fluidOutputs = new ArrayList<>();
+    public final List<Port<?>> inputs = new ArrayList<>();
+    public final List<Port<?>> outputs = new ArrayList<>();
 
-    @Nullable
     public String machineName;
-    public int durationTicks;
-    @Nullable
+    public int durationTicks = 0;
+
     public Recipe.RecipeId recipeId;
     public int handlerRecipeIndex;
-    @Nonnull
-    public final MachineConfig machineConfig = new MachineConfig();
 
-    @Nonnull
-    public final ExtractedProperties properties = new ExtractedProperties();
+    public final MachineConfig machineConfig;
+    public final Map<RecipeProperty<?>, Object> properties = new HashMap<>();
+
+    @Getter
+    private transient PropertyProvider extractor;
+    @Getter
+    private transient List<PropertyProvider> availableExtractors = List.of();
+    @Getter
+    @Setter
+    private int extractorIndex;
 
     public Node(final IRecipeHandler handler, final int recipeIndex, final int x, final int y) {
         this.id = UUID.randomUUID();
@@ -61,49 +57,135 @@ public class Node {
         this.machineName = handler.getRecipeName()
             .trim();
         this.recipeId = Recipe.RecipeId.of(handler, recipeIndex);
-        this.inputs = new ArrayList<>();
-        this.outputs = new ArrayList<>();
+        this.handlerRecipeIndex = recipeIndex;
+
+        this.availableExtractors = RecipePropertyAPI.getExtractors(handler.getOverlayIdentifier());
+        if (availableExtractors.isEmpty()) {
+            this.extractor = null;
+            this.machineConfig = new MachineConfig(this);
+            return;
+        }
+        this.extractorIndex = 0;
+        this.extractor = pickBestExtractor(handler, recipeIndex);
+
+        final String pid = this.extractor.getProfileId(handler, recipeIndex);
+        if (pid != null && !MachineProfileRegistry.defaultId()
+            .equals(pid)) {
+            this.machineConfig = new MachineConfig(this, MachineProfileRegistry.get(pid));
+        } else {
+            this.machineConfig = new MachineConfig(this);
+        }
+
+        refresh();
+    }
+
+    public void refresh() {
+        if (extractor == null) return;
+        final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
+        final IRecipeHandler handler = ref.handler;
+        final int recipeIndex = ref.recipeIndex;
+        inputs.clear();
+        outputs.clear();
 
         final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
         for (final PositionedStack ps : ins) {
             if (ps != null && ps.item != null && ps.item.stackSize > 0) {
-                this.inputs.add(new ObjectFloatImmutablePair<>(ps.item.copy(), 1.f));
+                this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
             }
         }
 
         final PositionedStack result = handler.getResultStack(recipeIndex);
         if (result != null && result.item != null) {
-            this.outputs.add(new ObjectFloatImmutablePair<>(result.item.copy(), 1.f));
+            this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, result.item.copy(), 1.f));
         }
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (final PositionedStack ps : others) {
-            if (ps != null && ps.item != null && TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
-                this.outputs.add(new ObjectFloatImmutablePair<>(ps.item.copy(), 1.f));
+            if (ps != null && ps.item != null) {
+                if (ConfigOverrides.alwaysShowBurnableSetting) {
+                    if (this.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
+                        .equals("IN")) {
+                        this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
+                    } else if (this.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
+                        .equals("OUT")) {
+                            this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
+                        }
+                } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
+                    this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
+                }
             }
         }
 
-        for (final PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
-            try {
-                final Map<RecipeProperty<?>, Object> props = ex.extract(this, handler, recipeIndex);
-                if (props != null && !props.isEmpty()) {
-                    this.properties.putAll(props);
-                }
-            } catch (final Exception ignored) {}
+        final Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
+        if (props != null && !props.isEmpty()) {
+            for (final var entry : props.entrySet()) {
+                this.properties.putIfAbsent(entry.getKey(), entry.getValue());
+            }
         }
 
-        for (final PropertyProvider ex : RecipePropertyAPI.getExtractors()) {
-            try {
-                final String pid = ex.getProfileId(handler, recipeIndex);
-                if (pid != null && !MachineProfileRegistry.defaultId()
-                    .equals(pid)) {
-                    this.machineConfig.profileId = pid;
-                    break;
-                }
-            } catch (final Exception ignored) {}
+        if (this.properties.containsKey(RecipePropertyAPI.DURATION_TICKS)) {
+            this.durationTicks = (int) this.properties.get(RecipePropertyAPI.DURATION_TICKS);
         }
-        this.machineConfig.initDefaults();
 
-        this.durationTicks = this.properties.get(RecipePropertyAPI.DURATION_TICKS);
+        deduplicate(inputs);
+        deduplicate(outputs);
+    }
+
+    private static void deduplicate(final List<Port<?>> ports) {
+        final List<Port<?>> aggregate = new ArrayList<>(ports);
+        for (int i = 0; i < aggregate.size(); i++) {
+            for (int j = i + 1; j < aggregate.size(); j++) { // 1. Start at i + 1 to avoid self-merging
+                if (aggregate.get(i)
+                    .canConnect(aggregate.get(j))) {
+                    aggregate.get(i)
+                        .merge(aggregate.get(j));
+                    aggregate.remove(j);
+                    j--;
+                }
+            }
+        }
+
+        ports.clear();
+        ports.addAll(aggregate);
+    }
+
+    public void switchExtractor() {
+        if (availableExtractors.size() < 2) return;
+        extractorIndex = (extractorIndex + 1) % availableExtractors.size();
+        this.extractor = availableExtractors.get(extractorIndex);
+
+        final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
+        if (ref != null) {
+            final String pid = extractor.getProfileId(ref.handler, ref.recipeIndex);
+            if (pid != null && !MachineProfileRegistry.defaultId()
+                .equals(pid)) {
+                this.machineConfig.profileId = pid;
+            } else {
+                this.machineConfig.profileId = MachineProfileRegistry.defaultId();
+            }
+        }
+
+        refresh();
+    }
+
+    private PropertyProvider pickBestExtractor(final IRecipeHandler handler, final int recipeIndex) {
+        for (final PropertyProvider p : availableExtractors) {
+            if (p.canCraft(handler, recipeIndex)) return p;
+        }
+        return availableExtractors.getFirst();
+    }
+
+    public void initExtractor() {
+        final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
+        if (ref == null) {
+            this.extractor = null;
+            this.availableExtractors = List.of();
+            return;
+        }
+        this.availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getOverlayIdentifier());
+        if (this.extractorIndex >= this.availableExtractors.size()) {
+            this.extractorIndex = 0;
+        }
+        this.extractor = this.availableExtractors.isEmpty() ? null : this.availableExtractors.get(this.extractorIndex);
     }
 
     /**
@@ -113,7 +195,6 @@ public class Node {
         this.id = id;
         this.x = x;
         this.y = y;
-        this.inputs = new ArrayList<>();
-        this.outputs = new ArrayList<>();
+        this.machineConfig = new MachineConfig(this);
     }
 }

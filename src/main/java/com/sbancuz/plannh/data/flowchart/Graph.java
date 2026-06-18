@@ -5,37 +5,40 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.annotation.Nonnull;
-
+import lombok.Getter;
 import lombok.Setter;
 
 public class Graph {
 
-    @Nonnull
     public final Map<UUID, Node> nodes = new HashMap<>();
-    @Nonnull
     public final Map<UUID, Edge> edges = new HashMap<>();
-    @Nonnull
     public final Map<UUID, Note> notes = new HashMap<>();
-    @Nonnull
     public final Map<UUID, Group> groups = new HashMap<>();
 
+    @Getter
     @Setter
     private Balancer.BalanceMode balanceMode = Balancer.BalanceMode.BACKWARD;
 
-    @Nonnull
-    public Balancer.BalanceMode getBalanceMode() {
-        return balanceMode;
+    public void removeNode(final UUID id) {
+        nodes.remove(id);
+        edges.values()
+            .removeIf(e -> e.sourceNodeId.equals(id) || e.targetNodeId.equals(id));
+    }
+
+    public Balancer.BalanceResult balance() {
+        return Balancer.balance(this, balanceMode);
+    }
+
+    public Collection<Node> getNodes() {
+        return nodes.values();
     }
 
     public void addNode(final Node node) {
         nodes.put(node.id, node);
     }
 
-    public void removeNode(final UUID id) {
-        nodes.remove(id);
-        edges.values()
-            .removeIf(e -> e.sourceNodeId.equals(id) || e.targetNodeId.equals(id));
+    public Collection<Edge> getEdges() {
+        return edges.values();
     }
 
     public void addEdge(final Edge edge) {
@@ -46,21 +49,6 @@ public class Graph {
         edges.remove(id);
     }
 
-    @Nonnull
-    public Balancer.BalanceResult balance() {
-        return Balancer.balance(this, balanceMode);
-    }
-
-    @Nonnull
-    public Collection<Node> getNodes() {
-        return nodes.values();
-    }
-
-    @Nonnull
-    public Collection<Edge> getEdges() {
-        return edges.values();
-    }
-
     public void addGroup(final Group group) {
         groups.put(group.id, group);
     }
@@ -69,7 +57,6 @@ public class Graph {
         groups.remove(id);
     }
 
-    @Nonnull
     public Collection<Group> getGroups() {
         return groups.values();
     }

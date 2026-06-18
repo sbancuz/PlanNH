@@ -20,14 +20,8 @@ import codechicken.nei.recipe.IRecipeHandler;
 public class VanillaProvider implements PropertyProvider {
 
     @Override
-    @Nonnull
-    public String getModId() {
-        return "minecraft";
-    }
-
-    @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerExtractor(new FurnaceRecipeHandler().getOverlayIdentifier(), this);
         MachineProfileRegistry.register(
             MachineProfile.builder("minecraft", "Default")
                 .setting(Settings.MACHINES.def())
@@ -40,7 +34,7 @@ public class VanillaProvider implements PropertyProvider {
     private static MachineProfile.EffectResult vanillaEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        return new MachineProfile.EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), machines);
+        return new MachineProfile.EffectResult(ctx.recipeDuration(), 0, machines);
     }
 
     @Override

@@ -5,12 +5,28 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import com.sbancuz.plannh.data.flowchart.Node;
+
 public class MachineConfig {
 
-    public String profileId = MachineProfileRegistry.defaultId();
+    public String profileId;
     public final Map<String, Object> settings = new HashMap<>();
     public final Map<Integer, Float> inputConsumption = new HashMap<>();
     public final Map<Integer, Float> outputProductivity = new HashMap<>();
+
+    private final Node parentRef;
+
+    public MachineConfig(final Node parentRef) {
+        this(parentRef, MachineProfileRegistry.get(MachineProfileRegistry.defaultId()));
+    }
+
+    public MachineConfig(final Node parentRef, final MachineProfile profile) {
+        this.parentRef = parentRef;
+        this.profileId = profile.id();
+        for (final SettingDef<?> def : profile.settings()) {
+            settings.putIfAbsent(def.key, def.defaultValue);
+        }
+    }
 
     @Nonnull
     public MachineProfile getProfile() {
@@ -35,21 +51,17 @@ public class MachineConfig {
 
     public void setInt(final String key, final int value) {
         settings.put(key, value);
+        parentRef.refresh();
     }
 
     public void setBoolean(final String key, final boolean value) {
         settings.put(key, value);
+        parentRef.refresh();
     }
 
     public void setString(final String key, final String value) {
         settings.put(key, value);
-    }
-
-    public void initDefaults() {
-        final MachineProfile p = getProfile();
-        for (final SettingDef<?> def : p.settings()) {
-            settings.putIfAbsent(def.key, def.defaultValue);
-        }
+        parentRef.refresh();
     }
 
     @Nonnull

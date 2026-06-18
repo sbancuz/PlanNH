@@ -35,21 +35,17 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
 
     @Override
     public boolean canCraft(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
-        for (final PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
-            if (!provider.canCraft(handler, recipeIndex)) return false;
-        }
-
-        return true;
+        final PropertyProvider provider = RecipePropertyAPI.getExtractor(handler.getOverlayIdentifier());
+        if (provider == null) return false;
+        return provider.canCraft(handler, recipeIndex);
     }
 
     @Override
-    public boolean craft(final GuiContainer firstGui, final IRecipeHandler recipe, final int recipeIndex,
+    public boolean craft(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex,
         final int multiplier) {
-        for (final PropertyProvider provider : RecipePropertyAPI.getExtractors()) {
-            if (!provider.canCraft(recipe, recipeIndex)) return false;
-        }
-
-        return true;
+        final PropertyProvider provider = RecipePropertyAPI.getExtractor(handler.getOverlayIdentifier());
+        if (provider == null) return false;
+        return provider.canCraft(handler, recipeIndex);
     }
 
     private static final int DEFAULT_NODE_X = 200;

@@ -14,27 +14,22 @@ import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.Nonnull;
 
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.ExtractedProperties;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.RecipeResource;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
 import codechicken.nei.recipe.Recipe;
-import it.unimi.dsi.fastutil.objects.ObjectFloatImmutablePair;
 
 public final class Serializer {
 
@@ -200,19 +195,25 @@ public final class Serializer {
             obj.addProperty("ticks", node.durationTicks);
             obj.add("recipeId", node.recipeId.toJsonObject());
             obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
-            obj.add("inputs", itemStackArrayToJson(node.inputs));
-            obj.add("outputs", itemStackArrayToJson(node.outputs));
-            obj.add("fluidInputs", fluidStackArrayToJson(node.fluidInputs));
-            obj.add("fluidOutputs", fluidStackArrayToJson(node.fluidOutputs));
+            obj.addProperty("extractorIndex", node.getExtractorIndex());
+            obj.add("inputs", portListToJson(node.inputs));
+            obj.add("outputs", portListToJson(node.outputs));
 
             if (node.machineConfig.hasAnyBoost()) {
                 obj.add("machineConfig", machineConfigToJson(node.machineConfig));
             }
 
             if (!node.properties.isEmpty()) {
-                final JsonObject propsObj = new JsonObject();
+                final JsonArray propsObj = new JsonArray();
                 for (final Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
-                    serializeProperty(propsObj, entry.getKey(), entry.getValue());
+                    final JsonObject e = new JsonObject();
+                    e.addProperty(
+                        "key",
+                        entry.getKey()
+                            .getKey());
+                    entry.getKey()
+                        .serialize(e, entry.getValue());
+                    propsObj.add(e);
                 }
                 obj.add("properties", propsObj);
             }
@@ -302,21 +303,30 @@ public final class Serializer {
                     .getAsJsonObject());
             node.handlerRecipeIndex = obj.has("handlerRecipeIndex") ? obj.get("handlerRecipeIndex")
                 .getAsInt() : 0;
-            jsonArrayToItemStacks(obj.getAsJsonArray("inputs"), node.inputs);
-            jsonArrayToItemStacks(obj.getAsJsonArray("outputs"), node.outputs);
-            if (obj.has("fluidInputs")) jsonArrayToFluidStacks(obj.getAsJsonArray("fluidInputs"), node.fluidInputs);
-            if (obj.has("fluidOutputs")) jsonArrayToFluidStacks(obj.getAsJsonArray("fluidOutputs"), node.fluidOutputs);
+            node.setExtractorIndex(
+                obj.has("extractorIndex") ? obj.get("extractorIndex")
+                    .getAsInt() : 0);
+            node.initExtractor();
+            jsonArrayToPorts(obj.getAsJsonArray("inputs"), node.inputs);
+            jsonArrayToPorts(obj.getAsJsonArray("outputs"), node.outputs);
 
             if (obj.has("machineConfig")) {
                 jsonToMachineConfig(obj.getAsJsonObject("machineConfig"), node.machineConfig);
             }
 
             if (obj.has("properties")) {
-                final JsonObject propsObj = obj.getAsJsonObject("properties");
-                for (final RecipeProperty<?> prop : RecipePropertyAPI.getProperties()) {
-                    final Object value = prop.deserialize(propsObj);
+                final JsonArray propsObj = obj.getAsJsonArray("properties");
+                for (int i = 0; i < propsObj.size(); i++) {
+                    final JsonObject o = propsObj.get(i)
+                        .getAsJsonObject();
+                    final RecipeProperty<?> prop = RecipePropertyAPI.getProperty(
+                        o.get("key")
+                            .getAsString());
+                    assert prop != null;
+
+                    final Object value = prop.deserialize(o);
                     if (value != null && !value.equals(prop.getDefaultValue())) {
-                        setProperty(node.properties, prop, value);
+                        node.properties.put(prop, value);
                     }
                 }
             }
@@ -401,89 +411,39 @@ public final class Serializer {
         return graph;
     }
 
-    // ── Item / Fluid stack helpers ──
+    // ── Port helpers ──
 
     @Nonnull
-    private static JsonArray itemStackArrayToJson(final List<ObjectFloatImmutablePair<ItemStack>> stacks) {
+    private static JsonArray portListToJson(final List<Port<?>> ports) {
         final JsonArray arr = new JsonArray();
-        for (final var pair : stacks) {
-            if (pair.left() == null) continue;
-            final ItemStack stack = pair.left();
+        for (final Port<?> port : ports) {
             final JsonObject obj = new JsonObject();
-            obj.addProperty("id", net.minecraft.item.Item.itemRegistry.getNameForObject(stack.getItem()));
-            obj.addProperty("size", stack.stackSize);
-            obj.addProperty("meta", stack.getItemDamage());
-            if (stack.hasTagCompound()) {
-                obj.addProperty(
-                    "nbt",
-                    stack.getTagCompound()
-                        .toString());
-            }
-            obj.addProperty("chance", pair.rightFloat());
+            obj.addProperty(
+                "type",
+                port.getType()
+                    .getKey());
+            port.getType()
+                .serialize(obj, port.getValue());
+            obj.addProperty("chance", port.getChance());
             arr.add(obj);
         }
         return arr;
     }
 
-    private static void jsonArrayToItemStacks(final JsonArray arr,
-        final List<ObjectFloatImmutablePair<ItemStack>> out) {
+    @SuppressWarnings("unchecked")
+    private static void jsonArrayToPorts(final JsonArray arr, final List<Port<?>> out) {
         for (final JsonElement elem : arr) {
             final JsonObject obj = elem.getAsJsonObject();
-            final String itemId = obj.get("id")
-                .getAsString();
-            final int size = obj.get("size")
-                .getAsInt();
-            final int meta = obj.get("meta")
-                .getAsInt();
-            final ItemStack stack = new ItemStack(
-                (net.minecraft.item.Item) net.minecraft.item.Item.itemRegistry.getObject(itemId),
-                size,
-                meta);
-            if (obj.has("nbt")) {
-                try {
-                    stack.setTagCompound(
-                        (net.minecraft.nbt.NBTTagCompound) net.minecraft.nbt.JsonToNBT.func_150315_a(
-                            obj.get("nbt")
-                                .getAsString()));
-                } catch (final net.minecraft.nbt.NBTException ignored) {}
-            }
-            out.add(
-                new ObjectFloatImmutablePair<>(
-                    stack,
-                    obj.get("chance")
-                        .getAsFloat()));
-        }
-    }
-
-    @Nonnull
-    private static JsonArray fluidStackArrayToJson(final List<ObjectFloatImmutablePair<FluidStack>> fluids) {
-        final JsonArray arr = new JsonArray();
-        for (final var pair : fluids) {
-            final FluidStack fs = pair.left();
-            if (fs == null || fs.getFluid() == null) continue;
-            final JsonObject obj = new JsonObject();
-            obj.addProperty("fluid", FluidRegistry.getFluidName(fs.getFluid()));
-            obj.addProperty("amount", fs.amount);
-            obj.addProperty("chance", pair.rightFloat());
-            arr.add(obj);
-        }
-        return arr;
-    }
-
-    private static void jsonArrayToFluidStacks(final JsonArray arr,
-        final List<ObjectFloatImmutablePair<FluidStack>> out) {
-        for (final JsonElement elem : arr) {
-            final JsonObject obj = elem.getAsJsonObject();
-            final String name = obj.get("fluid")
-                .getAsString();
-            final int amount = obj.get("amount")
-                .getAsInt();
-            final FluidStack fs = FluidRegistry.getFluidStack(name, amount);
-            if (fs != null) out.add(
-                new ObjectFloatImmutablePair<>(
-                    fs,
-                    obj.get("chance")
-                        .getAsFloat()));
+            final String key = obj.has("type") ? obj.get("type")
+                .getAsString() : "item";
+            final RecipeResource<?> res = (RecipeResource<?>) RecipePropertyAPI.getProperty(key);
+            if (res == null) continue;
+            final Object value = res.deserialize(obj);
+            if (value == null) continue;
+            final float chance = obj.get("chance")
+                .getAsFloat();
+            final RecipeResource<Object> resource = (RecipeResource<Object>) res;
+            out.add(new Port<>(resource, value, chance));
         }
     }
 
@@ -499,19 +459,17 @@ public final class Serializer {
             obj.addProperty("profile", cfg.profileId);
         }
 
-        if (profile != null) {
-            final JsonObject settingsObj = new JsonObject();
-            for (final SettingDef<?> def : profile.settings()) {
-                final Object val = cfg.settings.get(def.key);
-                if (val == null) continue;
-                if (val.equals(def.defaultValue)) continue;
-                if (val instanceof final Boolean b) settingsObj.addProperty(def.key, b);
-                else if (val instanceof final Integer i) settingsObj.addProperty(def.key, i);
-                else if (val instanceof final String s) settingsObj.addProperty(def.key, s);
-            }
-            if (!settingsObj.entrySet()
-                .isEmpty()) obj.add("settings", settingsObj);
+        final JsonObject settingsObj = new JsonObject();
+        for (final SettingDef<?> def : profile.settings()) {
+            final Object val = cfg.settings.get(def.key);
+            if (val == null) continue;
+            if (val.equals(def.defaultValue)) continue;
+            if (val instanceof final Boolean b) settingsObj.addProperty(def.key, b);
+            else if (val instanceof final Integer i) settingsObj.addProperty(def.key, i);
+            else if (val instanceof final String s) settingsObj.addProperty(def.key, s);
         }
+        if (!settingsObj.entrySet()
+            .isEmpty()) obj.add("settings", settingsObj);
 
         if (!cfg.inputConsumption.isEmpty()) {
             obj.add("inMul", multiplierArrayToJson(cfg.inputConsumption));
@@ -540,8 +498,6 @@ public final class Serializer {
                 }
             }
         }
-
-        cfg.initDefaults();
 
         if (obj.has("inMul")) {
             jsonToMultiplierArray(obj.getAsJsonArray("inMul"), cfg.inputConsumption);
@@ -576,19 +532,6 @@ public final class Serializer {
         }
     }
 
-    // ── Recipe property helpers ──
-
-    @SuppressWarnings("unchecked")
-    private static <T> void serializeProperty(final JsonObject obj, final RecipeProperty<?> prop, final Object value) {
-        ((RecipeProperty<T>) prop).serialize(obj, (T) value);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> void setProperty(final ExtractedProperties props, final RecipeProperty<?> prop,
-        final Object value) {
-        props.set((RecipeProperty<T>) prop, (T) value);
-    }
-
     // ── Mermaid helpers ──
 
     @Nonnull
@@ -610,16 +553,9 @@ public final class Serializer {
         if (src == null) return "";
 
         final int idx = edge.sourceOutputIndex;
-        if (idx < src.outputs.size()) {
-            final ItemStack stack = src.outputs.get(idx)
-                .left();
-            if (stack != null) return stack.getDisplayName();
-        }
-        final int fluidIdx = idx - src.outputs.size();
-        if (fluidIdx >= 0 && fluidIdx < src.fluidOutputs.size()) {
-            final FluidStack fs = src.fluidOutputs.get(fluidIdx)
-                .left();
-            if (fs != null && fs.getFluid() != null) return fs.getLocalizedName();
+        if (idx >= 0 && idx < src.outputs.size()) {
+            final Port port = src.outputs.get(idx);
+            return port.getDisplayName();
         }
         return "";
     }
