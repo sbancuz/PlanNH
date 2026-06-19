@@ -38,7 +38,9 @@ public final class Serializer {
 
     // ── Public API ──
 
-    /** Encodes a full graph to a compressed base64 string (gzip + json + base64). */
+    /**
+     * Encodes a full graph to a compressed base64 string (gzip + json + base64).
+     */
     @Nonnull
     public static String encode(final Graph graph) {
         try {
@@ -55,7 +57,9 @@ public final class Serializer {
         }
     }
 
-    /** Decodes a compressed base64 string back to a Graph. */
+    /**
+     * Decodes a compressed base64 string back to a Graph.
+     */
     @Nonnull
     public static Graph decode(final String data) {
         try {
@@ -80,7 +84,9 @@ public final class Serializer {
 
     // ── SlotSet serialization ──
 
-    /** Encodes a SlotSet (with all its graphs) to a JSON string. */
+    /**
+     * Encodes a SlotSet (with all its graphs) to a JSON string.
+     */
     @Nonnull
     public static String encode(final SlotSet set) {
         final JsonObject root = new JsonObject();
@@ -100,7 +106,9 @@ public final class Serializer {
         return GSON.toJson(root);
     }
 
-    /** Decodes a SlotSet (with all its graphs) from a JSON string. */
+    /**
+     * Decodes a SlotSet (with all its graphs) from a JSON string.
+     */
     @Nonnull
     public static SlotSet decodeSlotSet(final String json) {
         final JsonObject root = GSON.fromJson(json, JsonObject.class);
@@ -133,7 +141,9 @@ public final class Serializer {
         return set;
     }
 
-    /** Renders a graph as a Mermaid.js flowchart (LR layout). */
+    /**
+     * Renders a graph as a Mermaid.js flowchart (LR layout).
+     */
     @Nonnull
     public static String toMermaid(final Graph graph) {
         final StringBuilder sb = new StringBuilder();
@@ -168,8 +178,8 @@ public final class Serializer {
         }
 
         for (final Note note : graph.notes.values()) {
-            sb.append("    %% Note: ")
-                .append(escapeMermaid(note.text))
+            sb.append("    %% Note: ");
+            for (String s : note.getText()) sb.append(escapeMermaid(s))
                 .append("\n");
         }
 
@@ -184,6 +194,9 @@ public final class Serializer {
             "balanceMode",
             graph.getBalanceMode()
                 .name());
+        root.addProperty("zoom", graph.getZoom());
+        root.addProperty("panX", graph.getPanX());
+        root.addProperty("panY", graph.getPanY());
 
         final JsonArray nodesArray = new JsonArray();
         for (final Node node : graph.getNodes()) {
@@ -237,10 +250,7 @@ public final class Serializer {
         final JsonArray notesArray = new JsonArray();
         for (final Note note : graph.notes.values()) {
             final JsonObject obj = new JsonObject();
-            obj.addProperty("id", note.id.toString());
-            obj.addProperty("x", note.x);
-            obj.addProperty("y", note.y);
-            obj.addProperty("text", note.text);
+            note.saveToJson(obj);
             notesArray.add(obj);
         }
         root.add("notes", notesArray);
@@ -282,6 +292,15 @@ public final class Serializer {
                             .getAsString()));
             } catch (final IllegalArgumentException ignored) {}
         }
+        graph.setZoom(
+            root.get("zoom")
+                .getAsFloat());
+        graph.setPanX(
+            root.get("panX")
+                .getAsFloat());
+        graph.setPanY(
+            root.get("panY")
+                .getAsFloat());
 
         final JsonArray nodesArray = root.getAsJsonArray("nodes");
         for (final JsonElement elem : nodesArray) {
@@ -353,22 +372,15 @@ public final class Serializer {
             graph.addEdge(new Edge(id, src, dst, srcOut, dstIn));
         }
 
-        if (root.has("notes")) {
-            final JsonArray notesArray = root.getAsJsonArray("notes");
-            for (final JsonElement elem : notesArray) {
-                final JsonObject obj = elem.getAsJsonObject();
-                final UUID id = UUID.fromString(
+        final JsonArray notesArray = root.getAsJsonArray("notes");
+        for (final JsonElement elem : notesArray) {
+            final JsonObject obj = elem.getAsJsonObject();
+            final Note note = new Note(
+                UUID.fromString(
                     obj.get("id")
-                        .getAsString());
-                final int x = obj.get("x")
-                    .getAsInt();
-                final int y = obj.get("y")
-                    .getAsInt();
-                final Note note = new Note(id, x, y);
-                if (obj.has("text")) note.text = obj.get("text")
-                    .getAsString();
-                graph.notes.put(id, note);
-            }
+                        .getAsString()));
+            note.loadFromJson(obj);
+            graph.notes.put(note.id, note);
         }
 
         if (root.has("groups")) {
