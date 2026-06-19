@@ -87,15 +87,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Getter
     private Graph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
-    private final Map<UUID, NoteWidget> noteWidgets = new HashMap<>();
+    // private final Map<UUID, NoteWidget> noteWidgets = new HashMap<>();
     private final Map<UUID, GroupWidget> groupWidgets = new HashMap<>();
-
-    @Getter
-    private float zoom = 1.0f;
-    @Getter
-    private float panX = 0;
-    @Getter
-    private float panY = 0;
 
     private boolean panning = false;
     private int panStartMouseX, panStartMouseY;
@@ -122,7 +115,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public int getZoomPercent() {
-        return Math.round(zoom * 100);
+        return Math.round(graph.getZoom() * 100);
     }
 
     public void removeNode(final UUID nodeId) {
@@ -172,7 +165,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             node.y += deltaY;
             final RecipeNodeWidget w = nodeWidgets.get(nodeId);
             if (w != null) {
-                w.syncTransform(zoom, panX, panY);
+                // w.syncTransform(zoom, panX, graph.getPanY());
             }
         }
     }
@@ -245,7 +238,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         group.height = maxY - minY + GROUP_FIT_PAD * 2;
         final GroupWidget gw = groupWidgets.get(group.id);
         if (gw != null) {
-            gw.syncTransform(zoom, panX, panY);
+            // gw.syncTransform(zoom, panX, graph.getPanY());
         }
         // Move all nodes into the group if auto-sizing
         for (final UUID nid : group.nodeIds) {
@@ -253,7 +246,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (n == null) continue;
             clampNodeToGroup(n);
             final RecipeNodeWidget w = nodeWidgets.get(nid);
-            if (w != null) w.syncTransform(zoom, panX, panY);
+            // if (w != null) w.syncTransform(zoom, panX, graph.getPanY());
         }
     }
 
@@ -274,11 +267,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public void rebuildNodeWidgets() {
         removeAll();
-        editingNoteId = null;
+        // editingNoteId = null;
         editingGroupId = null;
         nodeWidgets.clear();
         groupWidgets.clear();
-        noteWidgets.clear();
+        // noteWidgets.clear();
         for (final Group group : graph.getGroups()) {
             addGroupWidget(group);
         }
@@ -297,10 +290,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildNoteWidgets() {
-        clearWidgetMap(noteWidgets);
-        for (final Note note : graph.notes.values()) {
-            addNoteWidget(note);
-        }
+        for (final Note note : graph.notes.values()) addNoteWidget(note);
     }
 
     private void clearWidgetMap(final Map<UUID, ? extends IWidget> widgets) {
@@ -312,22 +302,22 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private void addGroupWidget(final Group group) {
         final GroupWidget gw = new GroupWidget(group, this);
-        // gw.syncTransform(zoom, panX, panY);
+        // gw.syncTransform(zoom, panX, graph.getPanY());
         groupWidgets.put(group.id, gw);
         child(gw);
     }
 
     private void addNodeWidget(final Node node) {
         final RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
-        // widget.syncTransform(zoom, panX, panY);
+        // widget.syncTransform(zoom, panX, graph.getPanY());
         nodeWidgets.put(node.id, widget);
         child(widget);
     }
 
     private void addNoteWidget(final Note note) {
-        final NoteWidget nw = new NoteWidget(note, this);
-        // nw.syncTransform(zoom, panX, panY);
-        noteWidgets.put(note.id, nw);
+        final NoteWidget nw = new NoteWidget(this, note);
+        // nw.syncTransform(zoom, panX, graph.getPanY());
+        // noteWidgets.put(note.id, nw);
         child(nw);
     }
 
@@ -351,21 +341,21 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void drawGrid(final int w, final int h) {
-        final float spacing = GRID_SIZE * zoom;
+        final float spacing = GRID_SIZE * graph.getZoom();
         if (spacing < MIN_GRID_SPACING) return;
 
         final int gridColor = PlannhColors.GRID_LINE.getColor();
         final int majorColor = PlannhColors.GRID_MAJOR.getColor();
 
-        final int firstKX = (int) Math.ceil(-panX / spacing);
-        final float startX = panX + firstKX * spacing;
+        final int firstKX = (int) Math.ceil(-graph.getPanX() / spacing);
+        final float startX = graph.getPanX() + firstKX * spacing;
         for (float x = startX; x < w; x += spacing) {
             final int k = firstKX + Math.round((x - startX) / spacing);
             GuiDraw.drawRect(Math.round(x), 0, 1, h, k % GRID_MAJOR == 0 ? majorColor : gridColor);
         }
 
-        final int firstKY = (int) Math.ceil(-panY / spacing);
-        final float startY = panY + firstKY * spacing;
+        final int firstKY = (int) Math.ceil(-graph.getPanY() / spacing);
+        final float startY = graph.getPanY() + firstKY * spacing;
         for (float y = startY; y < h; y += spacing) {
             final int k = firstKY + Math.round((y - startY) / spacing);
             GuiDraw.drawRect(0, Math.round(y), w, 1, k % GRID_MAJOR == 0 ? majorColor : gridColor);
@@ -373,15 +363,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private int widgetX(final RecipeNodeWidget w) {
-        return Math.round(w.getNode().x * zoom + panX);
+        return Math.round(w.getNode().x * graph.getZoom() + graph.getPanX());
     }
 
     private int widgetY(final RecipeNodeWidget w) {
-        return Math.round(w.getNode().y * zoom + panY);
+        return Math.round(w.getNode().y * graph.getZoom() + graph.getPanY());
     }
 
     private int portY(final int index) {
-        return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * zoom);
+        return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * graph.getZoom());
     }
 
     /**
@@ -403,14 +393,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      * Converts a canvas-space X coordinate to world space, clamped to >= 0.
      */
     private int toWorldX(final int cx) {
-        return Math.max(0, Math.round((cx - panX) / zoom));
+        return Math.max(0, Math.round((cx - graph.getPanX()) / graph.getZoom()));
     }
 
     /**
      * Converts a canvas-space Y coordinate to world space, clamped to >= 0.
      */
     private int toWorldY(final int cy) {
-        return Math.max(0, Math.round((cy - panY) / zoom));
+        return Math.max(0, Math.round((cy - graph.getPanY()) / graph.getZoom()));
     }
 
     private static boolean containsPoint(final Area a, final int mx, final int my) {
@@ -512,26 +502,26 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int[] sx = new int[n];
         final int[] sy = new int[n];
         for (int i = 0; i < n; i++) {
-            sx[i] = Math.round(route.get(i)[0] * zoom + panX);
-            sy[i] = Math.round(route.get(i)[1] * zoom + panY);
+            sx[i] = Math.round(route.get(i)[0] * graph.getZoom() + graph.getPanX());
+            sy[i] = Math.round(route.get(i)[1] * graph.getZoom() + graph.getPanY());
         }
 
-        final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * zoom);
+        final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
         final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
         final int x2 = sx[n - 1];
         final int y2 = sy[n - 1];
         // Stop the line at the arrow base so it does not poke through the head (last segment is horizontal).
         sx[n - 1] = Math.round(x2 - as);
 
-        drawLineStrip(sx, sy, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * zoom));
+        drawLineStrip(sx, sy, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
         drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO, color);
     }
 
     private void drawArrow(final int x1, final int y1, final int x2, final int y2, final boolean fluid) {
-        final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * zoom);
+        final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
         final int ex = Math.round(x2 - as);
         final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
-        drawOrthogonalLine(x1, y1, x2, y2, ex, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * zoom));
+        drawOrthogonalLine(x1, y1, x2, y2, ex, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
 
         drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO, color);
     }
@@ -554,7 +544,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
         }
 
-        drawOrthogonalLine(x1, y1, x2, y2, x2, PREVIEW_COLOR, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * zoom));
+        drawOrthogonalLine(
+            x1,
+            y1,
+            x2,
+            y2,
+            x2,
+            PREVIEW_COLOR,
+            Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
     }
 
     private void drawOrthogonalLine(final int x1, final int y1, final int x2, final int y2, final int xEnd,
@@ -602,17 +599,17 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Nullable
     private Edge getEdgeAt(final int absMx, final int absMy) {
         ensureRoutes();
-        final int margin = Math.max(EDGE_MARGIN_BASE, Math.round(EDGE_MARGIN_BASE * zoom));
+        final int margin = Math.max(EDGE_MARGIN_BASE, Math.round(EDGE_MARGIN_BASE * graph.getZoom()));
         final int cmx = absMx - getArea().x;
         final int cmy = absMy - getArea().y;
         for (final Edge edge : graph.getEdges()) {
             final List<int[]> route = edgeRoutes.get(edge.id);
             if (route == null || route.size() < 2) continue;
             for (int i = 0; i < route.size() - 1; i++) {
-                final int x1 = Math.round(route.get(i)[0] * zoom + panX);
-                final int y1 = Math.round(route.get(i)[1] * zoom + panY);
-                final int x2 = Math.round(route.get(i + 1)[0] * zoom + panX);
-                final int y2 = Math.round(route.get(i + 1)[1] * zoom + panY);
+                final int x1 = Math.round(route.get(i)[0] * graph.getZoom() + graph.getPanX());
+                final int y1 = Math.round(route.get(i)[1] * graph.getZoom() + graph.getPanY());
+                final int x2 = Math.round(route.get(i + 1)[0] * graph.getZoom() + graph.getPanX());
+                final int y2 = Math.round(route.get(i + 1)[1] * graph.getZoom() + graph.getPanY());
                 // Segments are axis-aligned, so this is a simple inflated-rectangle test.
                 if (cmx >= Math.min(x1, x2) - margin && cmx <= Math.max(x1, x2) + margin
                     && cmy >= Math.min(y1, y2) - margin
@@ -680,7 +677,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             for (final GroupWidget gw : groupWidgets.values()) {
                 final Area a = gw.getArea();
                 if (containsPoint(a, absMx, absMy)) {
-                    showGroupContextMenu(gw, cmx, cmy);
+                    showGroupContextMenu(gw, absMx, absMy);
                     return Result.SUCCESS;
                 }
             }
@@ -689,7 +686,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             for (final RecipeNodeWidget widget : nodeWidgets.values()) {
                 final Area a = widget.getArea();
                 if (containsPoint(a, absMx, absMy)) {
-                    showNodeContextMenu(widget, cmx, cmy);
+                    showNodeContextMenu(widget, absMx, absMy);
                     return Result.SUCCESS;
                 }
             }
@@ -760,9 +757,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public boolean onMouseScroll(final UpOrDown direction, final int amount) {
         float delta = direction == UpOrDown.UP ? ZOOM_STEP : -ZOOM_STEP;
         delta *= Math.max(1, Math.abs(amount));
-        final float oldZoom = zoom;
-        zoom = Math.clamp(zoom + delta, ZOOM_MIN, ZOOM_MAX);
-        final float ratio = zoom / oldZoom;
+        final float oldZoom = graph.getZoom();
+        graph.setZoom(Math.clamp(graph.getZoom() + delta, ZOOM_MIN, ZOOM_MAX));
+        final float ratio = graph.getZoom() / oldZoom;
 
         final int mx = getContext().getAbsMouseX();
         final int my = getContext().getAbsMouseY();
@@ -770,8 +767,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final float mxRel = mx - getArea().x;
         final float myRel = my - getArea().y;
 
-        panX = mxRel - (mxRel - panX) * ratio;
-        panY = myRel - (myRel - panY) * ratio;
+        graph.setPanX(mxRel - (mxRel - graph.getPanX()) * ratio);
+        graph.setPanY(myRel - (myRel - graph.getPanY()) * ratio);
 
         // updatePositions();
         return true;
@@ -800,32 +797,36 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     // ── Notes ──
 
     public void addNote(final int x, final int y) {
-        final Note note = new Note(UUID.randomUUID(), x, y);
-        graph.notes.put(note.id, note);
+        final Note note = new Note(UUID.randomUUID());
+        note.setX(x);
+        note.setY(y);
+        graph.notes.put(note.getId(), note);
         addNoteWidget(note);
     }
 
     public void removeNote(final UUID noteId) {
-        final NoteWidget nw = noteWidgets.remove(noteId);
-        if (nw != null) remove(nw);
         graph.notes.remove(noteId);
     }
 
-    @Nullable
-    private UUID editingNoteId = null;
+    // @Nullable
+    // private UUID editingNoteId = null;
     @Nullable
     private UUID editingGroupId = null;
 
-    public void startEditingNote(final UUID noteId) {
-        editingNoteId = noteId;
-        for (final NoteWidget nw : noteWidgets.values()) {
-            nw.setEditing(nw.getNote().id.equals(noteId));
-        }
-    }
+    /*
+     * public void startEditingNote(final UUID noteId) {
+     * editingNoteId = noteId;
+     * for (final NoteWidget nw : noteWidgets.values()) {
+     * nw.setEditing(nw.getNote().id.equals(noteId));
+     * }
+     * }
+     */
 
-    public void onNoteEditingDone() {
-        editingNoteId = null;
-    }
+    /*
+     * public void onNoteEditingDone() {
+     * editingNoteId = null;
+     * }
+     */
 
     public void startEditingGroup(final UUID groupId) {
         editingGroupId = groupId;
@@ -840,29 +841,31 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Override
     public @NotNull Result onKeyPressed(final char typedChar, final int keyCode) {
-        if (editingNoteId != null) {
-            final NoteWidget nw = noteWidgets.get(editingNoteId);
-            if (nw == null) {
-                editingNoteId = null;
-                return Result.IGNORE;
-            }
-            final Note note = nw.getNote();
-            if (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RETURN) {
-                nw.setEditing(false);
-                return Result.SUCCESS;
-            }
-            if (keyCode == org.lwjgl.input.Keyboard.KEY_BACK) {
-                if (!note.text.isEmpty()) {
-                    note.text = note.text.substring(0, note.text.length() - 1);
-                }
-                return Result.SUCCESS;
-            }
-            if (typedChar >= 32 && typedChar < 127) {
-                note.text += typedChar;
-                return Result.SUCCESS;
-            }
-            return Result.SUCCESS;
-        }
+        /*
+         * if (editingNoteId != null) {
+         * final NoteWidget nw = noteWidgets.get(editingNoteId);
+         * if (nw == null) {
+         * editingNoteId = null;
+         * return Result.IGNORE;
+         * }
+         * final Note note = nw.getNote();
+         * if (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RETURN) {
+         * nw.setEditing(false);
+         * return Result.SUCCESS;
+         * }
+         * if (keyCode == org.lwjgl.input.Keyboard.KEY_BACK) {
+         * if (!note.text.isEmpty()) {
+         * note.text = note.text.substring(0, note.text.length() - 1);
+         * }
+         * return Result.SUCCESS;
+         * }
+         * if (typedChar >= 32 && typedChar < 127) {
+         * note.text += typedChar;
+         * return Result.SUCCESS;
+         * }
+         * return Result.SUCCESS;
+         * }
+         */
         if (editingGroupId != null) {
             final GroupWidget gw = groupWidgets.get(editingGroupId);
             if (gw == null) {
@@ -988,8 +991,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private void drawHoveredPortLabels() {
         final int mouseX = getContext().getMouseX();
         final int mouseY = getContext().getMouseY();
-        final int ps = Math.max(1, Math.round(PORT_S * zoom));
-        final int half = Math.round(PORT_HALF * zoom);
+        final int ps = Math.max(1, Math.round(PORT_S * graph.getZoom()));
+        final int half = Math.round(PORT_HALF * graph.getZoom());
 
         for (final RecipeNodeWidget w : nodeWidgets.values()) {
             final Node node = w.getNode();
@@ -997,8 +1000,28 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final int widgetY = widgetY(w);
             final int widgetWidth = w.getArea().width;
 
-            if (tryPortLabel(mouseX, mouseY, zoom, ps, half, widgetX, widgetY, widgetWidth, node.outputs, true)) return;
-            if (tryPortLabel(mouseX, mouseY, zoom, ps, half, widgetX, widgetY, widgetWidth, node.inputs, false)) return;
+            if (tryPortLabel(
+                mouseX,
+                mouseY,
+                graph.getZoom(),
+                ps,
+                half,
+                widgetX,
+                widgetY,
+                widgetWidth,
+                node.outputs,
+                true)) return;
+            if (tryPortLabel(
+                mouseX,
+                mouseY,
+                graph.getZoom(),
+                ps,
+                half,
+                widgetX,
+                widgetY,
+                widgetWidth,
+                node.inputs,
+                false)) return;
         }
     }
 
@@ -1041,8 +1064,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Override
     public void transformChildren(IViewportStack stack) {
-        stack.translate(panX, panY);
-        stack.scale(zoom, zoom);
+        stack.translate(graph.getPanX(), graph.getPanY());
+        stack.scale(graph.getZoom(), graph.getZoom());
     }
 
     @Override
@@ -1065,8 +1088,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Override
     public boolean onDragStart(int button) {
         if (button == 0 || button == 2) {
-            panStartX = panX;
-            panStartY = panY;
+            panStartX = graph.getPanX();
+            panStartY = graph.getPanY();
             panStartMouseX = getContext().getAbsMouseX();
             panStartMouseY = getContext().getAbsMouseY();
             return true;
@@ -1077,8 +1100,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Override
     public void onDragEnd(boolean successful) {
         if (!successful) {
-            panX = panStartX;
-            panY = panStartY;
+            graph.setPanX(panStartX);
+            graph.setPanY(panStartY);
         }
     }
 
@@ -1086,8 +1109,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public void onDrag(int mouseButton, long timeSinceLastClick) {
         final int dx = getContext().getAbsMouseX() - panStartMouseX;
         final int dy = getContext().getAbsMouseY() - panStartMouseY;
-        panX = panStartX + dx;
-        panY = panStartY + dy;
+        graph.setPanX(panStartX + dx);
+        graph.setPanY(panStartY + dy);
     }
 
     @Override

@@ -7,20 +7,26 @@ import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
+import com.sbancuz.plannh.data.flowchart.GraphData;
 
-public abstract class FlowchartWidget<T extends ParentWidget<T>> extends ParentWidget<T>
+import lombok.Getter;
+
+public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends GraphData> extends ParentWidget<T>
     implements Interactable, IDraggable {
 
+    @Getter
+    protected final D data;
     protected boolean moving = false;
     protected int dragStartMouseX, dragStartMouseY;
     protected int dragStartX, dragStartY;
-    protected int x, y;
 
     protected final CanvasWidget canvas;
     protected final GuiHelper.DoubleClickDetector doubleClick = new GuiHelper.DoubleClickDetector();
 
-    protected FlowchartWidget(CanvasWidget canvas) {
+    protected FlowchartWidget(CanvasWidget canvas, D data) {
         this.canvas = canvas;
+        this.data = data;
+        pos(data.getX(), data.getY());
     }
 
     @Override
@@ -29,8 +35,8 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>> extends ParentW
     @Override
     public boolean onDragStart(int mouseButton) {
         if (mouseButton == 0) {
-            dragStartX = x;
-            dragStartY = y;
+            dragStartX = data.getX();
+            dragStartY = data.getY();
             dragStartMouseX = getContext().getAbsMouseX();
             dragStartMouseY = getContext().getAbsMouseY();
             return true;
@@ -40,17 +46,22 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>> extends ParentW
 
     @Override
     public void onDragEnd(boolean successful) {
-        if (!successful) pos(dragStartX, dragStartY);
+        if (!successful) {
+            data.setX(dragStartX);
+            data.setY(dragStartY);
+            pos(data.getX(), data.getY());
+        }
     }
 
     @Override
     public void onDrag(int mouseButton, long timeSinceLastClick) {
         final int dx = getContext().getAbsMouseX() - dragStartMouseX;
         final int dy = getContext().getAbsMouseY() - dragStartMouseY;
-        final float z = canvas.getZoom();
-        x = dragStartX + Math.round(dx / z);
-        y = dragStartY + Math.round(dy / z);
-        pos(x, y);
+        final float z = canvas.getGraph()
+            .getZoom();
+        data.setX(dragStartX + Math.round(dx / z));
+        data.setY(dragStartY + Math.round(dy / z));
+        pos(data.getX(), data.getY());
     }
 
     @Override
@@ -67,4 +78,6 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>> extends ParentW
     public void setMoving(boolean moving) {
         this.moving = moving;
     }
+
+    public abstract void removeFromGraph();
 }
