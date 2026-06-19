@@ -82,7 +82,8 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
     public GroupWidget(final Group group, final CanvasWidget canvas) {
         this.group = group;
         this.canvas = canvas;
-        final float z = canvas.getZoom();
+        final float z = canvas.getGraph()
+            .getZoom();
         size(Math.round(group.width * z), computePixelHeight(z));
     }
 
@@ -110,7 +111,10 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
     }
 
     private int zq(final float v) {
-        return GuiHelper.zq(v, canvas.getZoom());
+        return GuiHelper.zq(
+            v,
+            canvas.getGraph()
+                .getZoom());
     }
 
     private int computePixelHeight(final float z) {
@@ -124,7 +128,8 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
 
     @Override
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
-        final float z = canvas.getZoom();
+        final float z = canvas.getGraph()
+            .getZoom();
         final int pw = getArea().width;
         final int ph = getArea().height;
         final int hh = Math.round(HEADER_H * z);
@@ -221,7 +226,8 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
     @Override
     public @Nonnull Result onMousePressed(final int mouseButton) {
         if (mouseButton != 0) return Result.IGNORE;
-        final float z = canvas.getZoom();
+        final float z = canvas.getGraph()
+            .getZoom();
         final int mx = getContext().getMouseX();
         final int my = getContext().getMouseY();
         final int pw = getArea().width;
@@ -296,7 +302,8 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
     }
 
     private ResizeMode getResizeModeAt(final int mx, final int my) {
-        final float z = canvas.getZoom();
+        final float z = canvas.getGraph()
+            .getZoom();
         final int rm = Math.max(1, Math.round(RESIZE_MARGIN * z));
         final int pw = getArea().width;
         final int ph = getArea().height;
@@ -343,7 +350,8 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
     private void handleResizeDrag() {
         final int dx = getContext().getAbsMouseX() - resizeStartMX;
         final int dy = getContext().getAbsMouseY() - resizeStartMY;
-        final float z = canvas.getZoom();
+        final float z = canvas.getGraph()
+            .getZoom();
         final int dgx = Math.round(dx / z);
         final int dgy = Math.round(dy / z);
 
@@ -379,13 +387,19 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
         group.y = newY;
         group.width = newW;
         group.height = newH;
-        syncTransform(z, canvas.getPanX(), canvas.getPanY());
+        syncTransform(
+            z,
+            canvas.getGraph()
+                .getPanX(),
+            canvas.getGraph()
+                .getPanY());
     }
 
     private void handlePositionDrag() {
         final int dx = getContext().getAbsMouseX() - dragStartMX;
         final int dy = getContext().getAbsMouseY() - dragStartMY;
-        final float z = canvas.getZoom();
+        final float z = canvas.getGraph()
+            .getZoom();
         final int newX = groupStartX + Math.round(dx / z);
         final int newY = groupStartY + Math.round(dy / z);
         final int deltaX = newX - group.x;
@@ -393,6 +407,11 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
         group.x = newX;
         group.y = newY;
         canvas.moveGroupNodes(group.id, deltaX, deltaY);
-        syncTransform(z, canvas.getPanX(), canvas.getPanY());
+        syncTransform(
+            z,
+            canvas.getGraph()
+                .getPanX(),
+            canvas.getGraph()
+                .getPanY());
     }
 }

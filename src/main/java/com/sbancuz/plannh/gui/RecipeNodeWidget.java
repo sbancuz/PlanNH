@@ -146,7 +146,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public RecipeNodeWidget(final Node node, final CanvasWidget canvas) {
         this.node = node;
         this.canvas = canvas;
-        final float z = canvas.getZoom();
+        final float z = canvas.getGraph()
+            .getZoom();
         size(Math.round(BASE_W * z), Math.round(BASE_H * z));
     }
 
@@ -172,7 +173,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int zq(final float v) {
-        return GuiHelper.zq(v, canvas.getZoom());
+        return GuiHelper.zq(
+            v,
+            canvas.getGraph()
+                .getZoom());
     }
 
     private int groupColor(final Group g) {
@@ -209,7 +213,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         this.recipeName = ref.handler.getRecipeName()
             .trim();
-        resizeForZoom(canvas.getZoom());
+        resizeForZoom(
+            canvas.getGraph()
+                .getZoom());
     }
 
     private void setAreaSize(final int pw, final int ph) {
@@ -232,7 +238,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
         ensureRecipeHandler();
 
-        final float z = canvas.getZoom();
+        final float z = canvas.getGraph().getZoom();
         if (neiWidget != null && handlerRef != null) {
             final long now = Minecraft.getSystemTime();
             if (now - lastHandlerUpdate > NEI_HANDLER_THROTTLE_MS) {
@@ -355,7 +361,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     private void drawCloseButtonPixel(final int w, final int h) {
         GuiHelper.drawCloseButton(
-            canvas.getZoom(),
+            canvas.getGraph()
+                .getZoom(),
             w,
             CLOSE_W,
             CLOSE_MARGIN,
@@ -395,7 +402,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int portTopY(final int index) {
-        final float z = canvas.getZoom();
+        final float z = canvas.getGraph()
+            .getZoom();
         return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * z);
     }
 
@@ -530,12 +538,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (mouseButton == 0) {
             final int mx = getContext().getMouseX();
             final int my = getContext().getMouseY();
-            if (GuiHelper.isInsideCloseButton(mx, my, canvas.getZoom(), getArea().width, CLOSE_W, CLOSE_MARGIN)) {
+            if (GuiHelper.isInsideCloseButton(
+                mx,
+                my,
+                canvas.getGraph()
+                    .getZoom(),
+                getArea().width,
+                CLOSE_W,
+                CLOSE_MARGIN)) {
                 canvas.removeNode(node.id);
                 return Result.SUCCESS;
             }
 
-            final float z = canvas.getZoom();
+            final float z = canvas.getGraph()
+                .getZoom();
             final int ux = Math.round(mx / z);
             final int uy = Math.round(my / z);
 
@@ -545,7 +561,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                     && uy >= GEAR_HIT_TOP
                     && uy <= GEAR_HIT_BOTTOM) {
                     configOpen = !configOpen;
-                    resizeForZoom(canvas.getZoom());
+                    resizeForZoom(
+                        canvas.getGraph()
+                            .getZoom());
                     return Result.SUCCESS;
                 }
                 if (configOpen) {
@@ -595,11 +613,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (dragging && mouseButton == 0) {
             final int dx = getContext().getAbsMouseX() - dragStartMouseX;
             final int dy = getContext().getAbsMouseY() - dragStartMouseY;
-            final float z = canvas.getZoom();
+            final float z = canvas.getGraph()
+                .getZoom();
             node.x = nodeStartX + Math.round(dx / z);
             node.y = nodeStartY + Math.round(dy / z);
             canvas.clampNodeToGroup(node);
-            syncTransform(z, canvas.getPanX(), canvas.getPanY());
+            syncTransform(
+                z,
+                canvas.getGraph()
+                    .getPanX(),
+                canvas.getGraph()
+                    .getPanY());
         }
     }
 
@@ -741,7 +765,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private void onConfigChanged() {
-        resizeForZoom(canvas.getZoom());
+        resizeForZoom(
+            canvas.getGraph()
+                .getZoom());
     }
 
     @Nullable

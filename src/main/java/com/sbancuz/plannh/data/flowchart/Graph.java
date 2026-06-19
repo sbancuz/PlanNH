@@ -17,6 +17,16 @@ public class Graph {
 
     @Getter
     @Setter
+    private float zoom = 1f;
+    @Getter
+    @Setter
+    private float panX;
+    @Getter
+    @Setter
+    private float panY;
+
+    @Getter
+    @Setter
     private Balancer.BalanceMode balanceMode = Balancer.BalanceMode.BACKWARD;
 
     public void removeNode(final UUID id) {
