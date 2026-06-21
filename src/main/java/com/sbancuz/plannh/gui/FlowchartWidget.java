@@ -16,6 +16,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     @Getter
     protected final D data;
+    @Getter
     protected final CanvasWidget canvas;
     private boolean moving = false;
     private int dragStartMouseX, dragStartMouseY;

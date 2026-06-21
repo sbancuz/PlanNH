@@ -32,6 +32,7 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ColorPickerDialog;
+import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
@@ -87,7 +88,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Getter
     private Graph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
-    // private final Map<UUID, NoteWidget> noteWidgets = new HashMap<>();
     private final Map<UUID, GroupWidget> groupWidgets = new HashMap<>();
 
     private boolean panning = false;
@@ -101,17 +101,23 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private UUID edgeHoverNodeId;
     private int edgeHoverPortIndex;
 
+    @Getter
+    private boolean menuOpen;
+    private final Menu<?> contextMenu2;
+
     /**
      * Cached arrow routes (world-space waypoints) keyed by edge id, plus the layout they were built for.
      */
     private final Map<UUID, List<int[]>> edgeRoutes = new HashMap<>();
     private long routeSignature = Long.MIN_VALUE;
 
-    public CanvasWidget(final Graph graph) {
+    public CanvasWidget(final Graph graph, Menu<?> menu) {
         this.graph = graph;
         rebuildNodeWidgets();
         full();
         marginBottom(18);
+
+        contextMenu2 = menu;
     }
 
     public int getZoomPercent() {
@@ -290,7 +296,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildNoteWidgets() {
-        for (final Note note : graph.notes.values()) addNoteWidget(note);
+        for (final Note note : graph.notes.values()) child(new NoteWidget(this, note));
     }
 
     private void clearWidgetMap(final Map<UUID, ? extends IWidget> widgets) {
@@ -312,13 +318,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         // widget.syncTransform(zoom, panX, graph.getPanY());
         nodeWidgets.put(node.id, widget);
         child(widget);
-    }
-
-    private void addNoteWidget(final Note note) {
-        final NoteWidget nw = new NoteWidget(this, note);
-        // nw.syncTransform(zoom, panX, graph.getPanY());
-        // noteWidgets.put(note.id, nw);
-        child(nw);
     }
 
     @Override
@@ -390,17 +389,25 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     /**
-     * Converts a canvas-space X coordinate to world space, clamped to >= 0.
+     * Converts a canvas-space X coordinate to world space.
      */
     private int toWorldX(final int cx) {
-        return Math.max(0, Math.round((cx - graph.getPanX()) / graph.getZoom()));
+        return Math.round((cx - graph.getPanX()) / graph.getZoom());
     }
 
     /**
-     * Converts a canvas-space Y coordinate to world space, clamped to >= 0.
+     * Converts a canvas-space Y coordinate to world space.
      */
     private int toWorldY(final int cy) {
-        return Math.max(0, Math.round((cy - graph.getPanY()) / graph.getZoom()));
+        return Math.round((cy - graph.getPanY()) / graph.getZoom());
+    }
+
+    private int getMouseCanvasX() {
+        return Math.round((getContext().getAbsMouseX() - getArea().x - graph.getPanX()) / graph.getZoom());
+    }
+
+    private int getMouseCanvasY() {
+        return Math.round((getContext().getAbsMouseY() - getArea().y - graph.getPanY()) / graph.getZoom());
     }
 
     private static boolean containsPoint(final Area a, final int mx, final int my) {
@@ -634,11 +641,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int absMx = getContext().getAbsMouseX();
         final int absMy = getContext().getAbsMouseY();
 
-        // Close context menu on any click, unless it's on the menu itself
-        if (isMouseOverContextMenu(absMx, absMy)) {
-            return Result.IGNORE;
-        }
-        closeContextMenu();
+        // Close context menu on any click
+        menuOpen =false;
 
         if (mouseButton == 0) {
             final int cmx = absMx - getArea().x;
@@ -655,7 +659,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     edgeEndY = cmy;
                     edgeHoverNodeId = null;
                     edgeHoverPortIndex = -1;
-                    return Interactable.Result.SUCCESS;
+                    return Result.SUCCESS;
                 }
             }
 
@@ -663,11 +667,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 final Edge clicked = getEdgeAt(absMx, absMy);
                 if (clicked != null) {
                     graph.removeEdge(clicked.id);
-                    return Interactable.Result.SUCCESS;
+                    return Result.SUCCESS;
                 }
                 return Result.ACCEPT;
             }
-            return Interactable.Result.IGNORE;
+            return Result.IGNORE;
         }
         if (mouseButton == 1) {
             final int cmx = absMx - getArea().x;
@@ -691,14 +695,20 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 }
             }
 
-            // Empty canvas
-            showCanvasContextMenu(cmx, cmy);
+            // Empty canvas -> open context menu
+            openContextMenu();
             return Result.SUCCESS;
         }
         if (mouseButton == 2) {
+            // allow middle mouse drag
             return Result.ACCEPT;
         }
-        return Interactable.Result.IGNORE;
+        return Result.IGNORE;
+    }
+
+    private void openContextMenu() {
+        contextMenu2.pos(getContext().getAbsMouseX(), getContext().getAbsMouseY());
+        menuOpen = true;
     }
 
     @Override
@@ -755,6 +765,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Override
     public boolean onMouseScroll(final UpOrDown direction, final int amount) {
+        // Close context menu on any scroll ?
+//        menuOpen = false;
+
         float delta = direction == UpOrDown.UP ? ZOOM_STEP : -ZOOM_STEP;
         delta *= Math.max(1, Math.abs(amount));
         final float oldZoom = graph.getZoom();
@@ -796,37 +809,19 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     // ── Notes ──
 
-    public void addNote(final int x, final int y) {
+    public void addNote() {
         final Note note = new Note(UUID.randomUUID());
-        note.setX(x);
-        note.setY(y);
+        note.setX(getMouseCanvasX());
+        note.setY(getMouseCanvasY());
+
         graph.notes.put(note.getId(), note);
-        addNoteWidget(note);
+        child(new NoteWidget(this, note));
+
+        menuOpen = false;
     }
 
-    public void removeNote(final UUID noteId) {
-        graph.notes.remove(noteId);
-    }
-
-    // @Nullable
-    // private UUID editingNoteId = null;
     @Nullable
     private UUID editingGroupId = null;
-
-    /*
-     * public void startEditingNote(final UUID noteId) {
-     * editingNoteId = noteId;
-     * for (final NoteWidget nw : noteWidgets.values()) {
-     * nw.setEditing(nw.getNote().id.equals(noteId));
-     * }
-     * }
-     */
-
-    /*
-     * public void onNoteEditingDone() {
-     * editingNoteId = null;
-     * }
-     */
 
     public void startEditingGroup(final UUID groupId) {
         editingGroupId = groupId;
@@ -841,31 +836,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Override
     public @NotNull Result onKeyPressed(final char typedChar, final int keyCode) {
-        /*
-         * if (editingNoteId != null) {
-         * final NoteWidget nw = noteWidgets.get(editingNoteId);
-         * if (nw == null) {
-         * editingNoteId = null;
-         * return Result.IGNORE;
-         * }
-         * final Note note = nw.getNote();
-         * if (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RETURN) {
-         * nw.setEditing(false);
-         * return Result.SUCCESS;
-         * }
-         * if (keyCode == org.lwjgl.input.Keyboard.KEY_BACK) {
-         * if (!note.text.isEmpty()) {
-         * note.text = note.text.substring(0, note.text.length() - 1);
-         * }
-         * return Result.SUCCESS;
-         * }
-         * if (typedChar >= 32 && typedChar < 127) {
-         * note.text += typedChar;
-         * return Result.SUCCESS;
-         * }
-         * return Result.SUCCESS;
-         * }
-         */
         if (editingGroupId != null) {
             final GroupWidget gw = groupWidgets.get(editingGroupId);
             if (gw == null) {
@@ -942,7 +912,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private void showCanvasContextMenu(final int cmx, final int cmy) {
         final List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
         items.add(new ContextMenuWidget.MenuItem("Add Group", () -> addGroup(toWorldX(cmx), toWorldY(cmy))));
-        items.add(new ContextMenuWidget.MenuItem("Add Note", () -> addNote(toWorldX(cmx), toWorldY(cmy))));
         contextMenuAt(cmx, cmy, items);
     }
 

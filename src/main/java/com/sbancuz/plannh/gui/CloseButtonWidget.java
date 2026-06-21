@@ -10,11 +10,9 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
 
     private final FlowchartWidget<?, ?> parent;
-    private final CanvasWidget canvas;
 
-    public CloseButtonWidget(FlowchartWidget<?, ?> parent, CanvasWidget canvas) {
+    public CloseButtonWidget(FlowchartWidget<?, ?> parent) {
         this.parent = parent;
-        this.canvas = canvas;
         background(
             new Rectangle().color(PlannhColors.NOTE_CLOSE_BG.getColor()),
             new Rectangle().color(Color.BLACK.main)
@@ -30,7 +28,8 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
 
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
-        canvas.remove(parent);
+        parent.getCanvas()
+            .remove(parent);
         parent.removeFromGraph();
         return Result.SUCCESS;
     }

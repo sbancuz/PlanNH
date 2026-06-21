@@ -7,18 +7,22 @@ import javax.annotation.Nonnull;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
+import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.ListWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
@@ -53,7 +57,6 @@ public class FlowchartScreen extends ModularScreen {
 
     public static FlowchartScreen create() {
         final Graph graph = PlanAPI.getActiveGraph();
-        final CanvasWidget canvas = new CanvasWidget(graph);
 
         final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main")
             .fullScreenInvisible()
@@ -61,6 +64,39 @@ public class FlowchartScreen extends ModularScreen {
 
         final Flow mainColumn = Flow.column()
             .full();
+
+        Menu<?> contextMenu = new Menu<>();
+
+        final CanvasWidget canvas = new CanvasWidget(graph, contextMenu);
+
+        contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
+            .coverChildren()
+            .relativeToScreen()
+            .child(
+                new ListWidget<>().coverChildrenHeight()
+                    .width(100)
+                    .child(new ButtonWidget<>().onMousePressed(_ -> {
+                        canvas.addNote();
+                        return true;
+                    })
+                        .fullWidth()
+                        .background(
+                            new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                            new Rectangle().hollow()
+                                .color(PlannhColors.CONTEXT_BORDER.getColor()))
+                        .overlay(
+                            IKey.str("Add Note")
+                                .color(Color.WHITE.main)))
+                    .child(
+                        new ButtonWidget<>()
+                            .fullWidth()
+                            .background(
+                                new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                                new Rectangle().hollow()
+                                    .color(PlannhColors.CONTEXT_BORDER.getColor()))
+                            .overlay(
+                                IKey.str("Add Group")
+                                    .color(Color.WHITE.main))));
 
         mainColumn.child(
             Flow.row()
@@ -74,7 +110,8 @@ public class FlowchartScreen extends ModularScreen {
                         .child(new ButtonWidget<>())
                         .child(
                             IKey.str("Slot x")
-                                .asWidget())
+                                .asWidget()
+                                .color(Color.WHITE.main))
                         .child(new ButtonWidget<>()))
                 .child(
                     Flow.row()
@@ -82,9 +119,9 @@ public class FlowchartScreen extends ModularScreen {
                         .childPadding(2)
                         .child(
                             new ToggleButton().value(new BoolValue.Dynamic(graph::isSnapToGrid, graph::setSnapToGrid))
-                                .child(
+                                .overlay(
                                     IKey.str("S2G")
-                                        .asWidget()))
+                                        .color(Color.WHITE.main)))
                         .child(new ButtonWidget<>())
                         .child(new ButtonWidget<>())
                         .child(new ButtonWidget<>())
@@ -93,6 +130,7 @@ public class FlowchartScreen extends ModularScreen {
 
         panel.child(mainColumn);
         panel.child(new SummaryWidget(canvas));
+        panel.child(contextMenu);
 
         return new FlowchartScreen(panel, graph, canvas);
     }
@@ -110,14 +148,6 @@ public class FlowchartScreen extends ModularScreen {
     public void onClose() {
         PlanAPI.save();
         super.onClose();
-    }
-
-    @Override
-    public boolean onKeyPressed(final char typedChar, final int keyCode) {
-        if (canvas.onKeyPressed(typedChar, keyCode) == Interactable.Result.SUCCESS) {
-            return true;
-        }
-        return super.onKeyPressed(typedChar, keyCode);
     }
 
     /*

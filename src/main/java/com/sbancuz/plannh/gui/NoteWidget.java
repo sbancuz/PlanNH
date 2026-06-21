@@ -22,7 +22,7 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
             .background(new Rectangle().color(PlannhColors.NOTE_BORDER.getColor()));
 
         topRow.child(new HeaderTextWidget(this));
-        topRow.child(new CloseButtonWidget(this, canvas));
+        topRow.child(new CloseButtonWidget(this));
 
         mainColumn.child(topRow);
         mainColumn.child(new NoteTextWidget(this));
