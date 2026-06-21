@@ -1,0 +1,10 @@
+## Share messages
+plannh.share.import_link=> PlanNH Import
+plannh.share.item_name=§bPlanNH Share
+plannh.share.item_lore=§7%s
+plannh.share.lore_shared=§7Shared flowchart
+plannh.share.click_to_import=§eClick to import
+plannh.share.import_error.missing=§cMissing NBT data
+plannh.share.import_error.invalid=§cInvalid PlanNH data
+plannh.share.import_error.decode=§cFailed to decode: %s
+plannh.share.slot_imported=Imported

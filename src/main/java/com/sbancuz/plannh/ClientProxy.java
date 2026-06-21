@@ -2,10 +2,14 @@ package com.sbancuz.plannh;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraftforge.client.ClientCommandHandler;
+import net.minecraftforge.common.MinecraftForge;
 
 import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.screen.ModularContainer;
+import com.sbancuz.plannh.client.ChatHandler;
+import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.data.provider.VanillaProvider;
 import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 import com.sbancuz.plannh.gui.FlowchartScreen;
@@ -31,6 +35,9 @@ public class ClientProxy extends CommonProxy {
         new VanillaProvider().register();
 
         ClientRegistry.registerKeyBinding(openFlowchartKey);
+
+        MinecraftForge.EVENT_BUS.register(new ChatHandler());
+        ClientCommandHandler.instance.registerCommand(new ImportCommand());
 
         FMLCommonHandler.instance()
             .bus()
