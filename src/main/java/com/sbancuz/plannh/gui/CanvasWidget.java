@@ -7,31 +7,25 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.entity.player.EntityPlayer;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
-import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.layout.IViewport;
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.api.widget.IDraggable;
-import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.BufferBuilder;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.drawable.Stencil;
-import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
-import com.cleanroommc.modularui.widgets.ColorPickerDialog;
 import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Edge;
@@ -88,7 +82,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Getter
     private Graph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
-    private final Map<UUID, GroupWidget> groupWidgets = new HashMap<>();
+    @Getter
+    private final Map<UUID, FlowchartWidget<?,?>> flowchartWidgets = new HashMap<>();
 
     private boolean panning = false;
     private int panStartMouseX, panStartMouseY;
@@ -113,11 +108,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public CanvasWidget(final Graph graph, Menu<?> menu) {
         this.graph = graph;
-        rebuildNodeWidgets();
         full();
         marginBottom(18);
 
         contextMenu2 = menu;
+        rebuildNoteWidgets();
+        rebuildGroupWidgets();
     }
 
     public void removeNode(final UUID nodeId) {
@@ -133,28 +129,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildNodeWidgets();
         rebuildNoteWidgets();
         rebuildGroupWidgets();
-    }
-
-    public void removeGroup(final UUID groupId) {
-        graph.removeGroup(groupId);
-        rebuildGroupWidgets();
-    }
-
-    public void addGroup(final int x, final int y) {
-        /*int n = 1;
-        for (final Group g : graph.getGroups()) {
-            if (g.title.startsWith("Group")) {
-                try {
-                    final int num = Integer.parseInt(
-                        g.title.substring(5)
-                            .trim());
-                    if (num >= n) n = num + 1;
-                } catch (final NumberFormatException ignored) {}
-            }
-        }
-        final Group group = new Group(x, y, "Group " + n);
-        graph.addGroup(group);
-        addGroupWidget(group);*/
     }
 
     public void moveGroupNodes(final UUID groupId, final int deltaX, final int deltaY) {
@@ -271,10 +245,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         removeAll();
         editingGroupId = null;
         nodeWidgets.clear();
-        groupWidgets.clear();
-        for (final Group group : graph.getGroups()) {
-            addGroupWidget(group);
-        }
         for (final Node node : graph.getNodes()) {
             addNodeWidget(node);
             updateNodeGroupMembership(node);
@@ -282,29 +252,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildNoteWidgets();
     }
 
-    public void rebuildGroupWidgets() {
-        clearWidgetMap(groupWidgets);
-        for (final Group group : graph.getGroups()) {
-            addGroupWidget(group);
-        }
-    }
-
     public void rebuildNoteWidgets() {
         for (final Note note : graph.notes.values()) child(new NoteWidget(this, note));
     }
 
-    private void clearWidgetMap(final Map<UUID, ? extends IWidget> widgets) {
-        for (final IWidget widget : widgets.values()) {
-            remove(widget);
-        }
-        widgets.clear();
-    }
-
-    private void addGroupWidget(final Group group) {
-        /*final GroupWidget gw = new GroupWidget(group, this);
-        // gw.syncTransform(zoom, panX, graph.getPanY());
-        groupWidgets.put(group.id, gw);
-        child(gw);*/
+    public void rebuildGroupWidgets() {
+        for (final Group group : graph.groups.values()) child(new GroupWidget2(this, group));
     }
 
     private void addNodeWidget(final Node node) {
@@ -320,6 +273,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int ah = getArea().height;
         if (aw <= 0 || ah <= 0) return;
 
+        // TODO add toggle for grid
         drawGrid(aw, ah);
 
         super.draw(context, widgetTheme);
@@ -396,11 +350,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return Math.round((cy - graph.getPanY()) / graph.getZoom());
     }
 
-    private int getMouseCanvasX() {
+    public int getMouseCanvasX() {
         return Math.round((getContext().getAbsMouseX() - getArea().x - graph.getPanX()) / graph.getZoom());
     }
 
-    private int getMouseCanvasY() {
+    public int getMouseCanvasY() {
         return Math.round((getContext().getAbsMouseY() - getArea().y - graph.getPanY()) / graph.getZoom());
     }
 
@@ -779,12 +733,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private boolean isMouseOverAnyGroup(final int mx, final int my) {
-        for (final GroupWidget gw : groupWidgets.values()) {
+        /*for (final GroupWidget gw : groupWidgets.values()) {
             final Area a = gw.getArea();
             if (containsPointInclusive(a, mx, my)) {
                 return true;
             }
-        }
+        }*/
         return false;
     }
 
@@ -798,8 +752,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return false;
     }
 
-    // ── Notes ──
-
     public void addNote() {
         final Note note = new Note();
         note.setX(getMouseCanvasX());
@@ -807,6 +759,17 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         graph.notes.put(note.getId(), note);
         child(new NoteWidget(this, note));
+
+        menuOpen = false;
+    }
+
+    public void addGroup() {
+        final Group group = new Group();
+        group.setX(getMouseCanvasX());
+        group.setY(getMouseCanvasY());
+
+        graph.groups.put(group.getId(), group);
+        child(new GroupWidget2(this, group));
 
         menuOpen = false;
     }
@@ -898,12 +861,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int ax = getArea().x + cmx;
         final int ay = getArea().y + cmy;
         showContextMenu(ax, ay, items);
-    }
-
-    private void showCanvasContextMenu(final int cmx, final int cmy) {
-        final List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
-        items.add(new ContextMenuWidget.MenuItem("Add Group", () -> addGroup(toWorldX(cmx), toWorldY(cmy))));
-        contextMenuAt(cmx, cmy, items);
     }
 
     private void showGroupContextMenu(final GroupWidget gw, final int cmx, final int cmy) {
@@ -1086,5 +1043,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Override
     public void setMoving(boolean moving) {
         panning = moving;
+    }
+
+    public boolean isMouseInsideCanvas() {
+        ModularGuiContext context = getContext();
+        Area area = getArea();
+        return isInside(context, context.getAbsMouseX() - area.x, context.getAbsMouseY() - area.y, false);
     }
 }
