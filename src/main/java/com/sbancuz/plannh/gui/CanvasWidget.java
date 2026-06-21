@@ -44,7 +44,7 @@ import lombok.Getter;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable, IViewport, IDraggable {
 
-    private static final int GRID_SIZE = 20;
+    public static final int GRID_SIZE = 20;
     private static final int GRID_MAJOR = 5;
 
     private static final int ARROW_COLOR_ITEM = PlannhColors.ARROW_ITEM.getColor();

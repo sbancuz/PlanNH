@@ -24,6 +24,9 @@ public class Graph {
     @Getter
     @Setter
     private float panY;
+    @Getter
+    @Setter
+    private boolean snapToGrid;
 
     @Getter
     @Setter

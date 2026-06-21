@@ -49,8 +49,13 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         if (!successful) {
             data.setX(dragStartX);
             data.setY(dragStartY);
-            pos(data.getX(), data.getY());
-        }
+            reposition();
+        } else if (canvas.getGraph()
+            .isSnapToGrid()) {
+                data.setX((int) (Math.round((double) data.getX() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
+                data.setY((int) (Math.round((double) data.getY() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
+                reposition();
+            }
     }
 
     @Override
@@ -61,7 +66,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             .getZoom();
         data.setX(dragStartX + Math.round(dx / z));
         data.setY(dragStartY + Math.round(dy / z));
-        pos(data.getX(), data.getY());
+        reposition();
     }
 
     @Override
@@ -80,4 +85,8 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     }
 
     public abstract void removeFromGraph();
+
+    protected void reposition() {
+        pos(data.getX(), data.getY());
+    }
 }

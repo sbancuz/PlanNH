@@ -13,9 +13,11 @@ import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
@@ -73,6 +75,19 @@ public class FlowchartScreen extends ModularScreen {
                         .child(
                             IKey.str("Slot x")
                                 .asWidget())
+                        .child(new ButtonWidget<>()))
+                .child(
+                    Flow.row()
+                        .coverChildren()
+                        .childPadding(2)
+                        .child(
+                            new ToggleButton().value(new BoolValue.Dynamic(graph::isSnapToGrid, graph::setSnapToGrid))
+                                .child(
+                                    IKey.str("S2G")
+                                        .asWidget()))
+                        .child(new ButtonWidget<>())
+                        .child(new ButtonWidget<>())
+                        .child(new ButtonWidget<>())
                         .child(new ButtonWidget<>())))
             .child(canvas);
 
