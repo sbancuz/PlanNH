@@ -9,23 +9,21 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
+import org.jetbrains.annotations.NotNull;
 
+@Data
 public class Note extends GraphData {
 
-    @Getter
-    @Setter
+    @NotNull
     private List<String> text = new ArrayList<>();
 
-    public Note(final UUID id) {
-        super(id);
-        if (header == null) header = "Note";
+    public Note() {
+        super(UUID.randomUUID());
     }
 
-    @Override
-    public void loadFromJson(JsonObject json) {
-        super.loadFromJson(json);
+    public Note(JsonObject json){
+        super(json);
         JsonArray jsonArray = json.getAsJsonArray("text");
         for (JsonElement elem : jsonArray) text.add(elem.getAsString());
     }
@@ -36,5 +34,10 @@ public class Note extends GraphData {
         JsonArray textArray = new JsonArray();
         for (String s : text) textArray.add(new JsonPrimitive(s));
         json.add("text", textArray);
+    }
+
+    @Override
+    public String getType() {
+        return "note";
     }
 }
