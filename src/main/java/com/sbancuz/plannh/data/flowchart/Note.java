@@ -9,13 +9,15 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-@Data
 public class Note extends GraphData {
 
     @NotNull
+    @Getter
+    @Setter
     private List<String> text = new ArrayList<>();
 
     public Note() {

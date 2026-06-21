@@ -5,14 +5,19 @@ import java.util.UUID;
 import com.google.gson.JsonObject;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 
-@Data
 public abstract class GraphData implements IJsonSerializable {
 
+    @Getter
     protected final UUID id;
+    @Getter @Setter
     protected int x;
+    @Getter @Setter
     protected int y;
+    @Getter @Setter
     protected String header;
 
     protected GraphData(UUID id){

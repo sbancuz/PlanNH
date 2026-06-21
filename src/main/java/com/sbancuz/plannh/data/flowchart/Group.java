@@ -5,6 +5,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -12,18 +14,25 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
-@Data
 public class Group extends GraphData {
 
     private static final int DEFAULT_W = 300;
     private static final int DEFAULT_H = 200;
 
+    @Getter
+    @Setter
     private int w = DEFAULT_W;
+    @Getter @Setter
     private int h = DEFAULT_H;
+    @Getter @Setter
     private int color = getRandomColor();
+    @Getter @Setter
     private boolean collapsed;
+    @Getter @Setter
     private boolean clampNodes;
+    @Getter @Setter
     private boolean autoResize;
+    @Getter
     @NotNull
     private final Map<UUID, GraphData> children = new HashMap<>();
 
