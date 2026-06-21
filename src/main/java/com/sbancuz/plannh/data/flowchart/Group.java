@@ -4,7 +4,6 @@ import com.cleanroommc.modularui.utils.Color;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -14,25 +13,19 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
+@Getter
+@Setter
 public class Group extends GraphData {
 
-    private static final int DEFAULT_W = 300;
-    private static final int DEFAULT_H = 200;
+    private static final int DEFAULT_WIDTH = 300;
+    private static final int DEFAULT_HEIGHT = 200;
 
-    @Getter
-    @Setter
-    private int w = DEFAULT_W;
-    @Getter @Setter
-    private int h = DEFAULT_H;
-    @Getter @Setter
+    private int width = DEFAULT_WIDTH;
+    private int height = DEFAULT_HEIGHT;
     private int color = getRandomColor();
-    @Getter @Setter
     private boolean collapsed;
-    @Getter @Setter
     private boolean clampNodes;
-    @Getter @Setter
     private boolean autoResize;
-    @Getter
     @NotNull
     private final Map<UUID, GraphData> children = new HashMap<>();
 
@@ -42,23 +35,23 @@ public class Group extends GraphData {
 
     public Group(JsonObject json){
         super(json);
-        w = json.get("w").getAsInt();
-        h = json.get("h").getAsInt();
+        width = json.get("width").getAsInt();
+        height = json.get("height").getAsInt();
         color = json.get("color").getAsInt();
         collapsed = json.get("collapsed").getAsBoolean();
         clampNodes = json.get("clampNodes").getAsBoolean();
         autoResize = json.get("autoResize").getAsBoolean();
         for(JsonElement elem : json.getAsJsonArray("children")){
             JsonObject obj = elem.getAsJsonObject();
-            children.put(UUID.fromString(obj.get("key").getAsString()), GraphData.loadFromJson(obj.get("value").getAsJsonObject()));
+            children.put(UUID.fromString(obj.get("id").getAsString()), GraphData.loadFromJson(obj.get("data").getAsJsonObject()));
         }
     }
 
     @Override
     public void saveToJson(JsonObject json) {
         super.saveToJson(json);
-        json.addProperty("w", w);
-        json.addProperty("h", h);
+        json.addProperty("width", width);
+        json.addProperty("height", height);
         json.addProperty("color", color);
         json.addProperty("collapsed", collapsed);
         json.addProperty("clampNodes", clampNodes);
@@ -66,10 +59,10 @@ public class Group extends GraphData {
         JsonArray jsonArray = new JsonArray();
         for(Map.Entry<UUID, GraphData> entry : children.entrySet()){
             JsonObject child = new JsonObject();
-            child.addProperty("key", entry.getKey().toString());
-            JsonObject value = new JsonObject();
-            entry.getValue().saveToJson(value);
-            child.add("value", value);
+            child.addProperty("id", entry.getKey().toString());
+            JsonObject data = new JsonObject();
+            entry.getValue().saveToJson(data);
+            child.add("data", data);
             jsonArray.add(child);
         }
         json.add("children", jsonArray);

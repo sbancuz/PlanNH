@@ -13,11 +13,11 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
+@Getter
+@Setter
 public class Note extends GraphData {
 
     @NotNull
-    @Getter
-    @Setter
     private List<String> text = new ArrayList<>();
 
     public Note() {
