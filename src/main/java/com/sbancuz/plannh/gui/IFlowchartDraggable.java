@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.gui;
 
+import com.cleanroommc.modularui.api.widget.IWidget;
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.widget.IDraggable;
@@ -28,6 +29,11 @@ public interface IFlowchartDraggable extends IDraggable {
     @Override
     default void onDrag(int i, long l) {
         getFlowchartParent().onDrag(i, l);
+    }
+
+    @Override
+    default boolean canDropHere(int x, int y, @Nullable IWidget widget) {
+        return getFlowchartParent().canDropHere(x, y, widget);
     }
 
     @Override

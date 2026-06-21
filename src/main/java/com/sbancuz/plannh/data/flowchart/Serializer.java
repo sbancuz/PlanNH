@@ -248,7 +248,7 @@ public final class Serializer {
         root.add("edges", edgesArray);
 
         final JsonArray notesArray = new JsonArray();
-        for (final Note note : graph.notes.values()) {
+        for (final Note note : graph.getNotes()) {
             final JsonObject obj = new JsonObject();
             note.saveToJson(obj);
             notesArray.add(obj);

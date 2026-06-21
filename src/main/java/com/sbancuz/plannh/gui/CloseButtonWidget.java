@@ -18,19 +18,16 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
             new Rectangle().color(Color.BLACK.main)
                 .asIcon()
                 .size(8));
-        child(
+        overlay(
             IKey.str("x")
-                .color(Color.WHITE.main)
-                .asWidget()
-                .center());
+                .color(Color.WHITE.main));
         size(12);
     }
 
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
-        parent.getCanvas()
-            .remove(parent);
-        parent.removeFromGraph();
+        if (parent.getCanvas().isMouseInsideCanvas())
+            parent.removeFromGraph();
         return Result.SUCCESS;
     }
 }

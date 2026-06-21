@@ -70,4 +70,8 @@ public class Graph {
     public Collection<Group> getGroups() {
         return groups.values();
     }
+
+    public Collection<Note> getNotes() {
+        return notes.values();
+    }
 }

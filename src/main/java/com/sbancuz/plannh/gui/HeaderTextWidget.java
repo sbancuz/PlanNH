@@ -8,10 +8,6 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
 
     public HeaderTextWidget(FlowchartWidget<?, ?> parent) {
         super(parent);
-        background(
-            new DynamicDrawable(
-                () -> new Rectangle()
-                    .color(isEditing ? PlannhColors.NOTE_BORDER_EDIT.getColor() : Color.argb(1f, 1f, 1f, 0))));
 
         height(20);
         setScale(1.5f);

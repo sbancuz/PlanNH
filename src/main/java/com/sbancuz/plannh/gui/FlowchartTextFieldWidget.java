@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.gui;
 
+import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -11,6 +12,7 @@ public abstract class FlowchartTextFieldWidget extends BaseTextFieldWidget<Flowc
     protected final FlowchartWidget<?, ?> parent;
     protected final GuiHelper.DoubleClickDetector doubleClick = new GuiHelper.DoubleClickDetector();
 
+    @Getter
     protected boolean isEditing = false;
 
     public FlowchartTextFieldWidget(FlowchartWidget<?, ?> parent) {
@@ -22,6 +24,7 @@ public abstract class FlowchartTextFieldWidget extends BaseTextFieldWidget<Flowc
 
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
+        if (!parent.getCanvas().isMouseInsideCanvas()) return Result.STOP;
         if (!doubleClick.check() && !isFocused()) return Result.IGNORE;
         return super.onMousePressed(mouseButton);
     }

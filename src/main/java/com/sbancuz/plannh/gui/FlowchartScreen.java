@@ -71,6 +71,7 @@ public class FlowchartScreen extends ModularScreen {
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
+            .background()
             .relativeToScreen()
             .child(
                 new ListWidget<>().coverChildrenHeight()
@@ -89,6 +90,10 @@ public class FlowchartScreen extends ModularScreen {
                                 .color(Color.WHITE.main)))
                     .child(
                         new ButtonWidget<>()
+                            .onMousePressed(_ -> {
+                                canvas.addGroup();
+                                return true;
+                            })
                             .fullWidth()
                             .background(
                                 new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
@@ -107,18 +112,19 @@ public class FlowchartScreen extends ModularScreen {
                     Flow.row()
                         .coverChildren()
                         .childPadding(2)
-                        .child(new ButtonWidget<>())
+                        .child(new ButtonWidget<>().overlay(IKey.str("<")))
                         .child(
                             IKey.str("Slot x")
                                 .asWidget()
                                 .color(Color.WHITE.main))
-                        .child(new ButtonWidget<>()))
+                        .child(new ButtonWidget<>().overlay(IKey.str(">"))))
                 .child(
                     Flow.row()
                         .coverChildren()
                         .childPadding(2)
                         .child(
-                            new ToggleButton().value(new BoolValue.Dynamic(graph::isSnapToGrid, graph::setSnapToGrid))
+                            new ToggleButton()
+                                .value(new BoolValue.Dynamic(graph::isSnapToGrid, graph::setSnapToGrid))
                                 .overlay(
                                     IKey.str("S2G")
                                         .color(Color.WHITE.main)))
