@@ -258,21 +258,7 @@ public final class Serializer {
         final JsonArray groupsArray = new JsonArray();
         for (final Group group : graph.getGroups()) {
             final JsonObject obj = new JsonObject();
-            obj.addProperty("id", group.id.toString());
-            obj.addProperty("title", group.title);
-            obj.addProperty("x", group.x);
-            obj.addProperty("y", group.y);
-            obj.addProperty("width", group.width);
-            obj.addProperty("height", group.height);
-            obj.addProperty("collapsed", group.collapsed);
-            if (group.colorOverride != 0) obj.addProperty("colorOverride", group.colorOverride);
-            if (group.clampNodes) obj.addProperty("clampNodes", true);
-            if (group.autoResize) obj.addProperty("autoResize", true);
-            final JsonArray nodeIdsArray = new JsonArray();
-            for (final UUID nid : group.nodeIds) {
-                nodeIdsArray.add(new com.google.gson.JsonPrimitive(nid.toString()));
-            }
-            obj.add("nodeIds", nodeIdsArray);
+            group.saveToJson(obj);
             groupsArray.add(obj);
         }
         root.add("groups", groupsArray);
@@ -374,50 +360,14 @@ public final class Serializer {
 
         final JsonArray notesArray = root.getAsJsonArray("notes");
         for (final JsonElement elem : notesArray) {
-            final JsonObject obj = elem.getAsJsonObject();
-            final Note note = new Note(
-                UUID.fromString(
-                    obj.get("id")
-                        .getAsString()));
-            note.loadFromJson(obj);
-            graph.notes.put(note.id, note);
+            final Note note = new Note(elem.getAsJsonObject());
+            graph.notes.put(note.getId(), note);
         }
 
-        if (root.has("groups")) {
-            final JsonArray groupsArray = root.getAsJsonArray("groups");
-            for (final JsonElement elem : groupsArray) {
-                final JsonObject obj = elem.getAsJsonObject();
-                final UUID id = UUID.fromString(
-                    obj.get("id")
-                        .getAsString());
-                final String title = obj.get("title")
-                    .getAsString();
-                final int x = obj.get("x")
-                    .getAsInt();
-                final int y = obj.get("y")
-                    .getAsInt();
-                final int w = obj.get("width")
-                    .getAsInt();
-                final int h = obj.get("height")
-                    .getAsInt();
-                final boolean collapsed = obj.has("collapsed") && obj.get("collapsed")
-                    .getAsBoolean();
-                final Group group = new Group(id, x, y, w, h, title);
-                group.collapsed = collapsed;
-                if (obj.has("colorOverride")) group.colorOverride = obj.get("colorOverride")
-                    .getAsInt();
-                if (obj.has("clampNodes")) group.clampNodes = obj.get("clampNodes")
-                    .getAsBoolean();
-                if (obj.has("autoResize")) group.autoResize = obj.get("autoResize")
-                    .getAsBoolean();
-                if (obj.has("nodeIds")) {
-                    final JsonArray nodeIdsArray = obj.getAsJsonArray("nodeIds");
-                    for (final JsonElement nidElem : nodeIdsArray) {
-                        group.nodeIds.add(UUID.fromString(nidElem.getAsString()));
-                    }
-                }
-                graph.addGroup(group);
-            }
+        final JsonArray groupsArray = root.getAsJsonArray("groups");
+        for (final JsonElement elem : groupsArray) {
+            final Group group = new Group(elem.getAsJsonObject());
+            graph.groups.put(group.getId(), group);
         }
 
         return graph;

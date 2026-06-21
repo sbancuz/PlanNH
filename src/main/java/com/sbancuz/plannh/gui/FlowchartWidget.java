@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui;
 
+import com.cleanroommc.modularui.ModularUI;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.widget.IDraggable;
@@ -11,6 +13,10 @@ import com.sbancuz.plannh.data.flowchart.GraphData;
 
 import lombok.Getter;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.StreamSupport;
+
 public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends GraphData> extends ParentWidget<T>
     implements Interactable, IDraggable {
 
@@ -21,11 +27,13 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     private boolean moving = false;
     private int dragStartMouseX, dragStartMouseY;
     private int dragStartX, dragStartY;
+    protected Map<UUID, D> containerSupplier;
 
     protected FlowchartWidget(CanvasWidget canvas, D data) {
         this.canvas = canvas;
         this.data = data;
         pos(data.getX(), data.getY());
+        containerSupplier = getDefaultContainer();
     }
 
     @Override
@@ -49,12 +57,14 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             data.setX(dragStartX);
             data.setY(dragStartY);
             reposition();
-        } else if (canvas.getGraph()
-            .isSnapToGrid()) {
-                data.setX((int) (Math.round((double) data.getX() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
-                data.setY((int) (Math.round((double) data.getY() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
-                reposition();
-            }
+            return;
+        }
+        if (canvas.getGraph().isSnapToGrid()) {
+            data.setX((int) (Math.round((double) data.getX() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
+            data.setY((int) (Math.round((double) data.getY() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
+            reposition();
+        }
+        adjustGroupMembership();
     }
 
     @Override
@@ -83,9 +93,26 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         this.moving = moving;
     }
 
-    public abstract void removeFromGraph();
+    @Override
+    public boolean canDropHere(int x, int y, @Nullable IWidget widget) {
+        return IDraggable.super.canDropHere(x, y, widget);
+    }
+
+    public void removeFromGraph(){
+        containerSupplier.remove(data.getId());
+    }
+
+    protected abstract Map<UUID, D> getDefaultContainer();
 
     protected void reposition() {
         pos(data.getX(), data.getY());
+    }
+
+    private void adjustGroupMembership(){
+        var a = getContext().getAllBelowMouse();
+
+        for (var b : a)
+            if (b instanceof FlowchartWidget<?,?> || b instanceof CanvasWidget)
+                ModularUI.LOGGER.info("Hovered: " + b.getClass());
     }
 }

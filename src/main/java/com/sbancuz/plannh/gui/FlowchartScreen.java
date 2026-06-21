@@ -529,7 +529,7 @@ public class FlowchartScreen extends ModularScreen {
                 PlannhColors.SEPARATOR_DIM.getColor());
             ly += HELP_SEP_GAP;
             GuiDraw.drawText(
-                "Zoom: " + canvas.getZoomPercent() + "%",
+                "Zoom: " + canvas.getGraph().getZoom()*100 + "%",
                 ZOOM_TEXT_X,
                 ly,
                 0.9f,

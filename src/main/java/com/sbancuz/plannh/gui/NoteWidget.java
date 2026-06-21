@@ -5,6 +5,10 @@ import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.flowchart.Note;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Supplier;
+
 public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
 
     protected NoteWidget(CanvasWidget canvas, Note note) {
@@ -31,7 +35,7 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
     }
 
     @Override
-    public void removeFromGraph() {
-        canvas.getGraph().notes.remove(data.getId());
+    protected Map<UUID, Note> getDefaultContainer() {
+        return canvas.getGraph().notes;
     }
 }

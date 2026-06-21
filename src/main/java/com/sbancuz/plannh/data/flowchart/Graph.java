@@ -10,6 +10,7 @@ import lombok.Setter;
 
 public class Graph {
 
+    // TODO make these use getters
     public final Map<UUID, Node> nodes = new HashMap<>();
     public final Map<UUID, Edge> edges = new HashMap<>();
     public final Map<UUID, Note> notes = new HashMap<>();
@@ -60,10 +61,6 @@ public class Graph {
 
     public void removeEdge(final UUID id) {
         edges.remove(id);
-    }
-
-    public void addGroup(final Group group) {
-        groups.put(group.id, group);
     }
 
     public void removeGroup(final UUID id) {

@@ -17,7 +17,7 @@ import com.sbancuz.plannh.data.flowchart.Group;
 import lombok.Getter;
 
 public class GroupWidget extends Widget<GroupWidget> implements Interactable {
-
+/*
     private static final int HEADER_H = 20;
     private static final int CLOSE_W = 12;
     private static final int COLLAPSE_W = 14;
@@ -413,5 +413,5 @@ public class GroupWidget extends Widget<GroupWidget> implements Interactable {
                 .getPanX(),
             canvas.getGraph()
                 .getPanY());
-    }
+    }*/
 }

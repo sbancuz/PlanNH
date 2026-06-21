@@ -180,7 +180,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int groupColor(final Group g) {
-        return g.colorOverride != 0 ? g.colorOverride : PlannhColors.titleColor(g.title);
+        return g.getColor();
     }
 
     @Nullable
@@ -279,7 +279,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             final Group grp = canvas.getGroupForNode(node.id);
             if (grp != null) {
                 final int gc = groupColor(grp);
-                final String gl = "\u229f " + grp.title;
+                final String gl = "\u229f " + grp.getHeader();
                 final int glW = Minecraft.getMinecraft().fontRenderer.getStringWidth(gl);
                 GuiDraw.drawText(gl, cw - glW - GROUP_LABEL_RMARGIN, TITLE_TEXT_Y, 1.0f, gc, false);
             }
@@ -350,7 +350,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
             final Group grp2 = canvas.getGroupForNode(node.id);
             if (grp2 != null) {
-                GuiDraw.drawText("\u229f " + grp2.title, zq(SIMPLE_TEXT_INSET_X), zq(SIMPLE_GROUP_LABEL_Y), z, groupColor(grp2), false);
+                GuiDraw.drawText("\u229f " + grp2.getHeader(), zq(SIMPLE_TEXT_INSET_X), zq(SIMPLE_GROUP_LABEL_Y), z, groupColor(grp2), false);
             }
 
             drawCloseButtonPixel(w, h);
