@@ -8,3 +8,5 @@ plannh.share.import_error.missing=§cMissing NBT data
 plannh.share.import_error.invalid=§cInvalid PlanNH data
 plannh.share.import_error.decode=§cFailed to decode: %s
 plannh.share.slot_imported=Imported
+plannh.share.copy_to_clipboard=Plan exported to clipboard
+plannh.share.copy_from_clipboard=Plan imported from clipboard

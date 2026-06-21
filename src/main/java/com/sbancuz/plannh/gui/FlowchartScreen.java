@@ -5,6 +5,10 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.StatCollector;
+
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -204,7 +208,12 @@ public class FlowchartScreen extends ModularScreen {
 
             final int cx = w - COPY_BTN_RIGHT;
             GuiDraw.drawText("Cp", cx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(cx, 0, cx + ARROW_W, h, () -> PlanAPI.copyToClipboard(canvas.getGraph())));
+            zones.add(new ClickZone(cx, 0, cx + ARROW_W, h, () -> {
+                PlanAPI.copyToClipboard(canvas.getGraph());
+                Minecraft.getMinecraft().thePlayer.addChatMessage(
+                    new ChatComponentText(
+                        "[" + PlanNH.MODID + "] " + StatCollector.translateToLocal("plannh.share.copy_to_clipboard")));
+            }));
 
             final int ix = w - IMP_BTN_RIGHT;
             GuiDraw.drawText("Im", ix, TEXT_Y, 1.0f, PlannhColors.ACCENT_AMBER.getColor(), false);
@@ -213,6 +222,11 @@ public class FlowchartScreen extends ModularScreen {
                 if (graph == null) return;
                 PlanAPI.importGraph(graph);
                 canvas.setGraph(graph);
+                Minecraft.getMinecraft().thePlayer.addChatMessage(
+                    new ChatComponentText(
+                        "[" + PlanNH.MODID
+                            + "] "
+                            + StatCollector.translateToLocal("plannh.share.copy_from_clipboard")));
             }));
         }
 
