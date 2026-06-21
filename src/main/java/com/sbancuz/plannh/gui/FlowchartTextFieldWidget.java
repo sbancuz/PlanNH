@@ -39,11 +39,6 @@ public abstract class FlowchartTextFieldWidget extends BaseTextFieldWidget<Flowc
     }
 
     @Override
-    public void drawMovingState(ModularGuiContext modularGuiContext, float v) {
-        parent.drawMovingState(modularGuiContext, v);
-    }
-
-    @Override
     public FlowchartWidget<?, ?> getFlowchartParent() {
         return parent;
     }

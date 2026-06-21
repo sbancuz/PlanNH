@@ -4,30 +4,15 @@ import java.util.UUID;
 
 import com.google.gson.JsonObject;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
+@Data
 public abstract class GraphData implements IJsonSerializable {
 
-    @Getter
     protected final UUID id;
-    @Getter
-    @Setter
     protected int x;
-    @Getter
-    @Setter
     protected int y;
-    @Getter
-    @Setter
     protected String header;
-    // @Getter @Setter
-    // protected int w;
-    // @Getter @Setter
-    // protected int h;
-
-    protected GraphData(UUID id) {
-        this.id = id;
-    }
 
     @Override
     public void loadFromJson(JsonObject json) {
@@ -37,8 +22,6 @@ public abstract class GraphData implements IJsonSerializable {
             .getAsInt();
         header = json.get("header")
             .getAsString();
-        // w = json.get("w").getAsInt();
-        // h = json.get("h").getAsInt();
     }
 
     @Override
@@ -47,7 +30,5 @@ public abstract class GraphData implements IJsonSerializable {
         json.addProperty("x", x);
         json.addProperty("y", y);
         json.addProperty("header", header);
-        // json.addProperty("w", w);
-        // json.addProperty("h", h);
     }
 }

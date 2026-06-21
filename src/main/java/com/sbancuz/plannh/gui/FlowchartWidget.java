@@ -16,12 +16,10 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     @Getter
     protected final D data;
-    protected boolean moving = false;
-    protected int dragStartMouseX, dragStartMouseY;
-    protected int dragStartX, dragStartY;
-
     protected final CanvasWidget canvas;
-    protected final GuiHelper.DoubleClickDetector doubleClick = new GuiHelper.DoubleClickDetector();
+    private boolean moving = false;
+    private int dragStartMouseX, dragStartMouseY;
+    private int dragStartX, dragStartY;
 
     protected FlowchartWidget(CanvasWidget canvas, D data) {
         this.canvas = canvas;
