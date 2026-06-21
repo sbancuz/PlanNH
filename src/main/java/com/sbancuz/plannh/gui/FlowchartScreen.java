@@ -5,6 +5,10 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.StatCollector;
+
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -112,6 +116,9 @@ public class FlowchartScreen extends ModularScreen {
         private static final int SUMMARY_BTN_RIGHT = 72;
         private static final int GROUP_BTN_RIGHT = 58;
         private static final int NOTE_BTN_RIGHT = 44;
+        private static final int SHARE_BTN_RIGHT = 100;
+        private static final int COPY_BTN_RIGHT = 114;
+        private static final int IMP_BTN_RIGHT = 128;
 
         SlotBarWidget(final CanvasWidget canvas) {
             this.canvas = canvas;
@@ -194,6 +201,33 @@ public class FlowchartScreen extends ModularScreen {
             final int nx = w - NOTE_BTN_RIGHT;
             GuiDraw.drawText("N", nx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
             zones.add(new ClickZone(nx, 0, nx + ARROW_W, h, this::addNote));
+
+            final int shx = w - SHARE_BTN_RIGHT;
+            GuiDraw.drawText("Sh", shx, TEXT_Y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
+            zones.add(new ClickZone(shx, 0, shx + ARROW_W, h, () -> PlanAPI.shareGraph(canvas.getGraph())));
+
+            final int cx = w - COPY_BTN_RIGHT;
+            GuiDraw.drawText("Cp", cx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            zones.add(new ClickZone(cx, 0, cx + ARROW_W, h, () -> {
+                PlanAPI.copyToClipboard(canvas.getGraph());
+                Minecraft.getMinecraft().thePlayer.addChatMessage(
+                    new ChatComponentText(
+                        "[" + PlanNH.MODID + "] " + StatCollector.translateToLocal("plannh.share.copy_to_clipboard")));
+            }));
+
+            final int ix = w - IMP_BTN_RIGHT;
+            GuiDraw.drawText("Im", ix, TEXT_Y, 1.0f, PlannhColors.ACCENT_AMBER.getColor(), false);
+            zones.add(new ClickZone(ix, 0, ix + ARROW_W, h, () -> {
+                final Graph graph = PlanAPI.importFromClipboard();
+                if (graph == null) return;
+                PlanAPI.importGraph(graph);
+                canvas.setGraph(graph);
+                Minecraft.getMinecraft().thePlayer.addChatMessage(
+                    new ChatComponentText(
+                        "[" + PlanNH.MODID
+                            + "] "
+                            + StatCollector.translateToLocal("plannh.share.copy_from_clipboard")));
+            }));
         }
 
         private void shiftSlot(final int dir) {
