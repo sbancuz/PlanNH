@@ -23,14 +23,9 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
             .coverChildrenHeight()
             .fullWidth()
             .childPadding(4)
-            .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
             .background(new Rectangle().color(PlannhColors.NOTE_BORDER.getColor()));
 
-        HeaderTextWidget header = new HeaderTextWidget(this);
-        topRow.child(header.background(
-            new DynamicDrawable(
-                () -> new Rectangle()
-                    .color(header.isEditing() ? PlannhColors.NOTE_BORDER_EDIT.getColor() : Color.argb(1f, 1f, 1f, 0)))));
+        topRow.child(new HeaderTextWidget(this, PlannhColors.NOTE_BORDER_EDIT.getColor()));
         topRow.child(new CloseButtonWidget(this));
 
         mainColumn.child(topRow);

@@ -1,17 +1,17 @@
 package com.sbancuz.plannh.gui;
 
-import com.cleanroommc.modularui.ModularUI;
-import com.cleanroommc.modularui.api.layout.IViewportStack;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IDragResizeable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
+import com.cleanroommc.modularui.utils.Color;
+import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widget.sizer.Area;
+import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.sbancuz.plannh.data.flowchart.Group;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.BiConsumer;
 
 public class GroupWidget2 extends FlowchartWidget<GroupWidget2, Group> implements IDragResizeable {
 
@@ -29,11 +29,42 @@ public class GroupWidget2 extends FlowchartWidget<GroupWidget2, Group> implement
             widget.dataContainer = data.getChildren();
             child(widget);
         });
+
+        child(FlowchartFlow.row(this)
+            .coverChildrenHeight()
+            .background(new Rectangle().color(data.getColor()))
+            .fullWidth()
+            .child(new HeaderTextWidget(this, data.getColor()))
+            .child(FlowchartFlow.row(this)
+                .childPadding(2)
+                .coverChildren()
+                .reverseLayout()
+                .child(new CloseButtonWidget(this))
+                .child(new ToggleButton().value(new BoolValue.Dynamic(data::isCoverChildren, val -> {
+                    data.setCoverChildren(val);
+                    if (data.isCoverChildren()) coverChildren(GROUP_MIN_W, GROUP_MIN_H);
+                    else disableCoverChildren();
+                    scheduleResize();
+                })).overlay(IKey.str("CC").color(Color.WHITE.main)))));
+    }
+
+    @Override
+    public void removeFromGraph() {
+        getChildren().stream()
+            .filter(w -> w instanceof FlowchartWidget<?,?>)
+            .map(w -> (FlowchartWidget<?,?>) w)
+            .forEach(FlowchartWidget::removeFromGraph);
+        super.removeFromGraph();
     }
 
     @Override
     protected Map<UUID, Group> getDefaultContainer() {
         return canvas.getGraph().groups;
+    }
+
+    @Override
+    public boolean isCurrentlyResizable() {
+        return !data.isCoverChildren();
     }
 
     @Override
@@ -43,12 +74,24 @@ public class GroupWidget2 extends FlowchartWidget<GroupWidget2, Group> implement
 
     @Override
     public int getMinDragWidth() {
-        return GROUP_MIN_W;
+        return Math.max(GROUP_MIN_W,
+            getChildren()
+                .stream()
+                .filter(w -> w instanceof FlowchartWidget<?,?>)
+                .mapToInt(w -> w.getArea().rx + w.getArea().width)
+                .max()
+                .orElse(0));
     }
 
     @Override
     public int getMinDragHeight() {
-        return GROUP_MIN_H;
+        return Math.max(GROUP_MIN_H,
+            getChildren()
+                .stream()
+                .filter(w -> w instanceof FlowchartWidget<?,?>)
+                .mapToInt(w -> w.getArea().ry + w.getArea().height)
+                .max()
+                .orElse(0));
     }
 
     @Override

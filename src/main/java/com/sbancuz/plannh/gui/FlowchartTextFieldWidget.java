@@ -15,7 +15,6 @@ public abstract class FlowchartTextFieldWidget extends BaseTextFieldWidget<Flowc
     protected final FlowchartWidget<?, ?> parent;
     protected final GuiHelper.DoubleClickDetector doubleClick = new GuiHelper.DoubleClickDetector();
 
-    @Getter
     protected boolean isEditing = false;
 
     public FlowchartTextFieldWidget(FlowchartWidget<?, ?> parent) {

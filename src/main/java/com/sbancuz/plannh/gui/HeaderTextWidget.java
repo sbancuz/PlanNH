@@ -6,12 +6,16 @@ import com.cleanroommc.modularui.utils.Color;
 
 public class HeaderTextWidget extends FlowchartTextFieldWidget {
 
-    public HeaderTextWidget(FlowchartWidget<?, ?> parent) {
+    public HeaderTextWidget(FlowchartWidget<?, ?> parent, int bgColor) {
         super(parent);
 
         height(20);
         setScale(1.5f);
         expanded();
+        background(
+            new DynamicDrawable(
+                () -> new Rectangle().color(isEditing ? bgColor : Color.argb(1f, 1f, 1f, 0))));
+
         handler.getText()
             .add(
                 parent.getData()

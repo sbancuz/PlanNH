@@ -25,7 +25,7 @@ public class Group extends GraphData {
     private int color = getRandomColor();
     private boolean collapsed;
     private boolean clampNodes;
-    private boolean autoResize;
+    private boolean coverChildren;
     @NotNull
     private final Map<UUID, GraphData> children = new HashMap<>();
 
@@ -40,7 +40,7 @@ public class Group extends GraphData {
         color = json.get("color").getAsInt();
         collapsed = json.get("collapsed").getAsBoolean();
         clampNodes = json.get("clampNodes").getAsBoolean();
-        autoResize = json.get("autoResize").getAsBoolean();
+        coverChildren = json.get("coverChildren").getAsBoolean();
         for(JsonElement elem : json.getAsJsonArray("children")){
             JsonObject obj = elem.getAsJsonObject();
             children.put(UUID.fromString(obj.get("id").getAsString()), GraphData.loadFromJson(obj.get("data").getAsJsonObject()));
@@ -55,7 +55,7 @@ public class Group extends GraphData {
         json.addProperty("color", color);
         json.addProperty("collapsed", collapsed);
         json.addProperty("clampNodes", clampNodes);
-        json.addProperty("autoResize", autoResize);
+        json.addProperty("coverChildren", coverChildren);
         JsonArray jsonArray = new JsonArray();
         for(Map.Entry<UUID, GraphData> entry : children.entrySet()){
             JsonObject child = new JsonObject();

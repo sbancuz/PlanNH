@@ -124,7 +124,6 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     }
 
     public void removeFromGraph(){
-        ((ParentWidget<?>) getParent()).remove(this);
         canvas.getFlowchartWidgets().remove(data.getId());
         dataContainer.remove(data.getId());
     }
