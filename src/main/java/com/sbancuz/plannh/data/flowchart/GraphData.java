@@ -2,14 +2,15 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.UUID;
 
-import com.google.gson.JsonObject;
-
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 
-@Getter @Setter
+import com.google.gson.JsonObject;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public abstract class GraphData implements IJsonSerializable {
 
     protected final UUID id;
@@ -17,13 +18,15 @@ public abstract class GraphData implements IJsonSerializable {
     protected int y;
     protected String header;
 
-    protected GraphData(UUID id){
+    protected GraphData(UUID id) {
         this.id = id;
         header = StringUtils.capitalize(getType());
     }
 
-    protected GraphData(JsonObject json){
-        id = UUID.fromString(json.get("id").getAsString());
+    protected GraphData(JsonObject json) {
+        id = UUID.fromString(
+            json.get("id")
+                .getAsString());
         x = json.get("x")
             .getAsInt();
         y = json.get("y")
@@ -43,9 +46,10 @@ public abstract class GraphData implements IJsonSerializable {
         json.addProperty("type", getType());
     }
 
-    public static GraphData loadFromJson(JsonObject json){
-        String type = json.get("type").getAsString();
-        return switch (type){
+    public static GraphData loadFromJson(JsonObject json) {
+        String type = json.get("type")
+            .getAsString();
+        return switch (type) {
             case "note" -> new Note(json);
             case "group" -> new Group(json);
             default -> throw new IllegalArgumentException("Invalid type " + type);
