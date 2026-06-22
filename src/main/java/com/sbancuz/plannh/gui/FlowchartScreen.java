@@ -5,12 +5,11 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
-import com.sbancuz.plannh.data.flowchart.SlotSet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -36,6 +35,7 @@ import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.SlotSet;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
@@ -94,20 +94,18 @@ public class FlowchartScreen extends ModularScreen {
                         .overlay(
                             IKey.str("Add Note")
                                 .color(Color.WHITE.main)))
-                    .child(
-                        new ButtonWidget<>()
-                            .onMousePressed(_ -> {
-                                canvas.addGroup();
-                                return true;
-                            })
-                            .fullWidth()
-                            .background(
-                                new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
-                                new Rectangle().hollow()
-                                    .color(PlannhColors.CONTEXT_BORDER.getColor()))
-                            .overlay(
-                                IKey.str("Add Group")
-                                    .color(Color.WHITE.main))));
+                    .child(new ButtonWidget<>().onMousePressed(_ -> {
+                        canvas.addGroup();
+                        return true;
+                    })
+                        .fullWidth()
+                        .background(
+                            new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                            new Rectangle().hollow()
+                                .color(PlannhColors.CONTEXT_BORDER.getColor()))
+                        .overlay(
+                            IKey.str("Add Group")
+                                .color(Color.WHITE.main))));
 
         mainColumn.child(
             Flow.row()
@@ -129,8 +127,7 @@ public class FlowchartScreen extends ModularScreen {
                         .coverChildren()
                         .childPadding(2)
                         .child(
-                            new ToggleButton()
-                                .value(new BoolValue.Dynamic(graph::isSnapToGrid, graph::setSnapToGrid))
+                            new ToggleButton().value(new BoolValue.Dynamic(graph::isSnapToGrid, graph::setSnapToGrid))
                                 .overlay(
                                     IKey.str("S2G")
                                         .color(Color.WHITE.main)))
@@ -257,13 +254,14 @@ public class FlowchartScreen extends ModularScreen {
                 PlanAPI.save();
             }));
 
-            /*final int gx = w - GROUP_BTN_RIGHT;
-            GuiDraw.drawText("G", gx, TEXT_Y, 1.0f, PlannhColors.titleColor("Group"), false);
-            zones.add(new ClickZone(gx, 0, gx + ARROW_W, h, this::addGroup));
-
-            final int nx = w - NOTE_BTN_RIGHT;
-            GuiDraw.drawText("N", nx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(nx, 0, nx + ARROW_W, h, this::addNote));*/
+            /*
+             * final int gx = w - GROUP_BTN_RIGHT;
+             * GuiDraw.drawText("G", gx, TEXT_Y, 1.0f, PlannhColors.titleColor("Group"), false);
+             * zones.add(new ClickZone(gx, 0, gx + ARROW_W, h, this::addGroup));
+             * final int nx = w - NOTE_BTN_RIGHT;
+             * GuiDraw.drawText("N", nx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+             * zones.add(new ClickZone(nx, 0, nx + ARROW_W, h, this::addNote));
+             */
 
             final int shx = w - SHARE_BTN_RIGHT;
             GuiDraw.drawText("Sh", shx, TEXT_Y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
@@ -320,21 +318,22 @@ public class FlowchartScreen extends ModularScreen {
             PlanAPI.save();
         }
 
-        /*private void addNote() {
-            int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
-            int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
-            if (cx < 0) cx = 0;
-            if (cy < 0) cy = 0;
-            canvas.addNote(cx, cy);
-        }
-
-        private void addGroup() {
-            int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
-            int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
-            if (cx < 0) cx = 0;
-            if (cy < 0) cy = 0;
-            canvas.addGroup(cx, cy);
-        }*/
+        /*
+         * private void addNote() {
+         * int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
+         * int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
+         * if (cx < 0) cx = 0;
+         * if (cy < 0) cy = 0;
+         * canvas.addNote(cx, cy);
+         * }
+         * private void addGroup() {
+         * int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
+         * int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
+         * if (cx < 0) cx = 0;
+         * if (cy < 0) cy = 0;
+         * canvas.addGroup(cx, cy);
+         * }
+         */
 
         private void cycleBalanceMode() {
             final Graph g = canvas.getGraph();
@@ -592,7 +591,8 @@ public class FlowchartScreen extends ModularScreen {
                 PlannhColors.SEPARATOR_DIM.getColor());
             ly += HELP_SEP_GAP;
             GuiDraw.drawText(
-                "Zoom: " + canvas.getGraph().getZoom()*100 + "%",
+                "Zoom: " + canvas.getGraph()
+                    .getZoom() * 100 + "%",
                 ZOOM_TEXT_X,
                 ly,
                 0.9f,

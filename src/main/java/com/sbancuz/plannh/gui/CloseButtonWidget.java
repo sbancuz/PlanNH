@@ -1,11 +1,11 @@
 package com.sbancuz.plannh.gui;
 
-import com.cleanroommc.modularui.widget.ParentWidget;
 import org.jetbrains.annotations.NotNull;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.utils.Color;
+import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 
 public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
@@ -27,7 +27,8 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
 
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
-        if (parent.getCanvas().isMouseInsideCanvas()){
+        if (parent.getCanvas()
+            .isMouseInsideCanvas()) {
             ((ParentWidget<?>) parent.getParent()).remove(parent);
             parent.removeFromGraph();
         }

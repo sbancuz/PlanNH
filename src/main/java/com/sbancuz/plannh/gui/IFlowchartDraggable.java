@@ -1,12 +1,13 @@
 package com.sbancuz.plannh.gui;
 
-import com.cleanroommc.modularui.api.widget.IWidget;
-import it.unimi.dsi.fastutil.Pair;
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.widget.IDraggable;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.widget.sizer.Area;
+
+import it.unimi.dsi.fastutil.Pair;
 
 public interface IFlowchartDraggable extends IDraggable {
 
@@ -53,5 +54,7 @@ public interface IFlowchartDraggable extends IDraggable {
         getFlowchartParent().setMoving(b);
     }
 
-    default Pair<Integer, Integer> dragOffset(){return Pair.of(0, 0);}
+    default Pair<Integer, Integer> dragOffset() {
+        return Pair.of(0, 0);
+    }
 }

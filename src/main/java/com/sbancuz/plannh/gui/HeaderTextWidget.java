@@ -12,9 +12,7 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
         height(20);
         setScale(1.5f);
         expanded();
-        background(
-            new DynamicDrawable(
-                () -> new Rectangle().color(isEditing ? bgColor : Color.argb(1f, 1f, 1f, 0))));
+        background(new DynamicDrawable(() -> new Rectangle().color(isEditing ? bgColor : Color.argb(1f, 1f, 1f, 0))));
 
         handler.getText()
             .add(

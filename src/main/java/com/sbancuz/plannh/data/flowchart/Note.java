@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.jetbrains.annotations.NotNull;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -11,7 +13,6 @@ import com.google.gson.JsonPrimitive;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter
@@ -24,7 +25,7 @@ public class Note extends GraphData {
         super(UUID.randomUUID());
     }
 
-    public Note(JsonObject json){
+    public Note(JsonObject json) {
         super(json);
         JsonArray jsonArray = json.getAsJsonArray("text");
         for (JsonElement elem : jsonArray) text.add(elem.getAsString());

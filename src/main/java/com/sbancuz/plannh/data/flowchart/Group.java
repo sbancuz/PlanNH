@@ -1,20 +1,22 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import com.cleanroommc.modularui.utils.Color;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import lombok.Getter;
-import lombok.Setter;
-import org.jetbrains.annotations.NotNull;
+import static com.sbancuz.plannh.gui.GroupWidget2.GROUP_MIN_H;
+import static com.sbancuz.plannh.gui.GroupWidget2.GROUP_MIN_W;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
-import static com.sbancuz.plannh.gui.GroupWidget2.GROUP_MIN_H;
-import static com.sbancuz.plannh.gui.GroupWidget2.GROUP_MIN_W;
+import org.jetbrains.annotations.NotNull;
+
+import com.cleanroommc.modularui.utils.Color;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -33,17 +35,29 @@ public class Group extends GraphData {
         super(UUID.randomUUID());
     }
 
-    public Group(JsonObject json){
+    public Group(JsonObject json) {
         super(json);
-        width = json.get("width").getAsInt();
-        height = json.get("height").getAsInt();
-        color = json.get("color").getAsInt();
-        collapsed = json.get("collapsed").getAsBoolean();
-        clampNodes = json.get("clampNodes").getAsBoolean();
-        coverChildren = json.get("coverChildren").getAsBoolean();
-        for(JsonElement elem : json.getAsJsonArray("children")){
+        width = json.get("width")
+            .getAsInt();
+        height = json.get("height")
+            .getAsInt();
+        color = json.get("color")
+            .getAsInt();
+        collapsed = json.get("collapsed")
+            .getAsBoolean();
+        clampNodes = json.get("clampNodes")
+            .getAsBoolean();
+        coverChildren = json.get("coverChildren")
+            .getAsBoolean();
+        for (JsonElement elem : json.getAsJsonArray("children")) {
             JsonObject obj = elem.getAsJsonObject();
-            children.put(UUID.fromString(obj.get("id").getAsString()), GraphData.loadFromJson(obj.get("data").getAsJsonObject()));
+            children.put(
+                UUID.fromString(
+                    obj.get("id")
+                        .getAsString()),
+                GraphData.loadFromJson(
+                    obj.get("data")
+                        .getAsJsonObject()));
         }
     }
 
@@ -57,11 +71,15 @@ public class Group extends GraphData {
         json.addProperty("clampNodes", clampNodes);
         json.addProperty("coverChildren", coverChildren);
         JsonArray jsonArray = new JsonArray();
-        for(Map.Entry<UUID, GraphData> entry : children.entrySet()){
+        for (Map.Entry<UUID, GraphData> entry : children.entrySet()) {
             JsonObject child = new JsonObject();
-            child.addProperty("id", entry.getKey().toString());
+            child.addProperty(
+                "id",
+                entry.getKey()
+                    .toString());
             JsonObject data = new JsonObject();
-            entry.getValue().saveToJson(data);
+            entry.getValue()
+                .saveToJson(data);
             child.add("data", data);
             jsonArray.add(child);
         }
