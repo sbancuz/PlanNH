@@ -5,6 +5,10 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.StatCollector;
+
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -156,154 +160,205 @@ public class FlowchartScreen extends ModularScreen {
         super.onClose();
     }
 
-    /*
-     * private static class SlotBarWidget extends Widget<SlotBarWidget> implements Interactable {
-     * private final CanvasWidget canvas;
-     * private final List<ClickZone> zones = new ArrayList<>();
-     * private static final int TEXT_Y = 4;
-     * private static final int ARROW_W = 14;
-     * private static final int PREV_X = 4;
-     * private static final int NAME_GAP = 16;
-     * private static final int NAME_EST_W = 6;
-     * private static final int NAME_EST_PAD = 8;
-     * private static final int ADD_BTN_RIGHT = 30;
-     * private static final int DEL_BTN_RIGHT = 15;
-     * private static final int MODE_BTN_RIGHT = 86;
-     * private static final int SUMMARY_BTN_RIGHT = 72;
-     * private static final int GROUP_BTN_RIGHT = 58;
-     * private static final int NOTE_BTN_RIGHT = 44;
-     * SlotBarWidget(final CanvasWidget canvas) {
-     * this.canvas = canvas;
-     * pos(0, 0);
-     * }
-     * private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action) {
-     * boolean contains(final int ux, final int uy) {
-     * return ux >= ux1 && ux < ux2 && uy >= uy1 && uy < uy2;
-     * }
-     * }
-     * @Override
-     * public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
-     * final Area a = getArea();
-     * final int w = a.width;
-     * final int h = a.height;
-     * GuiDraw.drawRect(0, 0, w, h, PlannhColors.SLOT_BAR_BG.getColor());
-     * GuiDraw.drawRect(0, h - 1, w, 1, PlannhColors.SLOT_BAR_LINE.getColor());
-     * final SlotSet set = PlanAPI.getSlotSet();
-     * final String name = set.activeSlot >= 0 && set.activeSlot < set.slots.size()
-     * ? set.slots.get(set.activeSlot).name
-     * : "?";
-     * zones.clear();
-     * final int px = PREV_X;
-     * GuiDraw.drawText("<", px, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-     * zones.add(new ClickZone(px, 0, px + ARROW_W, h, () -> shiftSlot(-1)));
-     * final int nameX = px + NAME_GAP;
-     * GuiDraw.drawText(name, nameX, TEXT_Y, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
-     * final int nameW = name.length() * NAME_EST_W + NAME_EST_PAD;
-     * final int nbx = nameX + nameW;
-     * GuiDraw.drawText(">", nbx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-     * zones.add(new ClickZone(nbx, 0, nbx + ARROW_W, h, () -> shiftSlot(1)));
-     * final int ax = w - ADD_BTN_RIGHT;
-     * GuiDraw.drawText("+", ax, TEXT_Y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
-     * zones.add(new ClickZone(ax, 0, ax + ARROW_W, h, this::addSlot));
-     * final int dx = w - DEL_BTN_RIGHT;
-     * GuiDraw.drawText("\u00d7", dx, TEXT_Y, 1.0f, PlannhColors.ACCENT_RED.getColor(), false);
-     * zones.add(new ClickZone(dx, 0, dx + ARROW_W, h, this::deleteSlot));
-     * final BalanceMode mode = canvas.getGraph()
-     * .getBalanceMode();
-     * final String modeLabel = switch (mode) {
-     * case NONE -> "M:-";
-     * case FORWARD -> "M:F";
-     * case BACKWARD -> "M:B";
-     * };
-     * final int modeColor = switch (mode) {
-     * case NONE -> PlannhColors.TEXT_MUTED.getColor();
-     * case FORWARD -> PlannhColors.ACCENT_GREEN.getColor();
-     * case BACKWARD -> PlannhColors.ACCENT_BLUE.getColor();
-     * };
-     * final int mx = w - MODE_BTN_RIGHT;
-     * GuiDraw.drawText(modeLabel, mx, TEXT_Y, 1.0f, modeColor, false);
-     * zones.add(new ClickZone(mx, 0, mx + ARROW_W, h, this::cycleBalanceMode));
-     * final SummaryMode sMode = set.summaryMode;
-     * final String sLabel = sMode == SummaryMode.CYCLES ? "S:C" : "S:T";
-     * final int sCol = sMode == SummaryMode.CYCLES ? PlannhColors.ACCENT_BLUE.getColor()
-     * : PlannhColors.ACCENT_GREEN.getColor();
-     * final int sx = w - SUMMARY_BTN_RIGHT;
-     * GuiDraw.drawText(sLabel, sx, TEXT_Y, 1.0f, sCol, false);
-     * zones.add(new ClickZone(sx, 0, sx + ARROW_W, h, () -> {
-     * final SlotSet s = PlanAPI.getSlotSet();
-     * s.summaryMode = s.summaryMode == SummaryMode.CYCLES ? SummaryMode.THROUGHPUT : SummaryMode.CYCLES;
-     * PlanAPI.save();
-     * }));
-     * final int gx = w - GROUP_BTN_RIGHT;
-     * GuiDraw.drawText("G", gx, TEXT_Y, 1.0f, PlannhColors.titleColor("Group"), false);
-     * zones.add(new ClickZone(gx, 0, gx + ARROW_W, h, this::addGroup));
-     * final int nx = w - NOTE_BTN_RIGHT;
-     * GuiDraw.drawText("N", nx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-     * zones.add(new ClickZone(nx, 0, nx + ARROW_W, h, this::addNote));
-     * }
-     * private void shiftSlot(final int dir) {
-     * final SlotSet set = PlanAPI.getSlotSet();
-     * if (set.slots.size() <= 1) return;
-     * set.activeSlot = (set.activeSlot + dir + set.slots.size()) % set.slots.size();
-     * canvas.setGraph(set.getActiveGraph());
-     * PlanAPI.save();
-     * }
-     * private void addSlot() {
-     * final SlotSet set = PlanAPI.getSlotSet();
-     * final int n = set.slots.size() + 1;
-     * final SlotSet.Slot slot = new SlotSet.Slot("Slot " + n, new Graph());
-     * set.slots.add(slot);
-     * set.activeSlot = set.slots.size() - 1;
-     * canvas.setGraph(slot.graph);
-     * PlanAPI.save();
-     * }
-     * private void deleteSlot() {
-     * final SlotSet set = PlanAPI.getSlotSet();
-     * if (set.slots.size() <= 1) return;
-     * set.slots.remove(set.activeSlot);
-     * if (set.activeSlot >= set.slots.size()) set.activeSlot = set.slots.size() - 1;
-     * canvas.setGraph(set.getActiveGraph());
-     * PlanAPI.save();
-     * }
-     * private void addNote() {
-     * int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
-     * int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
-     * if (cx < 0) cx = 0;
-     * if (cy < 0) cy = 0;
-     * canvas.addNote(cx, cy);
-     * }
-     * private void addGroup() {
-     * int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
-     * int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
-     * if (cx < 0) cx = 0;
-     * if (cy < 0) cy = 0;
-     * canvas.addGroup(cx, cy);
-     * }
-     * private void cycleBalanceMode() {
-     * final Graph g = canvas.getGraph();
-     * final BalanceMode next = switch (g.getBalanceMode()) {
-     * case NONE -> BalanceMode.FORWARD;
-     * case FORWARD -> BalanceMode.BACKWARD;
-     * case BACKWARD -> BalanceMode.NONE;
-     * };
-     * g.setBalanceMode(next);
-     * PlanAPI.save();
-     * }
-     * @Override
-     * public @Nonnull Result onMousePressed(final int mouseButton) {
-     * if (mouseButton != 0) return Result.IGNORE;
-     * final int mx = getContext().getMouseX();
-     * final int my = getContext().getMouseY();
-     * for (final ClickZone zone : zones) {
-     * if (zone.contains(mx, my)) {
-     * zone.action.run();
-     * return Result.SUCCESS;
-     * }
-     * }
-     * return Result.IGNORE;
-     * }
-     * }
-     */
+    private static class SlotBarWidget extends Widget<SlotBarWidget> implements Interactable {
+
+        private final CanvasWidget canvas;
+        private final List<ClickZone> zones = new ArrayList<>();
+
+        private static final int TEXT_Y = 4;
+        private static final int ARROW_W = 14;
+        private static final int PREV_X = 4;
+        private static final int NAME_GAP = 16;
+        private static final int NAME_EST_W = 6;
+        private static final int NAME_EST_PAD = 8;
+        private static final int ADD_BTN_RIGHT = 30;
+        private static final int DEL_BTN_RIGHT = 15;
+        private static final int MODE_BTN_RIGHT = 86;
+        private static final int SUMMARY_BTN_RIGHT = 72;
+        private static final int GROUP_BTN_RIGHT = 58;
+        private static final int NOTE_BTN_RIGHT = 44;
+        private static final int SHARE_BTN_RIGHT = 100;
+        private static final int COPY_BTN_RIGHT = 114;
+        private static final int IMP_BTN_RIGHT = 128;
+
+        SlotBarWidget(final CanvasWidget canvas) {
+            this.canvas = canvas;
+            pos(0, 0);
+        }
+
+        private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action) {
+
+            boolean contains(final int ux, final int uy) {
+                return ux >= ux1 && ux < ux2 && uy >= uy1 && uy < uy2;
+            }
+        }
+
+        @Override
+        public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
+            final Area a = getArea();
+            final int w = a.width;
+            final int h = a.height;
+
+            GuiDraw.drawRect(0, 0, w, h, PlannhColors.SLOT_BAR_BG.getColor());
+            GuiDraw.drawRect(0, h - 1, w, 1, PlannhColors.SLOT_BAR_LINE.getColor());
+
+            final SlotSet set = PlanAPI.getSlotSet();
+            final String name = set.activeSlot >= 0 && set.activeSlot < set.slots.size()
+                ? set.slots.get(set.activeSlot).name
+                : "?";
+
+            zones.clear();
+
+            final int px = PREV_X;
+            GuiDraw.drawText("<", px, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            zones.add(new ClickZone(px, 0, px + ARROW_W, h, () -> shiftSlot(-1)));
+            final int nameX = px + NAME_GAP;
+            GuiDraw.drawText(name, nameX, TEXT_Y, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
+            final int nameW = name.length() * NAME_EST_W + NAME_EST_PAD;
+            final int nbx = nameX + nameW;
+            GuiDraw.drawText(">", nbx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            zones.add(new ClickZone(nbx, 0, nbx + ARROW_W, h, () -> shiftSlot(1)));
+
+            final int ax = w - ADD_BTN_RIGHT;
+            GuiDraw.drawText("+", ax, TEXT_Y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
+            zones.add(new ClickZone(ax, 0, ax + ARROW_W, h, this::addSlot));
+
+            final int dx = w - DEL_BTN_RIGHT;
+            GuiDraw.drawText("\u00d7", dx, TEXT_Y, 1.0f, PlannhColors.ACCENT_RED.getColor(), false);
+            zones.add(new ClickZone(dx, 0, dx + ARROW_W, h, this::deleteSlot));
+
+            final BalanceMode mode = canvas.getGraph()
+                .getBalanceMode();
+            final String modeLabel = switch (mode) {
+                case NONE -> "M:-";
+                case FORWARD -> "M:F";
+                case BACKWARD -> "M:B";
+            };
+            final int modeColor = switch (mode) {
+                case NONE -> PlannhColors.TEXT_MUTED.getColor();
+                case FORWARD -> PlannhColors.ACCENT_GREEN.getColor();
+                case BACKWARD -> PlannhColors.ACCENT_BLUE.getColor();
+            };
+            final int mx = w - MODE_BTN_RIGHT;
+            GuiDraw.drawText(modeLabel, mx, TEXT_Y, 1.0f, modeColor, false);
+            zones.add(new ClickZone(mx, 0, mx + ARROW_W, h, this::cycleBalanceMode));
+
+            final SummaryMode sMode = set.summaryMode;
+            final String sLabel = sMode == SummaryMode.CYCLES ? "S:C" : "S:T";
+            final int sCol = sMode == SummaryMode.CYCLES ? PlannhColors.ACCENT_BLUE.getColor()
+                : PlannhColors.ACCENT_GREEN.getColor();
+            final int sx = w - SUMMARY_BTN_RIGHT;
+            GuiDraw.drawText(sLabel, sx, TEXT_Y, 1.0f, sCol, false);
+            zones.add(new ClickZone(sx, 0, sx + ARROW_W, h, () -> {
+                final SlotSet s = PlanAPI.getSlotSet();
+                s.summaryMode = s.summaryMode == SummaryMode.CYCLES ? SummaryMode.THROUGHPUT : SummaryMode.CYCLES;
+                PlanAPI.save();
+            }));
+
+            final int gx = w - GROUP_BTN_RIGHT;
+            GuiDraw.drawText("G", gx, TEXT_Y, 1.0f, PlannhColors.titleColor("Group"), false);
+            zones.add(new ClickZone(gx, 0, gx + ARROW_W, h, this::addGroup));
+
+            final int nx = w - NOTE_BTN_RIGHT;
+            GuiDraw.drawText("N", nx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            zones.add(new ClickZone(nx, 0, nx + ARROW_W, h, this::addNote));
+
+            final int shx = w - SHARE_BTN_RIGHT;
+            GuiDraw.drawText("Sh", shx, TEXT_Y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
+            zones.add(new ClickZone(shx, 0, shx + ARROW_W, h, () -> PlanAPI.shareGraph(canvas.getGraph())));
+
+            final int cx = w - COPY_BTN_RIGHT;
+            GuiDraw.drawText("Cp", cx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+            zones.add(new ClickZone(cx, 0, cx + ARROW_W, h, () -> {
+                PlanAPI.copyToClipboard(canvas.getGraph());
+                Minecraft.getMinecraft().thePlayer.addChatMessage(
+                    new ChatComponentText(
+                        "[" + PlanNH.MODID + "] " + StatCollector.translateToLocal("plannh.share.copy_to_clipboard")));
+            }));
+
+            final int ix = w - IMP_BTN_RIGHT;
+            GuiDraw.drawText("Im", ix, TEXT_Y, 1.0f, PlannhColors.ACCENT_AMBER.getColor(), false);
+            zones.add(new ClickZone(ix, 0, ix + ARROW_W, h, () -> {
+                final Graph graph = PlanAPI.importFromClipboard();
+                if (graph == null) return;
+                PlanAPI.importGraph(graph);
+                canvas.setGraph(graph);
+                Minecraft.getMinecraft().thePlayer.addChatMessage(
+                    new ChatComponentText(
+                        "[" + PlanNH.MODID
+                            + "] "
+                            + StatCollector.translateToLocal("plannh.share.copy_from_clipboard")));
+            }));
+        }
+
+        private void shiftSlot(final int dir) {
+            final SlotSet set = PlanAPI.getSlotSet();
+            if (set.slots.size() <= 1) return;
+            set.activeSlot = (set.activeSlot + dir + set.slots.size()) % set.slots.size();
+            canvas.setGraph(set.getActiveGraph());
+            PlanAPI.save();
+        }
+
+        private void addSlot() {
+            final SlotSet set = PlanAPI.getSlotSet();
+            final int n = set.slots.size() + 1;
+            final SlotSet.Slot slot = new SlotSet.Slot("Slot " + n, new Graph());
+            set.slots.add(slot);
+            set.activeSlot = set.slots.size() - 1;
+            canvas.setGraph(slot.graph);
+            PlanAPI.save();
+        }
+
+        private void deleteSlot() {
+            final SlotSet set = PlanAPI.getSlotSet();
+            if (set.slots.size() <= 1) return;
+            set.slots.remove(set.activeSlot);
+            if (set.activeSlot >= set.slots.size()) set.activeSlot = set.slots.size() - 1;
+            canvas.setGraph(set.getActiveGraph());
+            PlanAPI.save();
+        }
+
+        private void addNote() {
+            int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
+            int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
+            if (cx < 0) cx = 0;
+            if (cy < 0) cy = 0;
+            canvas.addNote(cx, cy);
+        }
+
+        private void addGroup() {
+            int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
+            int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
+            if (cx < 0) cx = 0;
+            if (cy < 0) cy = 0;
+            canvas.addGroup(cx, cy);
+        }
+
+        private void cycleBalanceMode() {
+            final Graph g = canvas.getGraph();
+            final BalanceMode next = switch (g.getBalanceMode()) {
+                case NONE -> BalanceMode.FORWARD;
+                case FORWARD -> BalanceMode.BACKWARD;
+                case BACKWARD -> BalanceMode.NONE;
+            };
+            g.setBalanceMode(next);
+            PlanAPI.save();
+        }
+
+        @Override
+        public @Nonnull Result onMousePressed(final int mouseButton) {
+            if (mouseButton != 0) return Result.IGNORE;
+            final int mx = getContext().getMouseX();
+            final int my = getContext().getMouseY();
+            for (final ClickZone zone : zones) {
+                if (zone.contains(mx, my)) {
+                    zone.action.run();
+                    return Result.SUCCESS;
+                }
+            }
+            return Result.IGNORE;
+        }
+    }
 
     private static class SummaryWidget extends Widget<SummaryWidget> implements Interactable {
 

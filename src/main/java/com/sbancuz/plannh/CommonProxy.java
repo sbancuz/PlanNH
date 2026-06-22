@@ -1,6 +1,6 @@
 package com.sbancuz.plannh;
 
-import com.sbancuz.plannh.config.ConfigMain;
+import com.sbancuz.plannh.client.ImportCommand;
 
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
@@ -9,19 +9,19 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
 
 public class CommonProxy {
 
-    // preInit "Run before anything else. Read your config, create blocks, items, etc, and register them with the
-    // GameRegistry." (Remove if not needed)
     public void preInit(final FMLPreInitializationEvent event) {
         Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
         ConfigMain.registerPlanNHConfigs();
     }
 
-    // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
     public void init(final FMLInitializationEvent event) {}
 
-    // postInit "Handle interaction with other mods, complete your setup based on this." (Remove if not needed)
     public void postInit(final FMLPostInitializationEvent event) {}
 
-    // register server commands in this event handler (Remove if not needed)
-    public void serverStarting(final FMLServerStartingEvent event) {}
+    public void serverStarting(final FMLServerStartingEvent event) {
+        if (!event.getServer()
+            .isDedicatedServer()) {
+            event.registerServerCommand(new ImportCommand());
+        }
+    }
 }
