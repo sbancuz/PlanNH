@@ -2,6 +2,7 @@ package com.sbancuz.plannh;
 
 import com.sbancuz.plannh.client.ImportCommand;
 
+import com.sbancuz.plannh.config.ConfigMain;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
