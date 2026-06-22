@@ -11,8 +11,8 @@ import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.data.provider.VanillaProvider;
-import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 import com.sbancuz.plannh.gui.FlowchartScreen;
+import com.sbancuz.plannh.gui.PlanGuiContainer;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -50,7 +50,7 @@ public class ClientProxy extends CommonProxy {
             final ModularContainer container = new ModularContainer();
             container.constructClientOnly();
             final FlowchartScreen screen = FlowchartScreen.create();
-            final FlowchartGuiContainer wrapper = new FlowchartGuiContainer(container, screen);
+            final PlanGuiContainer wrapper = new PlanGuiContainer(container, screen);
             Minecraft.getMinecraft()
                 .displayGuiScreen(wrapper);
         }

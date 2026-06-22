@@ -4,11 +4,12 @@ import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.cleanroommc.modularui.screen.ModularContainer;
 import com.cleanroommc.modularui.screen.ModularScreen;
 
-public class FlowchartGuiContainer extends GuiContainerWrapper {
+import codechicken.nei.ItemsGrid;
+import codechicken.nei.NEIClientConfig;
 
-    private static final int NEI_PANEL_WIDTH = 368;
+public class PlanGuiContainer extends GuiContainerWrapper {
 
-    public FlowchartGuiContainer(final ModularContainer container, final ModularScreen screen) {
+    public PlanGuiContainer(final ModularContainer container, final ModularScreen screen) {
         super(container, screen);
     }
 
@@ -20,7 +21,12 @@ public class FlowchartGuiContainer extends GuiContainerWrapper {
     }
 
     public void applyNeiSizing(final int width) {
-        this.xSize = width - NEI_PANEL_WIDTH;
+        final int cols = Math.max(
+            1,
+            NEIClientConfig.getSetting("plannh.itemColumns")
+                .getIntValue(9));
+        final int panelWidth = cols * ItemsGrid.SLOT_SIZE * 2;
+        this.xSize = width - panelWidth;
         this.guiLeft = (width - this.xSize) / 2;
     }
 }

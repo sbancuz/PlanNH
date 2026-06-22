@@ -80,7 +80,7 @@ public class FlowchartScreen extends ModularScreen {
     public void onResize(final int width, final int height) {
         super.onResize(width, height);
         if (getScreenWrapper() != null
-            && getScreenWrapper().getGuiScreen() instanceof final FlowchartGuiContainer container) {
+            && getScreenWrapper().getGuiScreen() instanceof final PlanGuiContainer container) {
             container.applyNeiSizing(width);
         }
     }

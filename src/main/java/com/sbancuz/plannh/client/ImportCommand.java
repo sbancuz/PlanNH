@@ -9,8 +9,8 @@ import net.minecraft.util.StatCollector;
 import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 import com.sbancuz.plannh.gui.FlowchartScreen;
+import com.sbancuz.plannh.gui.PlanGuiContainer;
 
 /**
  * Client-side command that processes an incoming PlanNH share.
@@ -50,7 +50,7 @@ public class ImportCommand extends CommandBase {
         final ModularContainer container = new ModularContainer();
         container.constructClientOnly();
         final FlowchartScreen screen = FlowchartScreen.create();
-        final FlowchartGuiContainer wrapper = new FlowchartGuiContainer(container, screen);
+        final PlanGuiContainer wrapper = new PlanGuiContainer(container, screen);
         Minecraft.getMinecraft()
             .displayGuiScreen(wrapper);
     }

@@ -10,15 +10,15 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 import com.sbancuz.plannh.gui.FlowchartScreen;
+import com.sbancuz.plannh.gui.PlanGuiContainer;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.IRecipeHandler;
 
-public class FlowchartOverlayHandler implements IOverlayHandler {
+public class PlanOverlayHandler implements IOverlayHandler {
 
     @Override
     public void overlayRecipe(final GuiContainer firstGui, final IRecipeHandler recipe, final int recipeIndex,
@@ -61,8 +61,8 @@ public class FlowchartOverlayHandler implements IOverlayHandler {
         graph.addNode(node);
         PlanAPI.save();
 
-        if (firstGui instanceof FlowchartGuiContainer) {
-            final Object screen = ((FlowchartGuiContainer) firstGui).getScreen();
+        if (firstGui instanceof PlanGuiContainer) {
+            final Object screen = ((PlanGuiContainer) firstGui).getScreen();
             if (screen instanceof FlowchartScreen) {
                 ((FlowchartScreen) screen).canvas.rebuildNodeWidgets();
             }

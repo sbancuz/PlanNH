@@ -32,7 +32,8 @@ public class LayoutManagerMixin {
         final CallbackInfo ci) {
         if (!visiblity.showNEI) return;
 
-        planNH$openFlowchartButton.x = LayoutManager.bookmarksButton.x + LayoutManager.bookmarksButton.w + FC_BUTTON_GAP;
+        planNH$openFlowchartButton.x = LayoutManager.bookmarksButton.x + LayoutManager.bookmarksButton.w
+            + FC_BUTTON_GAP;
         planNH$openFlowchartButton.y = gui.height - FC_BUTTON_BOTTOM_OFF;
         planNH$openFlowchartButton.h = FC_BUTTON_SIZE;
         planNH$openFlowchartButton.w = FC_BUTTON_SIZE;
