@@ -29,6 +29,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     protected final CanvasWidget canvas;
     private boolean moving = false;
     private int dragStartMouseX, dragStartMouseY;
+    private int dragOffsetX, dragOffsetY;
     private int dragStartX, dragStartY;
     protected Map<UUID, GraphData> dataContainer;
     private List<FlowchartWidget<?, ?>> dragStartIntersect;
@@ -46,11 +47,18 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     @Override
     public boolean onDragStart(int mouseButton) {
+        return onDragStartWithOffset(mouseButton, 0, 0);
+    }
+
+    public boolean onDragStartWithOffset(int mouseButton, int x, int y) {
         if (mouseButton == 0 && canvas.isMouseInsideCanvas()) {
+            ModularGuiContext context = getContext();
             dragStartX = data.getX();
             dragStartY = data.getY();
-            dragStartMouseX = getContext().getAbsMouseX();
-            dragStartMouseY = getContext().getAbsMouseY();
+            dragOffsetX = x + context.getMouseX();
+            dragOffsetY = y + context.getMouseY();
+            dragStartMouseX = context.getAbsMouseX();
+            dragStartMouseY = context.getAbsMouseY();
             dragStartIntersect = canvas.getFlowchartWidgets()
                 .values()
                 .stream()
@@ -142,13 +150,13 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             dataContainer.remove(data.getId());
             if (newParent instanceof GroupWidget2 groupWidget){
                 dataContainer = groupWidget.getData().getChildren();
-                data.setX(groupWidget.getMouseGroupX());
-                data.setY(groupWidget.getMouseGroupY());
+                data.setX(groupWidget.getMouseGroupX() - dragOffsetX);
+                data.setY(groupWidget.getMouseGroupY() - dragOffsetY);
             }
             else {
                 dataContainer = (Map<UUID, GraphData>) getDefaultContainer();
-                data.setX(canvas.getMouseCanvasX());
-                data.setY(canvas.getMouseCanvasY());
+                data.setX(canvas.getMouseCanvasX() - dragOffsetX);
+                data.setY(canvas.getMouseCanvasY() - dragOffsetY);
             }
             dataContainer.put(data.getId(), data);
             reposition();

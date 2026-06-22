@@ -1,6 +1,7 @@
 package com.sbancuz.plannh.gui;
 
 import com.cleanroommc.modularui.api.widget.IWidget;
+import it.unimi.dsi.fastutil.Pair;
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.widget.IDraggable;
@@ -18,7 +19,8 @@ public interface IFlowchartDraggable extends IDraggable {
 
     @Override
     default boolean onDragStart(int i) {
-        return getFlowchartParent().onDragStart(i);
+        Pair<Integer, Integer> offset = dragOffset();
+        return getFlowchartParent().onDragStartWithOffset(i, offset.left(), offset.right());
     }
 
     @Override
@@ -50,4 +52,6 @@ public interface IFlowchartDraggable extends IDraggable {
     default void setMoving(boolean b) {
         getFlowchartParent().setMoving(b);
     }
+
+    default Pair<Integer, Integer> dragOffset(){return Pair.of(0, 0);}
 }

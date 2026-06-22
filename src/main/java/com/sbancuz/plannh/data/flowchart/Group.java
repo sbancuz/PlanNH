@@ -13,15 +13,15 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
+import static com.sbancuz.plannh.gui.GroupWidget2.GROUP_MIN_H;
+import static com.sbancuz.plannh.gui.GroupWidget2.GROUP_MIN_W;
+
 @Getter
 @Setter
 public class Group extends GraphData {
 
-    private static final int DEFAULT_WIDTH = 300;
-    private static final int DEFAULT_HEIGHT = 200;
-
-    private int width = DEFAULT_WIDTH;
-    private int height = DEFAULT_HEIGHT;
+    private int width = GROUP_MIN_W;
+    private int height = GROUP_MIN_H;
     private int color = getRandomColor();
     private boolean collapsed;
     private boolean clampNodes;
