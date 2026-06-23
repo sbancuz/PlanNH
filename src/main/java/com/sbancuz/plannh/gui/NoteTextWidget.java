@@ -2,6 +2,8 @@ package com.sbancuz.plannh.gui;
 
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
+import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
+import com.cleanroommc.modularui.theme.TextFieldTheme;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.sbancuz.plannh.data.flowchart.Note;
 
@@ -41,6 +43,12 @@ public class NoteTextWidget extends FlowchartTextFieldWidget {
             renderer.getMaxWidth(handler.getText()),
             (int) renderer.getFontHeight() * handler.getText()
                 .size());
+    }
+
+    @Override
+    protected void setupDrawText(ModularGuiContext context, TextFieldTheme widgetTheme) {
+        super.setupDrawText(context, widgetTheme);
+        renderer.setAlignment(this.textAlignment, -1, -1);
     }
 
     @Override
