@@ -22,6 +22,8 @@ import lombok.Setter;
 @Setter
 public class Group extends GraphData {
 
+    private static Random colorRandom = new Random(12345);
+
     private int width = GROUP_MIN_W;
     private int height = GROUP_MIN_H;
     private int color = getRandomColor();
@@ -92,7 +94,6 @@ public class Group extends GraphData {
     }
 
     private int getRandomColor() {
-        Random random = new Random();
-        return Color.argb(random.nextFloat(), random.nextFloat(), random.nextFloat(), 0.5f);
+        return Color.argb(colorRandom.nextFloat(), colorRandom.nextFloat(), colorRandom.nextFloat(), 0.5f);
     }
 }
