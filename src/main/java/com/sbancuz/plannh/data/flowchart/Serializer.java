@@ -33,7 +33,9 @@ import codechicken.nei.recipe.Recipe;
 
 public final class Serializer {
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting()
+    public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
+        .enableComplexMapKeySerialization()
+        .registerTypeAdapter(GraphData.class, new GraphDataAdapter())
         .create();
 
     // ── Public API ──
@@ -247,21 +249,9 @@ public final class Serializer {
         }
         root.add("edges", edgesArray);
 
-        final JsonArray notesArray = new JsonArray();
-        for (final Note note : graph.getNotes()) {
-            final JsonObject obj = new JsonObject();
-            note.saveToJson(obj);
-            notesArray.add(obj);
-        }
-        root.add("notes", notesArray);
+        root.add("notes", GSON.toJsonTree(graph.getNotes()));
 
-        final JsonArray groupsArray = new JsonArray();
-        for (final Group group : graph.getGroups()) {
-            final JsonObject obj = new JsonObject();
-            group.saveToJson(obj);
-            groupsArray.add(obj);
-        }
-        root.add("groups", groupsArray);
+        root.add("groups", GSON.toJsonTree(graph.getGroups()));
 
         return root;
     }
@@ -360,13 +350,13 @@ public final class Serializer {
 
         final JsonArray notesArray = root.getAsJsonArray("notes");
         for (final JsonElement elem : notesArray) {
-            final Note note = new Note(elem.getAsJsonObject());
+            final Note note = GSON.fromJson(elem, Note.class);
             graph.notes.put(note.getId(), note);
         }
 
         final JsonArray groupsArray = root.getAsJsonArray("groups");
         for (final JsonElement elem : groupsArray) {
-            final Group group = new Group(elem.getAsJsonObject());
+            final Group group = GSON.fromJson(elem, Group.class);
             graph.groups.put(group.getId(), group);
         }
 
