@@ -3,6 +3,8 @@
     "package": "com.sbancuz.plannh.mixins",
     "compatibilityLevel": "JAVA_8",
     "client": [
+        "GuiContainerAccessor",
+        "GuiScreenAccessor",
         "LayoutManagerMixin",
         "GuiOverlayButtonMixin"
     ]

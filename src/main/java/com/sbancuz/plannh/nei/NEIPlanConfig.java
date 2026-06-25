@@ -2,9 +2,10 @@ package com.sbancuz.plannh.nei;
 
 import net.minecraftforge.common.MinecraftForge;
 
+import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.Tags;
-import com.sbancuz.plannh.gui.PlanGuiContainer;
+import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import codechicken.lib.config.ConfigTag;
 import codechicken.nei.NEIClientConfig;
@@ -28,6 +29,7 @@ public class NEIPlanConfig implements IConfigureNEI {
     @Override
     public void loadConfig() {
         API.registerNEIGuiHandler(new FlowchartGuiHandler());
+        API.addLayoutStyle(0, new FlowchartLayoutStyle());
         MinecraftForge.EVENT_BUS.register(this);
         API.addOption(new OptionTextField("plannh.itemColumns"));
         ITEM_COLUMNS = NEIClientConfig.getSetting("plannh.itemColumns")
@@ -37,14 +39,15 @@ public class NEIPlanConfig implements IConfigureNEI {
     @SubscribeEvent
     public void onPreButtonUpdate(final UpdateRecipeButtonsEvent.Pre event) {
         final GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
-        if (!(gui.firstGui instanceof PlanGuiContainer)) return;
+        if (!(gui.firstGui instanceof final GuiContainerWrapper wrapper
+            && wrapper.getScreen() instanceof FlowchartScreen)) return;
 
         for (final Object h : gui.currenthandlers) {
             if (!(h instanceof final IRecipeHandler r)) continue;
             final String ident = r.getOverlayIdentifier();
             if (ident != null && !ident.isEmpty()
-                && !RecipeInfo.hasOverlayHandler(PlanGuiContainer.class, ident)) {
-                API.registerGuiOverlayHandler(PlanGuiContainer.class, HANDLER, ident);
+                && !RecipeInfo.hasOverlayHandler(GuiContainerWrapper.class, ident)) {
+                API.registerGuiOverlayHandler(GuiContainerWrapper.class, HANDLER, ident);
             }
         }
     }
@@ -52,7 +55,8 @@ public class NEIPlanConfig implements IConfigureNEI {
     @SubscribeEvent
     public void onPostButtonUpdate(final UpdateRecipeButtonsEvent.Post event) {
         final GuiRecipe<?> gui = (GuiRecipe<?>) event.gui;
-        if (!(gui.firstGui instanceof PlanGuiContainer)) return;
+        if (!(gui.firstGui instanceof GuiContainerWrapper
+            && ((GuiContainerWrapper) gui.firstGui).getScreen() instanceof FlowchartScreen)) return;
 
         for (final GuiRecipeButton btn : event.buttonList) {
             if (btn instanceof GuiOverlayButton) {

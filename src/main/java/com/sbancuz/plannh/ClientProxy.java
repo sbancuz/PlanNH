@@ -7,12 +7,12 @@ import net.minecraftforge.common.MinecraftForge;
 
 import org.lwjgl.input.Keyboard;
 
+import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.data.provider.VanillaProvider;
 import com.sbancuz.plannh.gui.FlowchartScreen;
-import com.sbancuz.plannh.gui.PlanGuiContainer;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -50,9 +50,8 @@ public class ClientProxy extends CommonProxy {
             final ModularContainer container = new ModularContainer();
             container.constructClientOnly();
             final FlowchartScreen screen = FlowchartScreen.create();
-            final PlanGuiContainer wrapper = new PlanGuiContainer(container, screen);
             Minecraft.getMinecraft()
-                .displayGuiScreen(wrapper);
+                .displayGuiScreen(new GuiContainerWrapper(container, screen));
         }
     }
 }

@@ -18,6 +18,9 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
+import com.cleanroommc.modularui.widget.sizer.Unit;
+import codechicken.nei.LayoutManager;
+
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
@@ -33,7 +36,6 @@ public class FlowchartScreen extends ModularScreen {
 
     private static final int SLOT_BAR_TOP = 18;
     private static final int SLOT_BAR_HEIGHT = 22;
-    private static final int PANEL_RIGHT = 176;
     private static final int CANVAS_TOP = 42;
     private static final int CANVAS_BOTTOM = 20;
 
@@ -52,6 +54,10 @@ public class FlowchartScreen extends ModularScreen {
         this.canvas = canvas;
     }
 
+    private static double panelRight() {
+        return Minecraft.getMinecraft().currentScreen.width - LayoutManager.itemPanel.x + 8;
+    }
+
     public static FlowchartScreen create() {
         final Graph graph = PlanAPI.getActiveGraph();
         final CanvasWidget canvas = new CanvasWidget(graph);
@@ -62,27 +68,18 @@ public class FlowchartScreen extends ModularScreen {
         panel.child(
             new SlotBarWidget(canvas).left(0)
                 .top(SLOT_BAR_TOP)
-                .right(PANEL_RIGHT)
+                .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL)
                 .height(SLOT_BAR_HEIGHT));
 
         panel.child(
             canvas.left(0)
                 .top(CANVAS_TOP)
-                .right(PANEL_RIGHT)
+                .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL)
                 .bottom(CANVAS_BOTTOM));
 
         panel.addChild(new SummaryWidget(canvas), -1);
 
         return new FlowchartScreen(panel, graph, canvas);
-    }
-
-    @Override
-    public void onResize(final int width, final int height) {
-        super.onResize(width, height);
-        if (getScreenWrapper() != null
-            && getScreenWrapper().getGuiScreen() instanceof final PlanGuiContainer container) {
-            container.applyNeiSizing(width);
-        }
     }
 
     @Override
