@@ -10,3 +10,7 @@ plannh.share.import_error.decode=§cFailed to decode: %s
 plannh.share.slot_imported=Imported
 plannh.share.copy_to_clipboard=Plan exported to clipboard
 plannh.share.copy_from_clipboard=Plan imported from clipboard
+
+## NEI config
+plannh.itemColumns=Item Columns
+plannh.itemColumns.tip=Number of columns in the NEI item panel (minimum: 4)

@@ -13,4 +13,10 @@ public interface GuiContainerAccessor extends GuiScreenAccessor {
 
     @Accessor("ySize")
     void setYSize(int ySize);
+
+    @Accessor("guiLeft")
+    void setGuiLeft(int guiLeft);
+
+    @Accessor("guiTop")
+    void setGuiTop(int guiTop);
 }
