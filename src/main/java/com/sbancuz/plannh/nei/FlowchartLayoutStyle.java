@@ -52,6 +52,7 @@ public class FlowchartLayoutStyle extends LayoutStyleMinecraft {
             + (LayoutManager.itemPanel.w - LayoutManager.itemPanel.pagePrev.w - PADDING) / 2;
 
         final ModularScreen screen = ((GuiContainerWrapper) gui).getScreen();
-        screen.getMainPanel().scheduleResize();
+        screen.getMainPanel()
+            .scheduleResize();
     }
 }
