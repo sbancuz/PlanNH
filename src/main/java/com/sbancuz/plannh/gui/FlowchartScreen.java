@@ -73,7 +73,7 @@ public class FlowchartScreen extends ModularScreen {
 
         Menu<?> contextMenu = new Menu<>();
 
-        final CanvasWidget canvas = new CanvasWidget(graph, contextMenu);
+        final CanvasWidget canvas = new CanvasWidget(graph, contextMenu, panel);
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()

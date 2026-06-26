@@ -20,6 +20,7 @@ import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.BufferBuilder;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.drawable.Stencil;
+import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
@@ -100,14 +101,17 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean menuOpen;
     private final Menu<?> contextMenu2;
 
+    private final ModularPanel panel;
+
     /**
      * Cached arrow routes (world-space waypoints) keyed by edge id, plus the layout they were built for.
      */
     private final Map<UUID, List<int[]>> edgeRoutes = new HashMap<>();
     private long routeSignature = Long.MIN_VALUE;
 
-    public CanvasWidget(final Graph graph, Menu<?> menu) {
+    public CanvasWidget(final Graph graph, Menu<?> menu, ModularPanel panel) {
         this.graph = graph;
+        this.panel = panel;
         full();
         marginBottom(18);
 
@@ -271,7 +275,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildGroupWidgets() {
-        for (final Group group : graph.groups.values()) child(new GroupWidget2(this, group));
+        for (final Group group : graph.groups.values()) child(new GroupWidget(this, group));
     }
 
     private void addNodeWidget(final Node node) {
@@ -786,7 +790,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         group.setY(getMouseCanvasY());
 
         graph.groups.put(group.getId(), group);
-        child(new GroupWidget2(this, group));
+        child(new GroupWidget(this, group));
 
         menuOpen = false;
     }
@@ -887,24 +891,24 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         showContextMenu(ax, ay, items);
     }
 
-    private void showGroupContextMenu(final GroupWidget gw, final int cmx, final int cmy) {
-        /*
-         * final Group group = gw.getGroup();
-         * final List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
-         * items.add(new ContextMenuWidget.MenuItem("Rename Group", () -> startEditingGroup(group.id)));
-         * items.add(new ContextMenuWidget.MenuItem("Customize Color", () -> openColorPickerFor(group)));
-         * items.add(
-         * new ContextMenuWidget.MenuItem(
-         * group.clampNodes ? "Disable Clamp" : "Enable Clamp",
-         * () -> group.clampNodes = !group.clampNodes));
-         * items.add(
-         * new ContextMenuWidget.MenuItem(
-         * group.autoResize ? "Disable Auto-Resize" : "Enable Auto-Resize",
-         * () -> group.autoResize = !group.autoResize));
-         * items.add(new ContextMenuWidget.MenuItem("Delete Group", () -> removeGroup(group.id)));
-         * contextMenuAt(cmx, cmy, items);
-         */
-    }
+    /*
+     * private void showGroupContextMenu(final GroupWidget gw, final int cmx, final int cmy) {
+     * final Group group = gw.getGroup();
+     * final List<ContextMenuWidget.MenuItem> items = new ArrayList<>();
+     * items.add(new ContextMenuWidget.MenuItem("Rename Group", () -> startEditingGroup(group.id)));
+     * items.add(new ContextMenuWidget.MenuItem("Customize Color", () -> openColorPickerFor(group)));
+     * items.add(
+     * new ContextMenuWidget.MenuItem(
+     * group.clampNodes ? "Disable Clamp" : "Enable Clamp",
+     * () -> group.clampNodes = !group.clampNodes));
+     * items.add(
+     * new ContextMenuWidget.MenuItem(
+     * group.autoResize ? "Disable Auto-Resize" : "Enable Auto-Resize",
+     * () -> group.autoResize = !group.autoResize));
+     * items.add(new ContextMenuWidget.MenuItem("Delete Group", () -> removeGroup(group.id)));
+     * contextMenuAt(cmx, cmy, items);
+     * }
+     */
 
     private void showNodeContextMenu(final RecipeNodeWidget nw, final int cmx, final int cmy) {
         /*
@@ -1077,5 +1081,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         ModularGuiContext context = getContext();
         Area area = getArea();
         return isInside(context, context.getAbsMouseX() - area.x, context.getAbsMouseY() - area.y, false);
+    }
+
+    @Override
+    public @NotNull ModularPanel getPanel() {
+        return panel;
     }
 }
