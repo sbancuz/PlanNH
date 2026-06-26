@@ -24,4 +24,7 @@ public final class MachineProfileRegistry {
         return "minecraft";
     }
 
+    public static void reset() {
+        profiles.clear();
+    }
 }

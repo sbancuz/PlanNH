@@ -3,15 +3,15 @@ package com.sbancuz.plannh.nei;
 import net.minecraftforge.common.MinecraftForge;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.Tags;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
-import codechicken.lib.config.ConfigTag;
-import codechicken.nei.NEIClientConfig;
 import codechicken.nei.api.API;
 import codechicken.nei.api.IConfigureNEI;
-import codechicken.nei.config.OptionTextField;
+import codechicken.nei.config.OptionCycled;
+import codechicken.nei.config.OptionIntegerField;
 import codechicken.nei.recipe.GuiOverlayButton;
 import codechicken.nei.recipe.GuiRecipe;
 import codechicken.nei.recipe.GuiRecipeButton;
@@ -22,7 +22,20 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class NEIPlanConfig implements IConfigureNEI {
 
-    public static ConfigTag ITEM_COLUMNS;
+    public static class ConfigItemColumns {
+
+        public static String KEY = "plannh.item_columns";
+        public static int min = 6;
+        public static int max = Integer.MAX_VALUE;
+        public static int defVal = 9;
+    }
+
+    public static class ConfigBurnableOverride {
+
+        public static String KEY = "plannh.burnable_override";
+        public static int OFF = 0;
+        public static int ON = 1;
+    }
 
     private static final PlanOverlayHandler HANDLER = new PlanOverlayHandler();
 
@@ -31,9 +44,18 @@ public class NEIPlanConfig implements IConfigureNEI {
         API.registerNEIGuiHandler(new FlowchartGuiHandler());
         API.addLayoutStyle(0, new FlowchartLayoutStyle());
         MinecraftForge.EVENT_BUS.register(this);
-        API.addOption(new OptionTextField("plannh.itemColumns"));
-        ITEM_COLUMNS = NEIClientConfig.getSetting("plannh.itemColumns")
-            .setComment("Number of item columns in node widgets");
+        API.addOption(new OptionIntegerField(ConfigItemColumns.KEY, ConfigItemColumns.min, ConfigItemColumns.max));
+        API.addOption(new OptionCycled(ConfigBurnableOverride.KEY, 2) {
+
+            public boolean onClick(int button) {
+                if (!super.onClick(button)) {
+                    return false;
+                } else {
+                    Compat.init();
+                    return true;
+                }
+            }
+        });
     }
 
     @SubscribeEvent

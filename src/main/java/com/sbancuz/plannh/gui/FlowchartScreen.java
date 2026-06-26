@@ -45,7 +45,6 @@ import codechicken.nei.LayoutManager;
 public class FlowchartScreen extends ModularScreen {
 
     private static final int LEFT_MARGIN = 5;
-    private static final int RIGHT_MARGIN = 190;
     private static final int TOP_MARGIN = 30;
     private static final int BOTTOM_MARGIN = 30;
 
@@ -73,24 +72,17 @@ public class FlowchartScreen extends ModularScreen {
 
         final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main")
             .fullScreenInvisible()
-            .margin(LEFT_MARGIN, RIGHT_MARGIN, TOP_MARGIN, BOTTOM_MARGIN);
+            .marginLeft(LEFT_MARGIN)
+            .marginBottom(BOTTOM_MARGIN)
+            .marginTop(TOP_MARGIN)
+            .widthRel(0.75f)
+            .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL);
 
         final Flow mainColumn = Flow.column()
             .full();
 
         Menu<?> contextMenu = new Menu<>();
-//        panel.child(
-//            new SlotBarWidget(canvas).left(0)
-//                .top(SLOT_BAR_TOP)
-//                .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL)
-//                .height(SLOT_BAR_HEIGHT));
-
         final CanvasWidget canvas = new CanvasWidget(graph, contextMenu);
-//        panel.child(
-//            canvas.left(0)
-//                .top(CANVAS_TOP)
-//                .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL)
-//                .bottom(CANVAS_BOTTOM));
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()

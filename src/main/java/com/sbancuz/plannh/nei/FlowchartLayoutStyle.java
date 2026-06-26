@@ -50,9 +50,9 @@ public class FlowchartLayoutStyle extends LayoutStyleMinecraft {
         accessor.setGuiTop(0);
 
         final int cols = Math.max(
-            4,
-            NEIClientConfig.getSetting("plannh.itemColumns")
-                .getIntValue(9));
+            NEIPlanConfig.ConfigItemColumns.min,
+            NEIClientConfig.getSetting(NEIPlanConfig.ConfigItemColumns.KEY)
+                .getIntValue(NEIPlanConfig.ConfigItemColumns.defVal));
 
         // Pass 1: wide left margin for cheat buttons.
         final int wideGap = 2 * (BUTTON_SIZE * NUMBER_OF_CHEAT_BUTTONS + PADDING * 2);

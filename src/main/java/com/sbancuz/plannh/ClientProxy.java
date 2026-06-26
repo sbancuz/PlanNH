@@ -11,7 +11,6 @@ import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.ImportCommand;
-import com.sbancuz.plannh.data.provider.VanillaProvider;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
@@ -38,7 +37,6 @@ public class ClientProxy extends CommonProxy {
         super.init(event);
 
         // Vanilla has to go first since the furnace handler is likely to be overwritten
-        new VanillaProvider().register();
         Compat.init();
 
         ClientRegistry.registerKeyBinding(openFlowchartKey);
