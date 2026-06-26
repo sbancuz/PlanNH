@@ -1,21 +1,27 @@
 package com.sbancuz.plannh.data.flowchart;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
-public class Note {
+import lombok.Getter;
+import lombok.Setter;
 
-    @Nonnull
-    public final UUID id;
-    public int x;
-    public int y;
-    @Nonnull
-    public String text = "";
+@Getter
+@Setter
+public class Note extends GraphData {
 
-    public Note(final UUID id, final int x, final int y) {
-        this.id = id;
-        this.x = x;
-        this.y = y;
+    @NotNull
+    private List<String> text = new ArrayList<>();
+
+    public Note() {
+        super(UUID.randomUUID());
+    }
+
+    @Override
+    public String getType() {
+        return "note";
     }
 }

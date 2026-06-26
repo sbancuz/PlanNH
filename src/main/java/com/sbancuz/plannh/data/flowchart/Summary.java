@@ -1,64 +1,123 @@
 package com.sbancuz.plannh.data.flowchart;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nonnull;
-
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
-
 import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.RecipeResource;
+import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 
-public record Summary(List<SummaryLine> netInputs, List<SummaryLine> netOutputs, List<FluidSummaryLine> netFluidInputs,
-    List<FluidSummaryLine> netFluidOutputs, Map<RecipeProperty<?>, Long> propertyTotals) {
+public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>> properties) {
 
     public enum SummaryMode {
         CYCLES,
         THROUGHPUT
     }
 
-    public static class SummaryLine {
+    public record Line<T> (RecipeProperty<T> label, T resource, float amount) {
 
-        @Nonnull
-        public final ItemStack stack;
-        public int totalCount;
-
-        SummaryLine(final ItemStack stack, final int count) {
-            this.stack = stack;
-            this.totalCount = count;
+        public String displayName() {
+            return label.formatDisplayName(resource);
         }
+
+        public String displayAmount(float amount) {
+            return label.formatAmount(amount);
+        }
+
     }
 
-    public static class FluidSummaryLine {
+    @SuppressWarnings("rawtypes")
+    private sealed interface LineKey permits LineKey.ResourceKey,LineKey.PropertyKey {
 
-        @Nonnull
-        public final FluidStack fluid;
-        public int totalAmount;
+        record ResourceKey<T> (RecipeResource<T> type, T resource) implements LineKey {
 
-        FluidSummaryLine(final FluidStack fluid, final int amount) {
-            this.fluid = fluid;
-            this.totalAmount = amount;
-        }
-    }
+            @SuppressWarnings("unchecked")
+            static ResourceKey<Object> of(final Port port) {
+                return new ResourceKey<>((RecipeResource<Object>) port.getType(), port.getValue());
+            }
 
-    static void mergeInto(final List<SummaryLine> list, final ItemStack stack, final int count) {
-        for (final SummaryLine line : list) {
-            if (line.stack.isItemEqual(stack)) {
-                line.totalCount += count;
-                return;
+            Line<?> toLine(final float amount) {
+                return new Line<>(type, resource, amount);
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public boolean equals(final Object o) {
+                return o instanceof ResourceKey<?>(RecipeResource<?> type1, Object resource1)
+                    && type == type1
+                    && type.canConnect(resource, (T) resource1);
+            }
+
+            @Override
+            public int hashCode() {
+                return type.hashValue(resource);
             }
         }
-        list.add(new SummaryLine(stack, count));
+
+        record PropertyKey(RecipeProperty<?> prop) implements LineKey {}
     }
 
-    static void mergeFluidInto(final List<FluidSummaryLine> list, final FluidStack fluid, final int amount) {
-        for (final FluidSummaryLine line : list) {
-            if (line.fluid.isFluidEqual(fluid)) {
-                line.totalAmount += amount;
-                return;
+    public static Summary compute(final BalanceResult balance, final Graph graph) {
+        final Map<LineKey, Float> outputMap = new HashMap<>();
+        final Map<LineKey, Float> inputMap = new HashMap<>();
+        final Map<LineKey, Float> propertyMap = new HashMap<>();
+
+        // Pass 1: accumulate all node outputs before any netting.
+        for (final Node node : graph.getNodes()) {
+            final var nb = balance.nodeBalances()
+                .get(node.id);
+            if (nb == null) continue;
+
+            for (int i = 0; i < node.outputs.size(); i++) {
+                final Float total = nb.effectiveOutputs.get(i);
+                if (total == null || total <= 0) continue;
+                outputMap.merge(LineKey.ResourceKey.of(node.outputs.get(i)), total, Float::sum);
             }
         }
-        list.add(new FluidSummaryLine(fluid.copy(), amount));
+
+        // Pass 2: net inputs against the fully-populated output map.
+        for (final Node node : graph.getNodes()) {
+            final var nb = balance.nodeBalances()
+                .get(node.id);
+            if (nb == null) continue;
+
+            for (int i = 0; i < node.inputs.size(); i++) {
+                final Float total = nb.effectiveInputs.get(i);
+                if (total == null || total <= 0) continue;
+                final LineKey key = LineKey.ResourceKey.of(node.inputs.get(i));
+                final float existing = outputMap.getOrDefault(key, 0f);
+                final float consumed = Math.min(existing, total);
+                if (consumed > 0) {
+                    final float remaining = existing - consumed;
+                    if (remaining > 0) outputMap.put(key, remaining);
+                    else outputMap.remove(key);
+                }
+                final float deficit = total - consumed;
+                if (deficit > 0) inputMap.merge(key, deficit, Float::sum);
+            }
+        }
+
+        for (final var entry : balance.propertyTotals()
+            .entrySet()) {
+            propertyMap.merge(new LineKey.PropertyKey(entry.getKey()), (float) entry.getValue(), Float::sum);
+        }
+
+        return new Summary(flatten(outputMap), flatten(inputMap), flatten(propertyMap));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static List<Line<?>> flatten(final Map<LineKey, Float> map) {
+        final List<Line<?>> result = new ArrayList<>();
+        for (final var entry : map.entrySet()) {
+            if (entry.getValue() <= 0) continue;
+            final Line<?> line = switch (entry.getKey()) {
+                case LineKey.ResourceKey rk -> rk.toLine(entry.getValue());
+                case LineKey.PropertyKey pk   -> new Line(pk.prop(), pk.prop().getDefaultValue(), entry.getValue());
+            };
+            result.add(line);
+        }
+        return result;
     }
 }

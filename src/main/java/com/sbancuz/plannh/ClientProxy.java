@@ -17,6 +17,7 @@ import com.sbancuz.plannh.gui.FlowchartScreen;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
+import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
 
@@ -28,11 +29,17 @@ public class ClientProxy extends CommonProxy {
         "key.categories.neiflowchart");
 
     @Override
+    public void preInit(FMLPreInitializationEvent event) {
+        super.preInit(event);
+    }
+
+    @Override
     public void init(final FMLInitializationEvent event) {
         super.init(event);
 
-        Compat.init();
+        // Vanilla has to go first since the furnace handler is likely to be overwritten
         new VanillaProvider().register();
+        Compat.init();
 
         ClientRegistry.registerKeyBinding(openFlowchartKey);
 
