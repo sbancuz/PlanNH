@@ -9,7 +9,13 @@ import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 
-import com.sbancuz.plannh.Compat;
+import com.gtnewhorizons.aspectrecipeindex.nei.AlchemyRecipeHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.AspectCombinationHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.InfusionRecipeHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.ItemsContainingAspectHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.ShapedArcaneRecipeHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.ShapelessArcaneRecipeHandler;
+import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.WandRecipeHandler;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -32,36 +38,39 @@ import thaumcraft.api.crafting.ShapelessArcaneRecipe;
 
 public class ThaumcraftProvider implements PropertyProvider {
 
-    public static final RecipeProperty<int[]> VIS_COST = RecipeProperty
-        .intArrayProperty("visCost", "Vis Cost", new int[6]);
+    public static final RecipeProperty<int[]> VIS_COST = RecipeProperty.intArrayBuilder("vis_cost", new int[6])
+        .build();
 
-    public static final RecipeProperty<Integer> INSTABILITY = RecipeProperty
-        .intProperty("instability", "Instability", 0);
+    public static final RecipeProperty<Integer> INSTABILITY = RecipeProperty.intBuilder("instability", 0)
+        .build();
 
-    public static final RecipeProperty<Integer> TOTAL_VIS = RecipeProperty.intProperty("totalVis", "Total Vis", 0);
+    public static final RecipeProperty<Integer> TOTAL_VIS = RecipeProperty.intBuilder("total_vis", 0)
+        .build();
 
-    public static final RecipeProperty<String> RESEARCH_KEY = RecipeProperty
-        .stringProperty("researchKey", "Research Key", "");
+    public static final RecipeProperty<String> RESEARCH_KEY = RecipeProperty.stringBuilder("research_key", "")
+        .build();
 
-    public static final RecipeProperty<Integer> NUM_COMPONENTS = RecipeProperty
-        .intProperty("numComponents", "Components", 0);
+    public static final RecipeProperty<Integer> NUM_COMPONENTS = RecipeProperty.intBuilder("num_components", 0)
+        .build();
 
     private static final String[] PRIMAL_TAGS = { "aer", "terra", "ignis", "aqua", "ordo", "perditio" };
 
     @Override
-    @Nonnull
-    public String getModId() {
-        return Compat.THAUMCRAFT.modid;
-    }
-
-    @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerExtractor(ItemsContainingAspectHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(AspectCombinationHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(ShapedArcaneRecipeHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(WandRecipeHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(ShapelessArcaneRecipeHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(AlchemyRecipeHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(InfusionRecipeHandler.OVERLAY, this);
+
         RecipePropertyAPI.registerProperty(VIS_COST);
         RecipePropertyAPI.registerProperty(INSTABILITY);
         RecipePropertyAPI.registerProperty(TOTAL_VIS);
         RecipePropertyAPI.registerProperty(RESEARCH_KEY);
         RecipePropertyAPI.registerProperty(NUM_COMPONENTS);
+
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:arcane", "Arcane Workbench")
                 .setting(Settings.MACHINES.def())

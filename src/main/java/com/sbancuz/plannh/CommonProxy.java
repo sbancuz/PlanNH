@@ -1,6 +1,7 @@
 package com.sbancuz.plannh;
 
 import com.sbancuz.plannh.client.ImportCommand;
+import com.sbancuz.plannh.config.ConfigMain;
 
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
@@ -11,6 +12,7 @@ public class CommonProxy {
 
     public void preInit(final FMLPreInitializationEvent event) {
         Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
+        ConfigMain.registerPlanNHConfigs();
     }
 
     public void init(final FMLInitializationEvent event) {}

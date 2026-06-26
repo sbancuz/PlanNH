@@ -7,7 +7,6 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -19,23 +18,35 @@ import com.sbancuz.plannh.data.flowchart.Node;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerBrewery;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerElvenTrade;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerFloatingFlowers;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerLexicaBotania;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerManaPool;
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerManaPool.CachedManaPoolRecipe;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerPetalApothecary;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerPureDaisy;
+import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar;
 import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar.CachedRunicAltarRecipe;
 
 public class BotaniaProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> MANA_COST = RecipeProperty.intProperty("manaCost", "Mana Cost", 0);
-
-    @Override
-    @Nonnull
-    public String getModId() {
-        return Compat.BOTANIA.modid;
-    }
+    public static final RecipeProperty<Integer> MANA_COST = RecipeProperty.intBuilder("mana_cost", 0)
+        .build();
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerFloatingFlowers().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerPetalApothecary().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerRunicAltar().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerManaPool().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerElvenTrade().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerBrewery().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerPureDaisy().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new RecipeHandlerLexicaBotania().getOverlayIdentifier(), this);
+
         RecipePropertyAPI.registerProperty(MANA_COST);
+
         MachineProfileRegistry.register(
             MachineProfile.builder("botania:basic", "Botania")
                 .setting(Settings.MACHINES.def())
@@ -59,9 +70,6 @@ public class BotaniaProvider implements PropertyProvider {
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
-        if (!handler.getClass()
-            .getName()
-            .startsWith("vazkii.botania")) return props;
 
         final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
         if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;

@@ -3,11 +3,12 @@ package com.sbancuz.plannh.data;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.config.ConfigOverrides;
 
 public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings,
     EffectComputer effectComputer) {
@@ -21,14 +22,6 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
     public record EffectResult(int durationTicks, long energyPerT, int throughputFactor) {}
 
     public record RecipeContext(Map<RecipeProperty<?>, Object> properties, int recipeDuration) {
-
-        public long recipeEUt() {
-            final Long euPerTick = get(RecipePropertyAPI.EU_PER_TICK);
-            if (euPerTick != null && euPerTick > 0) return euPerTick;
-            final Long totalEu = get(RecipePropertyAPI.TOTAL_EU);
-            if (totalEu != null && totalEu > 0 && recipeDuration > 0) return totalEu / recipeDuration;
-            return 0;
-        }
 
         @SuppressWarnings("unchecked")
         @Nullable
@@ -47,11 +40,14 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         private final String id;
         private final String displayName;
         private final List<SettingDef<?>> settings = new ArrayList<>();
-        private EffectComputer effectComputer = (s, ctx) -> new EffectResult(ctx.recipeDuration(), ctx.recipeEUt(), 1);
+        private EffectComputer effectComputer = (s, ctx) -> new EffectResult(ctx.recipeDuration(), 0, 1);
 
         private Builder(final String id, final String displayName) {
             this.id = id;
             this.displayName = displayName;
+            if (ConfigOverrides.alwaysShowBurnableSetting) {
+                addSetting(Settings.BURNABLE_OVERRIDE.def());
+            }
         }
 
         public Builder addSetting(final SettingDef<?> setting) {
@@ -59,40 +55,13 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
             return this;
         }
 
-        public Builder baseSettings() {
-            settings.add(Settings.VOLTAGE.def());
-            settings.add(Settings.AMP.def());
-            settings.add(Settings.SPEED.def());
-            settings.add(Settings.PARALLELS.def());
-            settings.add(Settings.MACHINES.def());
-            settings.add(Settings.PERFECT_OC.def());
-            return this;
-        }
-
-        public Builder heatSettings() {
-            settings.add(Settings.MACHINE_HEAT.def());
-            settings.add(Settings.RECIPE_HEAT.def());
-            settings.add(Settings.HEAT_OC.def());
-            settings.add(Settings.HEAT_DISCOUNT.def());
-            settings.add(Settings.HEAT_DISCOUNT_MULT.def());
-            return this;
-        }
-
-        public Builder advancedSettings() {
-            settings.add(Settings.LASER_OC.def());
-            settings.add(Settings.EUT_DISCOUNT.def());
-            settings.add(Settings.EUT_INCREASE_PER_OC.def());
-            settings.add(Settings.DURATION_DECREASE_PER_OC.def());
-            settings.add(Settings.MAX_OVERCLOCKS.def());
-            settings.add(Settings.MAX_REGULAR_OC.def());
-            settings.add(Settings.MAX_TIER_SKIPS.def());
-            settings.add(Settings.UNLIMITED_SKIPS.def());
-            settings.add(Settings.NO_OVERCLOCK.def());
-            return this;
-        }
-
         public Builder setting(final SettingDef<?> s) {
             return addSetting(s);
+        }
+
+        public Builder settings(final Consumer<Builder> consumer) {
+            consumer.accept(this);
+            return this;
         }
 
         public Builder effect(final EffectComputer effect) {
@@ -119,15 +88,5 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
     public static String getString(final Map<String, Object> s, final String key, final String def) {
         final Object v = s.get(key);
         return v instanceof final String str ? str : def;
-    }
-
-    public static long tierNameToVoltage(@Nullable final String name) {
-        if (name == null || name.equals("OFF")) return 0;
-        final String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV",
-            "UXV", "MAX" };
-        for (int i = 0; i < names.length; i++) {
-            if (names[i].equals(name)) return 8L * (long) Math.pow(4, i);
-        }
-        return 0;
     }
 }

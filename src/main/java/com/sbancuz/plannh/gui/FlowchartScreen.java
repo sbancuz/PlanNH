@@ -9,16 +9,26 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
+import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.utils.Color;
+import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widget.sizer.Unit;
+import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.ListWidget;
+import com.cleanroommc.modularui.widgets.ToggleButton;
+import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
@@ -34,10 +44,10 @@ import codechicken.nei.LayoutManager;
 
 public class FlowchartScreen extends ModularScreen {
 
-    private static final int SLOT_BAR_TOP = 18;
-    private static final int SLOT_BAR_HEIGHT = 22;
-    private static final int CANVAS_TOP = 42;
-    private static final int CANVAS_BOTTOM = 20;
+    private static final int LEFT_MARGIN = 5;
+    private static final int RIGHT_MARGIN = 190;
+    private static final int TOP_MARGIN = 30;
+    private static final int BOTTOM_MARGIN = 30;
 
     @Nonnull
     public final Graph graph;
@@ -60,24 +70,93 @@ public class FlowchartScreen extends ModularScreen {
 
     public static FlowchartScreen create() {
         final Graph graph = PlanAPI.getActiveGraph();
-        final CanvasWidget canvas = new CanvasWidget(graph);
 
-        final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main");
-        panel.fullScreenInvisible();
+        final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main")
+            .fullScreenInvisible()
+            .margin(LEFT_MARGIN, RIGHT_MARGIN, TOP_MARGIN, BOTTOM_MARGIN);
 
-        panel.child(
-            new SlotBarWidget(canvas).left(0)
-                .top(SLOT_BAR_TOP)
-                .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL)
-                .height(SLOT_BAR_HEIGHT));
+        final Flow mainColumn = Flow.column()
+            .full();
 
-        panel.child(
-            canvas.left(0)
-                .top(CANVAS_TOP)
-                .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL)
-                .bottom(CANVAS_BOTTOM));
+        Menu<?> contextMenu = new Menu<>();
+//        panel.child(
+//            new SlotBarWidget(canvas).left(0)
+//                .top(SLOT_BAR_TOP)
+//                .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL)
+//                .height(SLOT_BAR_HEIGHT));
 
-        panel.addChild(new SummaryWidget(canvas), -1);
+        final CanvasWidget canvas = new CanvasWidget(graph, contextMenu);
+//        panel.child(
+//            canvas.left(0)
+//                .top(CANVAS_TOP)
+//                .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL)
+//                .bottom(CANVAS_BOTTOM));
+
+        contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
+            .coverChildren()
+            .background()
+            .relativeToScreen()
+            .child(
+                new ListWidget<>().coverChildrenHeight()
+                    .width(100)
+                    .child(new ButtonWidget<>().onMousePressed(_ -> {
+                        canvas.addNote();
+                        return true;
+                    })
+                        .fullWidth()
+                        .background(
+                            new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                            new Rectangle().hollow()
+                                .color(PlannhColors.CONTEXT_BORDER.getColor()))
+                        .overlay(
+                            IKey.str("Add Note")
+                                .color(Color.WHITE.main)))
+                    .child(new ButtonWidget<>().onMousePressed(_ -> {
+                        canvas.addGroup();
+                        return true;
+                    })
+                        .fullWidth()
+                        .background(
+                            new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                            new Rectangle().hollow()
+                                .color(PlannhColors.CONTEXT_BORDER.getColor()))
+                        .overlay(
+                            IKey.str("Add Group")
+                                .color(Color.WHITE.main))));
+
+        mainColumn.child(
+            Flow.row()
+                .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
+                .coverChildrenHeight()
+                .fullWidth()
+                .child(
+                    Flow.row()
+                        .coverChildren()
+                        .childPadding(2)
+                        .child(new ButtonWidget<>().overlay(IKey.str("<")))
+                        .child(
+                            IKey.str("Slot x")
+                                .asWidget()
+                                .color(Color.WHITE.main))
+                        .child(new ButtonWidget<>().overlay(IKey.str(">"))))
+                .child(
+                    Flow.row()
+                        .coverChildren()
+                        .childPadding(2)
+                        .child(
+                            new ToggleButton().value(new BoolValue.Dynamic(graph::isSnapToGrid, graph::setSnapToGrid))
+                                .overlay(
+                                    IKey.str("S2G")
+                                        .color(Color.WHITE.main)))
+                        .child(new ButtonWidget<>())
+                        .child(new ButtonWidget<>())
+                        .child(new ButtonWidget<>())
+                        .child(new ButtonWidget<>())))
+            .child(canvas);
+
+        panel.child(mainColumn);
+        panel.child(new SummaryWidget(canvas));
+        panel.child(contextMenu);
 
         return new FlowchartScreen(panel, graph, canvas);
     }
@@ -86,14 +165,6 @@ public class FlowchartScreen extends ModularScreen {
     public void onClose() {
         PlanAPI.save();
         super.onClose();
-    }
-
-    @Override
-    public boolean onKeyPressed(final char typedChar, final int keyCode) {
-        if (canvas.onKeyPressed(typedChar, keyCode) == Interactable.Result.SUCCESS) {
-            return true;
-        }
-        return super.onKeyPressed(typedChar, keyCode);
     }
 
     private static class SlotBarWidget extends Widget<SlotBarWidget> implements Interactable {
@@ -191,13 +262,14 @@ public class FlowchartScreen extends ModularScreen {
                 PlanAPI.save();
             }));
 
-            final int gx = w - GROUP_BTN_RIGHT;
-            GuiDraw.drawText("G", gx, TEXT_Y, 1.0f, PlannhColors.titleColor("Group"), false);
-            zones.add(new ClickZone(gx, 0, gx + ARROW_W, h, this::addGroup));
-
-            final int nx = w - NOTE_BTN_RIGHT;
-            GuiDraw.drawText("N", nx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(nx, 0, nx + ARROW_W, h, this::addNote));
+            /*
+             * final int gx = w - GROUP_BTN_RIGHT;
+             * GuiDraw.drawText("G", gx, TEXT_Y, 1.0f, PlannhColors.titleColor("Group"), false);
+             * zones.add(new ClickZone(gx, 0, gx + ARROW_W, h, this::addGroup));
+             * final int nx = w - NOTE_BTN_RIGHT;
+             * GuiDraw.drawText("N", nx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
+             * zones.add(new ClickZone(nx, 0, nx + ARROW_W, h, this::addNote));
+             */
 
             final int shx = w - SHARE_BTN_RIGHT;
             GuiDraw.drawText("Sh", shx, TEXT_Y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
@@ -254,21 +326,22 @@ public class FlowchartScreen extends ModularScreen {
             PlanAPI.save();
         }
 
-        private void addNote() {
-            int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
-            int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
-            if (cx < 0) cx = 0;
-            if (cy < 0) cy = 0;
-            canvas.addNote(cx, cy);
-        }
-
-        private void addGroup() {
-            int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
-            int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
-            if (cx < 0) cx = 0;
-            if (cy < 0) cy = 0;
-            canvas.addGroup(cx, cy);
-        }
+        /*
+         * private void addNote() {
+         * int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
+         * int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
+         * if (cx < 0) cx = 0;
+         * if (cy < 0) cy = 0;
+         * canvas.addNote(cx, cy);
+         * }
+         * private void addGroup() {
+         * int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
+         * int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
+         * if (cx < 0) cx = 0;
+         * if (cy < 0) cy = 0;
+         * canvas.addGroup(cx, cy);
+         * }
+         */
 
         private void cycleBalanceMode() {
             final Graph g = canvas.getGraph();
@@ -359,26 +432,22 @@ public class FlowchartScreen extends ModularScreen {
             if (collapsed) return TITLE_H;
             final Graph g = graph();
             final BalanceResult br = g.balance();
+            final Summary s = Summary.compute(br, g);
             int h = TITLE_H + SECTION_LY_OFFSET;
 
-            if (!br.netOutputs()
+            if (!s.outputs()
                 .isEmpty()) {
-                h += SECTION_H + br.netOutputs()
+                h += SECTION_H + s.outputs()
                     .size() * LINE_H + SECTION_END_PAD;
             }
-            if (!br.netInputs()
+            if (!s.inputs()
                 .isEmpty()) {
-                h += SECTION_H + br.netInputs()
+                h += SECTION_H + s.inputs()
                     .size() * LINE_H + SECTION_END_PAD;
             }
-            if (!br.netFluidOutputs()
+            if (!s.properties()
                 .isEmpty()) {
-                h += SECTION_H + br.netFluidOutputs()
-                    .size() * LINE_H + SECTION_END_PAD;
-            }
-            if (!br.netFluidInputs()
-                .isEmpty()) {
-                h += SECTION_H + br.netFluidInputs()
+                h += SECTION_H + s.properties()
                     .size() * LINE_H + SECTION_END_PAD;
             }
             if (br.totalOperations() > 0) {
@@ -413,6 +482,7 @@ public class FlowchartScreen extends ModularScreen {
 
             final Graph g = graph();
             final BalanceResult br = g.balance();
+            final Summary s = Summary.compute(br, g);
             final SummaryMode sMode = summaryMode();
             final float cycleSecs = summaryCycleSecs(br);
             final boolean isCycle = sMode == SummaryMode.CYCLES;
@@ -422,41 +492,38 @@ public class FlowchartScreen extends ModularScreen {
                 ly,
                 w,
                 "Products",
-                br.netOutputs(),
+                s.outputs(),
                 PlannhColors.SECTION_PRODUCT.getColor(),
                 PlannhColors.ACCENT_AMBER.getColor(),
                 PlannhColors.ACCENT_AMBER.getColor(),
-                i -> itemLabel((Summary.SummaryLine) i, cycleSecs, isCycle));
+                cycleSecs,
+                isCycle);
 
             ly = drawSection(
                 ly,
                 w,
                 "External Inputs",
-                br.netInputs(),
+                s.inputs(),
                 PlannhColors.SECTION_INPUT.getColor(),
                 PlannhColors.ACCENT_GREEN2.getColor(),
                 PlannhColors.TEXT_MUTED.getColor(),
-                i -> itemLabel((Summary.SummaryLine) i, cycleSecs, isCycle));
+                cycleSecs,
+                isCycle);
 
-            ly = drawFluidSection(
-                ly,
-                w,
-                "Fluid Products",
-                br.netFluidOutputs(),
-                PlannhColors.SECTION_FLUID_OUT.getColor(),
-                PlannhColors.ACCENT_CYAN2.getColor(),
-                PlannhColors.ACCENT_CYAN.getColor(),
-                i -> fluidLabel((Summary.FluidSummaryLine) i, cycleSecs, isCycle));
+            if (!s.properties()
+                .isEmpty()) {
 
-            ly = drawFluidSection(
-                ly,
-                w,
-                "Fluid Inputs",
-                br.netFluidInputs(),
-                PlannhColors.SECTION_FLUID_IN.getColor(),
-                PlannhColors.ACCENT_BLUE2.getColor(),
-                PlannhColors.ACCENT_BLUE3.getColor(),
-                i -> fluidLabel((Summary.FluidSummaryLine) i, cycleSecs, isCycle));
+                ly = drawSection(
+                    ly,
+                    w,
+                    "Properties",
+                    s.properties(),
+                    PlannhColors.SECTION_OPS.getColor(),
+                    PlannhColors.SECTION_OPS.getColor(),
+                    PlannhColors.ACCENT_BLUE.getColor(),
+                    cycleSecs,
+                    isCycle);
+            }
 
             if (br.totalOperations() > 0) {
                 GuiDraw.drawRect(
@@ -532,7 +599,8 @@ public class FlowchartScreen extends ModularScreen {
                 PlannhColors.SEPARATOR_DIM.getColor());
             ly += HELP_SEP_GAP;
             GuiDraw.drawText(
-                "Zoom: " + canvas.getZoomPercent() + "%",
+                "Zoom: " + canvas.getGraph()
+                    .getZoom() * 100 + "%",
                 ZOOM_TEXT_X,
                 ly,
                 0.9f,
@@ -550,43 +618,9 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawText("[+ in NEI GUI] add recipe", 6, ly, 0.8f, PlannhColors.TEXT_FAINT.getColor(), false);
         }
 
-        private int drawSection(int ly, final int w, final String title, final List<?> items, final int headerColor,
-            final int titleColor, final int itemColor, final java.util.function.Function<Object, String> labelFn) {
-            if (items.isEmpty()) return ly;
-            GuiDraw.drawRect(SECTION_HEADER_X, ly, w - SECTION_HEADER_X * 2, SECTION_H, headerColor);
-            GuiDraw.drawText(
-                title + " (" + items.size() + ")",
-                SECTION_HEADER_TEXT_X,
-                ly + SECTION_HEADER_TEXT_Y_OFF,
-                1.0f,
-                titleColor,
-                false);
-            ly += SECTION_H;
-            for (final Object item : items) {
-                GuiDraw.drawText(labelFn.apply(item), ITEM_TEXT_X, ly, 0.8f, itemColor, false);
-                ly += LINE_H;
-            }
-            return ly + SECTION_END_PAD;
-        }
-
-        private static String itemLabel(final Summary.SummaryLine line, final float cycleSecs, final boolean isCycle) {
-            if (isCycle) {
-                return line.totalCount + "x " + line.stack.getDisplayName();
-            }
-            return formatRate(line.totalCount / cycleSecs) + "/s " + line.stack.getDisplayName();
-        }
-
-        private static String fluidLabel(final Summary.FluidSummaryLine line, final float cycleSecs,
+        private int drawSection(int ly, final int w, final String title, final List<Summary.Line<?>> items,
+            final int headerColor, final int titleColor, final int itemColor, final float cycleSecs,
             final boolean isCycle) {
-            if (isCycle) {
-                return formatFluidAmount(line.totalAmount) + " " + line.fluid.getLocalizedName();
-            }
-            return formatFluidAmount(line.totalAmount / cycleSecs) + "/s " + line.fluid.getLocalizedName();
-        }
-
-        private int drawFluidSection(int ly, final int w, final String title, final List<?> items,
-            final int headerColor, final int titleColor, final int itemColor,
-            final java.util.function.Function<Object, String> labelFn) {
             if (items.isEmpty()) return ly;
             GuiDraw.drawRect(SECTION_HEADER_X, ly, w - SECTION_HEADER_X * 2, SECTION_H, headerColor);
             GuiDraw.drawText(
@@ -597,8 +631,12 @@ public class FlowchartScreen extends ModularScreen {
                 titleColor,
                 false);
             ly += SECTION_H;
-            for (final Object item : items) {
-                GuiDraw.drawText(labelFn.apply(item), ITEM_TEXT_X, ly, 0.8f, itemColor, false);
+            for (final var item : items) {
+                final String text = item.displayAmount(isCycle ? item.amount() : item.amount() / cycleSecs)
+                    + (isCycle ? " x " : "/s ")
+                    + item.displayName();
+
+                GuiDraw.drawText(text, ITEM_TEXT_X, ly, 0.8f, itemColor, false);
                 ly += LINE_H;
             }
             return ly + SECTION_END_PAD;
@@ -648,18 +686,6 @@ public class FlowchartScreen extends ModularScreen {
             floatX = dragStartX + (getContext().getAbsMouseX() - dragAbsMX);
             floatY = dragStartY + (getContext().getAbsMouseY() - dragAbsMY);
             pos(floatX, floatY);
-        }
-
-        private static String formatFluidAmount(final float mb) {
-            if (mb >= 1000) return (int) (mb / 1000) + "." + ((int) (mb % 1000) / 100) + "B";
-            return String.format("%.1f", mb) + "mB";
-        }
-
-        private static String formatRate(final float rate) {
-            if (rate >= 1000000) return String.format("%.1fM", rate / 1000000);
-            if (rate >= 1000) return String.format("%.0f", rate);
-            if (rate >= 1) return String.format("%.2f", rate);
-            return String.format("%.3f", rate);
         }
     }
 }
