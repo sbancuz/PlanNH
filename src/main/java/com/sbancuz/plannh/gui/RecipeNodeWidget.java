@@ -226,7 +226,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     private void resizeForZoom(final float z) {
         if (handlerRef != null && neiWidget != null) {
-            final int cw = neiWidget.w + NEI_PAD_W;
+            final int cw = getWorldWidth() - NEI_BORDER;
             final int ch = neiWidget.h + NEI_PAD_H + calcInfoHeight() + computeConfigPanelHeight();
             setAreaSize(Math.round((cw + NEI_BORDER) * z), Math.round((ch + NEI_BORDER) * z));
         } else {

@@ -23,6 +23,7 @@ import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
+import com.cleanroommc.modularui.widget.sizer.Unit;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.ListWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
@@ -39,10 +40,11 @@ import com.sbancuz.plannh.data.flowchart.SlotSet;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
+import codechicken.nei.LayoutManager;
+
 public class FlowchartScreen extends ModularScreen {
 
     private static final int LEFT_MARGIN = 5;
-    private static final int RIGHT_MARGIN = 190;
     private static final int TOP_MARGIN = 30;
     private static final int BOTTOM_MARGIN = 30;
 
@@ -61,18 +63,25 @@ public class FlowchartScreen extends ModularScreen {
         this.canvas = canvas;
     }
 
+    private static double panelRight() {
+        return Minecraft.getMinecraft().currentScreen.width - LayoutManager.itemPanel.x + 8;
+    }
+
     public static FlowchartScreen create() {
         final Graph graph = PlanAPI.getActiveGraph();
 
         final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main")
             .fullScreenInvisible()
-            .margin(LEFT_MARGIN, RIGHT_MARGIN, TOP_MARGIN, BOTTOM_MARGIN);
+            .marginLeft(LEFT_MARGIN)
+            .marginBottom(BOTTOM_MARGIN)
+            .marginTop(TOP_MARGIN)
+            .widthRel(0.75f)
+            .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL);
 
         final Flow mainColumn = Flow.column()
             .full();
 
         Menu<?> contextMenu = new Menu<>();
-
         final CanvasWidget canvas = new CanvasWidget(graph, contextMenu);
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
@@ -142,15 +151,6 @@ public class FlowchartScreen extends ModularScreen {
         panel.child(contextMenu);
 
         return new FlowchartScreen(panel, graph, canvas);
-    }
-
-    @Override
-    public void onResize(final int width, final int height) {
-        super.onResize(width, height);
-        if (getScreenWrapper() != null
-            && getScreenWrapper().getGuiScreen() instanceof final FlowchartGuiContainer container) {
-            container.applyNeiSizing(width);
-        }
     }
 
     @Override
