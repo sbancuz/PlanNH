@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
@@ -45,7 +46,7 @@ import codechicken.nei.LayoutManager;
 public class FlowchartScreen extends ModularScreen {
 
     private static final int LEFT_MARGIN = 5;
-    private static final int RIGHT_MARGIN = 190;
+    private static final int RIGHT_MARGIN = 15;
     private static final int TOP_MARGIN = 30;
     private static final int BOTTOM_MARGIN = 30;
 
@@ -64,20 +65,15 @@ public class FlowchartScreen extends ModularScreen {
         this.canvas = canvas;
     }
 
-    private static double panelRight() {
-        return Minecraft.getMinecraft().currentScreen.width - LayoutManager.itemPanel.x + 8;
-    }
-
     public static FlowchartScreen create() {
         final Graph graph = PlanAPI.getActiveGraph();
 
         final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main")
             .fullScreenInvisible()
-            .marginLeft(LEFT_MARGIN)
+            .left(LEFT_MARGIN)
             .marginBottom(BOTTOM_MARGIN)
             .marginTop(TOP_MARGIN)
-            .widthRel(0.75f)
-            .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL);
+            .widthRelOffset(() -> (double) (LayoutManager.itemPanel.x - RIGHT_MARGIN) / Minecraft.getMinecraft().currentScreen.width, 0);
 
         final Flow mainColumn = Flow.column()
             .full();
