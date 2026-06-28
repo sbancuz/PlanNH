@@ -81,14 +81,14 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
                         else colorPicker.closePanel();
                         return true;
                     }))
-            .child(new CycleButtonWidget()
-                .stateCount(2)
-                .stateOverlay(true, IKey.str("^"))
-                .stateOverlay(false, IKey.str("V"))
-                .value(new BoolValue.Dynamic(data::isCollapsed, val -> {
-                    data.setCollapsed(val);
-                    scheduleResize();
-                })));
+            .child(
+                new CycleButtonWidget().stateCount(2)
+                    .stateOverlay(true, IKey.str("^"))
+                    .stateOverlay(false, IKey.str("V"))
+                    .value(new BoolValue.Dynamic(data::isCollapsed, val -> {
+                        data.setCollapsed(val);
+                        scheduleResize();
+                    })));
 
         topRow.child(buttonRow);
 

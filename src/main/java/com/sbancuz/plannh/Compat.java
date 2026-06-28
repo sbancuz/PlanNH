@@ -3,11 +3,14 @@ package com.sbancuz.plannh;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.provider.BotaniaProvider;
 import com.sbancuz.plannh.data.provider.EnderIOProvider;
 import com.sbancuz.plannh.data.provider.ForestryProvider;
 import com.sbancuz.plannh.data.provider.ThaumcraftProvider;
+import com.sbancuz.plannh.data.provider.VanillaProvider;
 import com.sbancuz.plannh.data.provider.gregtech.GTProvider;
 
 import cpw.mods.fml.common.Loader;
@@ -46,6 +49,9 @@ public enum Compat {
     }
 
     public static void init() {
+        MachineProfileRegistry.reset();
+        RecipePropertyAPI.reset();
+        new VanillaProvider().register();
         for (final Compat mod : values()) {
             if (mod.isLoaded) {
                 mod.extractor = create(mod.providerFactory);

@@ -76,9 +76,8 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
 
     @Override
     public Object getAdditionalHoverInfo(IViewportStack viewportStack, int mouseX, int mouseY) {
-        Object superInfo =  super.getAdditionalHoverInfo(viewportStack, mouseX, mouseY);
-        if(superInfo instanceof ResizeDragArea resizeDragArea && resizeDragArea.top)
-            return null;
+        Object superInfo = super.getAdditionalHoverInfo(viewportStack, mouseX, mouseY);
+        if (superInfo instanceof ResizeDragArea resizeDragArea && resizeDragArea.top) return null;
         return superInfo;
     }
 
@@ -100,7 +99,7 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
 
     @Override
     public void onDragResizeEnd() {
-//        parent.scheduleResize();
+        // parent.scheduleResize();
     }
 
     public void configureCoverChildren() {

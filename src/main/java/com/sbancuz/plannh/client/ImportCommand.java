@@ -6,10 +6,10 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.gui.FlowchartGuiContainer;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
 /**
@@ -50,9 +50,8 @@ public class ImportCommand extends CommandBase {
         final ModularContainer container = new ModularContainer();
         container.constructClientOnly();
         final FlowchartScreen screen = FlowchartScreen.create();
-        final FlowchartGuiContainer wrapper = new FlowchartGuiContainer(container, screen);
         Minecraft.getMinecraft()
-            .displayGuiScreen(wrapper);
+            .displayGuiScreen(new GuiContainerWrapper(container, screen));
     }
 
     @Override

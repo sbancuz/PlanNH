@@ -8,7 +8,9 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.config.ConfigOverrides;
+import com.sbancuz.plannh.nei.NEIPlanConfig;
+
+import codechicken.nei.NEIClientConfig;
 
 public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings,
     EffectComputer effectComputer) {
@@ -45,7 +47,8 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         private Builder(final String id, final String displayName) {
             this.id = id;
             this.displayName = displayName;
-            if (ConfigOverrides.alwaysShowBurnableSetting) {
+            if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
+                .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
                 addSetting(Settings.BURNABLE_OVERRIDE.def());
             }
         }

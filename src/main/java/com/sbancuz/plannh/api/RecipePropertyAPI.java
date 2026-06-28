@@ -88,12 +88,6 @@ public final class RecipePropertyAPI {
                 .hashCode())
         .build();
 
-    static {
-        registerProperty(DURATION_TICKS);
-        registerProperty(ITEM);
-        registerProperty(FLUID);
-    }
-
     public static void registerProperty(final RecipeProperty<?> property) {
         properties.put(property.getKey(), property);
     }
@@ -115,5 +109,16 @@ public final class RecipePropertyAPI {
     public static @Nullable PropertyProvider getExtractor(String overlayId) {
         final List<PropertyProvider> list = extractors.get(overlayId);
         return list != null && !list.isEmpty() ? list.get(0) : null;
+    }
+
+    public static void reset() {
+        properties.clear();
+        for (var ex : extractors.values()) {
+            ex.clear();
+        }
+        extractors.clear();
+        registerProperty(DURATION_TICKS);
+        registerProperty(ITEM);
+        registerProperty(FLUID);
     }
 }

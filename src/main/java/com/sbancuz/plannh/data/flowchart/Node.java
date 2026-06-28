@@ -9,13 +9,14 @@ import java.util.UUID;
 import net.minecraft.tileentity.TileEntityFurnace;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.config.ConfigOverrides;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.nei.NEIPlanConfig;
 
+import codechicken.nei.NEIClientConfig;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
@@ -101,7 +102,8 @@ public class Node {
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (final PositionedStack ps : others) {
             if (ps != null && ps.item != null) {
-                if (ConfigOverrides.alwaysShowBurnableSetting) {
+                if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
+                    .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
                     if (this.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
                         .equals("IN")) {
                         this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
