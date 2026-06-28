@@ -1,8 +1,5 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import static com.sbancuz.plannh.gui.GroupWidget2.GROUP_MIN_H;
-import static com.sbancuz.plannh.gui.GroupWidget2.GROUP_MIN_W;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -18,6 +15,9 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Group extends GraphData {
+
+    public static final int GROUP_MIN_W = 300;
+    public static final int GROUP_MIN_H = 200;
 
     private static Random colorRandom = new Random(12345);
 
