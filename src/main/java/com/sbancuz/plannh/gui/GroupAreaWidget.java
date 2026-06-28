@@ -70,12 +70,8 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
     }
 
     @Override
-    public void onDragResizeStart() {
-
-    }
-
-    @Override
     public Object getAdditionalHoverInfo(IViewportStack viewportStack, int mouseX, int mouseY) {
+        // disallow resizing on the top edge
         Object superInfo = super.getAdditionalHoverInfo(viewportStack, mouseX, mouseY);
         if (superInfo instanceof ResizeDragArea resizeDragArea && resizeDragArea.top) return null;
         return superInfo;
@@ -83,24 +79,24 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
 
     @Override
     public void onDragResize() {
-        // IDragResizeable.super.onDragResize();
-        getParent().scheduleResize();
+        parent.scheduleResize();
     }
 
     @Override
     public void onResized() {
         Area area = getArea();
         if (data.getWidth() != area.width || data.getHeight() != area.height) {
-            // TODO add rx, ry?
             data.setWidth(area.width);
             data.setHeight(area.height);
         }
     }
 
-    @Override
-    public void onDragResizeEnd() {
-        // parent.scheduleResize();
-    }
+    /*
+     * @Override
+     * public void onDragResizeEnd() {
+     * // add new widgets in area?
+     * }
+     */
 
     public void configureCoverChildren() {
         if (data.isCoverChildren()) {

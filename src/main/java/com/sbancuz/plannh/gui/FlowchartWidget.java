@@ -179,10 +179,4 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             default -> throw new IllegalArgumentException("Unsupported data type: " + data.getClass());
         };
     }
-
-    @Override
-    public void scheduleResize() {
-        super.scheduleResize();
-        getParent().scheduleResize();
-    }
 }
