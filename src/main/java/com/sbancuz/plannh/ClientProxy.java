@@ -1,5 +1,6 @@
 package com.sbancuz.plannh;
 
+import com.sbancuz.plannh.client.WorldHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraftforge.client.ClientCommandHandler;
@@ -40,6 +41,10 @@ public class ClientProxy extends CommonProxy {
         Compat.init();
 
         ClientRegistry.registerKeyBinding(openFlowchartKey);
+
+        final WorldHandler handler = new WorldHandler();
+        MinecraftForge.EVENT_BUS.register(handler);
+        FMLCommonHandler.instance().bus().register(handler);
 
         MinecraftForge.EVENT_BUS.register(new ChatHandler());
         ClientCommandHandler.instance.registerCommand(new ImportCommand());
