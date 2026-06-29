@@ -10,9 +10,6 @@ import javax.annotation.Nullable;
 
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.JsonToNBT;
-import net.minecraft.nbt.NBTException;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -25,27 +22,10 @@ public final class RecipePropertyAPI {
     private static final Map<String, RecipeProperty<?>> properties = new HashMap<>();
     private static final Map<String, List<PropertyProvider>> extractors = new HashMap<>();
 
-    public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.intBuilder("duration_ticks", 0)
+    public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.<Integer>builder("duration_ticks", 0)
         .build();
 
     public static final RecipeResource<ItemStack> ITEM = RecipeResource.builder("item", new ItemStack(Blocks.dirt))
-        .serializer((obj, stack) -> {
-            if (stack == null) return;
-            NBTTagCompound nbt = new NBTTagCompound();
-            stack.writeToNBT(nbt);
-            obj.addProperty("itemStack", nbt.toString());
-        })
-        .deserializer(obj -> {
-            if (!obj.has("itemStack")) return null;
-            try {
-                NBTTagCompound nbt = (NBTTagCompound) JsonToNBT.func_150315_a(
-                    obj.get("itemStack")
-                        .getAsString());
-                return ItemStack.loadItemStackFromNBT(nbt);
-            } catch (final NBTException e) {
-                return null;
-            }
-        })
         .displayFormatter(ItemStack::getDisplayName)
         .amountFormatter((rate) -> {
             if (rate >= 1000000000f) return String.format("%.1fB", rate / 1000000000f);
@@ -64,17 +44,6 @@ public final class RecipePropertyAPI {
 
     public static final RecipeResource<FluidStack> FLUID = RecipeResource
         .<FluidStack>builder("fluid", new FluidStack(FluidRegistry.WATER, 0, null))
-        .serializer((obj, stack) -> {
-            obj.addProperty("fluid", FluidRegistry.getFluidName(stack.getFluid()));
-            obj.addProperty("amount", stack.amount);
-        })
-        .deserializer(obj -> {
-            final String name = obj.get("fluid")
-                .getAsString();
-            final int amount = obj.get("amount")
-                .getAsInt();
-            return FluidRegistry.getFluidStack(name, amount);
-        })
         .displayFormatter(FluidStack::getLocalizedName)
         .amountFormatter(amount -> {
             final int mB = Math.round(amount);
@@ -102,13 +71,9 @@ public final class RecipePropertyAPI {
         return extractors.getOrDefault(overlayId, List.of());
     }
 
-    public static @Nullable RecipeProperty<?> getProperty(String key) {
-        return properties.get(key);
-    }
-
     public static @Nullable PropertyProvider getExtractor(String overlayId) {
         final List<PropertyProvider> list = extractors.get(overlayId);
-        return list != null && !list.isEmpty() ? list.get(0) : null;
+        return list != null && !list.isEmpty() ? list.getFirst() : null;
     }
 
     public static void reset() {
@@ -117,8 +82,5 @@ public final class RecipePropertyAPI {
             ex.clear();
         }
         extractors.clear();
-        registerProperty(DURATION_TICKS);
-        registerProperty(ITEM);
-        registerProperty(FLUID);
     }
 }
