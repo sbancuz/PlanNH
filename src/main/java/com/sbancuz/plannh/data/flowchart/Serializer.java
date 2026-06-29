@@ -339,8 +339,10 @@ public final class Serializer {
         final JsonArray arr = new JsonArray();
         for (final Port<?> port : ports) {
             final JsonObject obj = new JsonObject();
-            obj.addProperty("type", port.getType()
-                .getKey());
+            obj.addProperty(
+                "type",
+                port.getType()
+                    .getKey());
             obj.addProperty("chance", port.getChance());
             arr.add(obj);
         }
@@ -353,12 +355,14 @@ public final class Serializer {
                 .getAsJsonObject();
             final String savedType = obj.has("type") ? obj.get("type")
                 .getAsString() : "item";
-            if (savedType.equals(ports.get(i)
-                .getType()
-                .getKey())) {
+            if (savedType.equals(
                 ports.get(i)
-                    .setChance(obj.get("chance")
-                        .getAsFloat());
+                    .getType()
+                    .getKey())) {
+                ports.get(i)
+                    .setChance(
+                        obj.get("chance")
+                            .getAsFloat());
             }
         }
     }
