@@ -38,19 +38,19 @@ import thaumcraft.api.crafting.ShapelessArcaneRecipe;
 
 public class ThaumcraftProvider implements PropertyProvider {
 
-    public static final RecipeProperty<int[]> VIS_COST = RecipeProperty.intArrayBuilder("vis_cost", new int[6])
+    public static final RecipeProperty<int[]> VIS_COST = RecipeProperty.<int[]>builder("vis_cost", new int[6])
         .build();
 
-    public static final RecipeProperty<Integer> INSTABILITY = RecipeProperty.intBuilder("instability", 0)
+    public static final RecipeProperty<Integer> INSTABILITY = RecipeProperty.<Integer>builder("instability", 0)
         .build();
 
-    public static final RecipeProperty<Integer> TOTAL_VIS = RecipeProperty.intBuilder("total_vis", 0)
+    public static final RecipeProperty<Integer> TOTAL_VIS = RecipeProperty.<Integer>builder("total_vis", 0)
         .build();
 
-    public static final RecipeProperty<String> RESEARCH_KEY = RecipeProperty.stringBuilder("research_key", "")
+    public static final RecipeProperty<String> RESEARCH_KEY = RecipeProperty.<String>builder("research_key", "")
         .build();
 
-    public static final RecipeProperty<Integer> NUM_COMPONENTS = RecipeProperty.intBuilder("num_components", 0)
+    public static final RecipeProperty<Integer> NUM_COMPONENTS = RecipeProperty.<Integer>builder("num_components", 0)
         .build();
 
     private static final String[] PRIMAL_TAGS = { "aer", "terra", "ignis", "aqua", "ordo", "perditio" };
@@ -64,12 +64,6 @@ public class ThaumcraftProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(ShapelessArcaneRecipeHandler.OVERLAY, this);
         RecipePropertyAPI.registerExtractor(AlchemyRecipeHandler.OVERLAY, this);
         RecipePropertyAPI.registerExtractor(InfusionRecipeHandler.OVERLAY, this);
-
-        RecipePropertyAPI.registerProperty(VIS_COST);
-        RecipePropertyAPI.registerProperty(INSTABILITY);
-        RecipePropertyAPI.registerProperty(TOTAL_VIS);
-        RecipePropertyAPI.registerProperty(RESEARCH_KEY);
-        RecipePropertyAPI.registerProperty(NUM_COMPONENTS);
 
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:arcane", "Arcane Workbench")

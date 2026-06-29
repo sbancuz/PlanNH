@@ -36,7 +36,7 @@ import forestry.factory.recipes.nei.NEIHandlerStill;
 public class ForestryProvider implements PropertyProvider {
 
     public static final RecipeProperty<Integer> PROCESSING_TIME = RecipeProperty
-        .intBuilder("forestry.processing_time", 0)
+        .<Integer>builder("forestry.processing_time", 0)
         .build();
 
     @Override
@@ -49,8 +49,6 @@ public class ForestryProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(new NEIHandlerMoistener().getOverlayIdentifier(), this);
         RecipePropertyAPI.registerExtractor(new NEIHandlerSqueezer().getOverlayIdentifier(), this);
         RecipePropertyAPI.registerExtractor(new NEIHandlerStill().getOverlayIdentifier(), this);
-
-        RecipePropertyAPI.registerProperty(PROCESSING_TIME);
 
         MachineProfileRegistry.register(
             MachineProfile.builder("forestry:basic", "Forestry")
