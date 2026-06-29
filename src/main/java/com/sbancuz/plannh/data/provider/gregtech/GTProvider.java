@@ -7,14 +7,11 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import gregtech.api.recipe.RecipeMaps;
-import gregtech.api.recipe.maps.FurnaceBackend;
 import net.minecraft.item.ItemStack;
-
-import codechicken.nei.PositionedStack;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -25,11 +22,14 @@ import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.provider.EFRProvider;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import gregtech.api.recipe.RecipeMap;
+import gregtech.api.recipe.RecipeMaps;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTRecipeConstants;
 import gregtech.api.util.recipe.Sievert;
@@ -60,6 +60,9 @@ public class GTProvider implements PropertyProvider {
     public void register() {
         // Add all recipes, even the furnace ones
         RecipePropertyAPI.registerExtractor(new FurnaceRecipeHandler().getOverlayIdentifier(), this);
+        if (Compat.EFR.isLoaded) {
+            EFRProvider.registerHandlers(this);
+        }
         RecipeMap.ALL_RECIPE_MAPS.keySet()
             .forEach(key -> RecipePropertyAPI.registerExtractor(key, this));
 
@@ -151,7 +154,7 @@ public class GTProvider implements PropertyProvider {
     private static final List<ProfileMatcher> PROFILE_MATCHERS = List.of(
         ProfileMatcher.keyword( "gregtech:ebf",
             "blastfurnace", "vacfurnace", "alloyblastsmelter", "vacuumfurnace", "digester", "nanochip"),
-        ProfileMatcher.keyword("gregtech:basic", "furnace", "alloysmelter"),
+        ProfileMatcher.keyword("gregtech:basic", "furnace", "alloysmelter", EFRProvider.BLAST_FURNACE_OVERLAY, EFRProvider.SMOKER_OVERLAY),
         ProfileMatcher.keyword("gregtech:plasmaforge", "plasmaforge", "fog_"),
         ProfileMatcher.keyword("gregtech:fusion", "fusion"),
         ProfileMatcher.keyword("gregtech:laser", "laserengraver", "precise_assembler"),
@@ -214,7 +217,18 @@ public class GTProvider implements PropertyProvider {
             if (ingredients == null || ingredients.isEmpty() || ingredients.getFirst().item == null) {
                 return props;
             }
-            r = RecipeMaps.furnaceRecipes.findRecipeQuery()
+
+            final String overlay = fh.getOverlayIdentifier();
+            final RecipeMap<?> recipeMap;
+            if (EFRProvider.SMOKER_OVERLAY.equals(overlay)) {
+                recipeMap = RecipeMaps.efrSmokingRecipes;
+            } else if (EFRProvider.BLAST_FURNACE_OVERLAY.equals(overlay)) {
+                recipeMap = RecipeMaps.efrBlastingRecipes;
+            } else {
+                recipeMap = RecipeMaps.furnaceRecipes;
+            }
+
+            r = recipeMap.findRecipeQuery()
                 .items(ingredients.getFirst().item)
                 .find();
             if (r == null) {
