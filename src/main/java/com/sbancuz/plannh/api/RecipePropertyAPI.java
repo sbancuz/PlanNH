@@ -12,6 +12,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.oredict.OreDictionary;
 
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
@@ -35,7 +36,7 @@ public final class RecipePropertyAPI {
         })
         .amountExtractor(stack -> stack.stackSize)
         .amountUpdater((stack, newAmount) -> stack.stackSize = newAmount)
-        .connectionChecker(ItemStack::isItemEqual)
+        .connectionChecker(RecipePropertyAPI::itemsMatch)
         .hashCodeExtractor(
             s -> 31 * s.getItem()
                 .hashCode() + s.getItemDamage())
@@ -55,6 +56,20 @@ public final class RecipePropertyAPI {
             fs -> fs.getFluid()
                 .hashCode())
         .build();
+
+    private static boolean itemsMatch(final ItemStack a, final ItemStack b) {
+        if (a.getItem() == null || b.getItem() == null) return false;
+        if (a.isItemEqual(b)) return true;
+        final int[] idsA = OreDictionary.getOreIDs(a);
+        final int[] idsB = OreDictionary.getOreIDs(b);
+        if (idsA.length == 0 || idsB.length == 0) return false;
+        for (final int idA : idsA) {
+            for (final int idB : idsB) {
+                if (idA == idB) return true;
+            }
+        }
+        return false;
+    }
 
     public static void registerExtractor(String overlayId, final PropertyProvider extractor) {
         extractors.computeIfAbsent(overlayId, k -> new ArrayList<>())
