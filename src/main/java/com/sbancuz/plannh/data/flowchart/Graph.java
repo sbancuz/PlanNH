@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -8,30 +7,25 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
+@Getter
+@Setter
 public class Graph {
 
-    // TODO make these use getters
-    public final Map<UUID, Node> nodes = new HashMap<>();
-    public final Map<UUID, Edge> edges = new HashMap<>();
-    public final Map<UUID, Note> notes = new HashMap<>();
-    public final Map<UUID, Group> groups = new HashMap<>();
+    private final Map<UUID, Node> nodes = new HashMap<>();
+    private final Map<UUID, Edge> edges = new HashMap<>();
+    private final Map<UUID, Note> notes = new HashMap<>();
+    private final Map<UUID, Group> groups = new HashMap<>();
 
-    @Getter
-    @Setter
     private float zoom = 1f;
-    @Getter
-    @Setter
     private float panX;
-    @Getter
-    @Setter
     private float panY;
-    @Getter
-    @Setter
-    private boolean snapToGrid;
+    private String name;
 
-    @Getter
-    @Setter
     private Balancer.BalanceMode balanceMode = Balancer.BalanceMode.BACKWARD;
+
+    public Graph(String name) {
+        this.name = name;
+    }
 
     public void removeNode(final UUID id) {
         nodes.remove(id);
@@ -41,37 +35,5 @@ public class Graph {
 
     public Balancer.BalanceResult balance() {
         return Balancer.balance(this, balanceMode);
-    }
-
-    public Collection<Node> getNodes() {
-        return nodes.values();
-    }
-
-    public void addNode(final Node node) {
-        nodes.put(node.id, node);
-    }
-
-    public Collection<Edge> getEdges() {
-        return edges.values();
-    }
-
-    public void addEdge(final Edge edge) {
-        edges.put(edge.id, edge);
-    }
-
-    public void removeEdge(final UUID id) {
-        edges.remove(id);
-    }
-
-    public void removeGroup(final UUID id) {
-        groups.remove(id);
-    }
-
-    public Collection<Group> getGroups() {
-        return groups.values();
-    }
-
-    public Collection<Note> getNotes() {
-        return notes.values();
     }
 }

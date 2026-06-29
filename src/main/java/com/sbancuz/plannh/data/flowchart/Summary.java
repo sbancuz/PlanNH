@@ -65,7 +65,8 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
         final Map<LineKey, Float> propertyMap = new HashMap<>();
 
         // Pass 1: accumulate all node outputs before any netting.
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             final var nb = balance.nodeBalances()
                 .get(node.id);
             if (nb == null) continue;
@@ -78,7 +79,8 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
         }
 
         // Pass 2: net inputs against the fully-populated output map.
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             final var nb = balance.nodeBalances()
                 .get(node.id);
             if (nb == null) continue;

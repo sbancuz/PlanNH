@@ -109,7 +109,8 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
 
     @Override
     protected Map<UUID, Group> getDefaultContainer() {
-        return canvas.getGraph().groups;
+        return canvas.getGraph()
+            .getGroups();
     }
 
     public int getMouseGroupX() {

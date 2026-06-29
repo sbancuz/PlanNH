@@ -33,7 +33,8 @@ public class GuiOverlayButtonMixin {
     private static boolean planNH$isRecipeInGraph(final RecipeHandlerRef ref) {
         final Recipe.RecipeId currentId = Recipe.RecipeId.of(ref.handler, ref.recipeIndex);
         final Graph graph = PlanAPI.getActiveGraph();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             if (currentId.equals(node.recipeId)) {
                 return true;
             }
