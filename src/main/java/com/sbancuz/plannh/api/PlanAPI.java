@@ -41,6 +41,11 @@ public final class PlanAPI {
         return slotSet;
     }
 
+    public static void unloadSlotSet() {
+        save();
+        slotSet = null;
+    }
+
     @Nonnull
     public static Graph getActiveGraph() {
         return getSlotSet().getActiveGraph();
