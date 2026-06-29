@@ -7,7 +7,11 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import gregtech.api.recipe.RecipeMaps;
+import gregtech.api.recipe.maps.FurnaceBackend;
 import net.minecraft.item.ItemStack;
+
+import codechicken.nei.PositionedStack;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -35,21 +39,21 @@ import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 
 public class GTProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.intBuilder("special_value", 0)
+    public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.<Integer>builder("special_value", 0)
         .build();
-    static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty.intBuilder("bartworks.glass_tier", 3)
+    static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty.<Integer>builder("bartworks.glass_tier", 3)
         .build();
-    public static final RecipeProperty<Integer> SIEVERT = RecipeProperty.intBuilder("bartworks.sievert", 0)
+    public static final RecipeProperty<Integer> SIEVERT = RecipeProperty.<Integer>builder("bartworks.sievert", 0)
         .build();
     public static final RecipeProperty<Boolean> SIEVERT_EXACT = RecipeProperty
-        .boolBuilder("bartworks.sievert_exact", false)
+        .<Boolean>builder("bartworks.sievert_exact", false)
         .build();
-    public static final RecipeProperty<Integer> MASS = RecipeProperty.intBuilder("bartworks.mass", 0)
+    public static final RecipeProperty<Integer> MASS = RecipeProperty.<Integer>builder("bartworks.mass", 0)
         .build();
 
-    public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.longBuilder("total_eu", 0L)
+    public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.<Long>builder("total_eu", 0L)
         .build();
-    public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.longBuilder("eu_per_tick", 0L)
+    public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.<Long>builder("eu_per_tick", 0L)
         .build();
 
     @Override
@@ -58,14 +62,6 @@ public class GTProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(new FurnaceRecipeHandler().getOverlayIdentifier(), this);
         RecipeMap.ALL_RECIPE_MAPS.keySet()
             .forEach(key -> RecipePropertyAPI.registerExtractor(key, this));
-
-        RecipePropertyAPI.registerProperty(SPECIAL_VALUE);
-        RecipePropertyAPI.registerProperty(GLASS_TIER);
-        RecipePropertyAPI.registerProperty(SIEVERT);
-        RecipePropertyAPI.registerProperty(SIEVERT_EXACT);
-        RecipePropertyAPI.registerProperty(MASS);
-        RecipePropertyAPI.registerProperty(TOTAL_EU);
-        RecipePropertyAPI.registerProperty(EU_PER_TICK);
 
         for (final MachineProfile p : PROFILES) {
             MachineProfileRegistry.register(p);
@@ -201,26 +197,45 @@ public class GTProvider implements PropertyProvider {
     @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final @NotNull Node node, final @NotNull IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
-        if ((handler instanceof FurnaceRecipeHandler)) {
+        GTRecipe r;
+
+        if (handler instanceof final FurnaceRecipeHandler fh) {
+            final List<TemplateRecipeHandler.CachedRecipe> fRecipes = RecipeHandlerAccess.getArecipes(fh);
             props.put(RecipePropertyAPI.DURATION_TICKS, 200);
+
+            if (recipeIndex < 0 || recipeIndex >= fRecipes.size()) {
+                return props;
+            }
+            final TemplateRecipeHandler.CachedRecipe cr = fRecipes.get(recipeIndex);
+            if (cr == null) {
+                return props;
+            }
+            final List<PositionedStack> ingredients = cr.getIngredients();
+            if (ingredients == null || ingredients.isEmpty() || ingredients.getFirst().item == null) {
+                return props;
+            }
+            r = RecipeMaps.furnaceRecipes.findRecipeQuery()
+                .items(ingredients.getFirst().item)
+                .find();
+            if (r == null) {
+                return props;
+            }
+
+        } else if (handler instanceof final GTNEIDefaultHandler gth) {
+            final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
+            if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
+
+            final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
+            r = cached.mRecipe;
+            if (r == null) return props;
+
+        } else {
             return props;
         }
 
-        if (!(handler instanceof final GTNEIDefaultHandler gth)) return props;
-
-        final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
-        if (recipeIndex < 0 || recipeIndex >= recipes.size()) return props;
-
-        final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
-        final GTRecipe r = cached.mRecipe;
-        if (r == null) return props;
-
-        final int duration = r.mDuration;
-        final int eut = r.mEUt;
-
-        props.put(RecipePropertyAPI.DURATION_TICKS, duration);
-        props.put(EU_PER_TICK, (long) eut);
-        props.put(TOTAL_EU, (long) eut * duration);
+        props.put(RecipePropertyAPI.DURATION_TICKS, r.mDuration);
+        props.put(EU_PER_TICK, (long) r.mEUt);
+        props.put(TOTAL_EU, (long) r.mEUt * r.mDuration);
 
         final int glassTier = r.getMetadataOrDefault(GTRecipeConstants.GLASS, 3);
         if (glassTier != 3) {

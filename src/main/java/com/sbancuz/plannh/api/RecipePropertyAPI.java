@@ -19,7 +19,6 @@ import com.sbancuz.plannh.data.RecipeResource;
 
 public final class RecipePropertyAPI {
 
-    private static final Map<String, RecipeProperty<?>> properties = new HashMap<>();
     private static final Map<String, List<PropertyProvider>> extractors = new HashMap<>();
 
     public static final RecipeProperty<Integer> DURATION_TICKS = RecipeProperty.<Integer>builder("duration_ticks", 0)
@@ -57,10 +56,6 @@ public final class RecipePropertyAPI {
                 .hashCode())
         .build();
 
-    public static void registerProperty(final RecipeProperty<?> property) {
-        properties.put(property.getKey(), property);
-    }
-
     public static void registerExtractor(String overlayId, final PropertyProvider extractor) {
         extractors.computeIfAbsent(overlayId, k -> new ArrayList<>())
             .add(extractor);
@@ -77,7 +72,6 @@ public final class RecipePropertyAPI {
     }
 
     public static void reset() {
-        properties.clear();
         for (var ex : extractors.values()) {
             ex.clear();
         }
