@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.data;
 
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.ToIntFunction;
@@ -11,11 +12,13 @@ public class RecipeResource<T> extends RecipeProperty<T> {
 
     @lombok.Builder.Default
     private final ToIntFunction<T> amountExtractor = (v) -> 1;
-    private final BiConsumer<T, Integer> amountUpdater;
+    @lombok.Builder.Default
+    private final BiConsumer<T, Integer> amountUpdater = (v, amount) -> {};
 
     @lombok.Builder.Default
     private final BiPredicate<T, T> connectionChecker = (a, b) -> true;
-    private final ToIntFunction<T> hashCodeExtractor;
+    @lombok.Builder.Default
+    private final ToIntFunction<T> hashCodeExtractor = Objects::hashCode;
 
     @Override
     public String displayName() {

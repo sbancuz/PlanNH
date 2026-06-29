@@ -34,9 +34,9 @@ import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
 
 public class EnderIOProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.intBuilder("rf_total", 0)
+    public static final RecipeProperty<Integer> RF_TOTAL = RecipeProperty.<Integer>builder("rf_total", 0)
         .build();
-    public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.intBuilder("experience", 0)
+    public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.<Integer>builder("experience", 0)
         .build();
 
     @Nullable
@@ -50,9 +50,6 @@ public class EnderIOProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(new EnchanterRecipeHandler().getOverlayIdentifier(), this);
         RecipePropertyAPI.registerExtractor(new SliceAndSpliceRecipeHandler().getOverlayIdentifier(), this);
         RecipePropertyAPI.registerExtractor(new SoulBinderRecipeHandler().getOverlayIdentifier(), this);
-
-        RecipePropertyAPI.registerProperty(RF_TOTAL);
-        RecipePropertyAPI.registerProperty(EXPERIENCE);
 
         MachineProfileRegistry.register(
             MachineProfile.builder("enderio", "EnderIO")

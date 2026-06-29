@@ -35,21 +35,21 @@ import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 
 public class GTProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.intBuilder("special_value", 0)
+    public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.<Integer>builder("special_value", 0)
         .build();
-    static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty.intBuilder("bartworks.glass_tier", 3)
+    static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty.<Integer>builder("bartworks.glass_tier", 3)
         .build();
-    public static final RecipeProperty<Integer> SIEVERT = RecipeProperty.intBuilder("bartworks.sievert", 0)
+    public static final RecipeProperty<Integer> SIEVERT = RecipeProperty.<Integer>builder("bartworks.sievert", 0)
         .build();
     public static final RecipeProperty<Boolean> SIEVERT_EXACT = RecipeProperty
-        .boolBuilder("bartworks.sievert_exact", false)
+        .<Boolean>builder("bartworks.sievert_exact", false)
         .build();
-    public static final RecipeProperty<Integer> MASS = RecipeProperty.intBuilder("bartworks.mass", 0)
+    public static final RecipeProperty<Integer> MASS = RecipeProperty.<Integer>builder("bartworks.mass", 0)
         .build();
 
-    public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.longBuilder("total_eu", 0L)
+    public static final RecipeProperty<Long> TOTAL_EU = RecipeProperty.<Long>builder("total_eu", 0L)
         .build();
-    public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.longBuilder("eu_per_tick", 0L)
+    public static final RecipeProperty<Long> EU_PER_TICK = RecipeProperty.<Long>builder("eu_per_tick", 0L)
         .build();
 
     @Override
@@ -58,14 +58,6 @@ public class GTProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(new FurnaceRecipeHandler().getOverlayIdentifier(), this);
         RecipeMap.ALL_RECIPE_MAPS.keySet()
             .forEach(key -> RecipePropertyAPI.registerExtractor(key, this));
-
-        RecipePropertyAPI.registerProperty(SPECIAL_VALUE);
-        RecipePropertyAPI.registerProperty(GLASS_TIER);
-        RecipePropertyAPI.registerProperty(SIEVERT);
-        RecipePropertyAPI.registerProperty(SIEVERT_EXACT);
-        RecipePropertyAPI.registerProperty(MASS);
-        RecipePropertyAPI.registerProperty(TOTAL_EU);
-        RecipePropertyAPI.registerProperty(EU_PER_TICK);
 
         for (final MachineProfile p : PROFILES) {
             MachineProfileRegistry.register(p);
