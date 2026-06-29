@@ -34,6 +34,7 @@ import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
 
 import lombok.Getter;
@@ -109,8 +110,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final Map<UUID, List<int[]>> edgeRoutes = new HashMap<>();
     private long routeSignature = Long.MIN_VALUE;
 
-    public CanvasWidget(final Graph graph, Menu<?> menu, ModularPanel panel) {
-        this.graph = graph;
+    public CanvasWidget(Menu<?> menu, ModularPanel panel) {
+        this.graph = Plan.getActiveGraph();
         this.panel = panel;
         full();
         marginBottom(18);

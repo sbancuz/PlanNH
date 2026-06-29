@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
 
+import com.sbancuz.plannh.data.flowchart.Plan;
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.widget.IDraggable;
@@ -80,7 +81,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             reposition();
             return;
         }
-        if (canvas.getGraph()
+        if (Plan.getInstance()
             .isSnapToGrid()) {
             data.setX((int) (Math.round((double) data.getX() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
             data.setY((int) (Math.round((double) data.getY() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));

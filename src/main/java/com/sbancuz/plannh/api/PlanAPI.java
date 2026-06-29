@@ -30,22 +30,6 @@ public final class PlanAPI {
     /** NBT key used to store the encoded graph in the share ItemStack. */
     public static final String PLANNH_DATA_KEY = "plannh_data";
 
-    @Nullable
-    private static Plan INSTANCE;
-
-    @Nonnull
-    public static Plan getPlan() {
-        if (INSTANCE == null) {
-            INSTANCE = loadPlan();
-        }
-        return INSTANCE;
-    }
-
-    @Nonnull
-    public static Graph getActiveGraph() {
-        return getPlan().getActiveGraph();
-    }
-
     /**
      * Encodes the given graph and sends it as an NEI item-link chat message.
      * Other PlanNH clients see an import link; vanilla clients see a dirt-item
@@ -121,7 +105,7 @@ public final class PlanAPI {
      * and persists. Does not open any GUI.
      */
     public static void importGraph(@Nonnull final Graph graph) {
-        final Plan plan = getPlan();
+        final Plan plan = Plan.getInstance();
         graph.setName(StatCollector.translateToLocal("plannh.share.slot_imported"));
         plan.getGraphs()
             .add(graph);
@@ -150,37 +134,16 @@ public final class PlanAPI {
         return stack;
     }
 
-    private static Plan loadPlan() {
-        try {
-            final File saveFile = getSaveFile();
-            if (saveFile.isFile()) {
-                final String data = Files.readString(saveFile.toPath(), StandardCharsets.UTF_8);
-                if (data.startsWith("{")) {
-                    return Serializer.decodePlan(data);
-                }
-                final Graph graph = Serializer.decodeGraph(data);
-                final Plan plan = new Plan();
-                plan.getGraphs()
-                    .add(graph);
-                return plan;
-            }
-        } catch (final Exception ignored) {}
-        final Plan plan = new Plan();
-        plan.getGraphs()
-            .add(new Graph("Slot 1"));
-        return plan;
-    }
-
     public static void save() {
         try {
             final File saveFile = getSaveFile();
             saveFile.getParentFile()
                 .mkdirs();
-            Files.writeString(saveFile.toPath(), Serializer.encodePlan(getPlan()), StandardCharsets.UTF_8);
+            Files.writeString(saveFile.toPath(), Serializer.encodePlan(Plan.getInstance()), StandardCharsets.UTF_8);
         } catch (final Exception ignored) {}
     }
 
-    private static File getSaveFile() {
+    public static File getSaveFile() {
         final Minecraft mc = Minecraft.getMinecraft();
         final String worldName = NEIClientConfig.getWorldPath();
         if (worldName != null && !worldName.isEmpty()) {
