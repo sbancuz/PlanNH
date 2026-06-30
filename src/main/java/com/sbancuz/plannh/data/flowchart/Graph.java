@@ -30,17 +30,48 @@ public class Graph {
     private boolean snapToGrid;
 
     @Getter
-    @Setter
-    private Balancer.BalanceMode balanceMode = Balancer.BalanceMode.BACKWARD;
+    private Balancer.BalanceMode balanceMode = Balancer.BalanceMode.OUTPUT;
+    @Getter
+    private boolean opsMode;
+
+    private Balancer.BalanceResult balance = null;
+    private Summary summary = null;
+
+    private boolean dirty = true;
+
+    public void markDirty() {
+        dirty = true;
+    }
+
+    public void setBalanceMode(final Balancer.BalanceMode mode) {
+        balanceMode = mode;
+        markDirty();
+    }
+
+    public void setOpsMode(final boolean opsMode) {
+        this.opsMode = opsMode;
+        markDirty();
+    }
 
     public void removeNode(final UUID id) {
         nodes.remove(id);
         edges.values()
             .removeIf(e -> e.sourceNodeId.equals(id) || e.targetNodeId.equals(id));
+        markDirty();
     }
 
     public Balancer.BalanceResult balance() {
-        return Balancer.balance(this, balanceMode);
+        if (dirty) {
+            balance = Balancer.balance(this, balanceMode, opsMode);
+            summary = Summary.compute(balance, this, opsMode);
+            dirty = false;
+        }
+        return balance;
+    }
+
+    public Summary summary() {
+        balance(); // ensure up-to-date
+        return summary;
     }
 
     public Collection<Node> getNodes() {
@@ -49,6 +80,7 @@ public class Graph {
 
     public void addNode(final Node node) {
         nodes.put(node.id, node);
+        markDirty();
     }
 
     public Collection<Edge> getEdges() {
@@ -57,10 +89,12 @@ public class Graph {
 
     public void addEdge(final Edge edge) {
         edges.put(edge.id, edge);
+        markDirty();
     }
 
     public void removeEdge(final UUID id) {
         edges.remove(id);
+        markDirty();
     }
 
     public void removeGroup(final UUID id) {
