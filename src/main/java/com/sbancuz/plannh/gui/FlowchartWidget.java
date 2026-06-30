@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
 
-import com.sbancuz.plannh.data.flowchart.Plan;
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.widget.IDraggable;
@@ -18,6 +17,7 @@ import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Note;
+import com.sbancuz.plannh.data.flowchart.Plan;
 
 import lombok.Getter;
 
@@ -164,8 +164,8 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             } else {
                 newParent.child(this);
                 dataContainer = (Map<UUID, GraphData>) getDefaultContainer();
-                data.setX(canvas.getMouseCanvasX() - dragOffsetX);
-                data.setY(canvas.getMouseCanvasY() - dragOffsetY);
+                data.setX(canvas.getCanvasMouseX() - dragOffsetX);
+                data.setY(canvas.getCanvasMouseY() - dragOffsetY);
             }
 
             dataContainer.put(data.getId(), data);

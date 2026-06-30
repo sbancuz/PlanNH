@@ -131,6 +131,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public void setGraph(final Graph newGraph) {
         this.graph = newGraph;
+        removeAll();
+        flowchartWidgets.clear();
         rebuildNodeWidgets();
         rebuildNoteWidgets();
         rebuildGroupWidgets();
@@ -263,9 +265,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildNodeWidgets() {
+        nodeWidgets.clear();
         /*
          * removeAll();
-         * nodeWidgets.clear();
          * for (final Node node : graph.getNodes()) {
          * addNodeWidget(node);
          * updateNodeGroupMembership(node);
@@ -374,12 +376,20 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return Math.round((cy - graph.getPanY()) / graph.getZoom());
     }
 
-    public int getMouseCanvasX() {
+    public int getCanvasMouseX() {
         return Math.round((getContext().getAbsMouseX() - getArea().x - graph.getPanX()) / graph.getZoom());
     }
 
-    public int getMouseCanvasY() {
+    public int getCanvasMouseY() {
         return Math.round((getContext().getAbsMouseY() - getArea().y - graph.getPanY()) / graph.getZoom());
+    }
+
+    public int getCanvasScreenCenterX() {
+        return Math.round((getArea().width / 2 - getArea().x - graph.getPanX()) / graph.getZoom());
+    }
+
+    public int getCanvasScreenCenterY() {
+        return Math.round((getArea().height / 2 - getArea().y - graph.getPanY()) / graph.getZoom());
     }
 
     private static boolean containsPoint(final Area a, final int mx, final int my) {
@@ -785,10 +795,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return false;
     }
 
-    public void addNote() {
+    public void addNote(int x, int y) {
         final Note note = new Note();
-        note.setX(getMouseCanvasX());
-        note.setY(getMouseCanvasY());
+        note.setX(x);
+        note.setY(y);
 
         graph.getNotes()
             .put(note.getId(), note);
@@ -797,10 +807,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         menuOpen = false;
     }
 
-    public void addGroup() {
+    public void addGroup(int x, int y) {
         final Group group = new Group();
-        group.setX(getMouseCanvasX());
-        group.setY(getMouseCanvasY());
+        group.setX(x);
+        group.setY(y);
 
         graph.getGroups()
             .put(group.getId(), group);
