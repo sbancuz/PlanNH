@@ -82,6 +82,13 @@ plannh.share.slot_imported=Imported
 plannh.share.copy_to_clipboard=Plan exported to clipboard
 plannh.share.copy_from_clipboard=Plan imported from clipboard
 
+## GUI
+## GUI - Balancer
+plannh.gui.balancer_mode=Mode: %s
+plannh.gui.balancer_mode.none=Normal
+plannh.gui.balancer_mode.input=Fixed Machines (input%s)
+plannh.gui.balancer_mode.output=Fixed Machines (output%s)
+
 ## NEI config
 nei.options.plannh = "PlanNH";
 nei.options.plannh.item_columns=Item Columns
