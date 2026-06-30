@@ -62,9 +62,8 @@ public class ForestryProvider implements PropertyProvider {
     @Nonnull
     private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
         final int rate = MachineProfile.getInt(s, Settings.RF_PER_TICK.key(), 10);
-        return new MachineProfile.EffectResult(ctx.recipeDuration(), rate, machines);
+        return new MachineProfile.EffectResult(ctx.recipeDuration(), rate, 1);
     }
 
     @Override

@@ -193,6 +193,7 @@ public final class Serializer {
             "balanceMode",
             graph.getBalanceMode()
                 .name());
+        root.addProperty("opsMode", graph.isOpsMode());
         root.addProperty("zoom", graph.getZoom());
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
@@ -207,6 +208,10 @@ public final class Serializer {
             obj.add("recipeId", node.recipeId.toJsonObject());
             obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
             obj.addProperty("extractorIndex", node.getExtractorIndex());
+            obj.addProperty("machineCount", node.machineConfig.getMachineCount());
+            if (node.isMachineCountFixed()) {
+                obj.addProperty("machineCountFixed", true);
+            }
 
             obj.add("inputs", portListToJson(node.inputs));
             obj.add("outputs", portListToJson(node.outputs));
@@ -250,6 +255,11 @@ public final class Serializer {
                             .getAsString()));
             } catch (final IllegalArgumentException ignored) {}
         }
+        if (root.has("opsMode")) {
+            graph.setOpsMode(
+                root.get("opsMode")
+                    .getAsBoolean());
+        }
         graph.setZoom(
             root.get("zoom")
                 .getAsFloat());
@@ -283,6 +293,15 @@ public final class Serializer {
                     .getAsInt() : 0);
             node.initExtractor();
             node.refresh();
+
+            if (obj.has("machineCount")) {
+                node.machineConfig.setMachineCount(
+                    obj.get("machineCount")
+                        .getAsInt());
+            }
+            node.setMachineCountFixed(
+                obj.has("machineCountFixed") && obj.get("machineCountFixed")
+                    .getAsBoolean());
 
             if (obj.has("inputs")) {
                 applySavedPortChances(obj.getAsJsonArray("inputs"), node.inputs);

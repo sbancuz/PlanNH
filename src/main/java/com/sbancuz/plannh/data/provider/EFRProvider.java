@@ -41,8 +41,7 @@ public class EFRProvider implements PropertyProvider {
     @Nonnull
     private static MachineProfile.EffectResult efrEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        return new MachineProfile.EffectResult(ctx.recipeDuration(), 0, machines);
+        return new MachineProfile.EffectResult(ctx.recipeDuration(), 0, 1);
     }
 
     @Override

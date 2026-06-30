@@ -248,7 +248,6 @@ public class ThaumcraftProvider implements PropertyProvider {
     @Nonnull
     private static MachineProfile.EffectResult arcaneEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
         final int rate = MachineProfile.getInt(s, Settings.VIS_PER_TICK.key(), 1);
         final Integer totalVis = ctx.get(ThaumcraftProvider.TOTAL_VIS);
         int duration = ctx.recipeDuration();
@@ -256,13 +255,12 @@ public class ThaumcraftProvider implements PropertyProvider {
             duration = Math.max(1, totalVis / rate);
         }
         final long consumptionEUt = duration > 0 && totalVis != null ? totalVis / duration : 0;
-        return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
+        return new MachineProfile.EffectResult(duration, consumptionEUt, 1);
     }
 
     @Nonnull
     private static MachineProfile.EffectResult infusionEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
         final Integer totalVis = ctx.get(ThaumcraftProvider.TOTAL_VIS);
         final Integer numComponents = ctx.get(ThaumcraftProvider.NUM_COMPONENTS);
         final int nc = numComponents != null ? numComponents : 0;
@@ -272,6 +270,6 @@ public class ThaumcraftProvider implements PropertyProvider {
             duration = Math.max(1, tv * 10 + nc * 60);
         }
         final long consumptionEUt = totalVis != null ? totalVis / duration : 0;
-        return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
+        return new MachineProfile.EffectResult(duration, consumptionEUt, 1);
     }
 }
