@@ -59,45 +59,65 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
         record PropertyKey(RecipeProperty<?> prop) implements LineKey {}
     }
 
-    public static Summary compute(final BalanceResult balance, final Graph graph) {
+    public static Summary compute(final BalanceResult balance, final Graph graph, final boolean opsMode) {
+        // In ops mode, effective amounts are per-operation totals (no duration scaling needed).
+        final int cycleTicks;
+        if (opsMode) {
+            cycleTicks = 1;
+        } else {
+            int maxTicks = 0;
+            for (final Node node : graph.getNodes()) {
+                final var nb = balance.nodeBalances()
+                    .get(node.id);
+                if (nb != null) maxTicks = Math.max(maxTicks, nb.durationPerOp());
+            }
+            cycleTicks = maxTicks > 0 ? maxTicks : 20;
+        }
+
+        // Accumulate scaled outputs and inputs per resource across all ports (both connected and unconnected).
         final Map<LineKey, Float> outputMap = new HashMap<>();
         final Map<LineKey, Float> inputMap = new HashMap<>();
         final Map<LineKey, Float> propertyMap = new HashMap<>();
 
-        // Pass 1: accumulate all node outputs before any netting.
         for (final Node node : graph.getNodes()) {
             final var nb = balance.nodeBalances()
                 .get(node.id);
             if (nb == null) continue;
+
+            final float scale = opsMode ? 1f : (float) cycleTicks / Math.max(1, nb.durationPerOp());
 
             for (int i = 0; i < node.outputs.size(); i++) {
-                final Float total = nb.effectiveOutputs.get(i);
+                final Float total = nb.effectiveOutputs()
+                    .get(i);
                 if (total == null || total <= 0) continue;
-                outputMap.merge(LineKey.ResourceKey.of(node.outputs.get(i)), total, Float::sum);
+                outputMap.merge(LineKey.ResourceKey.of(node.outputs.get(i)), total * scale, Float::sum);
             }
-        }
-
-        // Pass 2: net inputs against the fully-populated output map.
-        for (final Node node : graph.getNodes()) {
-            final var nb = balance.nodeBalances()
-                .get(node.id);
-            if (nb == null) continue;
 
             for (int i = 0; i < node.inputs.size(); i++) {
-                final Float total = nb.effectiveInputs.get(i);
+                final Float total = nb.effectiveInputs()
+                    .get(i);
                 if (total == null || total <= 0) continue;
-                final LineKey key = LineKey.ResourceKey.of(node.inputs.get(i));
-                final float existing = outputMap.getOrDefault(key, 0f);
-                final float consumed = Math.min(existing, total);
-                if (consumed > 0) {
-                    final float remaining = existing - consumed;
-                    if (remaining > 0) outputMap.put(key, remaining);
-                    else outputMap.remove(key);
-                }
-                final float deficit = total - consumed;
-                if (deficit > 0) inputMap.merge(key, deficit, Float::sum);
+                inputMap.merge(LineKey.ResourceKey.of(node.inputs.get(i)), total * scale, Float::sum);
             }
         }
+
+        // Net by resource: output = max(0, prod - cons), input = max(0, cons - prod).
+        final Map<LineKey, Float> netInputs = new HashMap<>();
+        for (final var entry : inputMap.entrySet()) {
+            final LineKey key = entry.getKey();
+            final float cons = entry.getValue();
+            final float prod = outputMap.getOrDefault(key, 0f);
+            if (cons > prod) {
+                netInputs.put(key, cons - prod);
+                outputMap.remove(key);
+            } else if (cons == prod) {
+                outputMap.remove(key);
+            } else {
+                outputMap.put(key, prod - cons);
+            }
+        }
+        inputMap.clear();
+        inputMap.putAll(netInputs);
 
         for (final var entry : balance.propertyTotals()
             .entrySet()) {
