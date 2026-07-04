@@ -1,6 +1,7 @@
 {
     "required": true,
     "package": "com.sbancuz.plannh.mixins",
+    "refmap": "mixins.plannh.refmap.json",
     "compatibilityLevel": "JAVA_8",
     "client": [
         "GuiContainerAccessor",
