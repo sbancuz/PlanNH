@@ -20,12 +20,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.RecipeResource;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 
@@ -186,30 +183,15 @@ public final class Serializer {
             obj.addProperty("x", node.x);
             obj.addProperty("y", node.y);
             obj.addProperty("machine", node.machineName);
-            obj.addProperty("ticks", node.durationTicks);
             obj.add("recipeId", node.recipeId.toJsonObject());
             obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
             obj.addProperty("extractorIndex", node.getExtractorIndex());
+
             obj.add("inputs", portListToJson(node.inputs));
             obj.add("outputs", portListToJson(node.outputs));
 
             if (node.machineConfig.hasAnyBoost()) {
                 obj.add("machineConfig", machineConfigToJson(node.machineConfig));
-            }
-
-            if (!node.properties.isEmpty()) {
-                final JsonArray propsObj = new JsonArray();
-                for (final Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
-                    final JsonObject e = new JsonObject();
-                    e.addProperty(
-                        "key",
-                        entry.getKey()
-                            .getKey());
-                    entry.getKey()
-                        .serialize(e, entry.getValue());
-                    propsObj.add(e);
-                }
-                obj.add("properties", propsObj);
             }
 
             nodesArray.add(obj);
@@ -279,8 +261,6 @@ public final class Serializer {
             final Node node = new Node(id, x, y);
             node.machineName = obj.get("machine")
                 .getAsString();
-            node.durationTicks = obj.get("ticks")
-                .getAsInt();
             node.recipeId = Recipe.RecipeId.of(
                 obj.get("recipeId")
                     .getAsJsonObject());
@@ -290,28 +270,17 @@ public final class Serializer {
                 obj.has("extractorIndex") ? obj.get("extractorIndex")
                     .getAsInt() : 0);
             node.initExtractor();
-            jsonArrayToPorts(obj.getAsJsonArray("inputs"), node.inputs);
-            jsonArrayToPorts(obj.getAsJsonArray("outputs"), node.outputs);
+            node.refresh();
+
+            if (obj.has("inputs")) {
+                applySavedPortChances(obj.getAsJsonArray("inputs"), node.inputs);
+            }
+            if (obj.has("outputs")) {
+                applySavedPortChances(obj.getAsJsonArray("outputs"), node.outputs);
+            }
 
             if (obj.has("machineConfig")) {
                 jsonToMachineConfig(obj.getAsJsonObject("machineConfig"), node.machineConfig);
-            }
-
-            if (obj.has("properties")) {
-                final JsonArray propsObj = obj.getAsJsonArray("properties");
-                for (int i = 0; i < propsObj.size(); i++) {
-                    final JsonObject o = propsObj.get(i)
-                        .getAsJsonObject();
-                    final RecipeProperty<?> prop = RecipePropertyAPI.getProperty(
-                        o.get("key")
-                            .getAsString());
-                    assert prop != null;
-
-                    final Object value = prop.deserialize(o);
-                    if (value != null && !value.equals(prop.getDefaultValue())) {
-                        node.properties.put(prop, value);
-                    }
-                }
             }
 
             graph.getNodes()
@@ -364,28 +333,27 @@ public final class Serializer {
                 "type",
                 port.getType()
                     .getKey());
-            port.getType()
-                .serialize(obj, port.getValue());
             obj.addProperty("chance", port.getChance());
             arr.add(obj);
         }
         return arr;
     }
 
-    @SuppressWarnings("unchecked")
-    private static void jsonArrayToPorts(final JsonArray arr, final List<Port<?>> out) {
-        for (final JsonElement elem : arr) {
-            final JsonObject obj = elem.getAsJsonObject();
-            final String key = obj.has("type") ? obj.get("type")
+    private static void applySavedPortChances(final JsonArray arr, final List<Port<?>> ports) {
+        for (int i = 0; i < arr.size() && i < ports.size(); i++) {
+            final JsonObject obj = arr.get(i)
+                .getAsJsonObject();
+            final String savedType = obj.has("type") ? obj.get("type")
                 .getAsString() : "item";
-            final RecipeResource<?> res = (RecipeResource<?>) RecipePropertyAPI.getProperty(key);
-            if (res == null) continue;
-            final Object value = res.deserialize(obj);
-            if (value == null) continue;
-            final float chance = obj.get("chance")
-                .getAsFloat();
-            final RecipeResource<Object> resource = (RecipeResource<Object>) res;
-            out.add(new Port<>(resource, value, chance));
+            if (savedType.equals(
+                ports.get(i)
+                    .getType()
+                    .getKey())) {
+                ports.get(i)
+                    .setChance(
+                        obj.get("chance")
+                            .getAsFloat());
+            }
         }
     }
 

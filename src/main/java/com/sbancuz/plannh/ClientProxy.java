@@ -11,6 +11,7 @@ import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.ImportCommand;
+import com.sbancuz.plannh.client.WorldHandler;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
@@ -40,6 +41,12 @@ public class ClientProxy extends CommonProxy {
         Compat.init();
 
         ClientRegistry.registerKeyBinding(openFlowchartKey);
+
+        final WorldHandler handler = new WorldHandler();
+        MinecraftForge.EVENT_BUS.register(handler);
+        FMLCommonHandler.instance()
+            .bus()
+            .register(handler);
 
         MinecraftForge.EVENT_BUS.register(new ChatHandler());
         ClientCommandHandler.instance.registerCommand(new ImportCommand());

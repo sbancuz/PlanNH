@@ -7,6 +7,7 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.provider.BotaniaProvider;
+import com.sbancuz.plannh.data.provider.EFRProvider;
 import com.sbancuz.plannh.data.provider.EnderIOProvider;
 import com.sbancuz.plannh.data.provider.ForestryProvider;
 import com.sbancuz.plannh.data.provider.ThaumcraftProvider;
@@ -22,7 +23,8 @@ public enum Compat {
     ENDERIO("EnderIO", EnderIOProvider.class),
     FORESTRY("Forestry", ForestryProvider.class),
     GREGTECH("gregtech", GTProvider.class),
-    THAUMCRAFT("Thaumcraft", ThaumcraftProvider.class);
+    THAUMCRAFT("Thaumcraft", ThaumcraftProvider.class),
+    EFR("etfuturum", EFRProvider.class);
 
     public final String modid;
     public final boolean isLoaded;

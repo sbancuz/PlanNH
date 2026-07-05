@@ -87,6 +87,7 @@ public class Node {
         final int recipeIndex = ref.recipeIndex;
         inputs.clear();
         outputs.clear();
+        properties.clear();
 
         final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
         for (final PositionedStack ps : ins) {
@@ -120,7 +121,7 @@ public class Node {
         final Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
         if (props != null && !props.isEmpty()) {
             for (final var entry : props.entrySet()) {
-                this.properties.putIfAbsent(entry.getKey(), entry.getValue());
+                this.properties.put(entry.getKey(), entry.getValue());
             }
         }
 
