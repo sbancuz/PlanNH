@@ -65,4 +65,9 @@ public class Plan {
             .add(new Graph("Slot 1"));
         return plan;
     }
+
+    public static void unloadPlan() {
+        PlanAPI.save();
+        INSTANCE = null;
+    }
 }

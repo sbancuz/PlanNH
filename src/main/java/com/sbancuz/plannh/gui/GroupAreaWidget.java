@@ -13,7 +13,7 @@ import com.sbancuz.plannh.data.flowchart.Group;
 
 public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IFlowchartDraggable, IDragResizeable {
 
-    private static final int GROUP_PADDING = 10;
+    // private static final int GROUP_PADDING = 10;
 
     private final GroupWidget parent;
     private final Group data;
@@ -43,7 +43,7 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
     @Override
     public int getMinDragWidth() {
         return Math.max(
-            GROUP_MIN_W + GROUP_PADDING,
+            GROUP_MIN_W, // + GROUP_PADDING,
             getChildren().stream()
                 .filter(w -> w instanceof FlowchartWidget<?, ?>)
                 .map(IWidget::getArea)
@@ -55,7 +55,7 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
     @Override
     public int getMinDragHeight() {
         return Math.max(
-            GROUP_MIN_H + GROUP_PADDING,
+            GROUP_MIN_H, // + GROUP_PADDING,
             getChildren().stream()
                 .filter(w -> w instanceof FlowchartWidget<?, ?>)
                 .map(IWidget::getArea)
