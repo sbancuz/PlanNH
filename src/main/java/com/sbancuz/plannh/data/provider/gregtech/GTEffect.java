@@ -44,12 +44,11 @@ public class GTEffect implements MachineProfile.EffectComputer {
     public MachineProfile.EffectResult compute(final @NotNull Map<String, Object> s,
         final MachineProfile.@NotNull RecipeContext ctx) {
         final int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
 
         if (recipeEUt(ctx) <= 0 || ctx.recipeDuration() <= 0
             || MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF")
                 .equals("OFF")) {
-            return new MachineProfile.EffectResult(ctx.recipeDuration(), recipeEUt(ctx), parallels * machines);
+            return new MachineProfile.EffectResult(ctx.recipeDuration(), recipeEUt(ctx), parallels);
         }
 
         final OverclockCalculator calc = buildGtCalc(s, ctx);
@@ -71,7 +70,7 @@ public class GTEffect implements MachineProfile.EffectComputer {
         }
 
         calc.calculate();
-        return new MachineProfile.EffectResult(calc.getDuration(), calc.getConsumption(), parallels * machines);
+        return new MachineProfile.EffectResult(calc.getDuration(), calc.getConsumption(), parallels);
     }
 
     public static long tierNameToVoltage(@Nullable final String name) {

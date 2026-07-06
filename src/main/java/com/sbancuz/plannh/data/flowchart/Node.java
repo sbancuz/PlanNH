@@ -43,6 +43,10 @@ public class Node {
     public final Map<RecipeProperty<?>, Object> properties = new HashMap<>();
 
     @Getter
+    @Setter
+    private boolean machineCountFixed;
+
+    @Getter
     private transient PropertyProvider extractor;
     @Getter
     private transient List<PropertyProvider> availableExtractors = List.of();

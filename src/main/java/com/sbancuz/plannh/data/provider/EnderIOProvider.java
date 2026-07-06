@@ -117,7 +117,6 @@ public class EnderIOProvider implements PropertyProvider {
     @Nonnull
     private static MachineProfile.EffectResult enderIOEffect(final Map<String, Object> s,
         final MachineProfile.RecipeContext ctx) {
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
         final int rate = MachineProfile.getInt(s, Settings.RF_PER_TICK.key(), 80);
         final Integer totalEnergy = ctx.get(EnderIOProvider.RF_TOTAL);
         int duration = ctx.recipeDuration();
@@ -125,6 +124,6 @@ public class EnderIOProvider implements PropertyProvider {
             duration = Math.max(1, totalEnergy / rate);
         }
         final long consumptionEUt = duration > 0 && totalEnergy != null ? totalEnergy / duration : 0;
-        return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
+        return new MachineProfile.EffectResult(duration, consumptionEUt, 1);
     }
 }

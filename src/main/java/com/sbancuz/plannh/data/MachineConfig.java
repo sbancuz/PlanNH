@@ -26,6 +26,7 @@ public class MachineConfig {
         for (final SettingDef<?> def : profile.settings()) {
             settings.putIfAbsent(def.key, def.defaultValue);
         }
+        settings.putIfAbsent(Settings.MACHINES.key(), Settings.MACHINES.def().defaultValue);
     }
 
     @Nonnull
@@ -78,6 +79,14 @@ public class MachineConfig {
             result = new MachineProfile.EffectResult(newDuration, newEnergyPerT, result.throughputFactor());
         }
         return result;
+    }
+
+    public int getMachineCount() {
+        return getInt(Settings.MACHINES.key());
+    }
+
+    public void setMachineCount(final int count) {
+        settings.put(Settings.MACHINES.key(), count);
     }
 
     public float inputMultiplier(final int inputIndex) {

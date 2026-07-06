@@ -55,4 +55,7 @@ dependencies {
     // @Data annotation for the data class, see: [https://projectlombok.org/api/lombok/Data]
     compileOnly('org.projectlombok:lombok:1.18.46')
     annotationProcessor('org.projectlombok:lombok:1.18.46')
+
+    // ILP solver
+    implementation('org.ojalgo:ojalgo:47.3.1')
 }

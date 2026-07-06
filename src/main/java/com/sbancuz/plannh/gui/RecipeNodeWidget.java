@@ -146,9 +146,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public RecipeNodeWidget(final Node node, final CanvasWidget canvas) {
         this.node = node;
         this.canvas = canvas;
-        final float z = canvas.getGraph()
-            .getZoom();
-        size(Math.round(BASE_W * z), Math.round(BASE_H * z));
+        size(BASE_W, BASE_H);
     }
 
     int getWorldWidth() {
@@ -166,17 +164,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     public void syncTransform(final float zoom, final float panX, final float panY) {
-        final int sx = Math.round(node.x * zoom + panX);
-        final int sy = Math.round(node.y * zoom + panY);
-        pos(sx, sy);
+        pos(Math.round(node.x), Math.round(node.y));
         resizeForZoom(zoom);
-    }
-
-    private int zq(final float v) {
-        return GuiHelper.zq(
-            v,
-            canvas.getGraph()
-                .getZoom());
     }
 
     private int groupColor(final Group g) {
@@ -228,9 +217,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (handlerRef != null && neiWidget != null) {
             final int cw = getWorldWidth() - NEI_BORDER;
             final int ch = neiWidget.h + NEI_PAD_H + calcInfoHeight() + computeConfigPanelHeight();
-            setAreaSize(Math.round((cw + NEI_BORDER) * z), Math.round((ch + NEI_BORDER) * z));
+            setAreaSize(cw + NEI_BORDER, ch + NEI_BORDER);
         } else {
-            setAreaSize(Math.round(BASE_W * z), Math.round(BASE_H * z));
+            setAreaSize(BASE_W, BASE_H);
         }
     }
 
@@ -238,7 +227,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
         ensureRecipeHandler();
 
-        final float z = canvas.getGraph().getZoom();
         if (neiWidget != null && handlerRef != null) {
             final long now = Minecraft.getSystemTime();
             if (now - lastHandlerUpdate > NEI_HANDLER_THROTTLE_MS) {
@@ -250,9 +238,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             glTranslatef(0, 0, Z_PUSH);
             GuiContainerManager.enable2DRender();
             glColor4f(1, 1, 1, 1);
-
-            glPushMatrix();
-            glScalef(z, z, 1);
 
             final int cw = neiWidget.w + NEI_PAD_W;
             final int ch = neiWidget.h + NEI_PAD_H;
@@ -295,8 +280,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             neiWidget.draw(CONTENT_INSET, CONTENT_TOP);
             drawThroughputInfo();
             drawConfigContent();
-
-            glPopMatrix();
             drawCloseButtonPixel(getArea().width, getArea().height);
             drawPorts();
             drawGroupMembershipBar();
@@ -307,20 +290,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             final int h = getArea().height;
 
             GuiDraw.drawRect(0, 0, w, h, PlannhColors.NODE_BG.getColor());
-            GuiHelper.drawRectBorder(0, 0, w, h, zq(1), PlannhColors.NODE_BORDER.getColor());
+            GuiHelper.drawRectBorder(0, 0, w, h, 1, PlannhColors.NODE_BORDER.getColor());
 
             assert node.machineName != null;
             GuiDraw.drawText(
                 node.machineName.isEmpty() ? "?" : node.machineName,
-                zq(SIMPLE_TEXT_INSET_X),
-                zq(SIMPLE_TEXT_INSET_Y),
-                z,
+                SIMPLE_TEXT_INSET_X,
+                SIMPLE_TEXT_INSET_Y,
+                1.0f,
                 PlannhColors.TEXT_LIGHT.getColor(),
                 false);
 
             final NodeBalance simpleNb = getNodeBalance();
-            final int simpleOps = simpleNb != null ? simpleNb.operations : 1;
-            final int simpleDurPerOp = simpleNb != null ? simpleNb.durationPerOp : node.durationTicks;
+            final int simpleOps = simpleNb != null ? simpleNb.operations() : 1;
+            final int simpleDurPerOp = simpleNb != null ? simpleNb.durationPerOp() : node.durationTicks;
             final StringBuilder simpleTiming = new StringBuilder();
             simpleTiming.append("\u00d7").append(simpleOps);
             if (simpleDurPerOp > 0) {
@@ -336,21 +319,21 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             }
             GuiDraw.drawText(
                 simpleTiming.toString(),
-                zq(SIMPLE_TEXT_INSET_X),
-                h - zq(BOTTOM_TIMING_Y_FROM_BOTTOM),
-                z,
+                SIMPLE_TEXT_INSET_X,
+                h - BOTTOM_TIMING_Y_FROM_BOTTOM,
+                1.0f,
                 PlannhColors.ACCENT_BLUE.getColor(),
                 false);
 
             final ItemStack primary = getFirstItemOutput();
             if (primary != null) {
-                final int is = zq(ICON_SIZE);
-                GuiDraw.drawItem(primary, w - is - zq(ICON_RMARGIN), zq(ICON_Y), is, is, context.getCurrentDrawingZ());
+                final int is = ICON_SIZE;
+                GuiDraw.drawItem(primary, w - is - ICON_RMARGIN, ICON_Y, is, is, context.getCurrentDrawingZ());
             }
 
             final Group grp2 = canvas.getGroupForNode(node.id);
             if (grp2 != null) {
-                GuiDraw.drawText("\u229f " + grp2.getHeader(), zq(SIMPLE_TEXT_INSET_X), zq(SIMPLE_GROUP_LABEL_Y), z, groupColor(grp2), false);
+                GuiDraw.drawText("\u229f " + grp2.getHeader(), SIMPLE_TEXT_INSET_X, SIMPLE_GROUP_LABEL_Y, 1.0f, groupColor(grp2), false);
             }
 
             drawCloseButtonPixel(w, h);
@@ -361,8 +344,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     private void drawCloseButtonPixel(final int w, final int h) {
         GuiHelper.drawCloseButton(
-            canvas.getGraph()
-                .getZoom(),
             w,
             CLOSE_W,
             CLOSE_MARGIN,
@@ -371,20 +352,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     public int getOutputPortAt(final int mx, final int my) {
-        final int half = zq(PORT_HALF);
-        final int px = getArea().width - zq(PORT_SIZE);
+        final int half = PORT_HALF;
+        final int px = getArea().width - PORT_SIZE;
         for (int i = 0; i < node.outputs.size(); i++) {
             final int py = portTopY(i) - half;
-            if (mx >= px && mx < px + zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
+            if (mx >= px && mx < px + PORT_SIZE && my >= py && my < py + PORT_SIZE) return i;
         }
         return -1;
     }
 
     public int getInputPortAt(final int mx, final int my) {
-        final int half = zq(PORT_HALF);
+        final int half = PORT_HALF;
         for (int i = 0; i < node.inputs.size(); i++) {
             final int py = portTopY(i) - half;
-            if (mx >= 0 && mx < zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
+            if (mx >= 0 && mx < PORT_SIZE && my >= py && my < py + PORT_SIZE) return i;
         }
         return -1;
     }
@@ -396,20 +377,18 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         GuiDraw.drawRect(
             0,
             0,
-            zq(GROUP_BAR_W),
+            GROUP_BAR_W,
             getArea().height,
             Color.argb(Color.getRed(gc), Color.getGreen(gc), Color.getBlue(gc), ALPHA_BAR));
     }
 
     private int portTopY(final int index) {
-        final float z = canvas.getGraph()
-            .getZoom();
-        return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * z);
+        return (index + 1) * PORT_SPACING + PORT_ORIGIN;
     }
 
     private void drawPorts() {
-        final int ps = zq(PORT_SIZE);
-        final int half = zq(PORT_HALF);
+        final int ps = PORT_SIZE;
+        final int half = PORT_HALF;
 
         for (int i = 0; i < node.outputs.size(); i++) {
             final int py = portTopY(i) - half;
@@ -452,14 +431,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         int y = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP;
 
         final NodeBalance nb = getNodeBalance();
-        final float sec = nb != null && nb.totalDurationTicks > 0
-            ? (float) nb.totalDurationTicks / GuiHelper.TICKS_PER_SECOND
+        final float sec = nb != null && nb.totalDurationTicks() > 0
+            ? (float) nb.totalDurationTicks() / GuiHelper.TICKS_PER_SECOND
             : node.durationTicks > 0 ? (float) node.durationTicks / GuiHelper.TICKS_PER_SECOND : 1f;
-        final int ops = nb != null ? nb.operations : 1;
+        final int ops = nb != null ? nb.operations() : 1;
         final int throughput = nb != null ? node.machineConfig.computeEffect(node.properties, node.durationTicks)
             .throughputFactor() : 1;
 
-        final int durPerOp = nb != null ? nb.durationPerOp : node.durationTicks;
+        final int durPerOp = nb != null ? nb.durationPerOp() : node.durationTicks;
         final StringBuilder opsLine = new StringBuilder();
         opsLine.append("\u00d7")
             .append(ops);
@@ -496,8 +475,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (port.getType() == RecipePropertyAPI.ITEM) {
             final ItemStack stack = (ItemStack) port.getValue();
             if (stack == null || stack.stackSize <= 0) return null;
-            final float total = (output ? nb.effectiveOutputs : nb.effectiveInputs).containsKey(index)
-                ? output ? nb.effectiveOutputs.get(index) : nb.effectiveInputs.get(index)
+            final float total = (output ? nb.effectiveOutputs() : nb.effectiveInputs()).containsKey(index) ? output
+                ? nb.effectiveOutputs()
+                    .get(index)
+                : nb.effectiveInputs()
+                    .get(index)
                 : stack.stackSize;
             String label = formatRate(total / sec) + "/s " + stack.getDisplayName();
             if (output && port.getChance() < 0.999f) {
@@ -512,7 +494,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             if (output) {
                 total = ops * (float) fs.amount * port.getChance() * throughput;
             } else {
-                total = nb.effectiveInputs.containsKey(index) ? nb.effectiveInputs.get(index) : (float) fs.amount;
+                total = nb.effectiveInputs()
+                    .containsKey(index)
+                        ? nb.effectiveInputs()
+                            .get(index)
+                        : (float) fs.amount;
             }
             return formatRate(total / sec) + "/s " + fs.getLocalizedName();
         }
@@ -538,28 +524,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (mouseButton == 0) {
             final int mx = getContext().getMouseX();
             final int my = getContext().getMouseY();
-            if (GuiHelper.isInsideCloseButton(
-                mx,
-                my,
-                canvas.getGraph()
-                    .getZoom(),
-                getArea().width,
-                CLOSE_W,
-                CLOSE_MARGIN)) {
+            if (GuiHelper.isInsideCloseButton(mx, my, getArea().width, CLOSE_W, CLOSE_MARGIN)) {
                 canvas.removeNode(node.id);
                 return Result.SUCCESS;
             }
 
-            final float z = canvas.getGraph()
-                .getZoom();
-            final int ux = Math.round(mx / z);
-            final int uy = Math.round(my / z);
-
             if (neiWidget != null) {
                 final int cw = neiWidget.w + NEI_PAD_W;
-                if (ux >= cw - GEAR_HIT_LEFT_OFF && ux <= cw - GEAR_HIT_RIGHT_OFF
-                    && uy >= GEAR_HIT_TOP
-                    && uy <= GEAR_HIT_BOTTOM) {
+                if (mx >= cw - GEAR_HIT_LEFT_OFF && mx <= cw - GEAR_HIT_RIGHT_OFF
+                    && my >= GEAR_HIT_TOP
+                    && my <= GEAR_HIT_BOTTOM) {
                     configOpen = !configOpen;
                     resizeForZoom(
                         canvas.getGraph()
@@ -568,7 +542,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 }
                 if (configOpen) {
                     for (final ClickZone zone : configZones) {
-                        if (zone.contains(ux, uy)) {
+                        if (zone.contains(mx, my)) {
                             zone.action.run();
                             return Result.SUCCESS;
                         }
@@ -654,8 +628,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final int x = LEFT_CONTENT_X;
         final int y0 = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + calcInfoHeight();
         final MachineProfile profile = node.machineConfig.getProfile();
-        int panelH = profile.settings()
-            .size() * LINE_H + 4;
+        int panelH = (profile.settings()
+            .size() + 2) * LINE_H + 4;
         if (node.getAvailableExtractors()
             .size() > 1) panelH += LINE_H;
         GuiDraw.drawRect(
@@ -667,6 +641,22 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         final MachineConfig c = node.machineConfig;
         int y = y0;
+
+        // Fixed toggle
+        final boolean fixed = node.isMachineCountFixed();
+        final String fixedLabel = (fixed ? "[\u2713] " : "[  ] ") + "Fixed";
+        GuiDraw.drawText(
+            fixedLabel,
+            x,
+            y,
+            1.0f,
+            fixed ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(),
+            false);
+        configZones.add(new ClickZone(x, y, x + BOOL_CLICK_W, y + CLICK_H, () -> {
+            node.setMachineCountFixed(!fixed);
+            onConfigChanged();
+        }));
+        y += LINE_H;
 
         for (final SettingDef<?> def : profile.settings()) {
             y = drawSetting(x, y, def, c);
@@ -734,8 +724,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private int computeConfigPanelHeight() {
         if (!configOpen) return 0;
         final MachineProfile profile = node.machineConfig.getProfile();
-        int h = profile.settings()
-            .size() * LINE_H + 8;
+        int h = (profile.settings()
+            .size() + 2) * LINE_H + 8;
         if (node.getAvailableExtractors()
             .size() > 1) h += LINE_H;
         return h;
@@ -765,6 +755,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private void onConfigChanged() {
+        canvas.getGraph()
+            .markDirty();
         resizeForZoom(
             canvas.getGraph()
                 .getZoom());
