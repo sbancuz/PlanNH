@@ -19,12 +19,12 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
-import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
 import codechicken.nei.recipe.Recipe;
 
@@ -41,7 +41,7 @@ public final class Serializer {
      * Encodes a full graph to a compressed base64 string (gzip + json + base64).
      */
     @Nonnull
-    public static String encode(final Graph graph) {
+    public static String encodeGraph(final Graph graph) {
         try {
             final String json = GSON.toJson(graphToJson(graph));
             final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -60,7 +60,7 @@ public final class Serializer {
      * Decodes a compressed base64 string back to a Graph.
      */
     @Nonnull
-    public static Graph decode(final String data) {
+    public static Graph decodeGraph(final String data) {
         try {
             final byte[] bytes = Base64.getDecoder()
                 .decode(data);
@@ -81,63 +81,37 @@ public final class Serializer {
         }
     }
 
-    // ── SlotSet serialization ──
+    // ── Plan serialization ──
 
     /**
-     * Encodes a SlotSet (with all its graphs) to a JSON string.
+     * Encodes a Plan (with all its graphs) to a JSON string.
      */
     @Nonnull
-    public static String encode(final SlotSet set) {
-        final JsonObject root = new JsonObject();
-        root.addProperty("active", set.activeSlot);
-        root.addProperty("summaryX", set.summaryX);
-        root.addProperty("summaryY", set.summaryY);
-        root.addProperty("summaryCollapsed", set.summaryCollapsed);
-        root.addProperty("summaryMode", set.summaryMode.name());
+    public static String encodePlan(final Plan plan) {
+        final JsonObject root = GSON.toJsonTree(plan, Plan.class)
+            .getAsJsonObject();
+
+        // graphs need to be encoded
         final JsonArray arr = new JsonArray();
-        for (final SlotSet.Slot slot : set.slots) {
-            final JsonObject slotObj = new JsonObject();
-            slotObj.addProperty("name", slot.name);
-            slotObj.addProperty("data", encode(slot.graph));
-            arr.add(slotObj);
-        }
-        root.add("slots", arr);
+        for (final Graph graph : plan.getGraphs()) arr.add(new JsonPrimitive(encodeGraph(graph)));
+        root.add("graphs", arr);
+
         return GSON.toJson(root);
     }
 
     /**
-     * Decodes a SlotSet (with all its graphs) from a JSON string.
+     * Decodes a Plan (with all its graphs) from a JSON string.
      */
     @Nonnull
-    public static SlotSet decodeSlotSet(final String json) {
-        final JsonObject root = GSON.fromJson(json, JsonObject.class);
-        final SlotSet set = new SlotSet();
-        set.activeSlot = root.get("active")
-            .getAsInt();
-        set.summaryX = root.has("summaryX") ? root.get("summaryX")
-            .getAsInt() : SlotSet.DEFAULT_SUMMARY_X;
-        set.summaryY = root.has("summaryY") ? root.get("summaryY")
-            .getAsInt() : SlotSet.DEFAULT_SUMMARY_Y;
-        set.summaryCollapsed = root.has("summaryCollapsed") && root.get("summaryCollapsed")
-            .getAsBoolean();
-        if (root.has("summaryMode")) {
-            try {
-                set.summaryMode = SummaryMode.valueOf(
-                    root.get("summaryMode")
-                        .getAsString());
-            } catch (final IllegalArgumentException ignored) {}
-        }
-        final JsonArray arr = root.getAsJsonArray("slots");
-        for (final JsonElement elem : arr) {
-            final JsonObject obj = elem.getAsJsonObject();
-            final String name = obj.get("name")
-                .getAsString();
-            final String data = obj.get("data")
-                .getAsString();
-            final Graph graph = decode(data);
-            set.slots.add(new SlotSet.Slot(name, graph));
-        }
-        return set;
+    public static Plan decodePlan(final String json) {
+        final Plan plan = GSON.fromJson(json, Plan.class);
+        final List<Graph> graphs = plan.getGraphs();
+
+        // graphs need to be decoded
+        for (final JsonElement elem : GSON.fromJson(json, JsonObject.class)
+            .getAsJsonArray("graphs")) graphs.add(decodeGraph(elem.getAsString()));
+
+        return plan;
     }
 
     /**
@@ -149,7 +123,8 @@ public final class Serializer {
         sb.append("flowchart LR\n");
 
         // Map UUIDs to short mermaid-safe IDs
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             final String id = mermaidId(node.id);
             final String label = node.machineName.isEmpty() ? "?" : node.machineName;
             sb.append("    ")
@@ -159,7 +134,8 @@ public final class Serializer {
                 .append("\"]\n");
         }
 
-        for (final Edge edge : graph.getEdges()) {
+        for (final Edge edge : graph.getEdges()
+            .values()) {
             final String srcId = mermaidId(edge.sourceNodeId);
             final String dstId = mermaidId(edge.targetNodeId);
             final String label = edgeLabel(graph, edge);
@@ -176,7 +152,8 @@ public final class Serializer {
                 .append("\n");
         }
 
-        for (final Note note : graph.notes.values()) {
+        for (final Note note : graph.getNotes()
+            .values()) {
             sb.append("    %% Note: ");
             for (String s : note.getText()) sb.append(escapeMermaid(s))
                 .append("\n");
@@ -196,9 +173,11 @@ public final class Serializer {
         root.addProperty("zoom", graph.getZoom());
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
+        root.addProperty("name", graph.getName());
 
         final JsonArray nodesArray = new JsonArray();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             final JsonObject obj = new JsonObject();
             obj.addProperty("id", node.id.toString());
             obj.addProperty("x", node.x);
@@ -220,7 +199,8 @@ public final class Serializer {
         root.add("nodes", nodesArray);
 
         final JsonArray edgesArray = new JsonArray();
-        for (final Edge edge : graph.getEdges()) {
+        for (final Edge edge : graph.getEdges()
+            .values()) {
             final JsonObject obj = new JsonObject();
             obj.addProperty("id", edge.id.toString());
             obj.addProperty("src", edge.sourceNodeId.toString());
@@ -231,16 +211,24 @@ public final class Serializer {
         }
         root.add("edges", edgesArray);
 
-        root.add("notes", GSON.toJsonTree(graph.getNotes()));
+        final JsonArray notesArray = new JsonArray();
+        for (Note note : graph.getNotes()
+            .values()) notesArray.add(GSON.toJsonTree(note));
+        root.add("notes", notesArray);
 
-        root.add("groups", GSON.toJsonTree(graph.getGroups()));
+        final JsonArray groupsArray = new JsonArray();
+        for (Group group : graph.getGroups()
+            .values()) groupsArray.add(GSON.toJsonTree(group));
+        root.add("groups", groupsArray);
 
         return root;
     }
 
     @Nonnull
     private static Graph jsonToGraph(final JsonObject root) {
-        final Graph graph = new Graph();
+        final Graph graph = new Graph(
+            root.get("name")
+                .getAsString());
 
         if (root.has("balanceMode")) {
             try {
@@ -295,7 +283,8 @@ public final class Serializer {
                 jsonToMachineConfig(obj.getAsJsonObject("machineConfig"), node.machineConfig);
             }
 
-            graph.addNode(node);
+            graph.getNodes()
+                .put(node.id, node);
         }
 
         final JsonArray edgesArray = root.getAsJsonArray("edges");
@@ -314,19 +303,20 @@ public final class Serializer {
                 .getAsInt();
             final int dstIn = obj.get("dstIn")
                 .getAsInt();
-            graph.addEdge(new Edge(id, src, dst, srcOut, dstIn));
+            graph.getEdges()
+                .put(id, new Edge(id, src, dst, srcOut, dstIn));
         }
 
-        final JsonArray notesArray = root.getAsJsonArray("notes");
-        for (final JsonElement elem : notesArray) {
+        for (final JsonElement elem : root.getAsJsonArray("notes")) {
             final Note note = GSON.fromJson(elem, Note.class);
-            graph.notes.put(note.getId(), note);
+            graph.getNotes()
+                .put(note.getId(), note);
         }
 
-        final JsonArray groupsArray = root.getAsJsonArray("groups");
-        for (final JsonElement elem : groupsArray) {
+        for (final JsonElement elem : root.getAsJsonArray("groups")) {
             final Group group = GSON.fromJson(elem, Group.class);
-            graph.groups.put(group.getId(), group);
+            graph.getGroups()
+                .put(group.getId(), group);
         }
 
         return graph;
@@ -469,7 +459,8 @@ public final class Serializer {
 
     @Nonnull
     private static String edgeLabel(final Graph graph, final Edge edge) {
-        final Node src = graph.nodes.get(edge.sourceNodeId);
+        final Node src = graph.getNodes()
+            .get(edge.sourceNodeId);
         if (src == null) return "";
 
         final int idx = edge.sourceOutputIndex;

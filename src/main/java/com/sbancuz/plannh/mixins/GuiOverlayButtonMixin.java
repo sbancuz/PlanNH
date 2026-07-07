@@ -7,9 +7,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
-import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import codechicken.nei.recipe.GuiOverlayButton;
@@ -32,8 +32,9 @@ public class GuiOverlayButtonMixin {
     @Unique
     private static boolean planNH$isRecipeInGraph(final RecipeHandlerRef ref) {
         final Recipe.RecipeId currentId = Recipe.RecipeId.of(ref.handler, ref.recipeIndex);
-        final Graph graph = PlanAPI.getActiveGraph();
-        for (final Node node : graph.getNodes()) {
+        final Graph graph = Plan.getActiveGraph();
+        for (final Node node : graph.getNodes()
+            .values()) {
             if (currentId.equals(node.recipeId)) {
                 return true;
             }

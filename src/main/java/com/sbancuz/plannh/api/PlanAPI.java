@@ -19,8 +19,8 @@ import net.minecraft.nbt.NBTTagString;
 import net.minecraft.util.StatCollector;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Serializer;
-import com.sbancuz.plannh.data.flowchart.SlotSet;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
@@ -30,38 +30,13 @@ public final class PlanAPI {
     /** NBT key used to store the encoded graph in the share ItemStack. */
     public static final String PLANNH_DATA_KEY = "plannh_data";
 
-    @Nullable
-    private static SlotSet slotSet = null;
-
-    @Nonnull
-    public static SlotSet getSlotSet() {
-        if (slotSet == null) {
-            slotSet = loadSlotSet();
-        }
-        return slotSet;
-    }
-
-    public static void unloadSlotSet() {
-        save();
-        slotSet = null;
-    }
-
-    @Nonnull
-    public static Graph getActiveGraph() {
-        return getSlotSet().getActiveGraph();
-    }
-
-    public static void save() {
-        saveSlotSet(getSlotSet());
-    }
-
     /**
      * Encodes the given graph and sends it as an NEI item-link chat message.
      * Other PlanNH clients see an import link; vanilla clients see a dirt-item
      * tooltip with a bookmark prompt.
      */
     public static void shareGraph(final Graph graph) {
-        final String encoded = Serializer.encode(graph);
+        final String encoded = Serializer.encodeGraph(graph);
         final ItemStack stack = createShareStack();
         stack.getTagCompound()
             .setString(PLANNH_DATA_KEY, encoded);
@@ -70,7 +45,7 @@ public final class PlanAPI {
 
     /** Copies the serialised graph to the system clipboard. */
     public static void copyToClipboard(final Graph graph) {
-        GuiScreen.setClipboardString(Serializer.encode(graph));
+        GuiScreen.setClipboardString(Serializer.encodeGraph(graph));
     }
 
     /**
@@ -84,7 +59,7 @@ public final class PlanAPI {
         final String data = GuiScreen.getClipboardString();
         if (data.isEmpty()) return null;
         try {
-            return Serializer.decode(data);
+            return Serializer.decodeGraph(data);
         } catch (final Exception e) {
             return null;
         }
@@ -105,7 +80,7 @@ public final class PlanAPI {
             if (!nbt.hasKey("tag")) return null;
             final NBTTagCompound tag = nbt.getCompoundTag("tag");
             if (!tag.hasKey(PLANNH_DATA_KEY)) return null;
-            return Serializer.decode(tag.getString(PLANNH_DATA_KEY));
+            return Serializer.decodeGraph(tag.getString(PLANNH_DATA_KEY));
         } catch (final NBTException e) {
             return null;
         }
@@ -126,14 +101,17 @@ public final class PlanAPI {
     }
 
     /**
-     * Wraps a deserialised graph in a new "Imported" slot, adds it to the
-     * active slot set, switches to it, and persists. Does not open any GUI.
+     * Wraps a deserialised graph in a new "Imported" slot, switches to it,
+     * and persists. Does not open any GUI.
      */
     public static void importGraph(@Nonnull final Graph graph) {
-        final SlotSet set = getSlotSet();
-        final SlotSet.Slot slot = new SlotSet.Slot(StatCollector.translateToLocal("plannh.share.slot_imported"), graph);
-        set.slots.add(slot);
-        set.activeSlot = set.slots.size() - 1;
+        final Plan plan = Plan.getInstance();
+        graph.setName(StatCollector.translateToLocal("plannh.share.slot_imported"));
+        plan.getGraphs()
+            .add(graph);
+        plan.setActiveIndex(
+            plan.getGraphs()
+                .size() - 1);
         save();
     }
 
@@ -156,35 +134,16 @@ public final class PlanAPI {
         return stack;
     }
 
-    private static SlotSet loadSlotSet() {
-        try {
-            final File saveFile = getSaveFile();
-            if (saveFile.isFile()) {
-                final String data = Files.readString(saveFile.toPath(), StandardCharsets.UTF_8);
-                if (data.startsWith("{")) {
-                    return Serializer.decodeSlotSet(data);
-                }
-                final Graph graph = Serializer.decode(data);
-                final SlotSet set = new SlotSet();
-                set.slots.add(new SlotSet.Slot("Slot 1", graph));
-                return set;
-            }
-        } catch (final Exception ignored) {}
-        final SlotSet set = new SlotSet();
-        set.slots.add(new SlotSet.Slot("Slot 1", new Graph()));
-        return set;
-    }
-
-    private static void saveSlotSet(final SlotSet set) {
+    public static void save() {
         try {
             final File saveFile = getSaveFile();
             saveFile.getParentFile()
                 .mkdirs();
-            Files.writeString(saveFile.toPath(), Serializer.encode(set), StandardCharsets.UTF_8);
+            Files.writeString(saveFile.toPath(), Serializer.encodePlan(Plan.getInstance()), StandardCharsets.UTF_8);
         } catch (final Exception ignored) {}
     }
 
-    private static File getSaveFile() {
+    public static File getSaveFile() {
         final Minecraft mc = Minecraft.getMinecraft();
         final String worldName = NEIClientConfig.getWorldPath();
         if (worldName != null && !worldName.isEmpty()) {

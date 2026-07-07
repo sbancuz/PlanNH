@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
+import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 
 import it.unimi.dsi.fastutil.Pair;
@@ -12,6 +13,10 @@ import it.unimi.dsi.fastutil.Pair;
 public interface IFlowchartDraggable extends IDraggable {
 
     FlowchartWidget<?, ?> getFlowchartParent();
+
+    Area getArea();
+
+    IWidget getParent();
 
     @Override
     default void drawMovingState(ModularGuiContext modularGuiContext, float v) {
@@ -55,6 +60,16 @@ public interface IFlowchartDraggable extends IDraggable {
     }
 
     default Pair<Integer, Integer> dragOffset() {
-        return Pair.of(0, 0);
+        Area area = getArea();
+        int x = area.rx;
+        int y = area.ry;
+        IWidget parentWidget = getParent();
+        while (parentWidget instanceof ParentWidget<?>parentWidgetActual && parentWidget != getFlowchartParent()) {
+            Area parentArea = parentWidget.getArea();
+            x += parentArea.rx;
+            y += parentArea.ry;
+            parentWidget = parentWidgetActual.getParent();
+        }
+        return Pair.of(x, y);
     }
 }

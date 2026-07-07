@@ -33,6 +33,7 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
 
     @Override
     protected Map<UUID, Note> getDefaultContainer() {
-        return canvas.getGraph().notes;
+        return canvas.getGraph()
+            .getNotes();
     }
 }

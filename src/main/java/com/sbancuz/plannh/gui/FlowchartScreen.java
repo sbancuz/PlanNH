@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.gui;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.Nonnull;
@@ -21,14 +20,16 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
+import com.cleanroommc.modularui.value.EnumValue;
+import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
-import com.cleanroommc.modularui.widget.sizer.Unit;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.ListWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.menu.Menu;
+import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
@@ -36,53 +37,45 @@ import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.data.flowchart.SlotSet;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
 import codechicken.nei.LayoutManager;
+import gregtech.common.gui.modularui.widget.EnumCycleButtonWidget;
 
 public class FlowchartScreen extends ModularScreen {
 
     private static final int LEFT_MARGIN = 5;
+    private static final int RIGHT_MARGIN = 15;
     private static final int TOP_MARGIN = 30;
     private static final int BOTTOM_MARGIN = 30;
 
-    @Nonnull
-    public final Graph graph;
-    @Nonnull
-    public final CanvasWidget canvas;
-
-    private FlowchartScreen(final ModularPanel panel, final Graph graph, final CanvasWidget canvas) {
+    private FlowchartScreen(final ModularPanel panel) {
         super(PlanNH.MODID, panel);
         getContext().setSettings(new UISettings());
         getContext().getUISettings()
             .getRecipeViewerSettings()
             .enable();
-        this.graph = graph;
-        this.canvas = canvas;
-    }
-
-    private static double panelRight() {
-        return Minecraft.getMinecraft().currentScreen.width - LayoutManager.itemPanel.x + 8;
     }
 
     public static FlowchartScreen create() {
-        final Graph graph = PlanAPI.getActiveGraph();
-
         final ModularPanel panel = ModularPanel.defaultPanel("flowchart_main")
             .fullScreenInvisible()
-            .marginLeft(LEFT_MARGIN)
+            .left(LEFT_MARGIN)
             .marginBottom(BOTTOM_MARGIN)
             .marginTop(TOP_MARGIN)
-            .widthRel(0.75f)
-            .right(FlowchartScreen::panelRight, Unit.Measure.PIXEL);
+            .widthRelOffset(
+                () -> (double) (LayoutManager.itemPanel.x - RIGHT_MARGIN)
+                    / Minecraft.getMinecraft().currentScreen.width,
+                0);
 
         final Flow mainColumn = Flow.column()
             .full();
 
         Menu<?> contextMenu = new Menu<>();
-        final CanvasWidget canvas = new CanvasWidget(graph, contextMenu);
+
+        final CanvasWidget canvas = new CanvasWidget(contextMenu, panel);
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
@@ -92,7 +85,7 @@ public class FlowchartScreen extends ModularScreen {
                 new ListWidget<>().coverChildrenHeight()
                     .width(100)
                     .child(new ButtonWidget<>().onMousePressed(_ -> {
-                        canvas.addNote();
+                        canvas.addNote(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
                         return true;
                     })
                         .fullWidth()
@@ -104,7 +97,7 @@ public class FlowchartScreen extends ModularScreen {
                             IKey.str("Add Note")
                                 .color(Color.WHITE.main)))
                     .child(new ButtonWidget<>().onMousePressed(_ -> {
-                        canvas.addGroup();
+                        canvas.addGroup(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
                         return true;
                     })
                         .fullWidth()
@@ -125,32 +118,138 @@ public class FlowchartScreen extends ModularScreen {
                     Flow.row()
                         .coverChildren()
                         .childPadding(2)
-                        .child(new ButtonWidget<>().overlay(IKey.str("<")))
+                        .child(new ButtonWidget<>().onMousePressed(_ -> {
+                            cycleGraphs(canvas, -1);
+                            return true;
+                        })
+                            .overlay(IKey.str("<"))
+                            .addTooltipLine("Previous Graph"))
                         .child(
-                            IKey.str("Slot x")
-                                .asWidget()
-                                .color(Color.WHITE.main))
-                        .child(new ButtonWidget<>().overlay(IKey.str(">"))))
+                            new TextFieldWidget().value(
+                                new StringValue.Dynamic(
+                                    () -> Plan.getActiveGraph()
+                                        .getName(),
+                                    val -> Plan.getActiveGraph()
+                                        .setName(val)))
+                                .background()
+                                .hoverBackground())
+                        .child(new ButtonWidget<>().onMousePressed(_ -> {
+                            cycleGraphs(canvas, 1);
+                            return true;
+                        })
+                            .overlay(IKey.str(">"))
+                            .addTooltipLine("Next Graph"))
+                        .child(new ButtonWidget<>().onMousePressed(_ -> {
+                            addGraph(canvas);
+                            return true;
+                        })
+                            .overlay(
+                                IKey.str("+")
+                                    .color(Color.GREEN.main))
+                            .addTooltipLine("Add Graph"))
+                        .child(new ButtonWidget<>().onMousePressed(_ -> {
+                            deleteGraph(canvas);
+                            return true;
+                        })
+                            .overlay(
+                                IKey.str("x")
+                                    .color(Color.RED.main))
+                            .addTooltipLine("Remove Graph")))
                 .child(
                     Flow.row()
                         .coverChildren()
                         .childPadding(2)
                         .child(
-                            new ToggleButton().value(new BoolValue.Dynamic(graph::isSnapToGrid, graph::setSnapToGrid))
-                                .overlay(
-                                    IKey.str("S2G")
-                                        .color(Color.WHITE.main)))
-                        .child(new ButtonWidget<>())
-                        .child(new ButtonWidget<>())
-                        .child(new ButtonWidget<>())
-                        .child(new ButtonWidget<>())))
+                            new ToggleButton().value(
+                                new BoolValue.Dynamic(
+                                    () -> Plan.getInstance()
+                                        .isSnapToGrid(),
+                                    val -> Plan.getInstance()
+                                        .setSnapToGrid(val)))
+                                .overlay(IKey.str("S2G"))
+                                .addTooltipLine("Snap to Grid"))
+                        .child(
+                            new EnumCycleButtonWidget<>(BalanceMode.class)
+                                .value(
+                                    new EnumValue.Dynamic<>(
+                                        BalanceMode.class,
+                                        () -> Plan.getActiveGraph()
+                                            .getBalanceMode(),
+                                        val -> Plan.getActiveGraph()
+                                            .setBalanceMode(val)))
+                                .overlay(val -> IKey.str("M:" + switch (val) {
+                                case NONE -> "-";
+                                case FORWARD -> "F";
+                                case BACKWARD -> "B";
+                                }))
+                                .addTooltipLine("Cycle Balance Modes"))
+                        .child(
+                            new EnumCycleButtonWidget<>(SummaryMode.class)
+                                .value(
+                                    new EnumValue.Dynamic<>(
+                                        SummaryMode.class,
+                                        () -> Plan.getInstance()
+                                            .getSummaryMode(),
+                                        val -> Plan.getInstance()
+                                            .setSummaryMode(val)))
+                                .overlay(val -> IKey.str("S:" + (val == SummaryMode.CYCLES ? "C" : "T")))
+                                .addTooltipLine("Cycle Summary Modes"))
+                        .child(new ButtonWidget<>().onMousePressed(_ -> {
+                            canvas.addGroup(canvas.getCanvasScreenCenterX(), canvas.getCanvasScreenCenterY());
+                            return true;
+                        })
+                            .overlay(IKey.str("G"))
+                            .addTooltipLine("Add Group"))
+                        .child(new ButtonWidget<>().onMousePressed(_ -> {
+                            canvas.addNote(canvas.getCanvasScreenCenterX(), canvas.getCanvasScreenCenterY());
+                            return true;
+                        })
+                            .overlay(IKey.str("N"))
+                            .addTooltipLine("Add Note"))
+                        .child(new ButtonWidget<>().onMousePressed(_ -> {
+                            PlanAPI.shareGraph(canvas.getGraph());
+                            return true;
+                        })
+                            .overlay(
+                                IKey.str("Sh")
+                                    .color(Color.GREEN_ACCENT.main))
+                            .addTooltipLine("Share Graph"))
+                        .child(new ButtonWidget<>().onMousePressed(_ -> {
+                            PlanAPI.copyToClipboard(canvas.getGraph());
+                            Minecraft.getMinecraft().thePlayer.addChatMessage(
+                                new ChatComponentText(
+                                    "[" + PlanNH.MODID
+                                        + "] "
+                                        + StatCollector.translateToLocal("plannh.share.copy_to_clipboard")));
+                            return true;
+                        })
+                            .overlay(
+                                IKey.str("Cp")
+                                    .color(Color.BLUE_ACCENT.main))
+                            .addTooltipLine("Copy Graph"))
+                        .child(new ButtonWidget<>().onMousePressed(_ -> {
+                            final Graph graph = PlanAPI.importFromClipboard();
+                            if (graph == null) return true;
+                            PlanAPI.importGraph(graph);
+                            canvas.setGraph(graph);
+                            Minecraft.getMinecraft().thePlayer.addChatMessage(
+                                new ChatComponentText(
+                                    "[" + PlanNH.MODID
+                                        + "] "
+                                        + StatCollector.translateToLocal("plannh.share.copy_from_clipboard")));
+                            return true;
+                        })
+                            .overlay(
+                                IKey.str("Im")
+                                    .color(Color.YELLOW_ACCENT.main))
+                            .addTooltipLine("Import Graph"))))
             .child(canvas);
 
         panel.child(mainColumn);
         panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
 
-        return new FlowchartScreen(panel, graph, canvas);
+        return new FlowchartScreen(panel);
     }
 
     @Override
@@ -159,206 +258,39 @@ public class FlowchartScreen extends ModularScreen {
         super.onClose();
     }
 
-    private static class SlotBarWidget extends Widget<SlotBarWidget> implements Interactable {
+    private static void refreshGraph(CanvasWidget canvas) {
+        canvas.setGraph(Plan.getActiveGraph());
+    }
 
-        private final CanvasWidget canvas;
-        private final List<ClickZone> zones = new ArrayList<>();
+    private static void cycleGraphs(CanvasWidget canvas, final int dir) {
+        final Plan plan = Plan.getInstance();
+        final int size = plan.getGraphs()
+            .size();
+        if (size <= 1) return;
+        plan.setActiveIndex((plan.getActiveIndex() + dir + size) % size);
+        refreshGraph(canvas);
+    }
 
-        private static final int TEXT_Y = 4;
-        private static final int ARROW_W = 14;
-        private static final int PREV_X = 4;
-        private static final int NAME_GAP = 16;
-        private static final int NAME_EST_W = 6;
-        private static final int NAME_EST_PAD = 8;
-        private static final int ADD_BTN_RIGHT = 30;
-        private static final int DEL_BTN_RIGHT = 15;
-        private static final int MODE_BTN_RIGHT = 86;
-        private static final int SUMMARY_BTN_RIGHT = 72;
-        private static final int GROUP_BTN_RIGHT = 58;
-        private static final int NOTE_BTN_RIGHT = 44;
-        private static final int SHARE_BTN_RIGHT = 100;
-        private static final int COPY_BTN_RIGHT = 114;
-        private static final int IMP_BTN_RIGHT = 128;
+    private static void addGraph(CanvasWidget canvas) {
+        final Plan plan = Plan.getInstance();
+        final int size = plan.getGraphs()
+            .size();
+        plan.getGraphs()
+            .add(new Graph("Slot " + (size + 1)));
+        plan.setActiveIndex(size);
+        refreshGraph(canvas);
+    }
 
-        SlotBarWidget(final CanvasWidget canvas) {
-            this.canvas = canvas;
-            pos(0, 0);
-        }
-
-        private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action) {
-
-            boolean contains(final int ux, final int uy) {
-                return ux >= ux1 && ux < ux2 && uy >= uy1 && uy < uy2;
-            }
-        }
-
-        @Override
-        public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
-            final Area a = getArea();
-            final int w = a.width;
-            final int h = a.height;
-
-            GuiDraw.drawRect(0, 0, w, h, PlannhColors.SLOT_BAR_BG.getColor());
-            GuiDraw.drawRect(0, h - 1, w, 1, PlannhColors.SLOT_BAR_LINE.getColor());
-
-            final SlotSet set = PlanAPI.getSlotSet();
-            final String name = set.activeSlot >= 0 && set.activeSlot < set.slots.size()
-                ? set.slots.get(set.activeSlot).name
-                : "?";
-
-            zones.clear();
-
-            final int px = PREV_X;
-            GuiDraw.drawText("<", px, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(px, 0, px + ARROW_W, h, () -> shiftSlot(-1)));
-            final int nameX = px + NAME_GAP;
-            GuiDraw.drawText(name, nameX, TEXT_Y, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
-            final int nameW = name.length() * NAME_EST_W + NAME_EST_PAD;
-            final int nbx = nameX + nameW;
-            GuiDraw.drawText(">", nbx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(nbx, 0, nbx + ARROW_W, h, () -> shiftSlot(1)));
-
-            final int ax = w - ADD_BTN_RIGHT;
-            GuiDraw.drawText("+", ax, TEXT_Y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
-            zones.add(new ClickZone(ax, 0, ax + ARROW_W, h, this::addSlot));
-
-            final int dx = w - DEL_BTN_RIGHT;
-            GuiDraw.drawText("\u00d7", dx, TEXT_Y, 1.0f, PlannhColors.ACCENT_RED.getColor(), false);
-            zones.add(new ClickZone(dx, 0, dx + ARROW_W, h, this::deleteSlot));
-
-            final BalanceMode mode = canvas.getGraph()
-                .getBalanceMode();
-            final String modeLabel = switch (mode) {
-                case NONE -> "M:-";
-                case FORWARD -> "M:F";
-                case BACKWARD -> "M:B";
-            };
-            final int modeColor = switch (mode) {
-                case NONE -> PlannhColors.TEXT_MUTED.getColor();
-                case FORWARD -> PlannhColors.ACCENT_GREEN.getColor();
-                case BACKWARD -> PlannhColors.ACCENT_BLUE.getColor();
-            };
-            final int mx = w - MODE_BTN_RIGHT;
-            GuiDraw.drawText(modeLabel, mx, TEXT_Y, 1.0f, modeColor, false);
-            zones.add(new ClickZone(mx, 0, mx + ARROW_W, h, this::cycleBalanceMode));
-
-            final SummaryMode sMode = set.summaryMode;
-            final String sLabel = sMode == SummaryMode.CYCLES ? "S:C" : "S:T";
-            final int sCol = sMode == SummaryMode.CYCLES ? PlannhColors.ACCENT_BLUE.getColor()
-                : PlannhColors.ACCENT_GREEN.getColor();
-            final int sx = w - SUMMARY_BTN_RIGHT;
-            GuiDraw.drawText(sLabel, sx, TEXT_Y, 1.0f, sCol, false);
-            zones.add(new ClickZone(sx, 0, sx + ARROW_W, h, () -> {
-                final SlotSet s = PlanAPI.getSlotSet();
-                s.summaryMode = s.summaryMode == SummaryMode.CYCLES ? SummaryMode.THROUGHPUT : SummaryMode.CYCLES;
-                PlanAPI.save();
-            }));
-
-            /*
-             * final int gx = w - GROUP_BTN_RIGHT;
-             * GuiDraw.drawText("G", gx, TEXT_Y, 1.0f, PlannhColors.titleColor("Group"), false);
-             * zones.add(new ClickZone(gx, 0, gx + ARROW_W, h, this::addGroup));
-             * final int nx = w - NOTE_BTN_RIGHT;
-             * GuiDraw.drawText("N", nx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-             * zones.add(new ClickZone(nx, 0, nx + ARROW_W, h, this::addNote));
-             */
-
-            final int shx = w - SHARE_BTN_RIGHT;
-            GuiDraw.drawText("Sh", shx, TEXT_Y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
-            zones.add(new ClickZone(shx, 0, shx + ARROW_W, h, () -> PlanAPI.shareGraph(canvas.getGraph())));
-
-            final int cx = w - COPY_BTN_RIGHT;
-            GuiDraw.drawText("Cp", cx, TEXT_Y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
-            zones.add(new ClickZone(cx, 0, cx + ARROW_W, h, () -> {
-                PlanAPI.copyToClipboard(canvas.getGraph());
-                Minecraft.getMinecraft().thePlayer.addChatMessage(
-                    new ChatComponentText(
-                        "[" + PlanNH.MODID + "] " + StatCollector.translateToLocal("plannh.share.copy_to_clipboard")));
-            }));
-
-            final int ix = w - IMP_BTN_RIGHT;
-            GuiDraw.drawText("Im", ix, TEXT_Y, 1.0f, PlannhColors.ACCENT_AMBER.getColor(), false);
-            zones.add(new ClickZone(ix, 0, ix + ARROW_W, h, () -> {
-                final Graph graph = PlanAPI.importFromClipboard();
-                if (graph == null) return;
-                PlanAPI.importGraph(graph);
-                canvas.setGraph(graph);
-                Minecraft.getMinecraft().thePlayer.addChatMessage(
-                    new ChatComponentText(
-                        "[" + PlanNH.MODID
-                            + "] "
-                            + StatCollector.translateToLocal("plannh.share.copy_from_clipboard")));
-            }));
-        }
-
-        private void shiftSlot(final int dir) {
-            final SlotSet set = PlanAPI.getSlotSet();
-            if (set.slots.size() <= 1) return;
-            set.activeSlot = (set.activeSlot + dir + set.slots.size()) % set.slots.size();
-            canvas.setGraph(set.getActiveGraph());
-            PlanAPI.save();
-        }
-
-        private void addSlot() {
-            final SlotSet set = PlanAPI.getSlotSet();
-            final int n = set.slots.size() + 1;
-            final SlotSet.Slot slot = new SlotSet.Slot("Slot " + n, new Graph());
-            set.slots.add(slot);
-            set.activeSlot = set.slots.size() - 1;
-            canvas.setGraph(slot.graph);
-            PlanAPI.save();
-        }
-
-        private void deleteSlot() {
-            final SlotSet set = PlanAPI.getSlotSet();
-            if (set.slots.size() <= 1) return;
-            set.slots.remove(set.activeSlot);
-            if (set.activeSlot >= set.slots.size()) set.activeSlot = set.slots.size() - 1;
-            canvas.setGraph(set.getActiveGraph());
-            PlanAPI.save();
-        }
-
-        /*
-         * private void addNote() {
-         * int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
-         * int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
-         * if (cx < 0) cx = 0;
-         * if (cy < 0) cy = 0;
-         * canvas.addNote(cx, cy);
-         * }
-         * private void addGroup() {
-         * int cx = -Math.round(canvas.getPanX() / canvas.getZoom());
-         * int cy = -Math.round((canvas.getPanY() - 60) / canvas.getZoom());
-         * if (cx < 0) cx = 0;
-         * if (cy < 0) cy = 0;
-         * canvas.addGroup(cx, cy);
-         * }
-         */
-
-        private void cycleBalanceMode() {
-            final Graph g = canvas.getGraph();
-            final BalanceMode next = switch (g.getBalanceMode()) {
-                case NONE -> BalanceMode.FORWARD;
-                case FORWARD -> BalanceMode.BACKWARD;
-                case BACKWARD -> BalanceMode.NONE;
-            };
-            g.setBalanceMode(next);
-            PlanAPI.save();
-        }
-
-        @Override
-        public @Nonnull Result onMousePressed(final int mouseButton) {
-            if (mouseButton != 0) return Result.IGNORE;
-            final int mx = getContext().getMouseX();
-            final int my = getContext().getMouseY();
-            for (final ClickZone zone : zones) {
-                if (zone.contains(mx, my)) {
-                    zone.action.run();
-                    return Result.SUCCESS;
-                }
-            }
-            return Result.IGNORE;
-        }
+    private static void deleteGraph(CanvasWidget canvas) {
+        final Plan plan = Plan.getInstance();
+        final int size = plan.getGraphs()
+            .size();
+        if (size <= 1) return;
+        final int active = plan.getActiveIndex();
+        plan.getGraphs()
+            .remove(active);
+        if (active >= size - 1) plan.setActiveIndex(size - 2);
+        refreshGraph(canvas);
     }
 
     private static class SummaryWidget extends Widget<SummaryWidget> implements Interactable {
@@ -403,7 +335,8 @@ public class FlowchartScreen extends ModularScreen {
         }
 
         private SummaryMode summaryMode() {
-            return PlanAPI.getSlotSet().summaryMode;
+            return Plan.getInstance()
+                .getSummaryMode();
         }
 
         private float summaryCycleSecs(final BalanceResult br) {
@@ -412,10 +345,10 @@ public class FlowchartScreen extends ModularScreen {
 
         SummaryWidget(final CanvasWidget canvas) {
             this.canvas = canvas;
-            final var set = PlanAPI.getSlotSet();
-            this.floatX = set.summaryX;
-            this.floatY = set.summaryY;
-            this.collapsed = set.summaryCollapsed;
+            final Plan plan = Plan.getInstance();
+            this.floatX = plan.getSummaryX();
+            this.floatY = plan.getSummaryY();
+            this.collapsed = plan.isSummaryCollapsed();
             pos(floatX, floatY);
             size(WIDTH, computeHeight());
         }
@@ -532,7 +465,8 @@ public class FlowchartScreen extends ModularScreen {
                     PlannhColors.ACCENT_BLUE.getColor(),
                     false);
                 ly += SECTION_H;
-                for (final Node node : g.getNodes()) {
+                for (final Node node : g.getNodes()
+                    .values()) {
                     final NodeBalance nb = br.nodeBalances()
                         .get(node.id);
                     if (nb == null || nb.operations <= 0) continue;
@@ -642,7 +576,8 @@ public class FlowchartScreen extends ModularScreen {
 
             if (my < TITLE_H && mx >= WIDTH - COLLAPSE_W) {
                 collapsed = !collapsed;
-                PlanAPI.getSlotSet().summaryCollapsed = collapsed;
+                Plan.getInstance()
+                    .setSummaryCollapsed(collapsed);
                 PlanAPI.save();
                 size(WIDTH, computeHeight());
                 return Result.SUCCESS;
@@ -663,9 +598,9 @@ public class FlowchartScreen extends ModularScreen {
         @Override
         public boolean onMouseRelease(final int mouseButton) {
             if (dragging) {
-                final var set = PlanAPI.getSlotSet();
-                set.summaryX = floatX;
-                set.summaryY = floatY;
+                final var set = Plan.getInstance();
+                set.setSummaryX(floatX);
+                set.setSummaryY(floatY);
                 PlanAPI.save();
             }
             dragging = false;

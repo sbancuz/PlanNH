@@ -37,7 +37,8 @@ public final class Balancer {
     @Nonnull
     private static BalanceResult balanceNone(final Graph graph) {
         final Map<UUID, Integer> ops = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             ops.put(node.id, 1);
         }
         return buildResult(graph, ops);
@@ -47,11 +48,13 @@ public final class Balancer {
     private static BalanceResult balanceForward(final Graph graph) {
         final Map<UUID, List<Edge>> outEdges = new HashMap<>();
         final Map<UUID, List<Edge>> inEdges = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             outEdges.put(node.id, new ArrayList<>());
             inEdges.put(node.id, new ArrayList<>());
         }
-        for (final Edge edge : graph.getEdges()) {
+        for (final Edge edge : graph.getEdges()
+            .values()) {
             outEdges.get(edge.sourceNodeId)
                 .add(edge);
             inEdges.get(edge.targetNodeId)
@@ -64,7 +67,8 @@ public final class Balancer {
         }
 
         final Map<UUID, Integer> ops = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             ops.put(
                 node.id,
                 inEdges.get(node.id)
@@ -72,21 +76,24 @@ public final class Balancer {
         }
 
         final Map<UUID, Integer> throughputFactors = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             final MachineConfig cfg = node.machineConfig;
             final var eff = cfg.computeEffect(node.properties, node.durationTicks);
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
         for (final UUID nodeId : topoOrder) {
-            final Node node = graph.nodes.get(nodeId);
+            final Node node = graph.getNodes()
+                .get(nodeId);
             if (node == null) continue;
 
             final int currentOps = ops.get(nodeId);
             if (currentOps <= 0) continue;
 
             for (final Edge edge : outEdges.get(nodeId)) {
-                final Node target = graph.nodes.get(edge.targetNodeId);
+                final Node target = graph.getNodes()
+                    .get(edge.targetNodeId);
                 if (target == null) continue;
 
                 final int myOutputCount = node.outputs.get(edge.sourceOutputIndex)
@@ -125,7 +132,8 @@ public final class Balancer {
             }
         }
 
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             final int v = ops.get(node.id);
             if (v <= 0) ops.put(node.id, 1);
         }
@@ -137,11 +145,13 @@ public final class Balancer {
     private static BalanceResult balanceBackward(final Graph graph) {
         final Map<UUID, List<Edge>> outEdges = new HashMap<>();
         final Map<UUID, List<Edge>> inEdges = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             outEdges.put(node.id, new ArrayList<>());
             inEdges.put(node.id, new ArrayList<>());
         }
-        for (final Edge edge : graph.getEdges()) {
+        for (final Edge edge : graph.getEdges()
+            .values()) {
             outEdges.get(edge.sourceNodeId)
                 .add(edge);
             inEdges.get(edge.targetNodeId)
@@ -149,7 +159,8 @@ public final class Balancer {
         }
 
         final Set<UUID> leafNodes = new HashSet<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             if (outEdges.get(node.id)
                 .isEmpty()) {
                 leafNodes.add(node.id);
@@ -165,19 +176,22 @@ public final class Balancer {
         Collections.reverse(reverseTopo);
 
         final Map<UUID, Integer> ops = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             ops.put(node.id, leafNodes.contains(node.id) ? 1 : 0);
         }
 
         final Map<UUID, Integer> throughputFactors = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             final MachineConfig cfg = node.machineConfig;
             final var eff = cfg.computeEffect(node.properties, node.durationTicks);
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
         for (final UUID nodeId : reverseTopo) {
-            final Node node = graph.nodes.get(nodeId);
+            final Node node = graph.getNodes()
+                .get(nodeId);
             if (node == null) continue;
 
             final int currentOps = ops.get(nodeId);
@@ -185,7 +199,8 @@ public final class Balancer {
             final Map<Integer, Float> itemsNeededPerPort = new HashMap<>();
             final Map<Integer, Float> yieldPerPort = new HashMap<>();
             for (final Edge edge : outEdges.get(nodeId)) {
-                final Node target = graph.nodes.get(edge.targetNodeId);
+                final Node target = graph.getNodes()
+                    .get(edge.targetNodeId);
                 if (target == null) continue;
 
                 final int targetOps = ops.get(edge.targetNodeId);
@@ -246,7 +261,8 @@ public final class Balancer {
     @Nullable
     private static List<UUID> topologicalSort(final Graph graph, final Map<UUID, List<Edge>> inEdges) {
         final Map<UUID, Integer> inDegree = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             inDegree.put(
                 node.id,
                 inEdges.get(node.id)
@@ -260,10 +276,12 @@ public final class Balancer {
 
         final List<UUID> result = new ArrayList<>();
         final Map<UUID, List<Edge>> out = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             out.put(node.id, new ArrayList<>());
         }
-        for (final Edge edge : graph.getEdges()) {
+        for (final Edge edge : graph.getEdges()
+            .values()) {
             out.get(edge.sourceNodeId)
                 .add(edge);
         }
@@ -288,7 +306,8 @@ public final class Balancer {
     @Nonnull
     private static BalanceResult fallbackBalance(final Graph graph) {
         final Map<UUID, Integer> ops = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes()
+            .values()) {
             ops.put(node.id, 1);
         }
         return buildResult(graph, ops);
@@ -301,7 +320,7 @@ public final class Balancer {
         int totalOps = 0;
         int totalDuration = 0;
 
-        for (final Node node : graph.getNodes()) {
+        for (final Node node : graph.getNodes().values()) {
             final int opCount = ops.get(node.id);
             totalOps += opCount;
 
