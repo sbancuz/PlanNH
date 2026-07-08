@@ -1,5 +1,5 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="src/main/resources/plannhlogo.png">
+  <source media="(prefers-color-scheme: dark)" srcset="src/main/resources/plannhlogo4x.png">
   <img alt="PlanNH" src="src/main/resources/plannhlogo4x.png" width="512">
 </picture>
 
