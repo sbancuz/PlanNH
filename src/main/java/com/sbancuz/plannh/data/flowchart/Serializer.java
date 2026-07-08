@@ -99,6 +99,18 @@ public final class Serializer {
         return GSON.toJson(root);
     }
 
+    @Nonnull
+    public static String encodePlanDebug(Plan plan) {
+        final JsonObject root = GSON.toJsonTree(plan, Plan.class)
+            .getAsJsonObject();
+
+        final JsonArray arr = new JsonArray();
+        for (final Graph graph : plan.getGraphs()) arr.add(graphToJson(graph));
+        root.add("graphs", arr);
+
+        return GSON.toJson(root);
+    }
+
     /**
      * Decodes a Plan (with all its graphs) from a JSON string.
      */
