@@ -1,31 +1,39 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="src/main/resources/plannhlogo.png">
+  <img alt="PlanNH" src="src/main/resources/plannhlogo.png" width="512">
+</picture>
+
 # PlanNH
 
-**PlanNH** is a Minecraft 1.7.10 mod for the GTNH pack that adds an interactive flowchart-based production planner. Visually map out recipe chains, configure machine overclocking, and compute throughput balances — all without leaving the game.
+In-game flowchart-based production planner for Minecraft 1.7.10 GTNH.
 
 ## Features
 
-- **Interactive canvas** — pan & zoom, drag nodes, connect ports with edges
-- **NEI integration** — press `F8` or click the `FC` sidebar button to open the flowchart, then `+` in any NEI recipe GUI to add it as a node
-- **Production balancer** — topological-sort based backward propagation computes per-node operation counts, net item/fluid throughput, and total duration
-- **Machine configuration** — per-node overclock and parallel settings with type-safe profile system:
-- **Sticky notes** — add text annotations anywhere on the canvas
+- **Group system.** Color picker, collapsible groups, cover children mode, and automatic membership when dropping nodes on a group.
+- **Canvas.** Infinite 2D whiteboard to organize complex recipe chain.
+- **Production balancer.** [ojAlgo](https://github.com/optimatika/ojAlgo) ILP solver with OUTPUT and INPUT modes, plus an ops mode toggle. Machine count is the single source of truth and a Fixed checkbox pins values in the solver.
+- **Summary.** Collapsible and scrollable with extended resource consumption info including GT steam. A dirty flag caches results so the balancer only recomputes on changes.
+- **Machine configuration.** Per-node overclock, parallel, voltage, heat, and laser OC settings with type-safe profiles. Easier config selection and better slot renaming.
+- **Mod integrations.** GregTech, EnderIO, Thaumcraft, Botania, Forestry, Et Futurum Requiem and many more to come
+- **Share and import.** Encode graphs as NEI item-link chat messages or clipboard with popup notifiers and preview shadows while dragging.
+- **Mermaid export.** Export graphs as Mermaid.js flowcharts for [GuideNH](https://github.com/GTNewHorizons/GuideNH).
+- **Client side only.** 
 
 ## Dependencies
 
-- Minecraft **1.7.10** with Forge
-- **NotEnoughItems** (required)
-- **ModularUI2** (required)
-- **GTNHLib** (required)
-- **GT5-Unofficial** (optional — enables GregTech recipe extraction and overclock profiles)
-- **EnderIO** (optional — enables EnderIO recipe extraction and speed profile)
+- Minecraft **1.7.10** with Forge **10.13.4.1614+**
+- **Not Enough Items**, **ModularUI**, **GTNHLib**, **Mixin**
+
+## Credits
+
+- **[@TheYoingLad](https://github.com/TheYoingLad)** for the UI code (ModularUI rework)
+- **[FlyToSpace](https://github.com/FlyToSpace)** for the logo design
 
 ## Building
 
 ```bash
 ./gradlew build
 ```
-
-The built jar will be in `build/libs/`.
 
 ## License
 
