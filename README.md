@@ -10,7 +10,7 @@ In-game flowchart-based production planner for Minecraft 1.7.10 for the GTNH pac
 - **Canvas.** Infinite 2D whiteboard to organize complex recipe chain.
 - **NEI Recipes.** Recipes can be added using NEI and are shown through the normal recipe widgets.
 - **Groups.** Collapsible and customizable groups to keep the recipes organized
-- **Sticky notes.** To provide extra context or just draw a smily face
+- **Sticky notes.** To provide extra context or to just draw a smily face
 - **Production balancer.** You can balance chains for optimal throuput by pinning recipe nodes, uses [ojAlgo](https://github.com/optimatika/ojAlgo) to provide a clean solution 
 - **Summary.** Shows the overall demands and outputs of a recipe chains, ranging from items, fluids, energy and even magic resources like mana
 - **Mod integrations.** GregTech, EnderIO, Thaumcraft, Botania, Forestry, Et Futurum Requiem and many more to come
