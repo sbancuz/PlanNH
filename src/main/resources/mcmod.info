@@ -3,10 +3,10 @@
 	"modList": [{
 		"modid": "${modId}",
 		"name": "${modName}",
-		"description": "An example mod for Minecraft 1.7.10 with Forge focused on a stable setup.",
+		"description": "In-game flowchart-based production planner for Minecraft 1.7.10 for the GTNH pack.",
 		"version": "${modVersion}",
 		"mcversion": "${minecraftVersion}",
-		"url": "https://github.com/SinTh0r4s/MyMod",
+		"url": "https://github.com/sbancuz/PlanNH",
 		"updateUrl": "",
 		"authorList": ["Sbancuz"],
 		"credits": "",
