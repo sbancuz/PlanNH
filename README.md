@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="src/main/resources/plannhlogo4x.png">
-  <img alt="PlanNH" src="src/main/resources/plannhlogo4x.png" width="512">
+  <img alt="PlanNH" src="src/main/resources/plannhlogo4x.png" width="606">
 </picture>
 
 In-game flowchart-based production planner for Minecraft 1.7.10 GTNH.
