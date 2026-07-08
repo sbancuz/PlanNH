@@ -1,31 +1,39 @@
-# PlanNH
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="src/main/resources/plannhlogo4x.png">
+  <img alt="PlanNH" src="src/main/resources/plannhlogo4x.png" width="606">
+</picture>
 
-**PlanNH** is a Minecraft 1.7.10 mod for the GTNH pack that adds an interactive flowchart-based production planner. Visually map out recipe chains, configure machine overclocking, and compute throughput balances — all without leaving the game.
+In-game flowchart-based production planner for Minecraft 1.7.10 for the GTNH pack.
 
 ## Features
 
-- **Interactive canvas** — pan & zoom, drag nodes, connect ports with edges
-- **NEI integration** — press `F8` or click the `FC` sidebar button to open the flowchart, then `+` in any NEI recipe GUI to add it as a node
-- **Production balancer** — topological-sort based backward propagation computes per-node operation counts, net item/fluid throughput, and total duration
-- **Machine configuration** — per-node overclock and parallel settings with type-safe profile system:
-- **Sticky notes** — add text annotations anywhere on the canvas
+- **Canvas.** Infinite 2D whiteboard to organize complex recipe chain.
+- **NEI Recipes.** Recipes can be added using NEI and are shown through the normal recipe widgets.
+- **Groups.** Collapsible and customizable groups to keep the recipes organized
+- **Sticky notes.** To provide extra context or to just draw a smily face
+- **Production balancer.** You can balance chains for optimal throuput by pinning recipe nodes, uses [ojAlgo](https://github.com/optimatika/ojAlgo) to provide a clean solution 
+- **Summary.** Shows the overall demands and outputs of a recipe chains, ranging from items, fluids, energy and even magic resources like mana
+- **Mod integrations.** GregTech, EnderIO, Thaumcraft, Botania, Forestry, Et Futurum Requiem and many more to come
+- **Machine configuration.** Mod-specific configuration options to calculate recipe throughput like voltage, overcloks or speed modifiers
+- **Share and import.** Share your charts to other players either via the in-game chat or externally via the clipboard
+- **Mermaid export.** Export graphs as Mermaid.js flowcharts for [GuideNH](https://github.com/GTNewHorizons/GuideNH).
+- **Client side only.** No server binary required!
 
 ## Dependencies
 
 - Minecraft **1.7.10** with Forge
-- **NotEnoughItems** (required)
-- **ModularUI2** (required)
-- **GTNHLib** (required)
-- **GT5-Unofficial** (optional — enables GregTech recipe extraction and overclock profiles)
-- **EnderIO** (optional — enables EnderIO recipe extraction and speed profile)
+- **Not Enough Items**, **ModularUI**, **GTNHLib**, **Mixin**
+
+## Credits
+
+- **[TheYoingLad](https://github.com/TheYoingLad)** for the UI code 
+- **[FlyToSpace](https://github.com/FlyToSpace)** for the logo design
 
 ## Building
 
 ```bash
 ./gradlew build
 ```
-
-The built jar will be in `build/libs/`.
 
 ## License
 
