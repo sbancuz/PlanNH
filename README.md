@@ -3,8 +3,6 @@
   <img alt="PlanNH" src="src/main/resources/plannhlogo.png" width="512">
 </picture>
 
-# PlanNH
-
 In-game flowchart-based production planner for Minecraft 1.7.10 GTNH.
 
 ## Features
