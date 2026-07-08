@@ -11,12 +11,12 @@ import lombok.experimental.SuperBuilder;
 public class RecipeResource<T> extends RecipeProperty<T> {
 
     @lombok.Builder.Default
-    private final ToIntFunction<T> amountExtractor = (v) -> 1;
+    private final ToIntFunction<T> amountExtractor = _ -> 1;
     @lombok.Builder.Default
-    private final BiConsumer<T, Integer> amountUpdater = (v, amount) -> {};
+    private final BiConsumer<T, Integer> amountUpdater = (_, _) -> {};
 
     @lombok.Builder.Default
-    private final BiPredicate<T, T> connectionChecker = (a, b) -> true;
+    private final BiPredicate<T, T> connectionChecker = (_, _) -> true;
     @lombok.Builder.Default
     private final ToIntFunction<T> hashCodeExtractor = Objects::hashCode;
 

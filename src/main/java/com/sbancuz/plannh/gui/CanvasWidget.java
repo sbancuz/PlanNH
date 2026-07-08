@@ -707,6 +707,20 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         menuOpen = false;
     }
 
+    public void addNode(int x, int y, IRecipeHandler handler, int recipeIndex) {
+        final Node node = new Node(handler, recipeIndex, x, y);
+
+        graph.getNodes()
+            .put(node.id, node);
+
+        RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
+
+        menuOpen = false;
+        nodeWidgets.put(node.id, widget);
+
+        child(widget);
+    }
+
     @Nullable
     private ContextMenuWidget contextMenu = null;
 

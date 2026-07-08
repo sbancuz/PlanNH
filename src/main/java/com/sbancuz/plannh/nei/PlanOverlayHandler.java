@@ -6,12 +6,8 @@ import java.util.List;
 import net.minecraft.client.gui.inventory.GuiContainer;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
-import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.PropertyProvider;
-import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import codechicken.nei.PositionedStack;
@@ -53,14 +49,9 @@ public class PlanOverlayHandler implements IOverlayHandler {
     private static final int DEFAULT_NODE_Y = 200;
 
     private static void addRecipe(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
-        final Node node = new Node(handler, recipeIndex, DEFAULT_NODE_X, DEFAULT_NODE_Y);
-        final Graph graph = Plan.getActiveGraph();
-        graph.getNodes().put(node.id, node);
-        PlanAPI.save();
-
         if (firstGui instanceof final GuiContainerWrapper wrapper
             && wrapper.getScreen() instanceof final FlowchartScreen screen) {
-//            screen.canvas.rebuildNodeWidgets();
+            screen.getCanvas().addNode(DEFAULT_NODE_X, DEFAULT_NODE_Y, handler, recipeIndex);
         }
     }
 

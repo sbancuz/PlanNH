@@ -617,7 +617,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 .getZoom();
             node.x = nodeStartX + Math.round(dx / z);
             node.y = nodeStartY + Math.round(dy / z);
-            canvas.clampNodeToGroup(node);
+            // canvas.clampNodeToGroup(node);
             syncTransform(
                 z,
                 canvas.getGraph()

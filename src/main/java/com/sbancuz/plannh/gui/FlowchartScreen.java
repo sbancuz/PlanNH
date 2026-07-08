@@ -43,6 +43,7 @@ import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
 import codechicken.nei.LayoutManager;
 import gregtech.common.gui.modularui.widget.EnumCycleButtonWidget;
+import lombok.Getter;
 
 public class FlowchartScreen extends ModularScreen {
 
@@ -51,12 +52,17 @@ public class FlowchartScreen extends ModularScreen {
     private static final int TOP_MARGIN = 30;
     private static final int BOTTOM_MARGIN = 30;
 
-    private FlowchartScreen(final ModularPanel panel) {
+    @Getter
+    private final CanvasWidget canvas;
+
+    private FlowchartScreen(final ModularPanel panel, CanvasWidget canvas) {
         super(PlanNH.MODID, panel);
         getContext().setSettings(new UISettings());
         getContext().getUISettings()
             .getRecipeViewerSettings()
             .enable();
+
+        this.canvas = canvas;
     }
 
     public static FlowchartScreen create() {
@@ -249,7 +255,7 @@ public class FlowchartScreen extends ModularScreen {
         panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
 
-        return new FlowchartScreen(panel);
+        return new FlowchartScreen(panel, canvas);
     }
 
     @Override
