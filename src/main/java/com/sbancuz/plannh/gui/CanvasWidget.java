@@ -37,6 +37,7 @@ import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
 
+import codechicken.nei.recipe.IRecipeHandler;
 import lombok.Getter;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable, IViewport, IDraggable {
@@ -119,6 +120,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         contextMenu2 = menu;
         rebuildNoteWidgets();
         rebuildGroupWidgets();
+        rebuildNodeWidgets();
     }
 
     public void removeNode(final UUID nodeId) {
@@ -133,44 +135,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         this.graph = newGraph;
         removeAll();
         flowchartWidgets.clear();
-        rebuildNodeWidgets();
         rebuildNoteWidgets();
         rebuildGroupWidgets();
-    }
-
-    public void moveGroupNodes(final UUID groupId, final int deltaX, final int deltaY) {
-        /*
-         * final Group group = graph.groups.get(groupId);
-         * if (group == null) return;
-         * for (final UUID nodeId : group.nodeIds) {
-         * final Node node = graph.nodes.get(nodeId);
-         * if (node == null) continue;
-         * node.x += deltaX;
-         * node.y += deltaY;
-         * final RecipeNodeWidget w = nodeWidgets.get(nodeId);
-         * if (w != null) {
-         * // w.syncTransform(zoom, panX, graph.getPanY());
-         * }
-         * }
-         */
-    }
-
-    public void setGroupNodesVisible(final UUID groupId, final boolean visible) {
-        /*
-         * final Group group = graph.groups.get(groupId);
-         * if (group == null) return;
-         * for (final UUID nodeId : group.nodeIds) {
-         * if (visible) {
-         * if (nodeWidgets.containsKey(nodeId)) continue;
-         * final Node node = graph.nodes.get(nodeId);
-         * if (node == null) continue;
-         * addNodeWidget(node);
-         * } else {
-         * final RecipeNodeWidget w = nodeWidgets.remove(nodeId);
-         * if (w != null) remove(w);
-         * }
-         * }
-         */
+        rebuildNodeWidgets();
     }
 
     public void recheckMembershipAndFit() {
@@ -190,78 +157,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
          * }
          */
         return null;
-    }
-
-    public void clampNodeToGroup(final Node node) {
-        /*
-         * final Group group = getGroupForNode(node.id);
-         * if (group == null || !group.clampNodes) return;
-         * if (node.x < group.x + CLAMP_MARGIN) node.x = group.x + CLAMP_MARGIN;
-         * if (node.y < group.y + CLAMP_MARGIN + HEADER_OFFSET) node.y = group.y + CLAMP_MARGIN + HEADER_OFFSET;
-         * if (node.x + NODE_W_ESTIMATE > group.x + group.width - CLAMP_MARGIN)
-         * node.x = group.x + group.width - CLAMP_MARGIN - NODE_W_ESTIMATE;
-         * if (node.y + NODE_H_ESTIMATE > group.y + group.height - CLAMP_MARGIN)
-         * node.y = group.y + group.height - CLAMP_MARGIN - NODE_H_ESTIMATE;
-         */
-    }
-
-    private void autoFitGroups() {
-        /*
-         * for (final Group group : graph.getGroups()) {
-         * if (!group.autoResize || group.nodeIds.isEmpty()) continue;
-         * fitGroupToChildren(group);
-         * }
-         */
-    }
-
-    public void fitGroupToChildren(final Group group) {
-        /*
-         * if (group.nodeIds.isEmpty()) return;
-         * int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
-         * int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
-         * for (final UUID nid : group.nodeIds) {
-         * final Node n = graph.nodes.get(nid);
-         * if (n == null) continue;
-         * if (n.x < minX) minX = n.x;
-         * if (n.y < minY) minY = n.y;
-         * if (n.x + NODE_W_ESTIMATE > maxX) maxX = n.x + NODE_W_ESTIMATE;
-         * if (n.y + NODE_H_ESTIMATE > maxY) maxY = n.y + NODE_H_ESTIMATE;
-         * }
-         * if (minX == Integer.MAX_VALUE) return;
-         * group.x = minX - GROUP_FIT_PAD;
-         * group.y = minY - GROUP_FIT_PAD;
-         * group.width = maxX - minX + GROUP_FIT_PAD * 2;
-         * group.height = maxY - minY + GROUP_FIT_PAD * 2;
-         * final GroupWidget gw = groupWidgets.get(group.id);
-         * if (gw != null) {
-         * // gw.syncTransform(zoom, panX, graph.getPanY());
-         * }
-         * // Move all nodes into the group if auto-sizing
-         * for (final UUID nid : group.nodeIds) {
-         * final Node n = graph.nodes.get(nid);
-         * if (n == null) continue;
-         * clampNodeToGroup(n);
-         * final RecipeNodeWidget w = nodeWidgets.get(nid);
-         * // if (w != null) w.syncTransform(zoom, panX, graph.getPanY());
-         * }
-         */
-    }
-
-    private void updateNodeGroupMembership(final Node node) {
-        /*
-         * for (final Group group : graph.getGroups()) {
-         * if (group.collapsed) continue;
-         * final boolean inside = node.x >= group.x && node.x < group.x + group.width
-         * && node.y >= group.y
-         * && node.y < group.y + group.height;
-         * final boolean contained = group.nodeIds.contains(node.id);
-         * if (inside && !contained) {
-         * group.nodeIds.add(node.id);
-         * } else if (!inside && contained) {
-         * group.nodeIds.remove(node.id);
-         * }
-         * }
-         */
     }
 
     public void rebuildNodeWidgets() {
@@ -284,13 +179,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public void rebuildGroupWidgets() {
         for (final Group group : graph.getGroups()
             .values()) child(new GroupWidget(this, group));
-    }
-
-    private void addNodeWidget(final Node node) {
-        final RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
-        // widget.syncTransform(zoom, panX, graph.getPanY());
-        nodeWidgets.put(node.id, widget);
-        child(widget);
     }
 
     @Override
@@ -385,11 +273,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public int getCanvasScreenCenterX() {
-        return Math.round((getArea().width / 2 - getArea().x - graph.getPanX()) / graph.getZoom());
+        return Math.round(((float) getArea().width / 2 - getArea().x - graph.getPanX()) / graph.getZoom());
     }
 
     public int getCanvasScreenCenterY() {
-        return Math.round((getArea().height / 2 - getArea().y - graph.getPanY()) / graph.getZoom());
+        return Math.round(((float) getArea().height / 2 - getArea().y - graph.getPanY()) / graph.getZoom());
     }
 
     private static boolean containsPoint(final Area a, final int mx, final int my) {
