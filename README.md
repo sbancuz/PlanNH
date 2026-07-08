@@ -26,7 +26,7 @@ In-game flowchart-based production planner for Minecraft 1.7.10 GTNH.
 
 ## Credits
 
-- **[@TheYoingLad](https://github.com/TheYoingLad)** for the UI code (ModularUI rework)
+- **[TheYoingLad](https://github.com/TheYoingLad)** for the UI code (ModularUI rework)
 - **[FlyToSpace](https://github.com/FlyToSpace)** for the logo design
 
 ## Building
