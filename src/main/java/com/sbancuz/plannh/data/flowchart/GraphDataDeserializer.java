@@ -7,7 +7,7 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 
-public class GraphDataAdapter implements JsonDeserializer<GraphData> {
+public class GraphDataDeserializer implements JsonDeserializer<GraphData> {
 
     @Override
     public GraphData deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
@@ -17,7 +17,8 @@ public class GraphDataAdapter implements JsonDeserializer<GraphData> {
             .getAsString()) {
             case "note" -> Serializer.GSON.fromJson(json, Note.class);
             case "group" -> Serializer.GSON.fromJson(json, Group.class);
-            default -> throw new IllegalArgumentException("Invalid type detected during GroupData deserialization");
+            case "node" -> Serializer.GSON.fromJson(json, Node2.class);
+            default -> throw new JsonParseException("Invalid type detected during GroupData deserialization");
         };
     }
 }

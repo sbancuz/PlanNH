@@ -33,6 +33,7 @@ import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Node2;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -159,18 +160,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return null;
     }
 
-    public void rebuildNodeWidgets() {
-        nodeWidgets.clear();
-        /*
-         * removeAll();
-         * for (final Node node : graph.getNodes()) {
-         * addNodeWidget(node);
-         * updateNodeGroupMembership(node);
-         * }
-         * rebuildNoteWidgets();
-         */
-    }
-
     public void rebuildNoteWidgets() {
         for (final Note note : graph.getNotes()
             .values()) child(new NoteWidget(this, note));
@@ -179,6 +168,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public void rebuildGroupWidgets() {
         for (final Group group : graph.getGroups()
             .values()) child(new GroupWidget(this, group));
+    }
+
+    public void rebuildNodeWidgets() {
+        nodeWidgets.clear();
+        for (final Node node : graph.getNodes()
+            .values()) {
+            RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
+            nodeWidgets.put(node.id, widget);
+            child(widget);
+        }
+        for (final Node2 node : graph.getNodes2()
+            .values()) child(new NodeWidget(this, node));
     }
 
     @Override
@@ -719,6 +720,19 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         nodeWidgets.put(node.id, widget);
 
         child(widget);
+    }
+
+    public void addNodeTest(int x, int y, IRecipeHandler handler, int recipeIndex) {
+        final Node2 node = new Node2(handler, recipeIndex);
+        node.setX(x);
+        node.setY(y);
+
+        graph.getNodes2()
+            .put(node.getId(), node);
+
+        child(new NodeWidget(this, node));
+
+        menuOpen = false;
     }
 
     @Nullable

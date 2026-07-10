@@ -1,0 +1,88 @@
+package com.sbancuz.plannh.gui;
+
+import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
+import static org.lwjgl.opengl.GL11.glDisable;
+import static org.lwjgl.opengl.GL11.glEnable;
+
+import codechicken.nei.PositionedStack;
+import com.cleanroommc.modularui.screen.RichTooltip;
+import net.minecraft.client.Minecraft;
+
+import com.cleanroommc.modularui.drawable.Rectangle;
+import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
+import com.cleanroommc.modularui.theme.WidgetThemeEntry;
+import com.cleanroommc.modularui.utils.Color;
+import com.cleanroommc.modularui.widget.ParentWidget;
+import com.gtnewhorizons.modularui.api.math.Pos2d;
+import com.gtnewhorizons.modularui.api.math.Size;
+import com.sbancuz.plannh.data.flowchart.Node2;
+import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
+
+import codechicken.nei.recipe.NEIRecipeWidget;
+import codechicken.nei.recipe.RecipeHandlerRef;
+
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements IFlowchartDraggable {
+
+    private final NodeWidget parent;
+    private final Node2 data;
+    private final NEIRecipeWidget neiWidget;
+    private final RecipeHandlerRef handlerRef;
+
+    private long lastHandlerUpdate = 0;
+
+    public RecipeAreaWidget(NodeWidget parent) {
+        this.parent = parent;
+        this.data = parent.getData();
+
+        handlerRef = RecipeHandlerRef.of(data.getRecipeId());
+        neiWidget = new NEIRecipeWidget(handlerRef);
+        neiWidget.showAsWidget(true);
+        neiWidget.x = 2;
+
+        List<PositionedStack> stacks = handlerRef.handler.getIngredientStacks(handlerRef.recipeIndex);
+        stacks.addAll(handlerRef.handler.getOtherStacks(handlerRef.recipeIndex));
+        stacks.add(handlerRef.handler.getResultStack(handlerRef.recipeIndex));
+        stacks.removeIf(Objects::isNull);
+
+        // TODO make the offsets static and add docs
+        Point offset = new Point(1, -1);
+        if (handlerRef.handler instanceof GTNEIDefaultHandlerAccessor handler) {
+            Size size = handler.getNeiProperties().recipeBackgroundSize;
+            size(size.width, size.height);
+            offset.y = 7;
+        } else {
+            size(neiWidget.w, neiWidget.h);
+        }
+
+        stacks.forEach(
+            positionedStack -> child(
+                new Rectangle().color(Color.BLACK.main)
+                    .hollow()
+                    .asWidget()
+                    .pos(positionedStack.relx + offset.x, positionedStack.rely + offset.y)));
+    }
+
+    @Override
+    public FlowchartWidget<?, ?> getFlowchartParent() {
+        return parent;
+    }
+
+    @Override
+    public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
+        final long now = Minecraft.getSystemTime();
+        if (now - lastHandlerUpdate > 50) {
+            lastHandlerUpdate = now;
+            handlerRef.handler.onUpdate();
+        }
+
+        glEnable(GL_TEXTURE_2D);
+        neiWidget.draw(0, 0);
+
+        glDisable(GL_TEXTURE_2D);
+    }
+}

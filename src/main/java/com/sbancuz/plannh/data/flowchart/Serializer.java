@@ -32,7 +32,8 @@ public final class Serializer {
 
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
         .enableComplexMapKeySerialization()
-        .registerTypeAdapter(GraphData.class, new GraphDataAdapter())
+        .registerTypeAdapter(GraphData.class, new GraphDataDeserializer())
+        .registerTypeAdapter(Recipe.RecipeId.class, new RecipeIdAdapter())
         .create();
 
     // ── Public API ──
@@ -430,6 +431,7 @@ public final class Serializer {
     }
 
     // ── Multiplier helpers ──
+    // TODO are these necessary? i don't think so
 
     @Nonnull
     private static JsonArray multiplierArrayToJson(final Map<Integer, Float> map) {

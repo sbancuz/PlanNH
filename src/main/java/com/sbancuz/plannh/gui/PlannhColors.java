@@ -119,6 +119,6 @@ public final class PlannhColors {
         final int r = (rgb >> 16) & 0xFF;
         final int g = (rgb >> 8) & 0xFF;
         final int b = rgb & 0xFF;
-        return Color.argb(200, r, g, b);
+        return Color.argb(r, g, b, 200);
     }
 }

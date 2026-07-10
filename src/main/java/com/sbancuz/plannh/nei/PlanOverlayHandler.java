@@ -51,7 +51,8 @@ public class PlanOverlayHandler implements IOverlayHandler {
     private static void addRecipe(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
         if (firstGui instanceof final GuiContainerWrapper wrapper
             && wrapper.getScreen() instanceof final FlowchartScreen screen) {
-            screen.getCanvas().addNode(DEFAULT_NODE_X, DEFAULT_NODE_Y, handler, recipeIndex);
+            if(FlowchartScreen.isTestNode) screen.getCanvas().addNodeTest(DEFAULT_NODE_X, DEFAULT_NODE_Y, handler, recipeIndex);
+            else screen.getCanvas().addNode(DEFAULT_NODE_X, DEFAULT_NODE_Y, handler, recipeIndex);
         }
     }
 

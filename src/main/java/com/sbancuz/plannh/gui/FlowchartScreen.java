@@ -54,6 +54,7 @@ public class FlowchartScreen extends ModularScreen {
 
     @Getter
     private final CanvasWidget canvas;
+    public static boolean isTestNode = true;
 
     private FlowchartScreen(final ModularPanel panel, CanvasWidget canvas) {
         super(PlanNH.MODID, panel);
@@ -99,9 +100,7 @@ public class FlowchartScreen extends ModularScreen {
                             new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
                             new Rectangle().hollow()
                                 .color(PlannhColors.CONTEXT_BORDER.getColor()))
-                        .overlay(
-                            IKey.str("Add Note")
-                                .color(Color.WHITE.main)))
+                        .overlay(IKey.str("Add Note")))
                     .child(new ButtonWidget<>().onMousePressed(_ -> {
                         canvas.addGroup(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
                         return true;
@@ -111,9 +110,7 @@ public class FlowchartScreen extends ModularScreen {
                             new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
                             new Rectangle().hollow()
                                 .color(PlannhColors.CONTEXT_BORDER.getColor()))
-                        .overlay(
-                            IKey.str("Add Group")
-                                .color(Color.WHITE.main))));
+                        .overlay(IKey.str("Add Group"))));
 
         mainColumn.child(
             Flow.row()
@@ -165,6 +162,10 @@ public class FlowchartScreen extends ModularScreen {
                     Flow.row()
                         .coverChildren()
                         .childPadding(2)
+                        .child(
+                            new ToggleButton().value(new BoolValue.Dynamic(() -> isTestNode, val -> isTestNode = val))
+                                .overlay(IKey.str("NT"))
+                                .addTooltipLine("Node Test Mode"))
                         .child(
                             new ToggleButton().value(
                                 new BoolValue.Dynamic(

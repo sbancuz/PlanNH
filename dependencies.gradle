@@ -39,13 +39,13 @@ dependencies {
     api("com.github.GTNewHorizons:ModularUI2:2.3.79-1.7.10:dev")
     api("com.github.GTNewHorizons:waila:1.19.30:dev")
 
-    compileOnly("com.github.GTNewHorizons:EnderIO:2.10.31:dev")
-    compileOnly("com.github.GTNewHorizons:Botania:1.13.25-GTNH:dev")
-    compileOnly(rfg.deobf("thaumcraft:Thaumcraft:1.7.10-4.2.3.5:dev"))
-    compileOnly("com.github.GTNewHorizons:AspectRecipeIndex:1.1.1:dev")
-    compileOnly("net.glease:tc4recipelib:1.5.37:dev")
-    compileOnly("com.github.GTNewHorizons:ForestryMC:4.11.27:dev")
-    compileOnly("ganymedes01.etfuturum:Et-Futurum-Requiem:2.6.45-GTNH:dev")
+    implementation("com.github.GTNewHorizons:EnderIO:2.10.31:dev")
+    implementation("com.github.GTNewHorizons:Botania:1.13.25-GTNH:dev")
+    implementation(rfg.deobf("thaumcraft:Thaumcraft:1.7.10-4.2.3.5:dev"))
+    implementation("com.github.GTNewHorizons:AspectRecipeIndex:1.1.1:dev")
+    implementation("net.glease:tc4recipelib:1.5.37:dev")
+    implementation("com.github.GTNewHorizons:ForestryMC:4.11.27:dev")
+    implementation("ganymedes01.etfuturum:Et-Futurum-Requiem:2.6.45-GTNH:dev")
     implementation("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.613:dev")
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.38:dev') { transitive = false }
 

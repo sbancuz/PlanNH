@@ -49,7 +49,7 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
         IPanelHandler colorPicker = IPanelHandler
             .simple(canvas.getPanel(), (_, _) -> new ColorPickerDialog(data::setColor, data.getColor(), true), true);
 
-        Flow mainColumn = FlowchartFlow.column()
+        Flow mainColumn = FlowchartFlow.column(this)
             .coverChildren(GROUP_MIN_W, 0)
             .collapseDisabledChild();
 
