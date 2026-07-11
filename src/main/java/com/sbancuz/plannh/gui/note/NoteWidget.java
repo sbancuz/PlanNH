@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.gui;
+package com.sbancuz.plannh.gui.note;
 
 import java.util.Map;
 import java.util.UUID;
@@ -6,10 +6,16 @@ import java.util.UUID;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.flowchart.Note;
+import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.common.CloseButtonWidget;
+import com.sbancuz.plannh.gui.common.FlowchartFlow;
+import com.sbancuz.plannh.gui.common.FlowchartWidget;
+import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 
 public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
 
-    protected NoteWidget(CanvasWidget canvas, Note note) {
+    public NoteWidget(CanvasWidget canvas, Note note) {
         super(canvas, note);
 
         coverChildren();

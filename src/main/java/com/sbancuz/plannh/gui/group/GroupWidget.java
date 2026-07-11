@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.gui;
+package com.sbancuz.plannh.gui.group;
 
 import static com.sbancuz.plannh.data.flowchart.Group.GROUP_MIN_W;
 
@@ -19,6 +19,11 @@ import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.common.CloseButtonWidget;
+import com.sbancuz.plannh.gui.common.FlowchartFlow;
+import com.sbancuz.plannh.gui.common.FlowchartWidget;
+import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 
 import lombok.Getter;
 
@@ -27,7 +32,7 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
     @Getter
     private final GroupAreaWidget areaWidget;
 
-    protected GroupWidget(CanvasWidget canvas, Group data) {
+    public GroupWidget(CanvasWidget canvas, Group data) {
         super(canvas, data);
         areaWidget = new GroupAreaWidget(this);
 
@@ -42,7 +47,7 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
             .values()
             .forEach(subData -> {
                 FlowchartWidget<?, ?> widget = FlowchartWidget.getFlowchartWidgetFromData(canvas, subData);
-                widget.dataContainer = data.getChildren();
+                widget.setDataContainer(data.getChildren());
                 areaWidget.child(widget);
             });
 

@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.gui;
+package com.sbancuz.plannh.gui.common;
 
 import java.util.List;
 import java.util.Map;
@@ -19,8 +19,13 @@ import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node2;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
+import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.group.GroupWidget;
+import com.sbancuz.plannh.gui.node.NodeWidget;
+import com.sbancuz.plannh.gui.note.NoteWidget;
 
 import lombok.Getter;
+import lombok.Setter;
 
 public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends GraphData> extends ParentWidget<T>
     implements Interactable, IDraggable {
@@ -33,9 +38,12 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     private int dragStartMouseX, dragStartMouseY;
     private int dragOffsetX, dragOffsetY;
     private int dragStartX, dragStartY;
-    protected Map<UUID, GraphData> dataContainer;
+    @Getter
+    @Setter
+    private Map<UUID, GraphData> dataContainer;
     private List<FlowchartWidget<?, ?>> dragStartIntersect;
 
+    @SuppressWarnings("unchecked")
     protected FlowchartWidget(CanvasWidget canvas, D data) {
         this.canvas = canvas;
         this.data = data;

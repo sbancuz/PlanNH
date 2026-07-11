@@ -1,9 +1,10 @@
-package com.sbancuz.plannh.gui;
+package com.sbancuz.plannh.gui.common;
 
 import org.jetbrains.annotations.NotNull;
 
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.widgets.textfield.BaseTextFieldWidget;
+import com.sbancuz.plannh.gui.GuiHelper;
 
 public abstract class FlowchartTextFieldWidget extends BaseTextFieldWidget<FlowchartTextFieldWidget>
     implements IFlowchartDraggable {

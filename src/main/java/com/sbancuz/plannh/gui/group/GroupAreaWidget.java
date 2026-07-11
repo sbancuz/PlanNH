@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.gui;
+package com.sbancuz.plannh.gui.group;
 
 import static com.sbancuz.plannh.data.flowchart.Group.GROUP_MIN_H;
 import static com.sbancuz.plannh.data.flowchart.Group.GROUP_MIN_W;
@@ -10,6 +10,8 @@ import com.cleanroommc.modularui.api.widget.ResizeDragArea;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.gui.common.FlowchartWidget;
+import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
 
 public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IFlowchartDraggable, IDragResizeable {
 

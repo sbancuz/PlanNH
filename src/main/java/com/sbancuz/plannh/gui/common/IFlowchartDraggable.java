@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.gui;
+package com.sbancuz.plannh.gui.common;
 
 import org.jetbrains.annotations.Nullable;
 

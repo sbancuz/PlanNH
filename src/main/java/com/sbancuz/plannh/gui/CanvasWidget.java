@@ -106,7 +106,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Getter
     private boolean menuOpen;
-    private final Menu<?> contextMenu2;
+    private final Menu<?> contextMenu;
 
     private final ModularPanel panel;
 
@@ -122,7 +122,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         full();
         marginBottom(18);
 
-        contextMenu2 = menu;
+        contextMenu = menu;
         rebuildNoteWidgets();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
@@ -589,7 +589,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void openContextMenu() {
-        contextMenu2.pos(getContext().getAbsMouseX(), getContext().getAbsMouseY());
+        contextMenu.pos(getContext().getAbsMouseX(), getContext().getAbsMouseY());
         menuOpen = true;
     }
 
@@ -737,22 +737,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         child(new NodeWidget(this, node));
 
         menuOpen = false;
-    }
-
-    @Nullable
-    private ContextMenuWidget contextMenu = null;
-
-    public void showContextMenu(final int x, final int y, final List<ContextMenuWidget.MenuItem> items) {
-        closeContextMenu();
-        contextMenu = new ContextMenuWidget(this, items, x, y);
-        child(contextMenu);
-    }
-
-    public void closeContextMenu() {
-        if (contextMenu != null) {
-            remove(contextMenu);
-            contextMenu = null;
-        }
     }
 
     private void showGroupContextMenu(final GroupWidget gw, final int cmx, final int cmy) {

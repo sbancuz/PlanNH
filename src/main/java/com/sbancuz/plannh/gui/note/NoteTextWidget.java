@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.gui;
+package com.sbancuz.plannh.gui.note;
 
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -6,6 +6,8 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.TextFieldTheme;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.sbancuz.plannh.data.flowchart.Note;
+import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.gui.common.FlowchartTextFieldWidget;
 
 public class NoteTextWidget extends FlowchartTextFieldWidget {
 

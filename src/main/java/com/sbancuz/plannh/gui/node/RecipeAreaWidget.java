@@ -1,11 +1,13 @@
-package com.sbancuz.plannh.gui;
+package com.sbancuz.plannh.gui.node;
 
 import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
 import static org.lwjgl.opengl.GL11.glDisable;
 import static org.lwjgl.opengl.GL11.glEnable;
 
-import codechicken.nei.PositionedStack;
-import com.cleanroommc.modularui.screen.RichTooltip;
+import java.awt.*;
+import java.util.List;
+import java.util.Objects;
+
 import net.minecraft.client.Minecraft;
 
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -13,18 +15,15 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.gtnewhorizons.modularui.api.math.Pos2d;
 import com.gtnewhorizons.modularui.api.math.Size;
 import com.sbancuz.plannh.data.flowchart.Node2;
+import com.sbancuz.plannh.gui.common.FlowchartWidget;
+import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
 import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
-
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 
 public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements IFlowchartDraggable {
 

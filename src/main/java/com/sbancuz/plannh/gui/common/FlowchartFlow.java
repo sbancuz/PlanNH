@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.gui;
+package com.sbancuz.plannh.gui.common;
 
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.widgets.layout.Flow;
