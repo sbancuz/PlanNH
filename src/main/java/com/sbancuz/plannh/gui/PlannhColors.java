@@ -1,7 +1,5 @@
 package com.sbancuz.plannh.gui;
 
-import javax.annotation.Nonnull;
-
 import com.cleanroommc.modularui.utils.Color;
 import com.gtnewhorizon.gtnhlib.color.ColorResource;
 
@@ -29,7 +27,8 @@ public final class PlannhColors {
         NOTE_BORDER        = C.argb("note_border",         "0xA0B4A050"),
         NOTE_BORDER_EDIT   = C.argb("note_border_edit",    "0xC8B4A03C"),
         SEPARATOR_LIGHT    = C.argb("separator_light",     "0x3CC8C8C8"),
-        SEPARATOR_DIM      = C.argb("separator_dim",       "0x32C8C8C8");
+        SEPARATOR_DIM      = C.argb("separator_dim",       "0x32C8C8C8"),
+        BACKGROUND         = C.argb("background",          "0x22000000");
 
     // ── Section Headers (summary highlight bars) ──
     public static final ColorResource
@@ -111,8 +110,7 @@ public final class PlannhColors {
      * Generates a deterministic title bar color from a recipe name hash.
      * Uses golden-ratio hue distribution for visual variety.
      */
-    @Nonnull
-    public static int titleColor(@Nonnull final String name) {
+    public static int titleColor(final String name) {
         final int hash = name.hashCode();
         final float hue = ((hash * 0.618033988749895f) % 1.0f + 1.0f) % 1.0f;
         final int rgb = java.awt.Color.HSBtoRGB(hue, 0.45f, 0.55f);
