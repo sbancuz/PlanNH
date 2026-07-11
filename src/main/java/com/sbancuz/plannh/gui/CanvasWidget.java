@@ -37,6 +37,10 @@ import com.sbancuz.plannh.data.flowchart.Node2;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.gui.common.FlowchartWidget;
+import com.sbancuz.plannh.gui.group.GroupWidget;
+import com.sbancuz.plannh.gui.node.NodeWidget;
+import com.sbancuz.plannh.gui.note.NoteWidget;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import lombok.Getter;
