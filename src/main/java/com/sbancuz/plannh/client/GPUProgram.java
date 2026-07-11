@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
 
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.gui.CanvasWidget;
 
 public enum GPUProgram {
@@ -58,21 +59,16 @@ public enum GPUProgram {
         GL20.glDeleteShader(vertex);
         GL20.glDeleteShader(fragment);
 
-        // TODO: setup a logger
         if (GL20.glGetProgrami(program, GL20.GL_LINK_STATUS) == GL11.GL_FALSE) {
-            // final String log = GL20.glGetProgramInfoLog(blurProgram, 4096);
-            // final Minecraft mc = Minecraft.getMinecraft();
-            // if (mc.thePlayer != null) {
-            // mc.thePlayer.addChatMessage(
-            // new net.minecraft.util.ChatComponentText("[PlanNH] Blur program link error: " + log));
-            // }
-            // GL20.glDeleteProgram(blurProgram);
+            final String log = GL20.glGetProgramInfoLog(program, 4096);
+            PlanNH.LOG.error("Shader link error: {}", log);
+            GL20.glDeleteProgram(program);
             program = INVALID;
             return false;
         }
 
         loaded = true;
-        return loaded;
+        return true;
     }
 
     public void bind() {
@@ -130,12 +126,8 @@ public enum GPUProgram {
         GL20.glShaderSource(shader, src);
         GL20.glCompileShader(shader);
         if (GL20.glGetShaderi(shader, GL20.GL_COMPILE_STATUS) == GL11.GL_FALSE) {
-            // final String log = GL20.glGetShaderInfoLog(shader, 4096);
-            // final Minecraft mc = Minecraft.getMinecraft();
-            // if (mc.thePlayer != null) {
-            // mc.thePlayer.addChatMessage(
-            // new net.minecraft.util.ChatComponentText("[PlanNH] Shader error: " + log));
-            // }
+            final String log = GL20.glGetShaderInfoLog(shader, 4096);
+            PlanNH.LOG.error("Shader error: {}", log);
             GL20.glDeleteShader(shader);
             return INVALID;
         }
