@@ -35,13 +35,17 @@ public abstract class ScreenEffect {
         if (width <= 0 || height <= 0) return;
 
         final Minecraft mc = Minecraft.getMinecraft();
-        final ScaledResolution sr = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
-        final int sf = sr.getScaleFactor();
-        final int newTexW = width * sf;
-        final int newTexH = height * sf;
+        boolean resolutionChanged = false;
+        if (prevDisplayHeight != mc.displayHeight || prevDisplayWidth != mc.displayWidth) {
+            final ScaledResolution sr = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
 
-        final boolean resChanged = mc.displayWidth != prevDisplayWidth || mc.displayHeight != prevDisplayHeight;
-        final boolean sizeChanged = newTexW != textureWidth || newTexH != textureHeight;
+            prevDisplayWidth = mc.displayWidth;
+            prevDisplayHeight = mc.displayHeight;
+            scaleFactor = sr.getScaleFactor();
+            textureWidth = width * scaleFactor;
+            textureHeight = height * scaleFactor;
+            resolutionChanged = true;
+        }
 
         // Ensure screen capture texture exists BEFORE onResolutionChange
         if (screenTex < 0) {
@@ -53,12 +57,7 @@ public abstract class ScreenEffect {
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
         }
 
-        if (resChanged || sizeChanged) {
-            prevDisplayWidth = mc.displayWidth;
-            prevDisplayHeight = mc.displayHeight;
-            scaleFactor = sf;
-            textureWidth = newTexW;
-            textureHeight = newTexH;
+        if (resolutionChanged) {
             onResolutionChange();
         }
 
@@ -72,7 +71,6 @@ public abstract class ScreenEffect {
 
         shader.bind();
         renderEffect(width, height);
-        shader.unbind();
 
         GL20.glUseProgram(prevProgram);
     }

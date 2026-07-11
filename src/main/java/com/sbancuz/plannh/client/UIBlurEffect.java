@@ -57,11 +57,6 @@ public class UIBlurEffect extends ScreenEffect {
             GL11.GL_RGBA,
             GL11.GL_UNSIGNED_BYTE,
             (ByteBuffer) null);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-
         if (fboId < 0) fboId = GL30.glGenFramebuffers();
         if (fboTex < 0) {
             fboTex = GL11.glGenTextures();
@@ -83,11 +78,6 @@ public class UIBlurEffect extends ScreenEffect {
             GL11.GL_RGBA,
             GL11.GL_UNSIGNED_BYTE,
             (ByteBuffer) null);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-
         final int prevFbo = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
         GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, fboId);
         GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, fboTex, 0);
@@ -152,7 +142,6 @@ public class UIBlurEffect extends ScreenEffect {
         shader.setUniformArray1f("uOffsets", offsets);
         shader.setUniformArray1f("uWeights", weights);
 
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, screenTex);
         drawFullScreenQuad();
 
         GL11.glMatrixMode(GL11.GL_PROJECTION);
@@ -164,8 +153,6 @@ public class UIBlurEffect extends ScreenEffect {
         // --- Vertical Pass: blur + upscale (half-res fboTex -> full-res screen)
         GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, prevFbo);
         shader.setUniform2f("uStep", 0.0f, 1.0f / textureHeight);
-        shader.setUniformArray1f("uOffsets", offsets);
-        shader.setUniformArray1f("uWeights", weights);
 
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, fboTex);
         drawFullQuad(width, height);

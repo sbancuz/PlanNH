@@ -4,11 +4,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.FloatBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
 
@@ -24,14 +26,11 @@ public enum GPUProgram {
     final private String vertexPath;
     final private String fragmentPath;
 
-    int vertex = INVALID;
-    int fragment = INVALID;
-
-    int program = INVALID;
-
-    boolean loaded = false;
+    private int program = INVALID;
+    private boolean loaded = false;
 
     private final Map<String, Integer> uniformCache = new HashMap<>();
+    private FloatBuffer uniformBuf;
 
     GPUProgram(String vertex, String fragment) {
         this.vertexPath = vertex;
@@ -45,9 +44,9 @@ public enum GPUProgram {
         final String fragmentSrc = loadShaderSource(fragmentPath);
         if (vertexSrc == null || fragmentSrc == null) return false;
 
-        vertex = compileShader(GL20.GL_VERTEX_SHADER, vertexSrc);
+        int vertex = compileShader(GL20.GL_VERTEX_SHADER, vertexSrc);
         if (vertex == INVALID) return false;
-        fragment = compileShader(GL20.GL_FRAGMENT_SHADER, fragmentSrc);
+        int fragment = compileShader(GL20.GL_FRAGMENT_SHADER, fragmentSrc);
         if (fragment == INVALID) return false;
 
         program = GL20.glCreateProgram();
@@ -100,9 +99,13 @@ public enum GPUProgram {
 
     public void setUniformArray1f(final String name, final float[] v) {
         final int base = getUniform(name);
-        for (int i = 0; i < v.length; i++) {
-            GL20.glUniform1f(base + i, v[i]);
+        if (uniformBuf == null || uniformBuf.capacity() < v.length) {
+            uniformBuf = BufferUtils.createFloatBuffer(v.length);
         }
+        uniformBuf.clear();
+        uniformBuf.put(v);
+        uniformBuf.flip();
+        GL20.glUniform1(base, uniformBuf);
     }
 
     private static @Nullable String loadShaderSource(final String path) {
