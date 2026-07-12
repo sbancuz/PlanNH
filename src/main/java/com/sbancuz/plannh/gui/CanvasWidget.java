@@ -18,7 +18,9 @@ import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.BufferBuilder;
+import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
+import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.Stencil;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -132,6 +134,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         contextMenu2 = menu;
         rebuildNoteWidgets();
         rebuildGroupWidgets();
+
+        background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
     }
 
     public void removeNode(final UUID nodeId) {
@@ -316,22 +320,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Override
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
-        final int aw = getArea().width;
-        final int ah = getArea().height;
+        final int width = getArea().width;
+        final int height = getArea().height;
         final int x = getArea().x;
         final int y = getArea().y;
-        if (aw <= 0 || ah <= 0) return;
-
-        // Already in local coords
-        GuiDraw.drawRect(0, 0, aw, ah, backgroundColor.getHexValue(PlannhColors.BACKGROUND.getColor()));
-
-        effect.execute(x, y, aw, ah);
-
-        if (showGrid.getIntValue(NEIPlanConfig.ConfigShowGrid.ON) == NEIPlanConfig.ConfigShowGrid.ON) {
-            drawGrid(aw, ah);
-        }
+        if (width <= 0 || height <= 0) return;
 
         super.draw(context, widgetTheme);
+
+        effect.execute(x, y, width, height);
+        if (showGrid.getIntValue(NEIPlanConfig.ConfigShowGrid.ON) == NEIPlanConfig.ConfigShowGrid.ON) {
+            drawGrid(width, height);
+        }
 
         drawArrows();
 
