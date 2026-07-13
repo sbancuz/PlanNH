@@ -124,7 +124,6 @@ public class UIBlurEffect extends ScreenEffect {
 
         GL11.glColorMask(true, true, true, true);
         GL11.glDisable(GL11.GL_CULL_FACE);
-        GL11.glDisable(GL11.GL_BLEND);
 
         // --- Horizontal Pass: downsample + blur (full-res screenTex -> half-res fboTex)
         GL11.glPushAttrib(GL11.GL_VIEWPORT_BIT);

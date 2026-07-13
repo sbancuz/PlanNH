@@ -327,7 +327,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (width <= 0 || height <= 0) return;
 
         super.draw(context, widgetTheme);
-
         effect.execute(x, y, width, height);
         if (showGrid.getIntValue(NEIPlanConfig.ConfigShowGrid.ON) == NEIPlanConfig.ConfigShowGrid.ON) {
             drawGrid(width, height);

@@ -68,10 +68,17 @@ public abstract class ScreenEffect {
         GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, screenX, screenY, textureWidth, textureHeight);
 
         final int prevProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        final boolean prevBlend = GL11.glGetBoolean(GL11.GL_BLEND);
+        final boolean prevAlphaTest = GL11.glGetBoolean(GL11.GL_ALPHA_TEST);
+
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
 
         shader.bind();
         renderEffect(width, height);
 
+        if (prevAlphaTest) GL11.glEnable(GL11.GL_ALPHA_TEST);
+        if (prevBlend) GL11.glEnable(GL11.GL_BLEND);
         GL20.glUseProgram(prevProgram);
     }
 
