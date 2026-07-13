@@ -191,6 +191,9 @@ public final class IngredientColors {
         if (result == null) result = fromResourcePng(icon, blocksAtlas);
         if (result == null) result = fromAtlasFrames(icon, !blocksAtlas);
         if (result == null) result = fromResourcePng(icon, !blocksAtlas);
+        if (result == null) {
+            PlanNH.LOG.debug("No pixels found for icon '{}' (blocksAtlas={})", icon.getIconName(), blocksAtlas);
+        }
         return result;
     }
 
@@ -234,6 +237,7 @@ public final class IngredientColors {
             final int[] pixels = image.getRGB(0, 0, width, height, null, 0, width);
             return modeWithOutlineFallback(pixels, width, height);
         } catch (final Exception e) {
+            PlanNH.LOG.debug("PNG read failed for icon '{}' at {}: {}", name, location, e.toString());
             return null;
         }
     }
