@@ -12,7 +12,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
-import com.cleanroommc.modularui.ModularUI;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerIngredientProvider;
@@ -20,6 +19,8 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -29,7 +30,7 @@ import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
-import com.sbancuz.plannh.nei.NodeLookupContext;
+import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.drawable.DrawableBuilder;
@@ -38,7 +39,6 @@ import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
-import gregtech.api.util.GTUtility;
 import lombok.Getter;
 
 public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Interactable, RecipeViewerIngredientProvider {
@@ -272,7 +272,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 (float) neiWidget.w / 2 - (float) titleW / 2,
                 TITLE_TEXT_Y,
                 1.0f,
-                PlannhColors.TEXT_BLACK.getColor(),
+                PlannhColors.textOn(titleCol),
                 false);
 
             if (node.machineConfig.hasAnyBoost()) {
@@ -802,7 +802,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (result != null) {
             // Remember the origin so a recipe added from the upcoming NEI lookup can be wired
             // back to this node automatically.
-            NodeLookupContext.set(node.id, result);
+            PlanAPI.lookupContext()
+                .set(node.id, result);
         }
         return result;
     }
@@ -881,9 +882,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     @Nullable
     private static ItemStack stackForPort(final Port<?> port) {
         if (port.getType() == RecipePropertyAPI.ITEM) return (ItemStack) port.getValue();
-        if (port.getType() == RecipePropertyAPI.FLUID && ModularUI.Mods.GT5U.isLoaded()) {
+        if (port.getType() == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) {
             final FluidStack fs = (FluidStack) port.getValue();
-            if (fs != null) return GTUtility.getFluidDisplayStack(fs, false);
+            if (fs != null) return GTHooks.fluidDisplayStack(fs);
         }
         return null;
     }

@@ -767,8 +767,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         // menuOpen = false;
 
         float delta = direction == UpOrDown.UP ? ZOOM_STEP : -ZOOM_STEP;
-        // Real LWJGL2 (dev client, vanilla installs) reports the wheel in multiples of +-120 per
-        // notch, while lwjgl3ify (all modern GTNH packs) reports notch counts directly.
+        // Normalize LWJGL2-style +-120-per-notch wheel deltas to notch counts.
         final int magnitude = Math.abs(amount);
         delta *= Math.max(1, magnitude >= 120 ? magnitude / 120 : magnitude);
         final float oldZoom = graph.getZoom();

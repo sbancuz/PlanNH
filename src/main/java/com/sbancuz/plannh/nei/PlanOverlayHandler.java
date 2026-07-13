@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
-import com.cleanroommc.modularui.ModularUI;
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.PropertyProvider;
@@ -17,13 +19,15 @@ import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
+import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiOverlayButton;
+import codechicken.nei.recipe.GuiUsageRecipe;
 import codechicken.nei.recipe.IRecipeHandler;
-import gregtech.api.util.GTUtility;
 
 public class PlanOverlayHandler implements IOverlayHandler {
 
@@ -75,18 +79,28 @@ public class PlanOverlayHandler implements IOverlayHandler {
      * If this recipe was added from an NEI lookup started on a node's ingredient (R/U on a
      * PlanNH node), wire the new node to that origin - but only on the looked-up ingredient, so
      * lookups that wandered several recipe layers deep don't create bogus edges.
+     *
+     * <p>
+     * The lookup DIRECTION comes from the NEI screen the + was clicked on: a recipe screen
+     * (GuiCraftingRecipe, the R key) lists producers of the ingredient, so the added node feeds
+     * the origin; a usage screen (GuiUsageRecipe, the U key) lists consumers, so the origin
+     * feeds the added node. MUI2's ingredient provider cannot distinguish R from U at lookup
+     * time, which is why the flag is read here rather than stored in the context.
      */
     private static void autoConnectToLookupOrigin(final Graph graph, final Node added) {
-        final UUID originId = NodeLookupContext.nodeId();
-        final ItemStack lookup = NodeLookupContext.stack();
-        if (originId == null || lookup == null) return;
-        final Node origin = graph.nodes.get(originId);
-        if (origin == null || origin.id.equals(added.id)) return;
+        final NodeLookupContext.Origin lookupOrigin = PlanAPI.lookupContext()
+            .consume();
+        if (lookupOrigin == null) return;
+        final Node origin = graph.nodes.get(lookupOrigin.nodeId());
+        final ItemStack lookup = lookupOrigin.stack();
+        if (origin == null || lookup == null || origin.id.equals(added.id)) return;
 
-        // R lookup: the new recipe produces what the origin consumes...
-        if (connectOnIngredient(graph, added, origin, lookup)) return;
-        // ...or U lookup: the new recipe consumes what the origin produces.
-        connectOnIngredient(graph, origin, added, lookup);
+        final GuiScreen current = Minecraft.getMinecraft().currentScreen;
+        if (current instanceof GuiUsageRecipe) {
+            connectOnIngredient(graph, origin, added, lookup);
+        } else if (current instanceof GuiCraftingRecipe) {
+            connectOnIngredient(graph, added, origin, lookup);
+        }
     }
 
     /** Wires src's lookup-matching output to dst's first compatible (preferably unfed) input. */
@@ -117,8 +131,8 @@ public class PlanOverlayHandler implements IOverlayHandler {
         if (value instanceof final ItemStack stack) {
             return stack.isItemEqual(lookup);
         }
-        if (value instanceof final FluidStack fluidValue && ModularUI.Mods.GT5U.isLoaded()) {
-            final FluidStack lookupFluid = GTUtility.getFluidFromDisplayStack(lookup);
+        if (value instanceof final FluidStack fluidValue && Compat.GREGTECH.isLoaded) {
+            final FluidStack lookupFluid = GTHooks.fluidFromDisplayStack(lookup);
             return lookupFluid != null && lookupFluid.getFluid() == fluidValue.getFluid();
         }
         return false;

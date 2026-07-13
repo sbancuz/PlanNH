@@ -23,14 +23,13 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GLContext;
 
-import com.cleanroommc.modularui.ModularUI;
 import com.cleanroommc.modularui.utils.Color;
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
 
 import codechicken.nei.guihook.GuiContainerManager;
-import gregtech.api.items.MetaGeneratedItem;
-import gregtech.api.util.GTUtility;
 
 /**
  * Derives a representative color for an ingredient from its sprite, so ports and edges can be
@@ -47,8 +46,9 @@ public final class IngredientColors {
     private static final Map<String, Integer> CACHE = new HashMap<>();
     private static final int ALPHA_OPAQUE_MIN = 128;
 
-    private static final int OUTLINE_DARK = 0xF00A0A0A;
-    private static final int OUTLINE_LIGHT = 0xF0F2F2F2;
+    private static final int UNKNOWN = -1;
+    private static final int NO_TINT = 0xFFFFFF;
+    private static final int RGB_MASK = 0xFFFFFF;
 
     private IngredientColors() {}
 
@@ -65,9 +65,9 @@ public final class IngredientColors {
         } else if (value instanceof final FluidStack fluidStack) {
             rgb = ofFluid(fluidStack);
         } else {
-            rgb = -1;
+            rgb = UNKNOWN;
         }
-        if (rgb == -1) return fallback;
+        if (rgb == UNKNOWN) return fallback;
         return Color.withAlpha(rgb, Color.getAlpha(fallback));
     }
 
@@ -81,7 +81,7 @@ public final class IngredientColors {
             Color.getRed(color) / 255f,
             Color.getGreen(color) / 255f,
             Color.getBlue(color) / 255f);
-        return lum < 0.5f ? OUTLINE_LIGHT : OUTLINE_DARK;
+        return lum < 0.5f ? PlannhColors.EDGE_OUTLINE_LIGHT.getColor() : PlannhColors.EDGE_OUTLINE_DARK.getColor();
     }
 
     private static float luminance(final float r, final float g, final float b) {
@@ -89,7 +89,7 @@ public final class IngredientColors {
     }
 
     private static int ofItem(final ItemStack stack) {
-        if (stack == null || stack.getItem() == null) return -1;
+        if (stack == null || stack.getItem() == null) return UNKNOWN;
         final String key = "item:" + Item.itemRegistry.getNameForObject(stack.getItem()) + ":" + stack.getItemDamage();
         return CACHE.computeIfAbsent(key, k -> {
             try {
@@ -122,8 +122,8 @@ public final class IngredientColors {
                     int tint = item.getColorFromItemStack(stack, pass);
                     // GT material items are grayscale sprites tinted by their custom renderer,
                     // not by getColorFromItemStack; apply the material color to the base pass.
-                    if (pass == 0 && (tint & 0xFFFFFF) == 0xFFFFFF) tint = gtTint;
-                    if ((tint & 0xFFFFFF) != 0xFFFFFF) rgb = multiplyRgb(rgb, tint);
+                    if (pass == 0 && (tint & RGB_MASK) == NO_TINT) tint = gtTint;
+                    if ((tint & RGB_MASK) != NO_TINT) rgb = multiplyRgb(rgb, tint);
                     final long count = modal[1];
                     r += (long) (rgb >> 16 & 0xFF) * count;
                     g += (long) (rgb >> 8 & 0xFF) * count;
@@ -132,18 +132,18 @@ public final class IngredientColors {
                 }
                 if (weight == 0) {
                     PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", k);
-                    return -1;
+                    return UNKNOWN;
                 }
                 return logColor(k, (int) (r / weight) << 16 | (int) (g / weight) << 8 | (int) (b / weight), "sprite");
             } catch (final Exception e) {
                 PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", k, e.toString());
-                return -1;
+                return UNKNOWN;
             }
         });
     }
 
     private static int ofFluid(final FluidStack fluidStack) {
-        if (fluidStack == null || fluidStack.getFluid() == null) return -1;
+        if (fluidStack == null || fluidStack.getFluid() == null) return UNKNOWN;
         final Fluid fluid = fluidStack.getFluid();
         final String key = "fluid:" + fluid.getName();
         // Manual get/put instead of computeIfAbsent: the display-stack path recurses into
@@ -278,42 +278,31 @@ public final class IngredientColors {
         }
     }
 
-    /**
-     * Chemistry-convention colors for fluids whose in-game color sources are unusable. Hydrogen
-     * defines a white fluid color, its texture region on the stitched atlas is empty, its fluid
-     * display item renders no pixels, and its GT material color is blue - while every player
-     * knows hydrogen as red-pink.
-     */
-    private static final Map<String, Integer> FLUID_CONVENTION_COLORS = Map.of("hydrogen", 0xE05A5A);
-
     private static int computeFluidColor(final FluidStack fluidStack, final Fluid fluid, final String key) {
         try {
-            final Integer convention = FLUID_CONVENTION_COLORS.get(fluid.getName());
-            if (convention != null) return logColor(key, convention, "convention");
-
             // The fluid's own color if it defines one.
             final int tint = fluid.getColor(fluidStack);
-            if ((tint & 0xFFFFFF) != 0xFFFFFF) return logColor(key, tint & 0xFFFFFF, "fluid-color");
+            if ((tint & RGB_MASK) != NO_TINT) return logColor(key, tint & RGB_MASK, "fluid-color");
 
             // Otherwise color it the way NEI displays it: GT's fluid display item carries the
             // exact icon + tint combination the player sees in recipe screens.
-            if (ModularUI.Mods.GT5U.isLoaded()) {
-                final ItemStack display = GTUtility.getFluidDisplayStack(fluidStack, false);
+            if (Compat.GREGTECH.isLoaded) {
+                final ItemStack display = GTHooks.fluidDisplayStack(fluidStack);
                 if (display != null) {
                     final int rgb = ofItem(display);
-                    if (rgb != -1) return logColor(key, rgb, "fluid-display");
+                    if (rgb != UNKNOWN) return logColor(key, rgb, "fluid-display");
                 }
             }
 
             final long[] modal = modalSpriteColor(fluid.getIcon(fluidStack), true);
             if (modal == null) {
                 PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", key);
-                return -1;
+                return UNKNOWN;
             }
             return logColor(key, (int) modal[0], "fluid-sprite");
         } catch (final Exception e) {
             PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", key, e.toString());
-            return -1;
+            return UNKNOWN;
         }
     }
 
@@ -462,22 +451,16 @@ public final class IngredientColors {
         return rgb;
     }
 
+    /** Bare RGB: an alpha byte here would collide with the UNKNOWN sentinel (0xFFFFFFFF). */
     private static int multiplyRgb(final int rgb, final int tint) {
-        final int r = (rgb >> 16 & 0xFF) * (tint >> 16 & 0xFF) / 255;
-        final int g = (rgb >> 8 & 0xFF) * (tint >> 8 & 0xFF) / 255;
-        final int b = (rgb & 0xFF) * (tint & 0xFF) / 255;
-        return r << 16 | g << 8 | b;
+        return Color.rgb(
+            Color.getRed(rgb) * Color.getRed(tint) / 255,
+            Color.getGreen(rgb) * Color.getGreen(tint) / 255,
+            Color.getBlue(rgb) * Color.getBlue(tint) / 255) & RGB_MASK;
     }
 
     /** GT material color for MetaGeneratedItems (their renderer applies it, so the item API lies). */
     private static int gtMaterialTint(final ItemStack stack) {
-        if (!ModularUI.Mods.GT5U.isLoaded()) return 0xFFFFFF;
-        if (stack.getItem() instanceof final MetaGeneratedItem gtItem) {
-            final short[] rgba = gtItem.getRGBa(stack);
-            if (rgba != null && rgba.length >= 3) {
-                return (rgba[0] & 0xFF) << 16 | (rgba[1] & 0xFF) << 8 | (rgba[2] & 0xFF);
-            }
-        }
-        return 0xFFFFFF;
+        return Compat.GREGTECH.isLoaded ? GTHooks.materialTint(stack) : NO_TINT;
     }
 }
