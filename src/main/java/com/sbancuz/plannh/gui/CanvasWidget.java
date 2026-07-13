@@ -44,8 +44,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private static final int ARROW_COLOR_ITEM = PlannhColors.ARROW_ITEM.getColor();
     private static final int ARROW_COLOR_FLUID = PlannhColors.ARROW_FLUID.getColor();
-    private static final int EDGE_OUTLINE = 0xE0141414;
-    private static final int EDGE_OUTLINE_EXTRA = 2;
+    private static final int EDGE_OUTLINE = 0xF00A0A0A;
+    private static final int EDGE_OUTLINE_EXTRA = 3;
     private static final int PREVIEW_COLOR = PlannhColors.PREVIEW_HIGHLIGHT.getColor();
     private static final int CLAMP_MARGIN = 4;
     private static final int NODE_W_ESTIMATE = 120;
