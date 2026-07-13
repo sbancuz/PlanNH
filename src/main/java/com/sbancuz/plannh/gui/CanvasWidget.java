@@ -44,6 +44,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private static final int ARROW_COLOR_ITEM = PlannhColors.ARROW_ITEM.getColor();
     private static final int ARROW_COLOR_FLUID = PlannhColors.ARROW_FLUID.getColor();
+    private static final int EDGE_OUTLINE = 0xE0141414;
+    private static final int EDGE_OUTLINE_EXTRA = 2;
     private static final int PREVIEW_COLOR = PlannhColors.PREVIEW_HIGHLIGHT.getColor();
     private static final int CLAMP_MARGIN = 4;
     private static final int NODE_W_ESTIMATE = 120;
@@ -487,15 +489,21 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         // Stop the line at the arrow base so it does not poke through the head (last segment is horizontal).
         sx[n - 1] = Math.round(x2 - as);
 
-        drawLineStrip(sx, sy, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
+        final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
+        // Dark underlay so the colored line stays readable over any world background.
+        drawLineStrip(sx, sy, EDGE_OUTLINE, thickness + EDGE_OUTLINE_EXTRA);
+        drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, EDGE_OUTLINE);
+        drawLineStrip(sx, sy, color, thickness);
         drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO, color);
     }
 
     private void drawArrow(final int x1, final int y1, final int x2, final int y2, final int color) {
         final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
         final int ex = Math.round(x2 - as);
-        drawOrthogonalLine(x1, y1, x2, y2, ex, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
-
+        final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
+        drawOrthogonalLine(x1, y1, x2, y2, ex, EDGE_OUTLINE, thickness + EDGE_OUTLINE_EXTRA);
+        drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, EDGE_OUTLINE);
+        drawOrthogonalLine(x1, y1, x2, y2, ex, color, thickness);
         drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO, color);
     }
 

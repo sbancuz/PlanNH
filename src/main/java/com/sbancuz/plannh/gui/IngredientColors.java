@@ -30,6 +30,13 @@ public final class IngredientColors {
     private static final Map<String, Integer> CACHE = new HashMap<>();
     private static final int ALPHA_OPAQUE_MIN = 128;
 
+    /**
+     * Minimum perceived luminance for derived colors. The canvas background is the world, which
+     * can be nearly black at night, so dark sprite colors (e.g. ethenone's navy) are lifted to
+     * stay legible while keeping their hue.
+     */
+    private static final float MIN_LUMINANCE = 0.42f;
+
     private IngredientColors() {}
 
     /** Representative ARGB color for the port's ingredient; {@code fallback} (with its alpha) if unknown. */
@@ -44,7 +51,40 @@ public final class IngredientColors {
             rgb = -1;
         }
         if (rgb == -1) return fallback;
-        return Color.withAlpha(rgb, Color.getAlpha(fallback));
+        return Color.withAlpha(ensureReadable(rgb), Color.getAlpha(fallback));
+    }
+
+    /**
+     * Lifts a color to {@link #MIN_LUMINANCE}: first scaled up (preserves saturation), then
+     * blended toward white for whatever channel clipping ate (a saturated navy can't reach the
+     * target by scaling alone).
+     */
+    private static int ensureReadable(final int rgb) {
+        float r = (rgb >> 16 & 0xFF) / 255f;
+        float g = (rgb >> 8 & 0xFF) / 255f;
+        float b = (rgb & 0xFF) / 255f;
+        float lum = luminance(r, g, b);
+        if (lum >= MIN_LUMINANCE) return rgb;
+        if (lum < 0.004f) {
+            final int v = Math.round(MIN_LUMINANCE * 255);
+            return v << 16 | v << 8 | v;
+        }
+        final float scale = MIN_LUMINANCE / lum;
+        r = Math.min(1f, r * scale);
+        g = Math.min(1f, g * scale);
+        b = Math.min(1f, b * scale);
+        lum = luminance(r, g, b);
+        if (lum < MIN_LUMINANCE) {
+            final float t = (MIN_LUMINANCE - lum) / (1f - lum);
+            r += (1f - r) * t;
+            g += (1f - g) * t;
+            b += (1f - b) * t;
+        }
+        return Math.round(r * 255) << 16 | Math.round(g * 255) << 8 | Math.round(b * 255);
+    }
+
+    private static float luminance(final float r, final float g, final float b) {
+        return 0.299f * r + 0.587f * g + 0.114f * b;
     }
 
     /** Mixes the color toward white, for hover rings and highlights. */

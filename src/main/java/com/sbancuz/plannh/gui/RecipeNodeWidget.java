@@ -99,6 +99,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static final int LEFT_CONTENT_X = 8;
     private static final int THROUGHPUT_GAP = 4;
     private static final int LIST_INDENT = 4;
+    private static final int PIN_OUTLINE = 0xE0141414;
+    private static final int ROW_HOVER = 0x40FFFFFF;
 
     // Settings panel
     private static final int CONFIG_PANEL_INSET = 2;
@@ -139,6 +141,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private long lastHandlerUpdate = 0;
     private boolean configOpen = false;
     private final List<ClickZone> configZones = new ArrayList<>();
+    private int hoverMx = -10000;
+    private int hoverMy = -10000;
 
     private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action) {
 
@@ -231,6 +235,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
         ensureRecipeHandler();
 
+        // Widget-local mouse while hovered; parked far away otherwise so hover highlights
+        // (NEI's white box, our row highlight) only show on the node actually under the mouse.
+        if (getContext().isHovered(this)) {
+            hoverMx = canvas.getMouseCanvasX() - Math.round(node.x);
+            hoverMy = canvas.getMouseCanvasY() - Math.round(node.y);
+        } else {
+            hoverMx = -10000;
+            hoverMy = -10000;
+        }
+
         if (neiWidget != null && handlerRef != null) {
             final long now = Minecraft.getSystemTime();
             if (now - lastHandlerUpdate > NEI_HANDLER_THROTTLE_MS) {
@@ -281,7 +295,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 configOpen ? PlannhColors.ACCENT_GREEN.getColor() : PlannhColors.TEXT_DIM.getColor(),
                 false);
 
-            neiWidget.draw(CONTENT_INSET, CONTENT_TOP);
+            // Passing the real mouse position enables NEI's own hover box on recipe stacks,
+            // signaling that the R/U keybinds work there.
+            neiWidget.draw(hoverMx, hoverMy);
             drawThroughputInfo();
             drawConfigContent();
             drawCloseButtonPixel(getArea().width, getArea().height);
@@ -400,8 +416,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             final int fallback = port.getType() == RecipePropertyAPI.FLUID ? PlannhColors.PIN_FLUID_OUT.getColor()
                 : PlannhColors.PIN_OUTPUT.getColor();
             final int color = IngredientColors.of(port, fallback);
-            final int ring = Color.withAlpha(IngredientColors.brighten(color, 0.5f), 0x3C);
-            GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, ring);
+            // Dark outline keeps the pin visible against any world background.
+            GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, PIN_OUTLINE);
             GuiDraw.drawRect(getArea().width - ps, py, ps, ps, color);
         }
         for (int i = 0; i < node.inputs.size(); i++) {
@@ -410,8 +426,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             final int fallback = port.getType() == RecipePropertyAPI.FLUID ? PlannhColors.PIN_FLUID_IN.getColor()
                 : PlannhColors.PIN_INPUT.getColor();
             final int color = IngredientColors.of(port, fallback);
-            final int ring = Color.withAlpha(IngredientColors.brighten(color, 0.5f), 0x3C);
-            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, ring);
+            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PIN_OUTLINE);
             GuiDraw.drawRect(0, py, ps, ps, color);
         }
     }
@@ -454,6 +469,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             final Port port = ports.get(i);
             final String label = portLabel(port, i, nb, sec, ops, throughput, output);
             if (label == null) continue;
+            if (hoverMy >= y && hoverMy < y + LINE_H && hoverMx >= x && hoverMx < getArea().width - x) {
+                // NEI-style hover box: tells the user the R/U keybinds work on this row.
+                GuiDraw.drawRect(x - 1, y - 2, getArea().width - 2 * x + 2, LINE_H, ROW_HOVER);
+            }
             final int color = portColor(port, output);
             GuiDraw.drawText(label, x + (output ? LIST_INDENT : 0), y, 1.0f, color, false);
             y += LINE_H;
