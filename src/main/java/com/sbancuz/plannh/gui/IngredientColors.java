@@ -234,6 +234,11 @@ public final class IngredientColors {
             GL11.glClearColor(0f, 0f, 0f, 0f);
             GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             GuiContainerManager.enable2DRender();
+            // The sampler is invoked mid-GUI-draw, typically right after untextured rect
+            // drawing: texturing must be re-enabled or vanilla-path icons render as flat
+            // white/tint quads (custom renderers that bind their own textures were unaffected).
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glColor4f(1f, 1f, 1f, 1f);
             // Empty quantity string suppresses the white amount text (fluid displays carry
             // one), which otherwise wins the modal vote over pale sprites.
             GuiContainerManager.drawItem(0, 0, stack, false, "");

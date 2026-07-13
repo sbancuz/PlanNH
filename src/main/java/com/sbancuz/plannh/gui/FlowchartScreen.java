@@ -5,13 +5,17 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
+
+import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.drawable.Rectangle;
+import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerIngredientProvider;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -235,6 +239,32 @@ public class FlowchartScreen extends ModularScreen {
     public void onClose() {
         PlanAPI.save();
         super.onClose();
+    }
+
+    @Override
+    public void drawForeground() {
+        super.drawForeground();
+        drawHoveredIngredientTooltip();
+    }
+
+    /**
+     * NEI's native tooltip pass renders before/among widget content and ends up depth-buried
+     * under node widgets, so the hovered ingredient's tooltip is redrawn here: the foreground
+     * phase is the last thing drawn, and depth is explicitly off. The user must never have to
+     * rearrange their chart to read a tooltip.
+     */
+    private void drawHoveredIngredientTooltip() {
+        if (!(getContext().getHovered() instanceof final RecipeViewerIngredientProvider provider)) return;
+        final ItemStack stack = provider.getStackForRecipeViewer();
+        if (stack == null) return;
+        final List<String> lines = codechicken.nei.guihook.GuiContainerManager
+            .itemDisplayNameMultiline(stack, null, true);
+        if (lines.isEmpty()) return;
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        codechicken.lib.gui.GuiDraw
+            .drawMultilineTip(getContext().getAbsMouseX() + 12, getContext().getAbsMouseY() - 12, lines);
+        GL11.glPopAttrib();
     }
 
     // ── Slot bar helpers ──
