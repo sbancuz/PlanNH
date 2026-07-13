@@ -17,9 +17,12 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
+import com.cleanroommc.modularui.ModularUI;
 import com.cleanroommc.modularui.utils.Color;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Port;
+
+import gregtech.api.items.MetaGeneratedItem;
 
 /**
  * Derives a representative color for an ingredient from its sprite, so ports and edges can be
@@ -36,16 +39,16 @@ public final class IngredientColors {
     private static final Map<String, Integer> CACHE = new HashMap<>();
     private static final int ALPHA_OPAQUE_MIN = 128;
 
-    /**
-     * Minimum perceived luminance for derived colors. The canvas background is the world, which
-     * can be nearly black at night, so dark sprite colors (e.g. ethenone's navy) are lifted to
-     * stay legible while keeping their hue.
-     */
-    private static final float MIN_LUMINANCE = 0.42f;
+    private static final int OUTLINE_DARK = 0xF00A0A0A;
+    private static final int OUTLINE_LIGHT = 0xF0F2F2F2;
 
     private IngredientColors() {}
 
-    /** Representative ARGB color for the port's ingredient; {@code fallback} (with its alpha) if unknown. */
+    /**
+     * Representative ARGB color for the port's ingredient; {@code fallback} (with its alpha) if
+     * unknown. Colors are true to the sprite - readability on arbitrary backgrounds comes from
+     * pairing them with {@link #outlineFor(int)}.
+     */
     public static int of(final Port<?> port, final int fallback) {
         final Object value = port.getValue();
         final int rgb;
@@ -57,48 +60,24 @@ public final class IngredientColors {
             rgb = -1;
         }
         if (rgb == -1) return fallback;
-        return Color.withAlpha(ensureReadable(rgb), Color.getAlpha(fallback));
+        return Color.withAlpha(rgb, Color.getAlpha(fallback));
     }
 
     /**
-     * Lifts a color to {@link #MIN_LUMINANCE}: first scaled up (preserves saturation), then
-     * blended toward white for whatever channel clipping ate (a saturated navy can't reach the
-     * target by scaling alone).
+     * Contrast outline for a color: light outline under dark colors, dark outline under light
+     * ones. This lets derived colors keep their true luminance (brown stays brown, navy stays
+     * navy) and still read on any world background.
      */
-    private static int ensureReadable(final int rgb) {
-        float r = (rgb >> 16 & 0xFF) / 255f;
-        float g = (rgb >> 8 & 0xFF) / 255f;
-        float b = (rgb & 0xFF) / 255f;
-        float lum = luminance(r, g, b);
-        if (lum >= MIN_LUMINANCE) return rgb;
-        if (lum < 0.004f) {
-            final int v = Math.round(MIN_LUMINANCE * 255);
-            return v << 16 | v << 8 | v;
-        }
-        final float scale = MIN_LUMINANCE / lum;
-        r = Math.min(1f, r * scale);
-        g = Math.min(1f, g * scale);
-        b = Math.min(1f, b * scale);
-        lum = luminance(r, g, b);
-        if (lum < MIN_LUMINANCE) {
-            final float t = (MIN_LUMINANCE - lum) / (1f - lum);
-            r += (1f - r) * t;
-            g += (1f - g) * t;
-            b += (1f - b) * t;
-        }
-        return Math.round(r * 255) << 16 | Math.round(g * 255) << 8 | Math.round(b * 255);
+    public static int outlineFor(final int color) {
+        final float lum = luminance(
+            Color.getRed(color) / 255f,
+            Color.getGreen(color) / 255f,
+            Color.getBlue(color) / 255f);
+        return lum < 0.5f ? OUTLINE_LIGHT : OUTLINE_DARK;
     }
 
     private static float luminance(final float r, final float g, final float b) {
         return 0.299f * r + 0.587f * g + 0.114f * b;
-    }
-
-    /** Mixes the color toward white, for hover rings and highlights. */
-    public static int brighten(final int color, final float factor) {
-        final int r = Color.getRed(color) + Math.round((255 - Color.getRed(color)) * factor);
-        final int g = Color.getGreen(color) + Math.round((255 - Color.getGreen(color)) * factor);
-        final int b = Color.getBlue(color) + Math.round((255 - Color.getBlue(color)) * factor);
-        return Color.argb(r, g, b, Color.getAlpha(color));
     }
 
     private static int ofItem(final ItemStack stack) {
@@ -113,6 +92,7 @@ public final class IngredientColors {
                 final int passes = item.requiresMultipleRenderPasses()
                     ? Math.max(1, item.getRenderPasses(stack.getItemDamage()))
                     : 1;
+                final int gtTint = gtMaterialTint(stack);
                 long r = 0, g = 0, b = 0, weight = 0;
                 for (int pass = 0; pass < passes; pass++) {
                     IIcon icon;
@@ -125,7 +105,10 @@ public final class IngredientColors {
                     final long[] modal = modalSpriteColor(icon, item.getSpriteNumber() == 0);
                     if (modal == null) continue;
                     int rgb = (int) modal[0];
-                    final int tint = item.getColorFromItemStack(stack, pass);
+                    int tint = item.getColorFromItemStack(stack, pass);
+                    // GT material items are grayscale sprites tinted by their custom renderer,
+                    // not by getColorFromItemStack; apply the material color to the base pass.
+                    if (pass == 0 && (tint & 0xFFFFFF) == 0xFFFFFF) tint = gtTint;
                     if ((tint & 0xFFFFFF) != 0xFFFFFF) rgb = multiplyRgb(rgb, tint);
                     final long count = modal[1];
                     r += (long) (rgb >> 16 & 0xFF) * count;
@@ -288,5 +271,17 @@ public final class IngredientColors {
         final int g = (rgb >> 8 & 0xFF) * (tint >> 8 & 0xFF) / 255;
         final int b = (rgb & 0xFF) * (tint & 0xFF) / 255;
         return r << 16 | g << 8 | b;
+    }
+
+    /** GT material color for MetaGeneratedItems (their renderer applies it, so the item API lies). */
+    private static int gtMaterialTint(final ItemStack stack) {
+        if (!ModularUI.Mods.GT5U.isLoaded()) return 0xFFFFFF;
+        if (stack.getItem() instanceof final MetaGeneratedItem gtItem) {
+            final short[] rgba = gtItem.getRGBa(stack);
+            if (rgba != null && rgba.length >= 3) {
+                return (rgba[0] & 0xFF) << 16 | (rgba[1] & 0xFF) << 8 | (rgba[2] & 0xFF);
+            }
+        }
+        return 0xFFFFFF;
     }
 }

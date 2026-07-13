@@ -99,7 +99,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static final int LEFT_CONTENT_X = 8;
     private static final int THROUGHPUT_GAP = 4;
     private static final int LIST_INDENT = 4;
-    private static final int PIN_OUTLINE = 0xE0141414;
     private static final int ROW_HOVER = 0x40FFFFFF;
 
     // Settings panel
@@ -417,7 +416,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 : PlannhColors.PIN_OUTPUT.getColor();
             final int color = IngredientColors.of(port, fallback);
             // Dark outline keeps the pin visible against any world background.
-            GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, PIN_OUTLINE);
+            GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, IngredientColors.outlineFor(color));
             GuiDraw.drawRect(getArea().width - ps, py, ps, ps, color);
         }
         for (int i = 0; i < node.inputs.size(); i++) {
@@ -426,7 +425,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             final int fallback = port.getType() == RecipePropertyAPI.FLUID ? PlannhColors.PIN_FLUID_IN.getColor()
                 : PlannhColors.PIN_INPUT.getColor();
             final int color = IngredientColors.of(port, fallback);
-            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PIN_OUTLINE);
+            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, IngredientColors.outlineFor(color));
             GuiDraw.drawRect(0, py, ps, ps, color);
         }
     }

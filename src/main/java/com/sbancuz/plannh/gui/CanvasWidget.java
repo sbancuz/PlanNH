@@ -44,7 +44,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private static final int ARROW_COLOR_ITEM = PlannhColors.ARROW_ITEM.getColor();
     private static final int ARROW_COLOR_FLUID = PlannhColors.ARROW_FLUID.getColor();
-    private static final int EDGE_OUTLINE = 0xF00A0A0A;
     private static final int EDGE_OUTLINE_EXTRA = 3;
     private static final int PREVIEW_COLOR = PlannhColors.PREVIEW_HIGHLIGHT.getColor();
     private static final int CLAMP_MARGIN = 4;
@@ -490,9 +489,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         sx[n - 1] = Math.round(x2 - as);
 
         final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
-        // Dark underlay so the colored line stays readable over any world background.
-        drawLineStrip(sx, sy, EDGE_OUTLINE, thickness + EDGE_OUTLINE_EXTRA);
-        drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, EDGE_OUTLINE);
+        // Contrast underlay (light under dark colors, dark under light ones) so the colored
+        // line stays readable over any world background.
+        final int outline = IngredientColors.outlineFor(color);
+        drawLineStrip(sx, sy, outline, thickness + EDGE_OUTLINE_EXTRA);
+        drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, outline);
         drawLineStrip(sx, sy, color, thickness);
         drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO, color);
     }
@@ -501,8 +502,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
         final int ex = Math.round(x2 - as);
         final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
-        drawOrthogonalLine(x1, y1, x2, y2, ex, EDGE_OUTLINE, thickness + EDGE_OUTLINE_EXTRA);
-        drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, EDGE_OUTLINE);
+        final int outline = IngredientColors.outlineFor(color);
+        drawOrthogonalLine(x1, y1, x2, y2, ex, outline, thickness + EDGE_OUTLINE_EXTRA);
+        drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, outline);
         drawOrthogonalLine(x1, y1, x2, y2, ex, color, thickness);
         drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO, color);
     }
