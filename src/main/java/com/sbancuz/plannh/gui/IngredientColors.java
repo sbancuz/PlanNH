@@ -234,7 +234,9 @@ public final class IngredientColors {
             GL11.glClearColor(0f, 0f, 0f, 0f);
             GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             GuiContainerManager.enable2DRender();
-            GuiContainerManager.drawItem(0, 0, stack);
+            // Empty quantity string suppresses the white amount text (fluid displays carry
+            // one), which otherwise wins the modal vote over pale sprites.
+            GuiContainerManager.drawItem(0, 0, stack, false, "");
 
             final ByteBuffer buffer = BufferUtils.createByteBuffer(SAMPLE_SIZE * SAMPLE_SIZE * 4);
             GL11.glReadPixels(0, 0, SAMPLE_SIZE, SAMPLE_SIZE, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buffer);
@@ -395,9 +397,23 @@ public final class IngredientColors {
                 acc[3] += b;
             }
         }
+        // Saturation-weighted mode: pale sprites (diamond, gases) fragment their gradient over
+        // many near-white bins while pure white concentrates in one, so plain counts pick white.
+        // Weighting by saturation prefers the sprite's characteristic hue; for genuinely
+        // achromatic items (salt, dusts) all bins score equally and the biggest still wins.
         long[] best = null;
+        double bestScore = -1;
         for (final long[] acc : bins.values()) {
-            if (best == null || acc[0] > best[0]) best = acc;
+            final double r = (double) acc[1] / acc[0];
+            final double g = (double) acc[2] / acc[0];
+            final double b = (double) acc[3] / acc[0];
+            final double max = Math.max(r, Math.max(g, b));
+            final double saturation = max <= 0 ? 0 : (max - Math.min(r, Math.min(g, b))) / max;
+            final double score = acc[0] * (0.35 + saturation);
+            if (score > bestScore) {
+                bestScore = score;
+                best = acc;
+            }
         }
         if (best == null) return null;
         final int rgb = (int) (best[1] / best[0]) << 16 | (int) (best[2] / best[0]) << 8 | (int) (best[3] / best[0]);
