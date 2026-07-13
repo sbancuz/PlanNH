@@ -100,7 +100,7 @@ public final class IngredientColors {
                 // pixels. This is immune to the icon API misrepresenting custom renderers
                 // (GT material items, GT blocks, fluid display items...).
                 final long[] rendered = sampleRenderedStack(stack);
-                if (rendered != null) return (int) rendered[0];
+                if (rendered != null) return logColor(k, (int) rendered[0], "render-sample");
 
                 // weighted by how many opaque pixels each contributes.
                 final int passes = item.requiresMultipleRenderPasses()
@@ -134,7 +134,7 @@ public final class IngredientColors {
                     PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", k);
                     return -1;
                 }
-                return (int) (r / weight) << 16 | (int) (g / weight) << 8 | (int) (b / weight);
+                return logColor(k, (int) (r / weight) << 16 | (int) (g / weight) << 8 | (int) (b / weight), "sprite");
             } catch (final Exception e) {
                 PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", k, e.toString());
                 return -1;
@@ -271,7 +271,7 @@ public final class IngredientColors {
         try {
             // The fluid's own color if it defines one.
             final int tint = fluid.getColor(fluidStack);
-            if ((tint & 0xFFFFFF) != 0xFFFFFF) return tint & 0xFFFFFF;
+            if ((tint & 0xFFFFFF) != 0xFFFFFF) return logColor(key, tint & 0xFFFFFF, "fluid-color");
 
             // Otherwise color it the way NEI displays it: GT's fluid display item carries the
             // exact icon + tint combination the player sees in recipe screens.
@@ -279,7 +279,7 @@ public final class IngredientColors {
                 final ItemStack display = GTUtility.getFluidDisplayStack(fluidStack, false);
                 if (display != null) {
                     final int rgb = ofItem(display);
-                    if (rgb != -1) return rgb;
+                    if (rgb != -1) return logColor(key, rgb, "fluid-display");
                 }
             }
 
@@ -288,7 +288,7 @@ public final class IngredientColors {
                 PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", key);
                 return -1;
             }
-            return (int) modal[0];
+            return logColor(key, (int) modal[0], "fluid-sprite");
         } catch (final Exception e) {
             PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", key, e.toString());
             return -1;
@@ -416,6 +416,11 @@ public final class IngredientColors {
         final int y) {
         if (x < 0 || x >= width || y < 0 || y >= height) return false;
         return (pixels[y * width + x] >>> 24) < ALPHA_OPAQUE_MIN;
+    }
+
+    private static int logColor(final String key, final int rgb, final String source) {
+        PlanNH.LOG.debug("Ingredient color {} -> #{} via {}", key, String.format("%06X", rgb), source);
+        return rgb;
     }
 
     private static int multiplyRgb(final int rgb, final int tint) {
