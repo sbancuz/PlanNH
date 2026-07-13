@@ -234,6 +234,11 @@ public final class Serializer {
             .values()) groupsArray.add(GSON.toJsonTree(group));
         root.add("groups", groupsArray);
 
+        final JsonArray nodes2Array = new JsonArray();
+        for (Node2 node : graph.getNodes2()
+            .values()) nodes2Array.add(GSON.toJsonTree(node));
+        root.add("nodes2", nodes2Array);
+
         return root;
     }
 
@@ -330,6 +335,13 @@ public final class Serializer {
             final Group group = GSON.fromJson(elem, Group.class);
             graph.getGroups()
                 .put(group.getId(), group);
+        }
+
+        for (final JsonElement elem : root.getAsJsonArray("nodes2")) {
+            final Node2 node = GSON.fromJson(elem, Node2.class);
+            node.refresh();
+            graph.getNodes2()
+                .put(node.getId(), node);
         }
 
         return graph;

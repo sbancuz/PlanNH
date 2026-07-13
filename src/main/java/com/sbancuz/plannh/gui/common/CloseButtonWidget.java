@@ -24,6 +24,7 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
             IKey.str("x")
                 .color(Color.WHITE.main));
         size(12);
+        marginRight(2);
     }
 
     @Override

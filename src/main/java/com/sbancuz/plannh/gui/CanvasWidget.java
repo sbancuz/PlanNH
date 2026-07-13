@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.cleanroommc.modularui.api.widget.IWidget;
+import com.cleanroommc.modularui.drawable.Rectangle;
 import net.minecraft.client.Minecraft;
 
 import org.jetbrains.annotations.NotNull;
@@ -737,6 +739,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         child(new NodeWidget(this, node));
 
         menuOpen = false;
+    }
+
+    @Override
+    public CanvasWidget child(IWidget child) {
+        return super.child(child);
     }
 
     private void showGroupContextMenu(final GroupWidget gw, final int cmx, final int cmy) {

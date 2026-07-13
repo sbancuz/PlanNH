@@ -3,6 +3,7 @@ package com.sbancuz.plannh.nei;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.sbancuz.plannh.gui.CanvasWidget;
 import net.minecraft.client.gui.inventory.GuiContainer;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
@@ -51,8 +52,9 @@ public class PlanOverlayHandler implements IOverlayHandler {
     private static void addRecipe(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
         if (firstGui instanceof final GuiContainerWrapper wrapper
             && wrapper.getScreen() instanceof final FlowchartScreen screen) {
-            if(FlowchartScreen.isTestNode) screen.getCanvas().addNodeTest(DEFAULT_NODE_X, DEFAULT_NODE_Y, handler, recipeIndex);
-            else screen.getCanvas().addNode(DEFAULT_NODE_X, DEFAULT_NODE_Y, handler, recipeIndex);
+            CanvasWidget canvas =  screen.getCanvas();
+            if(FlowchartScreen.isTestNode) canvas.addNodeTest(canvas.getCanvasScreenCenterX(), canvas.getCanvasScreenCenterY(), handler, recipeIndex);
+            else canvas.addNode(DEFAULT_NODE_X, DEFAULT_NODE_Y, handler, recipeIndex);
         }
     }
 

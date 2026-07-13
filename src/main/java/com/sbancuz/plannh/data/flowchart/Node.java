@@ -92,13 +92,13 @@ public class Node {
         final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
         for (final PositionedStack ps : ins) {
             if (ps != null && ps.item != null && ps.item.stackSize > 0) {
-                this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
+                this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), (float) ps.getChance() / 10_000));
             }
         }
 
         final PositionedStack result = handler.getResultStack(recipeIndex);
         if (result != null && result.item != null) {
-            this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, result.item.copy(), 1.f));
+            this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, result.item.copy(), (float) result.getChance() / 10_000));
         }
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (final PositionedStack ps : others) {
@@ -113,16 +113,14 @@ public class Node {
                             this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
                         }
                 } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
-                    this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
+                    this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), (float) ps.getChance() / 10_000));
                 }
             }
         }
 
         final Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
         if (props != null && !props.isEmpty()) {
-            for (final var entry : props.entrySet()) {
-                this.properties.put(entry.getKey(), entry.getValue());
-            }
+            this.properties.putAll(props);
         }
 
         if (this.properties.containsKey(RecipePropertyAPI.DURATION_TICKS)) {

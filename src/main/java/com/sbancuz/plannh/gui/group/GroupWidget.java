@@ -61,6 +61,7 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
         Flow topRow = FlowchartFlow.row(this)
             .coverChildrenHeight()
             .fullWidth()
+            .childPadding(4)
             .background(new DynamicDrawable(() -> new Rectangle().color(data.getColor())));
 
         topRow.child(new HeaderTextWidget(this, data::getColor));

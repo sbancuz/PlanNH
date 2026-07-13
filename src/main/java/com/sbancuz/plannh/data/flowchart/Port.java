@@ -30,7 +30,7 @@ public class Port<T> {
     @SuppressWarnings("unchecked")
     public boolean canConnect(final Port<?> other) {
         if (!type.equals(other.type)) return false;
-        return ((RecipeResource<Object>) type).canConnect(value, other.value);
+        return type.canConnect(value, (T) other.value);
     }
 
     public void merge(final Port<?> other) {

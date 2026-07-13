@@ -17,7 +17,11 @@ public class GraphDataDeserializer implements JsonDeserializer<GraphData> {
             .getAsString()) {
             case "note" -> Serializer.GSON.fromJson(json, Note.class);
             case "group" -> Serializer.GSON.fromJson(json, Group.class);
-            case "node" -> Serializer.GSON.fromJson(json, Node2.class);
+            case "node" -> {
+                Node2 node = Serializer.GSON.fromJson(json, Node2.class);
+                node.refresh(); // init i/o lists
+                yield node;
+            }
             default -> throw new JsonParseException("Invalid type detected during GroupData deserialization");
         };
     }

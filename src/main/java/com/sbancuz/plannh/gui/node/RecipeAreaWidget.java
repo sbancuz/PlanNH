@@ -43,27 +43,21 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         neiWidget.showAsWidget(true);
         neiWidget.x = 2;
 
-        List<PositionedStack> stacks = handlerRef.handler.getIngredientStacks(handlerRef.recipeIndex);
-        stacks.addAll(handlerRef.handler.getOtherStacks(handlerRef.recipeIndex));
-        stacks.add(handlerRef.handler.getResultStack(handlerRef.recipeIndex));
-        stacks.removeIf(Objects::isNull);
-
         // TODO make the offsets static and add docs
-        Point offset = new Point(1, -1);
         if (handlerRef.handler instanceof GTNEIDefaultHandlerAccessor handler) {
             Size size = handler.getNeiProperties().recipeBackgroundSize;
             size(size.width, size.height);
-            offset.y = 7;
         } else {
             size(neiWidget.w, neiWidget.h);
         }
 
-        stacks.forEach(
-            positionedStack -> child(
-                new Rectangle().color(Color.BLACK.main)
-                    .hollow()
-                    .asWidget()
-                    .pos(positionedStack.relx + offset.x, positionedStack.rely + offset.y)));
+        // input
+        data.getInputs()
+            .forEach(positionedStack -> child(new PortWidget(handlerRef, true, positionedStack)));
+
+        // output
+        data.getOutputs()
+            .forEach(positionedStack -> child(new PortWidget(handlerRef, false, positionedStack)));
     }
 
     @Override

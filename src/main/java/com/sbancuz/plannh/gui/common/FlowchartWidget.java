@@ -148,6 +148,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         pos(data.getX(), data.getY());
     }
 
+    @SuppressWarnings("unchecked")
     private void adjustGroupMembership() {
         ParentWidget<?> oldParent = (ParentWidget<?>) getParent();
         ParentWidget<?> newParent = StreamSupport.stream(
