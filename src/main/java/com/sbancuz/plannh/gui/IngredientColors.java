@@ -22,8 +22,8 @@ import com.cleanroommc.modularui.utils.Color;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Port;
 
-import gregtech.api.enums.Materials;
 import gregtech.api.items.MetaGeneratedItem;
+import gregtech.api.util.GTUtility;
 
 /**
  * Derives a representative color for an ingredient from its sprite, so ports and edges can be
@@ -133,36 +133,41 @@ public final class IngredientColors {
         if (fluidStack == null || fluidStack.getFluid() == null) return -1;
         final Fluid fluid = fluidStack.getFluid();
         final String key = "fluid:" + fluid.getName();
-        return CACHE.computeIfAbsent(key, k -> {
-            try {
-                // The fluid's own color if it defines one, else GT's material color (fluids like
-                // hydrogen are registered by IC2 with a white color and a generic gas texture -
-                // the GT material knows it should be red).
-                int tint = fluid.getColor(fluidStack);
-                if ((tint & 0xFFFFFF) == 0xFFFFFF) tint = gtFluidMaterialTint(fluid);
-                if ((tint & 0xFFFFFF) != 0xFFFFFF) return tint & 0xFFFFFF;
-
-                final long[] modal = modalSpriteColor(fluid.getIcon(fluidStack), true);
-                if (modal == null) {
-                    PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", k);
-                    return -1;
-                }
-                return (int) modal[0];
-            } catch (final Exception e) {
-                PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", k, e.toString());
-                return -1;
-            }
-        });
+        // Manual get/put instead of computeIfAbsent: the display-stack path recurses into
+        // ofItem, and nested computeIfAbsent on one map is illegal.
+        final Integer cached = CACHE.get(key);
+        if (cached != null) return cached;
+        final int rgb = computeFluidColor(fluidStack, fluid, key);
+        CACHE.put(key, rgb);
+        return rgb;
     }
 
-    /** GT material color for a fluid, resolved through GT's fluid-to-material map. */
-    private static int gtFluidMaterialTint(final Fluid fluid) {
-        if (!ModularUI.Mods.GT5U.isLoaded()) return 0xFFFFFF;
-        final Materials material = Materials.FLUID_MAP.get(fluid);
-        if (material != null && material.mRGBa != null && material.mRGBa.length >= 3) {
-            return (material.mRGBa[0] & 0xFF) << 16 | (material.mRGBa[1] & 0xFF) << 8 | (material.mRGBa[2] & 0xFF);
+    private static int computeFluidColor(final FluidStack fluidStack, final Fluid fluid, final String key) {
+        try {
+            // The fluid's own color if it defines one.
+            final int tint = fluid.getColor(fluidStack);
+            if ((tint & 0xFFFFFF) != 0xFFFFFF) return tint & 0xFFFFFF;
+
+            // Otherwise color it the way NEI displays it: GT's fluid display item carries the
+            // exact icon + tint combination the player sees in recipe screens.
+            if (ModularUI.Mods.GT5U.isLoaded()) {
+                final ItemStack display = GTUtility.getFluidDisplayStack(fluidStack, false);
+                if (display != null) {
+                    final int rgb = ofItem(display);
+                    if (rgb != -1) return rgb;
+                }
+            }
+
+            final long[] modal = modalSpriteColor(fluid.getIcon(fluidStack), true);
+            if (modal == null) {
+                PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", key);
+                return -1;
+            }
+            return (int) modal[0];
+        } catch (final Exception e) {
+            PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", key, e.toString());
+            return -1;
         }
-        return 0xFFFFFF;
     }
 
     /**
@@ -180,9 +185,12 @@ public final class IngredientColors {
         // Fast path: the stitched atlas' retained CPU-side frame data. Angelica (present in all
         // modern GTNH packs and this repo's dev runtime) frees that data, so fall back to reading
         // the sprite's source PNG through the resource manager - the same file the stitcher
-        // loaded it from.
+        // loaded it from. Items that borrow icons from the other atlas (e.g. GT's fluid display
+        // uses block-atlas fluid icons) get a cross-atlas retry.
         long[] result = fromAtlasFrames(icon, blocksAtlas);
         if (result == null) result = fromResourcePng(icon, blocksAtlas);
+        if (result == null) result = fromAtlasFrames(icon, !blocksAtlas);
+        if (result == null) result = fromResourcePng(icon, !blocksAtlas);
         return result;
     }
 

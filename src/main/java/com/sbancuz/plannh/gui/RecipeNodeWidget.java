@@ -29,6 +29,7 @@ import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.drawable.DrawableBuilder;
@@ -797,6 +798,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     @Override
     @Nullable
     public ItemStack getStackForRecipeViewer() {
+        final ItemStack result = findStackForRecipeViewer();
+        if (result != null) {
+            // Remember the origin so a recipe added from the upcoming NEI lookup can be wired
+            // back to this node automatically.
+            NodeLookupContext.set(node.id, result);
+        }
+        return result;
+    }
+
+    @Nullable
+    private ItemStack findStackForRecipeViewer() {
         // World-space widget-local mouse; independent of whatever viewport state NEI calls us in.
         final int mx = canvas.getMouseCanvasX() - Math.round(node.x);
         final int my = canvas.getMouseCanvasY() - Math.round(node.y);
