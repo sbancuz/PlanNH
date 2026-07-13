@@ -253,7 +253,11 @@ public final class IngredientColors {
                 final int a = buffer.get(i * 4 + 3) & 0xFF;
                 pixels[i] = a << 24 | r << 16 | g << 8 | b;
             }
-            return modeWithOutlineFallback(pixels, SAMPLE_SIZE, SAMPLE_SIZE);
+            final long[] result = modeWithOutlineFallback(pixels, SAMPLE_SIZE, SAMPLE_SIZE);
+            if (result == null) {
+                PlanNH.LOG.debug("Render sample of {} produced no opaque pixels", stack);
+            }
+            return result;
         } catch (final Exception e) {
             PlanNH.LOG.debug("Render sampling failed for {}: {}", stack, e.toString());
             return null;
@@ -274,8 +278,19 @@ public final class IngredientColors {
         }
     }
 
+    /**
+     * Chemistry-convention colors for fluids whose in-game color sources are unusable. Hydrogen
+     * defines a white fluid color, its texture region on the stitched atlas is empty, its fluid
+     * display item renders no pixels, and its GT material color is blue - while every player
+     * knows hydrogen as red-pink.
+     */
+    private static final Map<String, Integer> FLUID_CONVENTION_COLORS = Map.of("hydrogen", 0xE05A5A);
+
     private static int computeFluidColor(final FluidStack fluidStack, final Fluid fluid, final String key) {
         try {
+            final Integer convention = FLUID_CONVENTION_COLORS.get(fluid.getName());
+            if (convention != null) return logColor(key, convention, "convention");
+
             // The fluid's own color if it defines one.
             final int tint = fluid.getColor(fluidStack);
             if ((tint & 0xFFFFFF) != 0xFFFFFF) return logColor(key, tint & 0xFFFFFF, "fluid-color");
@@ -362,7 +377,10 @@ public final class IngredientColors {
             .getResource(location)
             .getInputStream()) {
             final BufferedImage image = ImageIO.read(in);
-            if (image == null) return null;
+            if (image == null) {
+                PlanNH.LOG.debug("PNG decoded null for icon '{}' at {}", name, location);
+                return null;
+            }
             final int width = image.getWidth();
             // Animated sprites are vertical strips; sample the first frame only.
             final int height = Math.min(image.getHeight(), width);
