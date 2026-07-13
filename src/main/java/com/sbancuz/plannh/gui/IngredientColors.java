@@ -11,7 +11,6 @@ import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureMap;
-import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
@@ -21,6 +20,8 @@ import net.minecraftforge.fluids.FluidStack;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GLContext;
 
 import com.cleanroommc.modularui.ModularUI;
 import com.cleanroommc.modularui.utils.Color;
@@ -155,20 +156,70 @@ public final class IngredientColors {
     }
 
     private static final int SAMPLE_SIZE = 16;
+    private static final int GL_FRAMEBUFFER_BINDING = 0x8CA6;
 
     /**
      * Renders the stack into a small offscreen framebuffer via NEI's item drawing (the exact
      * pipeline recipe screens use) and returns the modal color of the result. Returns null when
-     * rendering is unavailable (headless, GL errors) so callers can fall back to sprite data.
+     * rendering is unavailable (headless, no FBO support, binding hijacked by render mods) so
+     * callers can fall back to sprite data.
+     *
+     * <p>
+     * Uses raw GL FBOs instead of Minecraft's Framebuffer wrapper: under Angelica the wrapper
+     * can silently no-op its bind, which would make this read back whatever is currently on
+     * screen. The binding is verified before anything is drawn.
      */
     private static long[] sampleRenderedStack(final ItemStack stack) {
-        Framebuffer fbo = null;
+        final Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null || mc.getTextureManager() == null) return null;
+        if (!GLContext.getCapabilities().OpenGL30) return null;
+
+        final int previousFbo = GL11.glGetInteger(GL_FRAMEBUFFER_BINDING);
+        int fbo = 0;
+        int colorTexture = 0;
+        int depthBuffer = 0;
         boolean stateSaved = false;
         try {
-            final Minecraft mc = Minecraft.getMinecraft();
-            if (mc == null || mc.getTextureManager() == null) return null;
+            colorTexture = GL11.glGenTextures();
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, colorTexture);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+            GL11.glTexImage2D(
+                GL11.GL_TEXTURE_2D,
+                0,
+                GL11.GL_RGBA8,
+                SAMPLE_SIZE,
+                SAMPLE_SIZE,
+                0,
+                GL11.GL_RGBA,
+                GL11.GL_UNSIGNED_BYTE,
+                (ByteBuffer) null);
+            depthBuffer = GL30.glGenRenderbuffers();
+            GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, depthBuffer);
+            GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER, GL11.GL_DEPTH_COMPONENT, SAMPLE_SIZE, SAMPLE_SIZE);
 
-            fbo = new Framebuffer(SAMPLE_SIZE, SAMPLE_SIZE, true);
+            fbo = GL30.glGenFramebuffers();
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, fbo);
+            if (GL11.glGetInteger(GL_FRAMEBUFFER_BINDING) != fbo) {
+                PlanNH.LOG.debug("FBO bind did not take for {}, falling back to sprites", stack);
+                return null;
+            }
+            GL30.glFramebufferTexture2D(
+                GL30.GL_FRAMEBUFFER,
+                GL30.GL_COLOR_ATTACHMENT0,
+                GL11.GL_TEXTURE_2D,
+                colorTexture,
+                0);
+            GL30.glFramebufferRenderbuffer(
+                GL30.GL_FRAMEBUFFER,
+                GL30.GL_DEPTH_ATTACHMENT,
+                GL30.GL_RENDERBUFFER,
+                depthBuffer);
+            if (GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER) != GL30.GL_FRAMEBUFFER_COMPLETE) {
+                PlanNH.LOG.debug("FBO incomplete for {}, falling back to sprites", stack);
+                return null;
+            }
+
             GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
             GL11.glMatrixMode(GL11.GL_PROJECTION);
             GL11.glPushMatrix();
@@ -179,7 +230,7 @@ public final class IngredientColors {
             GL11.glLoadIdentity();
             stateSaved = true;
 
-            fbo.bindFramebuffer(true);
+            GL11.glViewport(0, 0, SAMPLE_SIZE, SAMPLE_SIZE);
             GL11.glClearColor(0f, 0f, 0f, 0f);
             GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             GuiContainerManager.enable2DRender();
@@ -200,12 +251,6 @@ public final class IngredientColors {
             PlanNH.LOG.debug("Render sampling failed for {}: {}", stack, e.toString());
             return null;
         } finally {
-            if (fbo != null) fbo.deleteFramebuffer();
-            try {
-                Minecraft.getMinecraft()
-                    .getFramebuffer()
-                    .bindFramebuffer(true);
-            } catch (final Exception ignored) {}
             if (stateSaved) {
                 GL11.glMatrixMode(GL11.GL_PROJECTION);
                 GL11.glPopMatrix();
@@ -213,6 +258,12 @@ public final class IngredientColors {
                 GL11.glPopMatrix();
                 GL11.glPopAttrib();
             }
+            try {
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, previousFbo);
+            } catch (final Exception ignored) {}
+            if (fbo != 0) GL30.glDeleteFramebuffers(fbo);
+            if (depthBuffer != 0) GL30.glDeleteRenderbuffers(depthBuffer);
+            if (colorTexture != 0) GL11.glDeleteTextures(colorTexture);
         }
     }
 

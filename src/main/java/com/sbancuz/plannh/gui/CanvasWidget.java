@@ -290,15 +290,21 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         // TODO add toggle for grid
         drawGrid(aw, ah);
 
-        super.draw(context, widgetTheme);
-
+        // Arrows before node widgets: nodes cover arrows by paint order, which lets the nodes
+        // keep a z below 300 so NEI tooltips (drawn at z=300) render above them.
         drawArrows();
 
+        super.draw(context, widgetTheme);
+
+        // Interactive aids above node bodies (which reach ~z 250 with their item rendering)
+        // but still under NEI tooltips at z 300.
+        GL11.glPushMatrix();
+        GL11.glTranslatef(0, 0, 280);
         if (creatingEdge) {
             drawPreviewLine();
         }
-
         drawHoveredPortLabels();
+        GL11.glPopMatrix();
     }
 
     private void drawGrid(final int w, final int h) {
