@@ -83,11 +83,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static final int GEAR_HIT_BOTTOM = 16;
 
     // Z-translation
-    // Must stay below 300: NEI draws item tooltips at z=300, and nodes above that bury the
-    // tooltip of whatever ingredient is hovered. Node-over-arrow layering is handled by paint
-    // order (arrows draw before node widgets), not by z.
-    private static final int Z_PUSH = 100;
-    private static final int Z_POP = -100;
+    private static final int Z_PUSH = 400;
+    private static final int Z_POP = -400;
 
     // Simple node (no NEI)
     private static final int SIMPLE_TEXT_INSET_X = 4;

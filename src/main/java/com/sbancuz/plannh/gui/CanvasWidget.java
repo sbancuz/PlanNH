@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import net.minecraft.client.Minecraft;
-
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
@@ -50,9 +48,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int NODE_W_ESTIMATE = 120;
     private static final int NODE_H_ESTIMATE = 80;
     private static final int HEADER_OFFSET = 24;
-    private static final int PORT_S = 8;
     private static final int PORT_HALF = 4;
-    private static final int PORT_GAP = 6;
     private static final int PORT_SPACING = 18;
     private static final int PORT_ORIGIN = 10;
     private static final int MIN_GRID_SPACING = 4;
@@ -62,11 +58,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int LINE_THICK_MIN = 1;
     private static final float ARROW_HB_RATIO = 0.35f;
     private static final int EDGE_MARGIN_BASE = 4;
-    private static final int PORT_LABEL_MAX = 20;
-    private static final int PORT_LABEL_TRUNC = 19;
-    private static final int PORT_FONT_SIZE = 9;
-    private static final float PORT_FONT_SCALE = 0.9f;
-    private static final int PORT_LABEL_PAD = 2;
 
     private static final int GROUP_FIT_PAD = 12;
     private static final float ZOOM_STEP = 0.15f;
@@ -290,21 +281,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         // TODO add toggle for grid
         drawGrid(aw, ah);
 
-        // Arrows before node widgets: nodes cover arrows by paint order, which lets the nodes
-        // keep a z below 300 so NEI tooltips (drawn at z=300) render above them.
-        drawArrows();
-
         super.draw(context, widgetTheme);
 
-        // Interactive aids above node bodies (which reach ~z 250 with their item rendering)
-        // but still under NEI tooltips at z 300.
-        GL11.glPushMatrix();
-        GL11.glTranslatef(0, 0, 280);
+        drawArrows();
+
         if (creatingEdge) {
             drawPreviewLine();
         }
-        drawHoveredPortLabels();
-        GL11.glPopMatrix();
     }
 
     private void drawGrid(final int w, final int h) {
@@ -989,81 +972,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
          */
     }
 
-    // ── Hovered port labels ──
-
-    private void drawHoveredPortLabels() {
-        final int mouseX = getContext().getMouseX();
-        final int mouseY = getContext().getMouseY();
-        final int ps = Math.max(1, Math.round(PORT_S * graph.getZoom()));
-        final int half = Math.round(PORT_HALF * graph.getZoom());
-
-        for (final RecipeNodeWidget w : nodeWidgets.values()) {
-            final Node node = w.getNode();
-            final int widgetX = widgetX(w);
-            final int widgetY = widgetY(w);
-            final int widgetWidth = Math.round(w.getArea().width * graph.getZoom());
-
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                graph.getZoom(),
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.outputs,
-                true)) return;
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                graph.getZoom(),
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.inputs,
-                false)) return;
-        }
-    }
-
-    private boolean tryPortLabel(final int mouseX, final int mouseY, final float zoom, final int ps, final int half,
-        final int widgetX, final int widgetY, final int widgetWidth, final List<Port<?>> ports,
-        final boolean rightSide) {
-        for (int i = 0; i < ports.size(); i++) {
-            final int px = rightSide ? widgetX + widgetWidth - ps : widgetX;
-            final int pcY = widgetY + portY(i);
-            final int py = pcY - half;
-            if (mouseX >= px && mouseX < px + ps && mouseY >= py && mouseY < py + ps) {
-                final String label = portLabel(ports.get(i));
-                if (label != null) {
-                    drawPortLabel(label, rightSide ? widgetX + widgetWidth : widgetX, pcY, rightSide, zoom);
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Nullable
-    private static String portLabel(final Port port) {
-        final String name = port.getDisplayName();
-        return name.isEmpty() ? null : name;
-    }
-
-    private static void drawPortLabel(String name, final int anchorX, final int centerY, final boolean rightSide,
-        final float z) {
-        if (name.length() > PORT_LABEL_MAX) name = name.substring(0, PORT_LABEL_TRUNC) + "…";
-        final int tw = Minecraft.getMinecraft().fontRenderer.getStringWidth(name);
-        final int fh = Math.round(PORT_FONT_SIZE * z * PORT_FONT_SCALE);
-        final int gap = Math.round(PORT_GAP * z);
-        final int labelX = rightSide ? anchorX + gap : anchorX - tw - gap;
-        final int labelY = centerY - fh / 2;
-        final int pad = Math.round(PORT_LABEL_PAD * z);
-        GuiDraw.drawRect(labelX - pad, labelY - pad, tw + pad * 2, fh + pad * 2, PlannhColors.PORT_LABEL_BG.getColor());
-        GuiDraw.drawText(name, labelX, labelY, z * 0.9f, PlannhColors.TEXT_WHITE.getColor(), false);
-    }
+    // Port-anchored name labels used to be drawn here on pin hover; they were painted inside
+    // the canvas viewport and therefore buried under adjacent nodes. The mouse-anchored full
+    // tooltip (FlowchartScreen.drawHoveredIngredientTooltip) replaced them.
 
     @Override
     public void transformChildren(IViewportStack stack) {
