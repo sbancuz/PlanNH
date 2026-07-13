@@ -1,7 +1,11 @@
 package com.sbancuz.plannh.gui;
 
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.imageio.ImageIO;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -9,10 +13,12 @@ import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.utils.Color;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Port;
 
 /**
@@ -127,9 +133,13 @@ public final class IngredientColors {
                     b += (long) (rgb & 0xFF) * count;
                     weight += count;
                 }
-                if (weight == 0) return -1;
+                if (weight == 0) {
+                    PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", k);
+                    return -1;
+                }
                 return (int) (r / weight) << 16 | (int) (g / weight) << 8 | (int) (b / weight);
             } catch (final Exception e) {
+                PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", k, e.toString());
                 return -1;
             }
         });
@@ -143,11 +153,15 @@ public final class IngredientColors {
             try {
                 final long[] modal = modalSpriteColor(fluid.getIcon(fluidStack), true);
                 final int tint = fluid.getColor(fluidStack);
-                if (modal == null) return (tint & 0xFFFFFF) != 0xFFFFFF ? tint & 0xFFFFFF : -1;
+                if (modal == null) {
+                    PlanNH.LOG.debug("No sprite color derivable for {}, using tint/type fallback", k);
+                    return (tint & 0xFFFFFF) != 0xFFFFFF ? tint & 0xFFFFFF : -1;
+                }
                 int rgb = (int) modal[0];
                 if ((tint & 0xFFFFFF) != 0xFFFFFF) rgb = multiplyRgb(rgb, tint);
                 return rgb;
             } catch (final Exception e) {
+                PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", k, e.toString());
                 return -1;
             }
         });
@@ -165,19 +179,60 @@ public final class IngredientColors {
      */
     private static long[] modalSpriteColor(final IIcon icon, final boolean blocksAtlas) {
         if (icon == null) return null;
-        final TextureMap atlas = (TextureMap) Minecraft.getMinecraft()
-            .getTextureManager()
-            .getTexture(blocksAtlas ? TextureMap.locationBlocksTexture : TextureMap.locationItemsTexture);
-        if (atlas == null) return null;
-        final TextureAtlasSprite sprite = atlas.getAtlasSprite(icon.getIconName());
-        if (sprite == null || sprite.getFrameCount() <= 0) return null;
-        final int[][] frame = sprite.getFrameTextureData(0);
-        if (frame == null || frame.length == 0 || frame[0] == null) return null;
+        // Fast path: the stitched atlas' retained CPU-side frame data. Angelica (present in all
+        // modern GTNH packs and this repo's dev runtime) frees that data, so fall back to reading
+        // the sprite's source PNG through the resource manager - the same file the stitcher
+        // loaded it from.
+        long[] result = fromAtlasFrames(icon, blocksAtlas);
+        if (result == null) result = fromResourcePng(icon, blocksAtlas);
+        return result;
+    }
 
-        final int[] pixels = frame[0];
-        final int width = Math.max(1, sprite.getIconWidth());
-        final int height = Math.max(1, pixels.length / width);
+    private static long[] fromAtlasFrames(final IIcon icon, final boolean blocksAtlas) {
+        try {
+            final TextureMap atlas = (TextureMap) Minecraft.getMinecraft()
+                .getTextureManager()
+                .getTexture(blocksAtlas ? TextureMap.locationBlocksTexture : TextureMap.locationItemsTexture);
+            if (atlas == null) return null;
+            final TextureAtlasSprite sprite = atlas.getAtlasSprite(icon.getIconName());
+            if (sprite == null || sprite.getFrameCount() <= 0) return null;
+            final int[][] frame = sprite.getFrameTextureData(0);
+            if (frame == null || frame.length == 0 || frame[0] == null) return null;
 
+            final int[] pixels = frame[0];
+            final int width = Math.max(1, sprite.getIconWidth());
+            return modeWithOutlineFallback(pixels, width, Math.max(1, pixels.length / width));
+        } catch (final Exception e) {
+            return null;
+        }
+    }
+
+    private static long[] fromResourcePng(final IIcon icon, final boolean blocksAtlas) {
+        final String name = icon.getIconName();
+        if (name == null || name.isEmpty()) return null;
+        final int colon = name.indexOf(':');
+        final String domain = colon >= 0 ? name.substring(0, colon) : "minecraft";
+        final String path = colon >= 0 ? name.substring(colon + 1) : name;
+        final ResourceLocation location = new ResourceLocation(
+            domain,
+            "textures/" + (blocksAtlas ? "blocks" : "items") + "/" + path + ".png");
+        try (InputStream in = Minecraft.getMinecraft()
+            .getResourceManager()
+            .getResource(location)
+            .getInputStream()) {
+            final BufferedImage image = ImageIO.read(in);
+            if (image == null) return null;
+            final int width = image.getWidth();
+            // Animated sprites are vertical strips; sample the first frame only.
+            final int height = Math.min(image.getHeight(), width);
+            final int[] pixels = image.getRGB(0, 0, width, height, null, 0, width);
+            return modeWithOutlineFallback(pixels, width, height);
+        } catch (final Exception e) {
+            return null;
+        }
+    }
+
+    private static long[] modeWithOutlineFallback(final int[] pixels, final int width, final int height) {
         long[] result = histogramMode(pixels, width, height, true);
         if (result == null) result = histogramMode(pixels, width, height, false);
         return result;
