@@ -271,7 +271,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 (float) neiWidget.w / 2 - (float) titleW / 2,
                 TITLE_TEXT_Y,
                 1.0f,
-                PlannhColors.TEXT_WHITE.getColor(),
+                PlannhColors.TEXT_BLACK.getColor(),
                 false);
 
             if (node.machineConfig.hasAnyBoost()) {

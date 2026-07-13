@@ -42,6 +42,7 @@ public final class PlannhColors {
     // ── Text Colors (opaque) ──
     public static final ColorResource
         TEXT_WHITE   = C.rgb("text_white",   "0xFFFFFF"),
+        TEXT_BLACK   = C.rgb("text_black",   "0x141414"),
         TEXT_LIGHT   = C.rgb("text_light",   "0xCCCCCC"),
         TEXT_MUTED   = C.rgb("text_muted",   "0xAAAAAA"),
         TEXT_DIM     = C.rgb("text_dim",     "0x888888"),

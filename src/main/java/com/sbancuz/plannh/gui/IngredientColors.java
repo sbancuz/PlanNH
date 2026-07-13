@@ -22,6 +22,7 @@ import com.cleanroommc.modularui.utils.Color;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Port;
 
+import gregtech.api.enums.Materials;
 import gregtech.api.items.MetaGeneratedItem;
 
 /**
@@ -134,20 +135,34 @@ public final class IngredientColors {
         final String key = "fluid:" + fluid.getName();
         return CACHE.computeIfAbsent(key, k -> {
             try {
+                // The fluid's own color if it defines one, else GT's material color (fluids like
+                // hydrogen are registered by IC2 with a white color and a generic gas texture -
+                // the GT material knows it should be red).
+                int tint = fluid.getColor(fluidStack);
+                if ((tint & 0xFFFFFF) == 0xFFFFFF) tint = gtFluidMaterialTint(fluid);
+                if ((tint & 0xFFFFFF) != 0xFFFFFF) return tint & 0xFFFFFF;
+
                 final long[] modal = modalSpriteColor(fluid.getIcon(fluidStack), true);
-                final int tint = fluid.getColor(fluidStack);
                 if (modal == null) {
-                    PlanNH.LOG.debug("No sprite color derivable for {}, using tint/type fallback", k);
-                    return (tint & 0xFFFFFF) != 0xFFFFFF ? tint & 0xFFFFFF : -1;
+                    PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", k);
+                    return -1;
                 }
-                int rgb = (int) modal[0];
-                if ((tint & 0xFFFFFF) != 0xFFFFFF) rgb = multiplyRgb(rgb, tint);
-                return rgb;
+                return (int) modal[0];
             } catch (final Exception e) {
                 PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", k, e.toString());
                 return -1;
             }
         });
+    }
+
+    /** GT material color for a fluid, resolved through GT's fluid-to-material map. */
+    private static int gtFluidMaterialTint(final Fluid fluid) {
+        if (!ModularUI.Mods.GT5U.isLoaded()) return 0xFFFFFF;
+        final Materials material = Materials.FLUID_MAP.get(fluid);
+        if (material != null && material.mRGBa != null && material.mRGBa.length >= 3) {
+            return (material.mRGBa[0] & 0xFF) << 16 | (material.mRGBa[1] & 0xFF) << 8 | (material.mRGBa[2] & 0xFF);
+        }
+        return 0xFFFFFF;
     }
 
     /**
