@@ -30,6 +30,7 @@ import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
+import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import lombok.Getter;
@@ -323,6 +324,91 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         widget.syncTransform(graph.getZoom(), graph.getPanX(), graph.getPanY());
         nodeWidgets.put(node.id, widget);
         child(widget);
+    }
+
+    /** Pre-auto-layout node positions, so a layout can be undone with shift-click. */
+    @Nullable
+    private Map<UUID, int[]> layoutSnapshot;
+
+    public void autoLayoutNodes() {
+        if (graph.getNodes()
+            .isEmpty()) return;
+
+        final List<AutoLayout.NodeBox> boxes = new ArrayList<>();
+        int anchorX = Integer.MAX_VALUE;
+        int anchorY = Integer.MAX_VALUE;
+        for (final Node node : graph.getNodes()) {
+            final RecipeNodeWidget widget = nodeWidgets.get(node.id);
+            final int width = widget != null ? widget.getWorldWidth() : 120;
+            final int height = widget != null ? widget.getWorldHeight() : 80;
+            boxes.add(
+                new AutoLayout.NodeBox(
+                    node.id,
+                    node.machineName == null ? "" : node.machineName,
+                    width,
+                    height,
+                    node.inputs.size(),
+                    node.outputs.size()));
+            anchorX = Math.min(anchorX, node.x);
+            anchorY = Math.min(anchorY, node.y);
+        }
+
+        final List<AutoLayout.Link> links = new ArrayList<>();
+        for (final Edge edge : graph.getEdges()) {
+            links.add(
+                new AutoLayout.Link(
+                    edge.sourceNodeId,
+                    edge.sourceOutputIndex,
+                    edge.targetNodeId,
+                    edge.targetInputIndex));
+        }
+
+        final Map<UUID, int[]> positions = AutoLayout.layout(boxes, links);
+        if (positions.isEmpty()) return;
+
+        final Map<UUID, int[]> snapshot = new HashMap<>();
+        for (final Node node : graph.getNodes()) {
+            snapshot.put(node.id, new int[] { node.x, node.y });
+        }
+        layoutSnapshot = snapshot;
+
+        // Anchor the new layout's top-left where the chart's top-left used to be.
+        int layoutMinX = Integer.MAX_VALUE;
+        int layoutMinY = Integer.MAX_VALUE;
+        for (final int[] pos : positions.values()) {
+            layoutMinX = Math.min(layoutMinX, pos[0]);
+            layoutMinY = Math.min(layoutMinY, pos[1]);
+        }
+        final int offsetX = anchorX - layoutMinX;
+        final int offsetY = anchorY - layoutMinY;
+
+        for (final Node node : graph.getNodes()) {
+            final int[] pos = positions.get(node.id);
+            if (pos == null) continue;
+            node.x = pos[0] + offsetX;
+            node.y = pos[1] + offsetY;
+        }
+        applyNodePositions();
+    }
+
+    /** Restores the positions captured by the last {@link #autoLayoutNodes()} call. */
+    public void restoreLayoutSnapshot() {
+        if (layoutSnapshot == null) return;
+        for (final Node node : graph.getNodes()) {
+            final int[] pos = layoutSnapshot.get(node.id);
+            if (pos == null) continue;
+            node.x = pos[0];
+            node.y = pos[1];
+        }
+        layoutSnapshot = null;
+        applyNodePositions();
+    }
+
+    private void applyNodePositions() {
+        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
+            widget.syncTransform(graph.getZoom(), graph.getPanX(), graph.getPanY());
+        }
+        recheckMembershipAndFit();
     }
 
     @Override

@@ -164,6 +164,20 @@ public class FlowchartScreen extends ModularScreen {
                         .coverChildren()
                         .childPadding(2)
                         .child(
+                            new ButtonWidget<>().overlay(IKey.str("AL"))
+                                .tooltipStatic(
+                                    t -> t.addLine(IKey.str("Auto layout"))
+                                        .addLine(IKey.str("Shift-click to restore previous positions")))
+                                .onMousePressed(_ -> {
+                                    if (Interactable.hasShiftDown()) {
+                                        canvas.restoreLayoutSnapshot();
+                                    } else {
+                                        canvas.autoLayoutNodes();
+                                    }
+                                    PlanAPI.save();
+                                    return true;
+                                }))
+                        .child(
                             new ButtonWidget<>().overlay(IKey.str("S2G"))
                                 .onMousePressed(_ -> {
                                     final Graph g = canvas.getGraph();
