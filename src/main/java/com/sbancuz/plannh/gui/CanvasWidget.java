@@ -442,14 +442,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (srcWidget == null || dstWidget == null) continue;
 
             final Node srcNode = graph.nodes.get(edge.sourceNodeId);
-            final boolean isFluid = srcNode != null && edge.sourceOutputIndex >= 0
-                && edge.sourceOutputIndex < srcNode.outputs.size()
-                && srcNode.outputs.get(edge.sourceOutputIndex)
-                    .getType() == RecipePropertyAPI.FLUID;
+            final int color = edgeColor(srcNode, edge.sourceOutputIndex);
 
             final List<int[]> route = edgeRoutes.get(edge.id);
             if (route != null && route.size() >= 2) {
-                drawRoutedArrow(route, isFluid);
+                drawRoutedArrow(route, color);
                 continue;
             }
 
@@ -458,14 +455,24 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final int dstX = widgetX(dstWidget);
             final int dstY = widgetY(dstWidget) + portY(edge.targetInputIndex);
 
-            drawArrow(srcX, srcY, dstX, dstY, isFluid);
+            drawArrow(srcX, srcY, dstX, dstY, color);
         }
+    }
+
+    /** Edge color follows the ingredient flowing through it; type color as fallback. */
+    private static int edgeColor(@Nullable final Node srcNode, final int outputIndex) {
+        if (srcNode == null || outputIndex < 0 || outputIndex >= srcNode.outputs.size()) {
+            return ARROW_COLOR_ITEM;
+        }
+        final Port<?> port = srcNode.outputs.get(outputIndex);
+        final int fallback = port.getType() == RecipePropertyAPI.FLUID ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
+        return IngredientColors.of(port, fallback);
     }
 
     /**
      * Draws a multi-segment orthogonal arrow from cached world-space waypoints.
      */
-    private void drawRoutedArrow(final List<int[]> route, final boolean fluid) {
+    private void drawRoutedArrow(final List<int[]> route, final int color) {
         final int n = route.size();
         final int[] sx = new int[n];
         final int[] sy = new int[n];
@@ -475,7 +482,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
 
         final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
-        final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
         final int x2 = sx[n - 1];
         final int y2 = sy[n - 1];
         // Stop the line at the arrow base so it does not poke through the head (last segment is horizontal).
@@ -485,10 +491,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO, color);
     }
 
-    private void drawArrow(final int x1, final int y1, final int x2, final int y2, final boolean fluid) {
+    private void drawArrow(final int x1, final int y1, final int x2, final int y2, final int color) {
         final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
         final int ex = Math.round(x2 - as);
-        final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
         drawOrthogonalLine(x1, y1, x2, y2, ex, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
 
         drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO, color);
@@ -719,7 +724,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 if (widget == srcWidget) continue;
                 final int localMx = worldDragMx - Math.round(widget.getNode().x);
                 final int localMy = worldDragMy - Math.round(widget.getNode().y);
-                final int port = widget.getInputPortAt(localMx, localMy);
+                int port = widget.getInputPortAt(localMx, localMy);
+                if (port < 0 && localMx >= 0
+                    && localMx < widget.getWorldWidth()
+                    && localMy >= 0
+                    && localMy < widget.getWorldHeight()) {
+                    // Dropped on the node body: wire into a matching input automatically.
+                    port = findCompatibleInputPort(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode());
+                }
                 if (port >= 0 && canConnect(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode(), port)) {
                     edgeHoverNodeId = widget.getNode().id;
                     edgeHoverPortIndex = port;
@@ -727,6 +739,27 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 }
             }
         }
+    }
+
+    /**
+     * First input port of {@code dstNode} that accepts the dragged ingredient, preferring ports
+     * that nothing feeds yet.
+     */
+    private int findCompatibleInputPort(final Node srcNode, final int srcOutIdx, final Node dstNode) {
+        int firstCompatible = -1;
+        for (int i = 0; i < dstNode.inputs.size(); i++) {
+            if (!canConnect(srcNode, srcOutIdx, dstNode, i)) continue;
+            if (firstCompatible < 0) firstCompatible = i;
+            if (!hasIncomingEdge(dstNode.id, i)) return i;
+        }
+        return firstCompatible;
+    }
+
+    private boolean hasIncomingEdge(final UUID nodeId, final int inputIndex) {
+        for (final Edge edge : graph.getEdges()) {
+            if (edge.targetNodeId.equals(nodeId) && edge.targetInputIndex == inputIndex) return true;
+        }
+        return false;
     }
 
     @Override
