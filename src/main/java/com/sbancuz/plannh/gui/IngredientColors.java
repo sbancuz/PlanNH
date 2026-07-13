@@ -2,6 +2,7 @@ package com.sbancuz.plannh.gui;
 
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,6 +11,7 @@ import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
@@ -17,11 +19,15 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+
 import com.cleanroommc.modularui.ModularUI;
 import com.cleanroommc.modularui.utils.Color;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Port;
 
+import codechicken.nei.guihook.GuiContainerManager;
 import gregtech.api.items.MetaGeneratedItem;
 import gregtech.api.util.GTUtility;
 
@@ -89,6 +95,12 @@ public final class IngredientColors {
                 final Item item = stack.getItem();
                 // Multi-render-pass items (all GT material items: gems, dusts, cells...) carry a
                 // grayscale base sprite per pass, tinted by the per-pass color. Blend the passes
+                // Ground truth first: render the stack the way NEI draws it and sample the
+                // pixels. This is immune to the icon API misrepresenting custom renderers
+                // (GT material items, GT blocks, fluid display items...).
+                final long[] rendered = sampleRenderedStack(stack);
+                if (rendered != null) return (int) rendered[0];
+
                 // weighted by how many opaque pixels each contributes.
                 final int passes = item.requiresMultipleRenderPasses()
                     ? Math.max(1, item.getRenderPasses(stack.getItemDamage()))
@@ -140,6 +152,68 @@ public final class IngredientColors {
         final int rgb = computeFluidColor(fluidStack, fluid, key);
         CACHE.put(key, rgb);
         return rgb;
+    }
+
+    private static final int SAMPLE_SIZE = 16;
+
+    /**
+     * Renders the stack into a small offscreen framebuffer via NEI's item drawing (the exact
+     * pipeline recipe screens use) and returns the modal color of the result. Returns null when
+     * rendering is unavailable (headless, GL errors) so callers can fall back to sprite data.
+     */
+    private static long[] sampleRenderedStack(final ItemStack stack) {
+        Framebuffer fbo = null;
+        boolean stateSaved = false;
+        try {
+            final Minecraft mc = Minecraft.getMinecraft();
+            if (mc == null || mc.getTextureManager() == null) return null;
+
+            fbo = new Framebuffer(SAMPLE_SIZE, SAMPLE_SIZE, true);
+            GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+            GL11.glMatrixMode(GL11.GL_PROJECTION);
+            GL11.glPushMatrix();
+            GL11.glLoadIdentity();
+            GL11.glOrtho(0, SAMPLE_SIZE, SAMPLE_SIZE, 0, -1000, 3000);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            GL11.glPushMatrix();
+            GL11.glLoadIdentity();
+            stateSaved = true;
+
+            fbo.bindFramebuffer(true);
+            GL11.glClearColor(0f, 0f, 0f, 0f);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            GuiContainerManager.enable2DRender();
+            GuiContainerManager.drawItem(0, 0, stack);
+
+            final ByteBuffer buffer = BufferUtils.createByteBuffer(SAMPLE_SIZE * SAMPLE_SIZE * 4);
+            GL11.glReadPixels(0, 0, SAMPLE_SIZE, SAMPLE_SIZE, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buffer);
+            final int[] pixels = new int[SAMPLE_SIZE * SAMPLE_SIZE];
+            for (int i = 0; i < pixels.length; i++) {
+                final int r = buffer.get(i * 4) & 0xFF;
+                final int g = buffer.get(i * 4 + 1) & 0xFF;
+                final int b = buffer.get(i * 4 + 2) & 0xFF;
+                final int a = buffer.get(i * 4 + 3) & 0xFF;
+                pixels[i] = a << 24 | r << 16 | g << 8 | b;
+            }
+            return modeWithOutlineFallback(pixels, SAMPLE_SIZE, SAMPLE_SIZE);
+        } catch (final Exception e) {
+            PlanNH.LOG.debug("Render sampling failed for {}: {}", stack, e.toString());
+            return null;
+        } finally {
+            if (fbo != null) fbo.deleteFramebuffer();
+            try {
+                Minecraft.getMinecraft()
+                    .getFramebuffer()
+                    .bindFramebuffer(true);
+            } catch (final Exception ignored) {}
+            if (stateSaved) {
+                GL11.glMatrixMode(GL11.GL_PROJECTION);
+                GL11.glPopMatrix();
+                GL11.glMatrixMode(GL11.GL_MODELVIEW);
+                GL11.glPopMatrix();
+                GL11.glPopAttrib();
+            }
+        }
     }
 
     private static int computeFluidColor(final FluidStack fluidStack, final Fluid fluid, final String key) {
