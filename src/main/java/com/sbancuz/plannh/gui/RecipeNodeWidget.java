@@ -8,7 +8,6 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.data.flowchart.Node;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
@@ -22,11 +21,12 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.setting.SettingDef;
 
 import codechicken.nei.drawable.DrawableBuilder;
 import codechicken.nei.drawable.DrawableResource;
@@ -192,7 +192,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int calcInfoHeight() {
-        final int lines = 1 + node.getInputs().size() + node.getOutputs().size();
+        final int lines = 1 + node.getInputs()
+            .size()
+            + node.getOutputs()
+                .size();
         return lines * LINE_H + 6;
     }
 
@@ -373,7 +376,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public int getOutputPortAt(final int mx, final int my) {
         final int half = zq(PORT_HALF);
         final int px = getArea().width - zq(PORT_SIZE);
-        for (int i = 0; i < node.getOutputs().size(); i++) {
+        for (int i = 0; i < node.getOutputs()
+            .size(); i++) {
             final int py = portTopY(i) - half;
             if (mx >= px && mx < px + zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
         }
@@ -382,7 +386,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     public int getInputPortAt(final int mx, final int my) {
         final int half = zq(PORT_HALF);
-        for (int i = 0; i < node.getInputs().size(); i++) {
+        for (int i = 0; i < node.getInputs()
+            .size(); i++) {
             final int py = portTopY(i) - half;
             if (mx >= 0 && mx < zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
         }
@@ -411,9 +416,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final int ps = zq(PORT_SIZE);
         final int half = zq(PORT_HALF);
 
-        for (int i = 0; i < node.getOutputs().size(); i++) {
+        for (int i = 0; i < node.getOutputs()
+            .size(); i++) {
             final int py = portTopY(i) - half;
-            final Port port = node.getOutputs().get(i);
+            final Port port = node.getOutputs()
+                .get(i);
             if (port.getType() == RecipePropertyAPI.FLUID) {
                 GuiDraw.drawRect(
                     getArea().width - ps - 1,
@@ -432,9 +439,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_OUTPUT.getColor());
             }
         }
-        for (int i = 0; i < node.getInputs().size(); i++) {
+        for (int i = 0; i < node.getInputs()
+            .size(); i++) {
             final int py = portTopY(i) - half;
-            final Port port = node.getInputs().get(i);
+            final Port port = node.getInputs()
+                .get(i);
             if (port.getType() == RecipePropertyAPI.FLUID) {
                 GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_IN_H.getColor());
                 GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_FLUID_IN.getColor());
@@ -456,7 +465,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             ? (float) nb.totalDurationTicks / GuiHelper.TICKS_PER_SECOND
             : node.getDurationTicks() > 0 ? (float) node.getDurationTicks() / GuiHelper.TICKS_PER_SECOND : 1f;
         final int ops = nb != null ? nb.operations : 1;
-        final int throughput = nb != null ? node.getMachineConfig().computeEffect(node.getProperties(), node.getDurationTicks())
+        final int throughput = nb != null ? node.getMachineConfig()
+            .computeEffect(node.getProperties(), node.getDurationTicks())
             .throughputFactor() : 1;
 
         final int durPerOp = nb != null ? nb.durationPerOp : node.getDurationTicks();
@@ -633,7 +643,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final StringBuilder sb = new StringBuilder();
 
         for (final SettingDef<?> def : profile.settings()) {
-            final Object val = c.getSettings().get(def.getKey());
+            final Object val = c.getSettings()
+                .get(def.getKey());
             if (val == null) continue;
             if (val.equals(def.getDefaultValue())) continue;
             final String badge = def.badge(val, c);
@@ -653,7 +664,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         final int x = LEFT_CONTENT_X;
         final int y0 = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + calcInfoHeight();
-        final MachineProfile profile = node.getMachineConfig().getProfile();
+        final MachineProfile profile = node.getMachineConfig()
+            .getProfile();
         int panelH = profile.settings()
             .size() * LINE_H + 4;
         if (node.getAvailableExtractors()
@@ -685,56 +697,56 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int drawSetting(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
-        /*if (def.type == Integer.class) {
-            return drawConfigIntField(x, y, def.label, c.getInt(def.key), def.minInt, def.maxInt, v -> {
-                c.setInt(def.key, v);
-                onConfigChanged();
-            });
-        } else if (def.type == Boolean.class) {
-            final boolean val = c.getBoolean(def.key);
-            final String label = (val ? "[\u2713] " : "[  ] ") + def.label;
-            GuiDraw.drawText(
-                label,
-                x,
-                y,
-                1.0f,
-                val ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(),
-                false);
-            configZones.add(new ClickZone(x, y, x + BOOL_CLICK_W, y + CLICK_H, () -> {
-                c.setBoolean(def.key, !val);
-                onConfigChanged();
-            }));
-            return y + LINE_H;
-        } else if (def.type == String.class && def.hasOptions()) {
-            final String val = c.getString(def.key);
-            GuiDraw.drawText(def.label + " " + val, x, y, 1.0f, PlannhColors.SETTING_ON.getColor(), false);
-
-            final int decX = x + SETTING_DEC_X;
-            final int incX = decX + SETTING_BTN_W;
-            GuiDraw.drawText("[-]", decX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
-            GuiDraw.drawText("[+]", incX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
-
-            assert def.options != null;
-
-            configZones.add(new ClickZone(decX, y, incX, y + CLICK_H, () -> {
-                final int cur = def.options.indexOf(c.getString(def.key));
-                c.setString(def.key, def.options.get(Math.max(0, (Math.max(cur, 0)) - 1)));
-                onConfigChanged();
-            }));
-            configZones.add(new ClickZone(incX, y, incX + SETTING_BTN_W, y + CLICK_H, () -> {
-                final int cur = def.options.indexOf(c.getString(def.key));
-                c.setString(def.key, def.options.get(Math.min(def.options.size() - 1, (Math.max(cur, 0)) + 1)));
-                onConfigChanged();
-            }));
-            return y + LINE_H;
-        }
-        return y + LINE_H;*/
+        /*
+         * if (def.type == Integer.class) {
+         * return drawConfigIntField(x, y, def.label, c.getInt(def.key), def.minInt, def.maxInt, v -> {
+         * c.setInt(def.key, v);
+         * onConfigChanged();
+         * });
+         * } else if (def.type == Boolean.class) {
+         * final boolean val = c.getBoolean(def.key);
+         * final String label = (val ? "[\u2713] " : "[  ] ") + def.label;
+         * GuiDraw.drawText(
+         * label,
+         * x,
+         * y,
+         * 1.0f,
+         * val ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(),
+         * false);
+         * configZones.add(new ClickZone(x, y, x + BOOL_CLICK_W, y + CLICK_H, () -> {
+         * c.setBoolean(def.key, !val);
+         * onConfigChanged();
+         * }));
+         * return y + LINE_H;
+         * } else if (def.type == String.class && def.hasOptions()) {
+         * final String val = c.getString(def.key);
+         * GuiDraw.drawText(def.label + " " + val, x, y, 1.0f, PlannhColors.SETTING_ON.getColor(), false);
+         * final int decX = x + SETTING_DEC_X;
+         * final int incX = decX + SETTING_BTN_W;
+         * GuiDraw.drawText("[-]", decX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
+         * GuiDraw.drawText("[+]", incX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
+         * assert def.options != null;
+         * configZones.add(new ClickZone(decX, y, incX, y + CLICK_H, () -> {
+         * final int cur = def.options.indexOf(c.getString(def.key));
+         * c.setString(def.key, def.options.get(Math.max(0, (Math.max(cur, 0)) - 1)));
+         * onConfigChanged();
+         * }));
+         * configZones.add(new ClickZone(incX, y, incX + SETTING_BTN_W, y + CLICK_H, () -> {
+         * final int cur = def.options.indexOf(c.getString(def.key));
+         * c.setString(def.key, def.options.get(Math.min(def.options.size() - 1, (Math.max(cur, 0)) + 1)));
+         * onConfigChanged();
+         * }));
+         * return y + LINE_H;
+         * }
+         * return y + LINE_H;
+         */
         return 0;
     }
 
     private int computeConfigPanelHeight() {
         if (!configOpen) return 0;
-        final MachineProfile profile = node.getMachineConfig().getProfile();
+        final MachineProfile profile = node.getMachineConfig()
+            .getProfile();
         int h = profile.settings()
             .size() * LINE_H + 8;
         if (node.getAvailableExtractors()

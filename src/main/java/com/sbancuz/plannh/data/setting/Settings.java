@@ -1,11 +1,11 @@
 package com.sbancuz.plannh.data.setting;
 
-import com.sbancuz.plannh.data.MachineConfig;
-
 import java.util.List;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nonnull;
+
+import com.sbancuz.plannh.data.MachineConfig;
 
 public enum Settings {
 

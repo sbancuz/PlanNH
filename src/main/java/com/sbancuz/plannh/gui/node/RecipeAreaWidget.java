@@ -4,8 +4,6 @@ import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
 import static org.lwjgl.opengl.GL11.glDisable;
 import static org.lwjgl.opengl.GL11.glEnable;
 
-import com.sbancuz.plannh.data.flowchart.Port;
-import it.unimi.dsi.fastutil.Pair;
 import net.minecraft.client.Minecraft;
 
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -13,6 +11,7 @@ import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.modularui.api.math.Size;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
 import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
@@ -47,12 +46,12 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         }
 
         // inputs
-        for(Port<?> port : data.getInputs())
-            port.getPositions().forEach(pos -> child(new PortWidget(handlerRef, true, pos, port)));
+        for (Port<?> port : data.getInputs()) port.getPositions()
+            .forEach(pos -> child(new PortWidget(handlerRef, true, pos, port)));
 
         // outputs
-        for(Port<?> port : data.getOutputs())
-            port.getPositions().forEach(pos -> child(new PortWidget(handlerRef, false, pos, port)));
+        for (Port<?> port : data.getOutputs()) port.getPositions()
+            .forEach(pos -> child(new PortWidget(handlerRef, false, pos, port)));
     }
 
     @Override

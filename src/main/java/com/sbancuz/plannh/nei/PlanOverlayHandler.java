@@ -3,12 +3,12 @@ package com.sbancuz.plannh.nei;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.sbancuz.plannh.gui.CanvasWidget;
 import net.minecraft.client.gui.inventory.GuiContainer;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.PropertyProvider;
+import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import codechicken.nei.PositionedStack;

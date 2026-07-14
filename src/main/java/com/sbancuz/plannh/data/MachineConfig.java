@@ -6,12 +6,11 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
+
 import lombok.Getter;
 import lombok.Setter;
-import org.jetbrains.annotations.Nullable;
 
 @Getter
 @Setter
@@ -30,14 +29,14 @@ public class MachineConfig {
         this(profile, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap());
     }
 
-    public MachineConfig(final MachineProfile profile, Map<String, Object> settings, Map<Integer, Float> inputConsumption, Map<Integer, Float> outputProductivity) {
+    public MachineConfig(final MachineProfile profile, Map<String, Object> settings,
+        Map<Integer, Float> inputConsumption, Map<Integer, Float> outputProductivity) {
         this.profileId = profile.id();
         this.inputConsumption = new HashMap<>(inputConsumption);
         this.outputProductivity = new HashMap<>(outputProductivity);
         this.settings = new HashMap<>(settings);
 
-        for (SettingDef<?> def : profile.settings())
-            this.settings.putIfAbsent(def.getKey(), def.getDefaultValue());
+        for (SettingDef<?> def : profile.settings()) this.settings.putIfAbsent(def.getKey(), def.getDefaultValue());
 
         this.inputConsumption.put(0, 0f); // TODO remove, this is a test
     }

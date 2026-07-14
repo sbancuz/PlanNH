@@ -21,8 +21,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
-
-import codechicken.nei.recipe.Recipe;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
@@ -31,6 +29,8 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
+
+import codechicken.nei.recipe.Recipe;
 
 public final class Serializer {
 
@@ -144,7 +144,8 @@ public final class Serializer {
         for (final Node node : graph.getNodes()
             .values()) {
             final String id = mermaidId(node.getId());
-            final String label = node.getMachineName().isEmpty() ? "?" : node.getMachineName();
+            final String label = node.getMachineName()
+                .isEmpty() ? "?" : node.getMachineName();
             sb.append("    ")
                 .append(id)
                 .append("[\"")
@@ -312,8 +313,10 @@ public final class Serializer {
         if (src == null) return "";
 
         final int idx = edge.sourceOutputIndex;
-        if (idx >= 0 && idx < src.getOutputs().size()) {
-            final Port port = src.getOutputs().get(idx);
+        if (idx >= 0 && idx < src.getOutputs()
+            .size()) {
+            final Port port = src.getOutputs()
+                .get(idx);
             return port.getDisplayName();
         }
         return "";

@@ -6,7 +6,6 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.data.flowchart.Node;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 
@@ -23,6 +22,7 @@ import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;

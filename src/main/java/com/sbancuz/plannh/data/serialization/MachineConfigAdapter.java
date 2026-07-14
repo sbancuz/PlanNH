@@ -1,5 +1,9 @@
 package com.sbancuz.plannh.data.serialization;
 
+import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.google.common.reflect.TypeToken;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -13,10 +17,6 @@ import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.setting.SettingDef;
-
-import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
 
 public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, JsonDeserializer<MachineConfig> {
 
@@ -51,9 +51,12 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
     }
 
     @Override
-    public MachineConfig deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+    public MachineConfig deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+        throws JsonParseException {
         JsonObject obj = json.getAsJsonObject();
-        MachineProfile p = MachineProfileRegistry.get(obj.get("profile").getAsString());
+        MachineProfile p = MachineProfileRegistry.get(
+            obj.get("profile")
+                .getAsString());
 
         Map<String, Object> settings = new HashMap<>();
         JsonObject settingsObj = obj.getAsJsonObject("settings");
@@ -67,9 +70,10 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
             }
         }
 
-        Type mapType = new TypeToken<Map<Integer, Float>>(){}.getType();
+        Type mapType = new TypeToken<Map<Integer, Float>>() {}.getType();
 
-        return new MachineConfig(p != null ? p : MachineProfileRegistry.get(MachineProfileRegistry.defaultId()),
+        return new MachineConfig(
+            p != null ? p : MachineProfileRegistry.get(MachineProfileRegistry.defaultId()),
             settings,
             Serializer.GSON.fromJson(obj.get("inputConsumption"), mapType),
             Serializer.GSON.fromJson(obj.get("outputProductivity"), mapType));

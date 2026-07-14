@@ -8,8 +8,6 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.data.flowchart.Node;
-import it.unimi.dsi.fastutil.Pair;
 import net.minecraft.item.ItemStack;
 
 import org.jetbrains.annotations.NotNull;
@@ -22,9 +20,10 @@ import com.sbancuz.plannh.data.ProfileMatcher;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.setting.Settings;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.provider.EFRProvider;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -38,6 +37,7 @@ import gregtech.api.util.recipe.Sievert;
 import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
+import it.unimi.dsi.fastutil.Pair;
 
 public class GTProvider implements PropertyProvider {
 

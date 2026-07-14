@@ -4,7 +4,6 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
-import com.sbancuz.plannh.data.flowchart.Node;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
@@ -37,6 +36,7 @@ import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;

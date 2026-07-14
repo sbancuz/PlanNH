@@ -6,11 +6,11 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.sbancuz.plannh.data.serialization.Serializer;
 import org.jetbrains.annotations.Nullable;
 
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
+import com.sbancuz.plannh.data.serialization.Serializer;
 
 import lombok.Getter;
 import lombok.Setter;

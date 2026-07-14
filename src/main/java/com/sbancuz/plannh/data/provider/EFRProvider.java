@@ -57,7 +57,7 @@ public class EFRProvider implements PropertyProvider {
     @Override
     @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
-                                                  final int recipeIndex) {
+        final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof FurnaceRecipeHandler fh)) return props;
         final String overlay = fh.getOverlayIdentifier();

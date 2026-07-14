@@ -42,17 +42,22 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
             .background(new Rectangle().color(PlannhColors.titleColor(data.getMachineName())))
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN);
 
-        topRow.child(new HeaderTextWidget(this, PlannhColors.titleColor(data.getMachineName())).setScale(1)
-            .background()
-            .setTextColor(Color.BLACK.main));
+        topRow.child(
+            new HeaderTextWidget(this, PlannhColors.titleColor(data.getMachineName())).setScale(1)
+                .background()
+                .setTextColor(Color.BLACK.main));
 
         topRow.child(new CloseButtonWidget(this));
 
         mainColumn.child(topRow)
             .child(new RecipeAreaWidget(this));
 
-        mainColumn.child(IKey.str("PROPERTIES TODO").asWidget());
-        mainColumn.child(IKey.str("SETTINGS TODO").asWidget());
+        mainColumn.child(
+            IKey.str("PROPERTIES TODO")
+                .asWidget());
+        mainColumn.child(
+            IKey.str("SETTINGS TODO")
+                .asWidget());
 
         child(mainColumn);
     }

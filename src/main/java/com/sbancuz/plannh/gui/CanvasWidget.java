@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.cleanroommc.modularui.api.widget.IWidget;
 import net.minecraft.client.Minecraft;
 
 import org.jetbrains.annotations.NotNull;
@@ -17,6 +16,7 @@ import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.layout.IViewport;
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.api.widget.IDraggable;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.BufferBuilder;
 import com.cleanroommc.modularui.drawable.GuiDraw;
@@ -175,13 +175,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildNodeWidgets() {
-        /*nodeWidgets.clear();
-        for (final Node node : graph.getNodes()
-            .values()) {
-            RecipeNodeWidget widget = new RecipeNodeWidget(this, node);
-            nodeWidgets.put(node.getId(), widget);
-            child(widget);
-        }*/
+        /*
+         * nodeWidgets.clear();
+         * for (final Node node : graph.getNodes()
+         * .values()) {
+         * RecipeNodeWidget widget = new RecipeNodeWidget(this, node);
+         * nodeWidgets.put(node.getId(), widget);
+         * child(widget);
+         * }
+         */
         for (final Node node : graph.getNodes()
             .values()) child(new NodeWidget(this, node));
     }
@@ -229,11 +231,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private int widgetX(final RecipeNodeWidget w) {
-        return Math.round(w.getNode().getX() * graph.getZoom() + graph.getPanX());
+        return Math.round(
+            w.getNode()
+                .getX() * graph.getZoom() + graph.getPanX());
     }
 
     private int widgetY(final RecipeNodeWidget w) {
-        return Math.round(w.getNode().getY() * graph.getZoom() + graph.getPanY());
+        return Math.round(
+            w.getNode()
+                .getY() * graph.getZoom() + graph.getPanY());
     }
 
     private int portY(final int index) {
@@ -305,7 +311,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         edgeRoutes.clear();
         final List<ArrowRouter.Rect> obstacles = new ArrayList<>();
         for (final RecipeNodeWidget w : nodeWidgets.values()) {
-            obstacles.add(new ArrowRouter.Rect(w.getNode().getX(), w.getNode().getY(), worldWidth(w), worldHeight(w)));
+            obstacles.add(
+                new ArrowRouter.Rect(
+                    w.getNode()
+                        .getX(),
+                    w.getNode()
+                        .getY(),
+                    worldWidth(w),
+                    worldHeight(w)));
         }
         final List<ArrowRouter.Request> requests = new ArrayList<>();
         for (final Edge edge : graph.getEdges()
@@ -313,10 +326,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final RecipeNodeWidget src = nodeWidgets.get(edge.sourceNodeId);
             final RecipeNodeWidget dst = nodeWidgets.get(edge.targetNodeId);
             if (src == null || dst == null) continue;
-            final int sx = src.getNode().getX() + worldWidth(src);
-            final int sy = src.getNode().getY() + portWorldY(edge.sourceOutputIndex);
-            final int dx = dst.getNode().getX();
-            final int dy = dst.getNode().getY() + portWorldY(edge.targetInputIndex);
+            final int sx = src.getNode()
+                .getX() + worldWidth(src);
+            final int sy = src.getNode()
+                .getY() + portWorldY(edge.sourceOutputIndex);
+            final int dx = dst.getNode()
+                .getX();
+            final int dy = dst.getNode()
+                .getY() + portWorldY(edge.targetInputIndex);
             requests.add(new ArrowRouter.Request(edge.id, sx, sy, dx, dy));
         }
 
@@ -334,12 +351,24 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             sig = mixRouteHash(sig, edge.id.getLeastSignificantBits());
             sig = mixRouteHash(sig, edge.sourceOutputIndex);
             sig = mixRouteHash(sig, edge.targetInputIndex);
-            sig = mixRouteHash(sig, src.getNode().getX());
-            sig = mixRouteHash(sig, src.getNode().getY());
+            sig = mixRouteHash(
+                sig,
+                src.getNode()
+                    .getX());
+            sig = mixRouteHash(
+                sig,
+                src.getNode()
+                    .getY());
             sig = mixRouteHash(sig, worldWidth(src));
             sig = mixRouteHash(sig, worldHeight(src));
-            sig = mixRouteHash(sig, dst.getNode().getX());
-            sig = mixRouteHash(sig, dst.getNode().getY());
+            sig = mixRouteHash(
+                sig,
+                dst.getNode()
+                    .getX());
+            sig = mixRouteHash(
+                sig,
+                dst.getNode()
+                    .getY());
             sig = mixRouteHash(sig, worldWidth(dst));
             sig = mixRouteHash(sig, worldHeight(dst));
         }
@@ -361,8 +390,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final Node srcNode = graph.getNodes()
                 .get(edge.sourceNodeId);
             final boolean isFluid = srcNode != null && edge.sourceOutputIndex >= 0
-                && edge.sourceOutputIndex < srcNode.getOutputs().size()
-                && srcNode.getOutputs().get(edge.sourceOutputIndex)
+                && edge.sourceOutputIndex < srcNode.getOutputs()
+                    .size()
+                && srcNode.getOutputs()
+                    .get(edge.sourceOutputIndex)
                     .getType() == RecipePropertyAPI.FLUID;
 
             final List<int[]> route = edgeRoutes.get(edge.id);
@@ -511,9 +542,16 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean canConnect(final Node srcNode, final int srcOutIdx, final Node dstNode, final int dstInIdx) {
         if (srcNode == dstNode) return false;
         if (srcOutIdx < 0 || dstInIdx < 0) return false;
-        if (srcOutIdx >= srcNode.getOutputs().size() || dstInIdx >= dstNode.getInputs().size()) return false;
-        return srcNode.getOutputs().get(srcOutIdx)
-            .canConnect(dstNode.getInputs().get(dstInIdx));
+        if (srcOutIdx >= srcNode.getOutputs()
+            .size() || dstInIdx
+                >= dstNode.getInputs()
+                    .size())
+            return false;
+        return srcNode.getOutputs()
+            .get(srcOutIdx)
+            .canConnect(
+                dstNode.getInputs()
+                    .get(dstInIdx));
     }
 
     @Override
@@ -533,7 +571,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 final int port = widget.getOutputPortAt(localMx, localMy);
                 if (port >= 0) {
                     creatingEdge = true;
-                    edgeSourceNodeId = widget.getNode().getId();
+                    edgeSourceNodeId = widget.getNode()
+                        .getId();
                     edgeSourcePortIndex = port;
                     edgeEndX = cmx;
                     edgeEndY = cmy;
@@ -637,7 +676,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 final int localMy = cmy - widgetY(widget);
                 final int port = widget.getInputPortAt(localMx, localMy);
                 if (port >= 0 && canConnect(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode(), port)) {
-                    edgeHoverNodeId = widget.getNode().getId();
+                    edgeHoverNodeId = widget.getNode()
+                        .getId();
                     edgeHoverPortIndex = port;
                     break;
                 }

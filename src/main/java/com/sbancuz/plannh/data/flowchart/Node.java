@@ -6,11 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import codechicken.nei.NEIClientConfig;
-import codechicken.nei.PositionedStack;
-import codechicken.nei.recipe.IRecipeHandler;
-import codechicken.nei.recipe.Recipe;
-import codechicken.nei.recipe.RecipeHandlerRef;
+import net.minecraft.tileentity.TileEntityFurnace;
+
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
@@ -18,9 +15,14 @@ import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
+
+import codechicken.nei.NEIClientConfig;
+import codechicken.nei.PositionedStack;
+import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.Recipe;
+import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 import lombok.Setter;
-import net.minecraft.tileentity.TileEntityFurnace;
 
 @Getter
 public class Node extends GraphData {
@@ -70,17 +72,17 @@ public class Node extends GraphData {
         refresh();
     }
 
-    private void refresh(){
+    private void refresh() {
         if (extractor == null) return;
         RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
         IRecipeHandler handler = ref.handler;
         int recipeIndex = ref.recipeIndex;
 
-        if(inputs == null) inputs = new ArrayList<>();
+        if (inputs == null) inputs = new ArrayList<>();
         else inputs.clear();
-        if(outputs == null) outputs = new ArrayList<>();
+        if (outputs == null) outputs = new ArrayList<>();
         else outputs.clear();
-        if(properties == null) properties = new HashMap<>();
+        if (properties == null) properties = new HashMap<>();
         else properties.clear();
 
         List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
@@ -88,8 +90,7 @@ public class Node extends GraphData {
             if (ps != null && ps.item != null && ps.item.stackSize > 0) inputs.add(Port.itemPort(ps));
 
         PositionedStack result = handler.getResultStack(recipeIndex);
-        if (result != null && result.item != null)
-            outputs.add(Port.itemPort(result));
+        if (result != null && result.item != null) outputs.add(Port.itemPort(result));
 
         List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (PositionedStack ps : others) {
@@ -101,10 +102,9 @@ public class Node extends GraphData {
                         inputs.add(Port.itemPort(ps));
                     } else if (machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
                         .equals("OUT")) {
-                        outputs.add(Port.itemPort(ps));
-                    }
-                } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0)
-                    outputs.add(Port.itemPort(ps));
+                            outputs.add(Port.itemPort(ps));
+                        }
+                } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) outputs.add(Port.itemPort(ps));
             }
         }
 

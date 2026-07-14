@@ -47,7 +47,7 @@ public class VanillaProvider implements PropertyProvider {
     @Override
     @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
-                                                  final int recipeIndex) {
+        final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof FurnaceRecipeHandler)) return props;
         props.put(RecipePropertyAPI.DURATION_TICKS, 200);

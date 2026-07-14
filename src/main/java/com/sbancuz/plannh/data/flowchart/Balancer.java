@@ -96,16 +96,20 @@ public final class Balancer {
                     .get(edge.targetNodeId);
                 if (target == null) continue;
 
-                final int myOutputCount = node.getOutputs().get(edge.sourceOutputIndex)
+                final int myOutputCount = node.getOutputs()
+                    .get(edge.sourceOutputIndex)
                     .getAmount();
                 if (myOutputCount <= 0) continue;
-                final float outputChance = node.getOutputs().get(edge.sourceOutputIndex)
+                final float outputChance = node.getOutputs()
+                    .get(edge.sourceOutputIndex)
                     .getChance();
 
-                final int targetInputCount = target.getInputs().get(edge.targetInputIndex)
+                final int targetInputCount = target.getInputs()
+                    .get(edge.targetInputIndex)
                     .getAmount();
                 if (targetInputCount <= 0) continue;
-                final float inputChance = target.getInputs().get(edge.targetInputIndex)
+                final float inputChance = target.getInputs()
+                    .get(edge.targetInputIndex)
                     .getChance();
 
                 final MachineConfig cfg = node.getMachineConfig();
@@ -206,16 +210,20 @@ public final class Balancer {
                 final int targetOps = ops.get(edge.targetNodeId);
                 if (targetOps <= 0) continue;
 
-                final int targetInputCount = target.getInputs().get(edge.targetInputIndex)
+                final int targetInputCount = target.getInputs()
+                    .get(edge.targetInputIndex)
                     .getAmount();
                 if (targetInputCount <= 0) continue;
-                final float inputChance = target.getInputs().get(edge.targetInputIndex)
+                final float inputChance = target.getInputs()
+                    .get(edge.targetInputIndex)
                     .getChance();
 
-                final int myOutputCount = node.getOutputs().get(edge.sourceOutputIndex)
+                final int myOutputCount = node.getOutputs()
+                    .get(edge.sourceOutputIndex)
                     .getAmount();
                 if (myOutputCount <= 0) continue;
-                final float outputChance = node.getOutputs().get(edge.sourceOutputIndex)
+                final float outputChance = node.getOutputs()
+                    .get(edge.sourceOutputIndex)
                     .getChance();
 
                 final MachineConfig cfg = node.getMachineConfig();

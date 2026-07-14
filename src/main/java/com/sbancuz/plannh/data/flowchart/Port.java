@@ -1,17 +1,17 @@
 package com.sbancuz.plannh.data.flowchart;
 
-import codechicken.nei.PositionedStack;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.RecipeResource;
-
-import it.unimi.dsi.fastutil.Pair;
-import lombok.Getter;
-import lombok.Setter;
-import net.minecraft.item.ItemStack;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import net.minecraft.item.ItemStack;
+
+import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.RecipeResource;
+
+import codechicken.nei.PositionedStack;
+import it.unimi.dsi.fastutil.Pair;
+import lombok.Getter;
+import lombok.Setter;
 
 @Setter
 @Getter
@@ -51,7 +51,11 @@ public class Port<T> {
         type.setAmount(value, newAmount);
     }
 
-    public static Port<ItemStack> itemPort(PositionedStack ps){
-        return new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), (float) ps.getChance() / 10_000, Pair.of(ps.relx, ps.rely));
+    public static Port<ItemStack> itemPort(PositionedStack ps) {
+        return new Port<>(
+            RecipePropertyAPI.ITEM,
+            ps.item.copy(),
+            (float) ps.getChance() / 10_000,
+            Pair.of(ps.relx, ps.rely));
     }
 }

@@ -1,17 +1,16 @@
 package com.sbancuz.plannh.gui.node;
 
-import codechicken.nei.recipe.RecipeHandlerRef;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
+
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Port;
-import gregtech.nei.GTNEIDefaultHandler;
-import it.unimi.dsi.fastutil.Pair;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 
-import java.awt.Point;
+import codechicken.nei.recipe.RecipeHandlerRef;
+import it.unimi.dsi.fastutil.Pair;
 
 public class PortWidget extends Widget<PortWidget> {
 
@@ -26,15 +25,15 @@ public class PortWidget extends Widget<PortWidget> {
         this.handlerRef = handlerRef;
         this.isInput = isInput;
 
-        background(new Rectangle().color(isInput? INPUT_COLOR : OUTPUT_COLOR).hollow());
+        background(
+            new Rectangle().color(isInput ? INPUT_COLOR : OUTPUT_COLOR)
+                .hollow());
         hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
         // TODO make the offsets static and add docs
         pos(pos.first() + 1, pos.second() - 1);
 
-        if(port.getType() == RecipePropertyAPI.ITEM)
-            tooltip(t -> t.addFromItem((ItemStack) port.getValue()));
-        if(port.getType() == RecipePropertyAPI.FLUID)
-            tooltip(t -> t.addFromFluid((FluidStack) port.getValue()));
+        if (port.getType() == RecipePropertyAPI.ITEM) tooltip(t -> t.addFromItem((ItemStack) port.getValue()));
+        if (port.getType() == RecipePropertyAPI.FLUID) tooltip(t -> t.addFromFluid((FluidStack) port.getValue()));
         addTooltipLine(port.getChance() * 100 + "%");
     }
 }
