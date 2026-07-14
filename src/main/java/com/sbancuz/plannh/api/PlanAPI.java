@@ -20,7 +20,7 @@ import net.minecraft.util.StatCollector;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
-import com.sbancuz.plannh.data.flowchart.Serializer;
+import com.sbancuz.plannh.data.serialization.Serializer;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;

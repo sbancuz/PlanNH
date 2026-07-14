@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.flowchart;
+package com.sbancuz.plannh.data.serialization;
 
 import java.lang.reflect.Type;
 

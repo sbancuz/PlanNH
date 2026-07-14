@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.flowchart;
+package com.sbancuz.plannh.data.serialization;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -7,7 +7,6 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -21,12 +20,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 
 import codechicken.nei.recipe.Recipe;
+import com.sbancuz.plannh.data.flowchart.Edge;
+import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.GraphData;
+import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Note;
+import com.sbancuz.plannh.data.flowchart.Plan;
+import com.sbancuz.plannh.data.flowchart.Port;
 
 public final class Serializer {
 
@@ -34,6 +38,7 @@ public final class Serializer {
         .enableComplexMapKeySerialization()
         .registerTypeAdapter(GraphData.class, new GraphDataDeserializer())
         .registerTypeAdapter(Recipe.RecipeId.class, new RecipeIdAdapter())
+        .registerTypeAdapter(MachineConfig.class, new MachineConfigAdapter())
         .create();
 
     // ── Public API ──
@@ -138,8 +143,8 @@ public final class Serializer {
         // Map UUIDs to short mermaid-safe IDs
         for (final Node node : graph.getNodes()
             .values()) {
-            final String id = mermaidId(node.id);
-            final String label = node.machineName.isEmpty() ? "?" : node.machineName;
+            final String id = mermaidId(node.getId());
+            final String label = node.getMachineName().isEmpty() ? "?" : node.getMachineName();
             sb.append("    ")
                 .append(id)
                 .append("[\"")
@@ -188,29 +193,6 @@ public final class Serializer {
         root.addProperty("panY", graph.getPanY());
         root.addProperty("name", graph.getName());
 
-        final JsonArray nodesArray = new JsonArray();
-        for (final Node node : graph.getNodes()
-            .values()) {
-            final JsonObject obj = new JsonObject();
-            obj.addProperty("id", node.id.toString());
-            obj.addProperty("x", node.x);
-            obj.addProperty("y", node.y);
-            obj.addProperty("machine", node.machineName);
-            obj.add("recipeId", node.recipeId.toJsonObject());
-            obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
-            obj.addProperty("extractorIndex", node.getExtractorIndex());
-
-            obj.add("inputs", portListToJson(node.inputs));
-            obj.add("outputs", portListToJson(node.outputs));
-
-            if (node.machineConfig.hasAnyBoost()) {
-                obj.add("machineConfig", machineConfigToJson(node.machineConfig));
-            }
-
-            nodesArray.add(obj);
-        }
-        root.add("nodes", nodesArray);
-
         final JsonArray edgesArray = new JsonArray();
         for (final Edge edge : graph.getEdges()
             .values()) {
@@ -234,10 +216,10 @@ public final class Serializer {
             .values()) groupsArray.add(GSON.toJsonTree(group));
         root.add("groups", groupsArray);
 
-        final JsonArray nodes2Array = new JsonArray();
-        for (Node2 node : graph.getNodes2()
-            .values()) nodes2Array.add(GSON.toJsonTree(node));
-        root.add("nodes2", nodes2Array);
+        final JsonArray nodesArray = new JsonArray();
+        for (Node node : graph.getNodes()
+            .values()) nodesArray.add(GSON.toJsonTree(node));
+        root.add("nodes", nodesArray);
 
         return root;
     }
@@ -265,45 +247,6 @@ public final class Serializer {
         graph.setPanY(
             root.get("panY")
                 .getAsFloat());
-
-        final JsonArray nodesArray = root.getAsJsonArray("nodes");
-        for (final JsonElement elem : nodesArray) {
-            final JsonObject obj = elem.getAsJsonObject();
-            final UUID id = UUID.fromString(
-                obj.get("id")
-                    .getAsString());
-            final int x = obj.get("x")
-                .getAsInt();
-            final int y = obj.get("y")
-                .getAsInt();
-            final Node node = new Node(id, x, y);
-            node.machineName = obj.get("machine")
-                .getAsString();
-            node.recipeId = Recipe.RecipeId.of(
-                obj.get("recipeId")
-                    .getAsJsonObject());
-            node.handlerRecipeIndex = obj.has("handlerRecipeIndex") ? obj.get("handlerRecipeIndex")
-                .getAsInt() : 0;
-            node.setExtractorIndex(
-                obj.has("extractorIndex") ? obj.get("extractorIndex")
-                    .getAsInt() : 0);
-            node.initExtractor();
-            node.refresh();
-
-            if (obj.has("inputs")) {
-                applySavedPortChances(obj.getAsJsonArray("inputs"), node.inputs);
-            }
-            if (obj.has("outputs")) {
-                applySavedPortChances(obj.getAsJsonArray("outputs"), node.outputs);
-            }
-
-            if (obj.has("machineConfig")) {
-                jsonToMachineConfig(obj.getAsJsonObject("machineConfig"), node.machineConfig);
-            }
-
-            graph.getNodes()
-                .put(node.id, node);
-        }
 
         final JsonArray edgesArray = root.getAsJsonArray("edges");
         for (final JsonElement elem : edgesArray) {
@@ -337,135 +280,14 @@ public final class Serializer {
                 .put(group.getId(), group);
         }
 
-        for (final JsonElement elem : root.getAsJsonArray("nodes2")) {
-            final Node2 node = GSON.fromJson(elem, Node2.class);
-            node.refresh();
-            graph.getNodes2()
+        for (final JsonElement elem : root.getAsJsonArray("nodes")) {
+            final Node node = GSON.fromJson(elem, Node.class);
+            node.init();
+            graph.getNodes()
                 .put(node.getId(), node);
         }
 
         return graph;
-    }
-
-    // ── Port helpers ──
-
-    @Nonnull
-    private static JsonArray portListToJson(final List<Port<?>> ports) {
-        final JsonArray arr = new JsonArray();
-        for (final Port<?> port : ports) {
-            final JsonObject obj = new JsonObject();
-            obj.addProperty(
-                "type",
-                port.getType()
-                    .getKey());
-            obj.addProperty("chance", port.getChance());
-            arr.add(obj);
-        }
-        return arr;
-    }
-
-    private static void applySavedPortChances(final JsonArray arr, final List<Port<?>> ports) {
-        for (int i = 0; i < arr.size() && i < ports.size(); i++) {
-            final JsonObject obj = arr.get(i)
-                .getAsJsonObject();
-            final String savedType = obj.has("type") ? obj.get("type")
-                .getAsString() : "item";
-            if (savedType.equals(
-                ports.get(i)
-                    .getType()
-                    .getKey())) {
-                ports.get(i)
-                    .setChance(
-                        obj.get("chance")
-                            .getAsFloat());
-            }
-        }
-    }
-
-    // ── Machine config ──
-
-    @Nonnull
-    private static JsonObject machineConfigToJson(final MachineConfig cfg) {
-        final JsonObject obj = new JsonObject();
-        final MachineProfile profile = cfg.getProfile();
-
-        if (!MachineProfileRegistry.defaultId()
-            .equals(cfg.profileId)) {
-            obj.addProperty("profile", cfg.profileId);
-        }
-
-        final JsonObject settingsObj = new JsonObject();
-        for (final SettingDef<?> def : profile.settings()) {
-            final Object val = cfg.settings.get(def.key);
-            if (val == null) continue;
-            if (val.equals(def.defaultValue)) continue;
-            if (val instanceof final Boolean b) settingsObj.addProperty(def.key, b);
-            else if (val instanceof final Integer i) settingsObj.addProperty(def.key, i);
-            else if (val instanceof final String s) settingsObj.addProperty(def.key, s);
-        }
-        if (!settingsObj.entrySet()
-            .isEmpty()) obj.add("settings", settingsObj);
-
-        if (!cfg.inputConsumption.isEmpty()) {
-            obj.add("inMul", multiplierArrayToJson(cfg.inputConsumption));
-        }
-        if (!cfg.outputProductivity.isEmpty()) {
-            obj.add("outMul", multiplierArrayToJson(cfg.outputProductivity));
-        }
-
-        return obj;
-    }
-
-    private static void jsonToMachineConfig(final JsonObject obj, final MachineConfig cfg) {
-        if (obj.has("profile")) {
-            cfg.profileId = obj.get("profile")
-                .getAsString();
-            if (obj.has("settings")) {
-                final JsonObject settingsObj = obj.getAsJsonObject("settings");
-                for (final Map.Entry<String, JsonElement> entry : settingsObj.entrySet()) {
-                    final JsonElement el = entry.getValue();
-                    if (el.isJsonPrimitive()) {
-                        final var prim = el.getAsJsonPrimitive();
-                        if (prim.isBoolean()) cfg.settings.put(entry.getKey(), prim.getAsBoolean());
-                        else if (prim.isNumber()) cfg.settings.put(entry.getKey(), prim.getAsInt());
-                        else cfg.settings.put(entry.getKey(), prim.getAsString());
-                    }
-                }
-            }
-        }
-
-        if (obj.has("inMul")) {
-            jsonToMultiplierArray(obj.getAsJsonArray("inMul"), cfg.inputConsumption);
-        }
-        if (obj.has("outMul")) {
-            jsonToMultiplierArray(obj.getAsJsonArray("outMul"), cfg.outputProductivity);
-        }
-    }
-
-    // ── Multiplier helpers ──
-    // TODO are these necessary? i don't think so
-
-    @Nonnull
-    private static JsonArray multiplierArrayToJson(final Map<Integer, Float> map) {
-        final JsonArray arr = new JsonArray();
-        for (final Map.Entry<Integer, Float> e : map.entrySet()) {
-            final JsonObject entry = new JsonObject();
-            entry.addProperty("index", e.getKey());
-            entry.addProperty("multiplier", e.getValue());
-            arr.add(entry);
-        }
-        return arr;
-    }
-
-    private static void jsonToMultiplierArray(final JsonArray arr, final Map<Integer, Float> out) {
-        for (final JsonElement elem : arr) {
-            final JsonObject entry = elem.getAsJsonObject();
-            out.put(
-                entry.get("index")
-                    .getAsInt(),
-                entry.get("multiplier")
-                    .getAsFloat());
-        }
     }
 
     // ── Mermaid helpers ──
@@ -490,8 +312,8 @@ public final class Serializer {
         if (src == null) return "";
 
         final int idx = edge.sourceOutputIndex;
-        if (idx >= 0 && idx < src.outputs.size()) {
-            final Port port = src.outputs.get(idx);
+        if (idx >= 0 && idx < src.getOutputs().size()) {
+            final Port port = src.getOutputs().get(idx);
             return port.getDisplayName();
         }
         return "";

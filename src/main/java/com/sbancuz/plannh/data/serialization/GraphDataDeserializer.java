@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.flowchart;
+package com.sbancuz.plannh.data.serialization;
 
 import java.lang.reflect.Type;
 
@@ -6,6 +6,10 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.sbancuz.plannh.data.flowchart.GraphData;
+import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Note;
 
 public class GraphDataDeserializer implements JsonDeserializer<GraphData> {
 
@@ -18,8 +22,8 @@ public class GraphDataDeserializer implements JsonDeserializer<GraphData> {
             case "note" -> Serializer.GSON.fromJson(json, Note.class);
             case "group" -> Serializer.GSON.fromJson(json, Group.class);
             case "node" -> {
-                Node2 node = Serializer.GSON.fromJson(json, Node2.class);
-                node.refresh(); // init i/o lists
+                Node node = Serializer.GSON.fromJson(json, Node.class);
+                node.init();
                 yield node;
             }
             default -> throw new JsonParseException("Invalid type detected during GroupData deserialization");
