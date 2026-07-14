@@ -9,7 +9,7 @@ import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.sbancuz.plannh.data.flowchart.Node2;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
@@ -17,7 +17,7 @@ import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 
-public class NodeWidget extends FlowchartWidget<NodeWidget, Node2> {
+public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
     private static final UITexture bg = UITexture.builder()
         .location("nei:textures/gui/recipebg.png")
@@ -26,7 +26,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node2> {
         .adaptable(3)
         .build();
 
-    public NodeWidget(CanvasWidget canvas, Node2 data) {
+    public NodeWidget(CanvasWidget canvas, Node data) {
         super(canvas, data);
         coverChildren();
         background(bg);
@@ -58,8 +58,8 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node2> {
     }
 
     @Override
-    protected Map<UUID, Node2> getDefaultContainer() {
+    protected Map<UUID, Node> getDefaultContainer() {
         return canvas.getGraph()
-            .getNodes2();
+            .getNodes();
     }
 }

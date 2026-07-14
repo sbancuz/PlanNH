@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.data.flowchart.Node;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 

@@ -4,31 +4,26 @@ import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
 import static org.lwjgl.opengl.GL11.glDisable;
 import static org.lwjgl.opengl.GL11.glEnable;
 
-import java.awt.*;
-import java.util.List;
-import java.util.Objects;
-
+import com.sbancuz.plannh.data.flowchart.Port;
+import it.unimi.dsi.fastutil.Pair;
 import net.minecraft.client.Minecraft;
 
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
-import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.modularui.api.math.Size;
-import com.sbancuz.plannh.data.flowchart.Node2;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
 import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
 
-import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 
 public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements IFlowchartDraggable {
 
     private final NodeWidget parent;
-    private final Node2 data;
+    private final Node data;
     private final NEIRecipeWidget neiWidget;
     private final RecipeHandlerRef handlerRef;
 
@@ -51,13 +46,13 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
             size(neiWidget.w, neiWidget.h);
         }
 
-        // input
-        data.getInputs()
-            .forEach(positionedStack -> child(new PortWidget(handlerRef, true, positionedStack)));
+        // inputs
+        for(Port<?> port : data.getInputs())
+            port.getPositions().forEach(pos -> child(new PortWidget(handlerRef, true, pos, port)));
 
-        // output
-        data.getOutputs()
-            .forEach(positionedStack -> child(new PortWidget(handlerRef, false, positionedStack)));
+        // outputs
+        for(Port<?> port : data.getOutputs())
+            port.getPositions().forEach(pos -> child(new PortWidget(handlerRef, false, pos, port)));
     }
 
     @Override

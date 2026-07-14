@@ -4,6 +4,7 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import com.sbancuz.plannh.data.flowchart.Node;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
@@ -36,7 +37,6 @@ import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
@@ -54,7 +54,6 @@ public class FlowchartScreen extends ModularScreen {
 
     @Getter
     private final CanvasWidget canvas;
-    public static boolean isTestNode = true;
 
     private FlowchartScreen(final ModularPanel panel, CanvasWidget canvas) {
         super(PlanNH.MODID, panel);
@@ -162,10 +161,6 @@ public class FlowchartScreen extends ModularScreen {
                     Flow.row()
                         .coverChildren()
                         .childPadding(2)
-                        .child(
-                            new ToggleButton().value(new BoolValue.Dynamic(() -> isTestNode, val -> isTestNode = val))
-                                .overlay(IKey.str("NT"))
-                                .addTooltipLine("Node Test Mode"))
                         .child(
                             new ToggleButton().value(
                                 new BoolValue.Dynamic(
@@ -475,10 +470,10 @@ public class FlowchartScreen extends ModularScreen {
                 for (final Node node : g.getNodes()
                     .values()) {
                     final NodeBalance nb = br.nodeBalances()
-                        .get(node.id);
+                        .get(node.getId());
                     if (nb == null || nb.operations <= 0) continue;
                     GuiDraw.drawText(
-                        "\u00d7" + nb.operations + "  " + node.machineName,
+                        "\u00d7" + nb.operations + "  " + node.getMachineName(),
                         ITEM_TEXT_X,
                         ly,
                         0.8f,

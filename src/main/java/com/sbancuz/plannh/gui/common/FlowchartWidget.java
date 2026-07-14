@@ -16,7 +16,7 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
-import com.sbancuz.plannh.data.flowchart.Node2;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.gui.CanvasWidget;
@@ -187,7 +187,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         return switch (data){
             case Note note -> new NoteWidget(canvas, note);
             case Group group -> new GroupWidget(canvas, group);
-            case Node2 node -> new NodeWidget(canvas, node);
+            case Node node -> new NodeWidget(canvas, node);
             default -> throw new IllegalArgumentException("Unsupported data type: " + data.getClass());
         };
     }

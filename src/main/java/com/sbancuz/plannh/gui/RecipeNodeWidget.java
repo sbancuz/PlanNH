@@ -8,6 +8,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.data.flowchart.Node;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
@@ -25,7 +26,6 @@ import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Group;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 
 import codechicken.nei.drawable.DrawableBuilder;
@@ -166,8 +166,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     public void syncTransform(final float zoom, final float panX, final float panY) {
-        final int sx = Math.round(node.x * zoom + panX);
-        final int sy = Math.round(node.y * zoom + panY);
+        final int sx = Math.round(node.getX() * zoom + panX);
+        final int sy = Math.round(node.getY() * zoom + panY);
         pos(sx, sy);
         resizeForZoom(zoom);
     }
@@ -188,18 +188,18 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final BalanceResult br = canvas.getGraph()
             .balance();
         return br.nodeBalances()
-            .get(node.id);
+            .get(node.getId());
     }
 
     private int calcInfoHeight() {
-        final int lines = 1 + node.inputs.size() + node.outputs.size();
+        final int lines = 1 + node.getInputs().size() + node.getOutputs().size();
         return lines * LINE_H + 6;
     }
 
     private void ensureRecipeHandler() {
         if (handlerRef != null || handlerInitFailed) return;
 
-        final RecipeHandlerRef ref = RecipeHandlerRef.of(node.recipeId);
+        final RecipeHandlerRef ref = RecipeHandlerRef.of(node.getRecipeId());
         if (ref == null) {
             handlerInitFailed = true;
             return;
@@ -272,11 +272,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 PlannhColors.TEXT_WHITE.getColor(),
                 false);
 
-            if (node.machineConfig.hasAnyBoost()) {
+            if (node.getMachineConfig().hasAnyBoost()) {
                 GuiDraw.drawText(buildConfigBadge(), LEFT_CONTENT_X, TITLE_TEXT_Y, 1.0f, PlannhColors.TEXT_BADGE.getColor(), false);
             }
 
-            final Group grp = canvas.getGroupForNode(node.id);
+            final Group grp = canvas.getGroupForNode(node.getId());
             if (grp != null) {
                 final int gc = groupColor(grp);
                 final String gl = "\u229f " + grp.getHeader();
@@ -309,9 +309,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             GuiDraw.drawRect(0, 0, w, h, PlannhColors.NODE_BG.getColor());
             GuiHelper.drawRectBorder(0, 0, w, h, zq(1), PlannhColors.NODE_BORDER.getColor());
 
-            assert node.machineName != null;
+            assert node.getMachineName() != null;
             GuiDraw.drawText(
-                node.machineName.isEmpty() ? "?" : node.machineName,
+                node.getMachineName().isEmpty() ? "?" : node.getMachineName(),
                 zq(SIMPLE_TEXT_INSET_X),
                 zq(SIMPLE_TEXT_INSET_Y),
                 z,
@@ -320,7 +320,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
             final NodeBalance simpleNb = getNodeBalance();
             final int simpleOps = simpleNb != null ? simpleNb.operations : 1;
-            final int simpleDurPerOp = simpleNb != null ? simpleNb.durationPerOp : node.durationTicks;
+            final int simpleDurPerOp = simpleNb != null ? simpleNb.durationPerOp : node.getDurationTicks();
             final StringBuilder simpleTiming = new StringBuilder();
             simpleTiming.append("\u00d7").append(simpleOps);
             if (simpleDurPerOp > 0) {
@@ -330,7 +330,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                     .append(String.format("%.1f", (float) simpleDurPerOp / GuiHelper.TICKS_PER_SECOND))
                     .append("s)");
             }
-            final Object rawVoltage = node.machineConfig.settings.get("voltage");
+            final Object rawVoltage = node.getMachineConfig().getSettings().get("voltage");
             if (rawVoltage instanceof final String v && !"OFF".equals(v)) {
                 simpleTiming.append("  ").append(v);
             }
@@ -348,7 +348,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 GuiDraw.drawItem(primary, w - is - zq(ICON_RMARGIN), zq(ICON_Y), is, is, context.getCurrentDrawingZ());
             }
 
-            final Group grp2 = canvas.getGroupForNode(node.id);
+            final Group grp2 = canvas.getGroupForNode(node.getId());
             if (grp2 != null) {
                 GuiDraw.drawText("\u229f " + grp2.getHeader(), zq(SIMPLE_TEXT_INSET_X), zq(SIMPLE_GROUP_LABEL_Y), z, groupColor(grp2), false);
             }
@@ -373,7 +373,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public int getOutputPortAt(final int mx, final int my) {
         final int half = zq(PORT_HALF);
         final int px = getArea().width - zq(PORT_SIZE);
-        for (int i = 0; i < node.outputs.size(); i++) {
+        for (int i = 0; i < node.getOutputs().size(); i++) {
             final int py = portTopY(i) - half;
             if (mx >= px && mx < px + zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
         }
@@ -382,7 +382,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     public int getInputPortAt(final int mx, final int my) {
         final int half = zq(PORT_HALF);
-        for (int i = 0; i < node.inputs.size(); i++) {
+        for (int i = 0; i < node.getInputs().size(); i++) {
             final int py = portTopY(i) - half;
             if (mx >= 0 && mx < zq(PORT_SIZE) && my >= py && my < py + zq(PORT_SIZE)) return i;
         }
@@ -390,7 +390,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private void drawGroupMembershipBar() {
-        final Group group = canvas.getGroupForNode(node.id);
+        final Group group = canvas.getGroupForNode(node.getId());
         if (group == null) return;
         final int gc = groupColor(group);
         GuiDraw.drawRect(
@@ -411,9 +411,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final int ps = zq(PORT_SIZE);
         final int half = zq(PORT_HALF);
 
-        for (int i = 0; i < node.outputs.size(); i++) {
+        for (int i = 0; i < node.getOutputs().size(); i++) {
             final int py = portTopY(i) - half;
-            final Port port = node.outputs.get(i);
+            final Port port = node.getOutputs().get(i);
             if (port.getType() == RecipePropertyAPI.FLUID) {
                 GuiDraw.drawRect(
                     getArea().width - ps - 1,
@@ -432,9 +432,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_OUTPUT.getColor());
             }
         }
-        for (int i = 0; i < node.inputs.size(); i++) {
+        for (int i = 0; i < node.getInputs().size(); i++) {
             final int py = portTopY(i) - half;
-            final Port port = node.inputs.get(i);
+            final Port port = node.getInputs().get(i);
             if (port.getType() == RecipePropertyAPI.FLUID) {
                 GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_IN_H.getColor());
                 GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_FLUID_IN.getColor());
@@ -454,12 +454,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final NodeBalance nb = getNodeBalance();
         final float sec = nb != null && nb.totalDurationTicks > 0
             ? (float) nb.totalDurationTicks / GuiHelper.TICKS_PER_SECOND
-            : node.durationTicks > 0 ? (float) node.durationTicks / GuiHelper.TICKS_PER_SECOND : 1f;
+            : node.getDurationTicks() > 0 ? (float) node.getDurationTicks() / GuiHelper.TICKS_PER_SECOND : 1f;
         final int ops = nb != null ? nb.operations : 1;
-        final int throughput = nb != null ? node.machineConfig.computeEffect(node.properties, node.durationTicks)
+        final int throughput = nb != null ? node.getMachineConfig().computeEffect(node.getProperties(), node.getDurationTicks())
             .throughputFactor() : 1;
 
-        final int durPerOp = nb != null ? nb.durationPerOp : node.durationTicks;
+        final int durPerOp = nb != null ? nb.durationPerOp : node.getDurationTicks();
         final StringBuilder opsLine = new StringBuilder();
         opsLine.append("\u00d7")
             .append(ops);
@@ -473,8 +473,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
         y += LINE_H;
 
-        y = drawPortList(x, y, node.inputs, nb, sec, ops, throughput, false);
-        drawPortList(x, y, node.outputs, nb, sec, ops, throughput, true);
+        y = drawPortList(x, y, node.getInputs(), nb, sec, ops, throughput, false);
+        drawPortList(x, y, node.getOutputs(), nb, sec, ops, throughput, true);
     }
 
     private int drawPortList(final int x, int y, final List<Port<?>> ports, final NodeBalance nb, final float sec,
@@ -546,7 +546,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 getArea().width,
                 CLOSE_W,
                 CLOSE_MARGIN)) {
-                canvas.removeNode(node.id);
+                canvas.removeNode(node.getId());
                 return Result.SUCCESS;
             }
 
@@ -586,8 +586,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             dragging = true;
             dragStartMouseX = getContext().getAbsMouseX();
             dragStartMouseY = getContext().getAbsMouseY();
-            nodeStartX = node.x;
-            nodeStartY = node.y;
+            nodeStartX = node.getX();
+            nodeStartY = node.getY();
             return Result.SUCCESS;
         }
         return Result.IGNORE;
@@ -615,8 +615,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             final int dy = getContext().getAbsMouseY() - dragStartMouseY;
             final float z = canvas.getGraph()
                 .getZoom();
-            node.x = nodeStartX + Math.round(dx / z);
-            node.y = nodeStartY + Math.round(dy / z);
+            node.setX(nodeStartX + Math.round(dx / z));
+            node.setY(nodeStartY + Math.round(dy / z));
             // canvas.clampNodeToGroup(node);
             syncTransform(
                 z,
@@ -628,14 +628,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private String buildConfigBadge() {
-        final MachineConfig c = node.machineConfig;
+        final MachineConfig c = node.getMachineConfig();
         final MachineProfile profile = c.getProfile();
         final StringBuilder sb = new StringBuilder();
 
         for (final SettingDef<?> def : profile.settings()) {
-            final Object val = c.settings.get(def.key);
+            final Object val = c.getSettings().get(def.getKey());
             if (val == null) continue;
-            if (val.equals(def.defaultValue)) continue;
+            if (val.equals(def.getDefaultValue())) continue;
             final String badge = def.badge(val, c);
             if (badge == null) continue;
             sb.append(badge)
@@ -653,7 +653,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         final int x = LEFT_CONTENT_X;
         final int y0 = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + calcInfoHeight();
-        final MachineProfile profile = node.machineConfig.getProfile();
+        final MachineProfile profile = node.getMachineConfig().getProfile();
         int panelH = profile.settings()
             .size() * LINE_H + 4;
         if (node.getAvailableExtractors()
@@ -665,7 +665,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             panelH,
             PlannhColors.SETTINGS_PANEL_BG.getColor());
 
-        final MachineConfig c = node.machineConfig;
+        final MachineConfig c = node.getMachineConfig();
         int y = y0;
 
         for (final SettingDef<?> def : profile.settings()) {
@@ -685,7 +685,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int drawSetting(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
-        if (def.type == Integer.class) {
+        /*if (def.type == Integer.class) {
             return drawConfigIntField(x, y, def.label, c.getInt(def.key), def.minInt, def.maxInt, v -> {
                 c.setInt(def.key, v);
                 onConfigChanged();
@@ -728,12 +728,13 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             }));
             return y + LINE_H;
         }
-        return y + LINE_H;
+        return y + LINE_H;*/
+        return 0;
     }
 
     private int computeConfigPanelHeight() {
         if (!configOpen) return 0;
-        final MachineProfile profile = node.machineConfig.getProfile();
+        final MachineProfile profile = node.getMachineConfig().getProfile();
         int h = profile.settings()
             .size() * LINE_H + 8;
         if (node.getAvailableExtractors()
@@ -772,14 +773,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     @Nullable
     private ItemStack getFirstItemOutput() {
-        for (final Port<?> port : node.outputs) {
+        for (final Port<?> port : node.getOutputs()) {
             if (port.getType() == RecipePropertyAPI.ITEM) return (ItemStack) port.getValue();
         }
         return null;
     }
 
     private void openNeiRecipe() {
-        for (final Port<?> port : node.outputs) {
+        for (final Port<?> port : node.getOutputs()) {
             if (port.getType() == RecipePropertyAPI.ITEM && port.getValue() != null) {
                 GuiCraftingRecipe.openRecipeGui("item", port.getValue());
                 return;

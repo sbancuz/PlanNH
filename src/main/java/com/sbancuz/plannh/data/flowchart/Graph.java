@@ -12,7 +12,6 @@ import lombok.Setter;
 public class Graph {
 
     private final Map<UUID, Node> nodes = new HashMap<>();
-    private final Map<UUID, Node2> nodes2 = new HashMap<>();
     private final Map<UUID, Edge> edges = new HashMap<>();
     private final Map<UUID, Note> notes = new HashMap<>();
     private final Map<UUID, Group> groups = new HashMap<>();

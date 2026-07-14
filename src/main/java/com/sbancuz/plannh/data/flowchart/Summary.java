@@ -71,10 +71,10 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
                 .get(node.id);
             if (nb == null) continue;
 
-            for (int i = 0; i < node.outputs.size(); i++) {
+            for (int i = 0; i < node.getOutputs().size(); i++) {
                 final Float total = nb.effectiveOutputs.get(i);
                 if (total == null || total <= 0) continue;
-                outputMap.merge(LineKey.ResourceKey.of(node.outputs.get(i)), total, Float::sum);
+                outputMap.merge(LineKey.ResourceKey.of(node.getOutputs().get(i)), total, Float::sum);
             }
         }
 
@@ -85,10 +85,10 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
                 .get(node.id);
             if (nb == null) continue;
 
-            for (int i = 0; i < node.inputs.size(); i++) {
+            for (int i = 0; i < node.getInputs().size(); i++) {
                 final Float total = nb.effectiveInputs.get(i);
                 if (total == null || total <= 0) continue;
-                final LineKey key = LineKey.ResourceKey.of(node.inputs.get(i));
+                final LineKey key = LineKey.ResourceKey.of(node.getInputs().get(i));
                 final float existing = outputMap.getOrDefault(key, 0f);
                 final float consumed = Math.min(existing, total);
                 if (consumed > 0) {

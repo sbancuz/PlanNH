@@ -5,9 +5,8 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.data.flowchart.Node;
-
 import codechicken.nei.recipe.IRecipeHandler;
+import com.sbancuz.plannh.data.flowchart.Node;
 
 public interface PropertyProvider {
 

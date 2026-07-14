@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.mixins;
 
+import com.sbancuz.plannh.data.flowchart.Node;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -8,7 +9,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
@@ -35,7 +35,7 @@ public class GuiOverlayButtonMixin {
         final Graph graph = Plan.getActiveGraph();
         for (final Node node : graph.getNodes()
             .values()) {
-            if (currentId.equals(node.recipeId)) {
+            if (currentId.equals(node.getRecipeId())) {
                 return true;
             }
         }

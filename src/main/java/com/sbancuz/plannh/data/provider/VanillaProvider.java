@@ -12,6 +12,7 @@ import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
@@ -46,7 +47,7 @@ public class VanillaProvider implements PropertyProvider {
     @Override
     @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
-        final int recipeIndex) {
+                                                  final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         if (!(handler instanceof FurnaceRecipeHandler)) return props;
         props.put(RecipePropertyAPI.DURATION_TICKS, 200);

@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.data.provider.gregtech;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -7,6 +8,8 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.data.flowchart.Node;
+import it.unimi.dsi.fastutil.Pair;
 import net.minecraft.item.ItemStack;
 
 import org.jetbrains.annotations.NotNull;
@@ -200,6 +203,8 @@ public class GTProvider implements PropertyProvider {
     public Map<RecipeProperty<?>, Object> extract(final @NotNull Node node, final @NotNull IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         GTRecipe r;
+        List<Pair<Integer, Integer>> inputPositions = new ArrayList<>();
+        List<Pair<Integer, Integer>> outputPositions = new ArrayList<>();
 
         if (handler instanceof final FurnaceRecipeHandler fh) {
             final List<TemplateRecipeHandler.CachedRecipe> fRecipes = RecipeHandlerAccess.getArecipes(fh);
@@ -233,6 +238,10 @@ public class GTProvider implements PropertyProvider {
             if (r == null) {
                 return props;
             }
+            // TODO test if this works
+            inputPositions = new ArrayList<>(cr.getIngredients().stream().map(ps -> Pair.of(ps.relx + 6, ps.rely)).toList());
+            outputPositions = new ArrayList<>(cr.getOtherStacks().stream().map(ps -> Pair.of(ps.relx + 6, ps.rely)).toList());
+            outputPositions.addFirst(Pair.of(cr.getResult().relx, cr.getResult().rely));
 
         } else if (handler instanceof final GTNEIDefaultHandler gth) {
             final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
@@ -241,6 +250,10 @@ public class GTProvider implements PropertyProvider {
             final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
             r = cached.mRecipe;
             if (r == null) return props;
+            // TODO make the offsets static and add docs
+            // TODO filter for oredict more inputs
+            inputPositions = new ArrayList<>(cached.mInputs.stream().map(ps -> Pair.of(ps.relx, ps.rely + 8)).toList());
+            outputPositions = new ArrayList<>(cached.mOutputs.stream().map(ps -> Pair.of(ps.relx, ps.rely + 8)).toList());
 
         } else {
             return props;
@@ -271,42 +284,47 @@ public class GTProvider implements PropertyProvider {
         }
 
         // Reset everything to not ignore burnables
-        node.inputs.clear();
-        node.outputs.clear();
+        node.getInputs().clear();
+        node.getOutputs().clear();
 
         for (int i = 0; i < r.mInputs.length; i++) {
             if (r.mInputs[i].stackSize <= 0) continue;
-            node.inputs.add(
+            node.getInputs().add(
                 new Port<>(
                     RecipePropertyAPI.ITEM,
                     r.mInputs[i],
-                    r.mInputChances != null ? r.mInputChances[i] / 100.0f : 1.f));
+                    r.mInputChances != null ? r.mInputChances[i] / 10_000f : 1,
+                    inputPositions.get(i)
+                    ));
         }
         for (int i = 0; i < r.mOutputs.length; i++) {
-            node.outputs.add(
+            node.getOutputs().add(
                 new Port<>(
                     RecipePropertyAPI.ITEM,
                     r.mOutputs[i],
-                    r.mOutputChances != null ? r.mOutputChances[i] / 100.0f : 1.f));
+                    r.mOutputChances != null ? r.mOutputChances[i] / 10_000f : 1,
+                    outputPositions.get(i)));
         }
         for (int i = 0; i < r.mFluidInputs.length; i++) {
             if (r.mFluidInputs[i].amount <= 0) continue;
-            node.inputs.add(
+            node.getInputs().add(
                 new Port<>(
                     RecipePropertyAPI.FLUID,
                     r.mFluidInputs[i],
-                    r.mFluidInputChances != null ? r.mFluidInputChances[i] / 100.0f : 1.f));
+                    r.mFluidInputChances != null ? r.mFluidInputChances[i] / 10_000f : 1,
+                    inputPositions.get(r.mInputs.length + i)));
         }
         for (int i = 0; i < r.mFluidOutputs.length; i++) {
-            node.outputs.add(
+            node.getOutputs().add(
                 new Port<>(
                     RecipePropertyAPI.FLUID,
                     r.mFluidOutputs[i],
-                    r.mFluidOutputChances != null ? r.mFluidOutputChances[i] / 100.0f : 1.f));
+                    r.mFluidOutputChances != null ? r.mFluidOutputChances[i] / 10_000f : 1,
+                    outputPositions.get(r.mOutputs.length + i)));
         }
 
-        node.inputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
-        node.outputs.removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
+        node.getInputs().removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
+        node.getOutputs().removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
 
         return props;
     }

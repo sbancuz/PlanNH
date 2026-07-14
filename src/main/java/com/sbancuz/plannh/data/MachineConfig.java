@@ -1,31 +1,45 @@
 package com.sbancuz.plannh.data;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
 
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.setting.SettingDef;
+import com.sbancuz.plannh.data.setting.Settings;
+import lombok.Getter;
+import lombok.Setter;
+import org.jetbrains.annotations.Nullable;
 
+@Getter
+@Setter
 public class MachineConfig {
 
-    public String profileId;
-    public final Map<String, Object> settings = new HashMap<>();
-    public final Map<Integer, Float> inputConsumption = new HashMap<>();
-    public final Map<Integer, Float> outputProductivity = new HashMap<>();
+    private String profileId;
+    private final Map<String, Object> settings;
+    private final Map<Integer, Float> inputConsumption;
+    private final Map<Integer, Float> outputProductivity;
 
-    private final Node parentRef;
-
-    public MachineConfig(final Node parentRef) {
-        this(parentRef, MachineProfileRegistry.get(MachineProfileRegistry.defaultId()));
+    public MachineConfig() {
+        this(MachineProfileRegistry.get(MachineProfileRegistry.defaultId()));
     }
 
-    public MachineConfig(final Node parentRef, final MachineProfile profile) {
-        this.parentRef = parentRef;
+    public MachineConfig(final MachineProfile profile) {
+        this(profile, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap());
+    }
+
+    public MachineConfig(final MachineProfile profile, Map<String, Object> settings, Map<Integer, Float> inputConsumption, Map<Integer, Float> outputProductivity) {
         this.profileId = profile.id();
-        for (final SettingDef<?> def : profile.settings()) {
-            settings.putIfAbsent(def.key, def.defaultValue);
-        }
+        this.inputConsumption = new HashMap<>(inputConsumption);
+        this.outputProductivity = new HashMap<>(outputProductivity);
+        this.settings = new HashMap<>(settings);
+
+        for (SettingDef<?> def : profile.settings())
+            this.settings.putIfAbsent(def.getKey(), def.getDefaultValue());
+
+        this.inputConsumption.put(0, 0f); // TODO remove, this is a test
     }
 
     @Nonnull
@@ -51,17 +65,14 @@ public class MachineConfig {
 
     public void setInt(final String key, final int value) {
         settings.put(key, value);
-        parentRef.refresh();
     }
 
     public void setBoolean(final String key, final boolean value) {
         settings.put(key, value);
-        parentRef.refresh();
     }
 
     public void setString(final String key, final String value) {
         settings.put(key, value);
-        parentRef.refresh();
     }
 
     @Nonnull
@@ -93,8 +104,8 @@ public class MachineConfig {
             .equals(profileId)) return true;
         final MachineProfile p = getProfile();
         for (final SettingDef<?> def : p.settings()) {
-            final Object val = settings.get(def.key);
-            if (val != null && !val.equals(def.defaultValue)) return true;
+            final Object val = settings.get(def.getKey());
+            if (val != null && !val.equals(def.getDefaultValue())) return true;
         }
         return !inputConsumption.isEmpty() || !outputProductivity.isEmpty();
     }

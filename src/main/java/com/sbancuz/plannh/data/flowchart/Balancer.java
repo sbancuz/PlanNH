@@ -78,8 +78,8 @@ public final class Balancer {
         final Map<UUID, Integer> throughputFactors = new HashMap<>();
         for (final Node node : graph.getNodes()
             .values()) {
-            final MachineConfig cfg = node.machineConfig;
-            final var eff = cfg.computeEffect(node.properties, node.durationTicks);
+            final MachineConfig cfg = node.getMachineConfig();
+            final var eff = cfg.computeEffect(node.getProperties(), node.getDurationTicks());
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
@@ -96,20 +96,20 @@ public final class Balancer {
                     .get(edge.targetNodeId);
                 if (target == null) continue;
 
-                final int myOutputCount = node.outputs.get(edge.sourceOutputIndex)
+                final int myOutputCount = node.getOutputs().get(edge.sourceOutputIndex)
                     .getAmount();
                 if (myOutputCount <= 0) continue;
-                final float outputChance = node.outputs.get(edge.sourceOutputIndex)
+                final float outputChance = node.getOutputs().get(edge.sourceOutputIndex)
                     .getChance();
 
-                final int targetInputCount = target.inputs.get(edge.targetInputIndex)
+                final int targetInputCount = target.getInputs().get(edge.targetInputIndex)
                     .getAmount();
                 if (targetInputCount <= 0) continue;
-                final float inputChance = target.inputs.get(edge.targetInputIndex)
+                final float inputChance = target.getInputs().get(edge.targetInputIndex)
                     .getChance();
 
-                final MachineConfig cfg = node.machineConfig;
-                final MachineConfig tgtCfg = target.machineConfig;
+                final MachineConfig cfg = node.getMachineConfig();
+                final MachineConfig tgtCfg = target.getMachineConfig();
                 final int srcThroughput = throughputFactors.get(nodeId);
                 final int tgtThroughput = throughputFactors.get(edge.targetNodeId);
 
@@ -184,8 +184,8 @@ public final class Balancer {
         final Map<UUID, Integer> throughputFactors = new HashMap<>();
         for (final Node node : graph.getNodes()
             .values()) {
-            final MachineConfig cfg = node.machineConfig;
-            final var eff = cfg.computeEffect(node.properties, node.durationTicks);
+            final MachineConfig cfg = node.getMachineConfig();
+            final var eff = cfg.computeEffect(node.getProperties(), node.getDurationTicks());
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
@@ -206,20 +206,20 @@ public final class Balancer {
                 final int targetOps = ops.get(edge.targetNodeId);
                 if (targetOps <= 0) continue;
 
-                final int targetInputCount = target.inputs.get(edge.targetInputIndex)
+                final int targetInputCount = target.getInputs().get(edge.targetInputIndex)
                     .getAmount();
                 if (targetInputCount <= 0) continue;
-                final float inputChance = target.inputs.get(edge.targetInputIndex)
+                final float inputChance = target.getInputs().get(edge.targetInputIndex)
                     .getChance();
 
-                final int myOutputCount = node.outputs.get(edge.sourceOutputIndex)
+                final int myOutputCount = node.getOutputs().get(edge.sourceOutputIndex)
                     .getAmount();
                 if (myOutputCount <= 0) continue;
-                final float outputChance = node.outputs.get(edge.sourceOutputIndex)
+                final float outputChance = node.getOutputs().get(edge.sourceOutputIndex)
                     .getChance();
 
-                final MachineConfig cfg = node.machineConfig;
-                final MachineConfig tgtCfg = target.machineConfig;
+                final MachineConfig cfg = node.getMachineConfig();
+                final MachineConfig tgtCfg = target.getMachineConfig();
                 final int srcThroughput = throughputFactors.get(nodeId);
                 final int tgtThroughput = throughputFactors.get(edge.targetNodeId);
 
@@ -324,10 +324,10 @@ public final class Balancer {
             final int opCount = ops.get(node.id);
             totalOps += opCount;
 
-            final MachineConfig cfg = node.machineConfig;
+            final MachineConfig cfg = node.getMachineConfig();
 
-            final int recipeDuration = node.durationTicks;
-            final var eff = cfg.computeEffect(node.properties, recipeDuration);
+            final int recipeDuration = node.getDurationTicks();
+            final var eff = cfg.computeEffect(node.getProperties(), recipeDuration);
             final long eutPerOp = eff.energyPerT();
             final int durPerOp = eff.durationTicks();
             final int throughputFactor = eff.throughputFactor();
@@ -337,20 +337,20 @@ public final class Balancer {
             totalDuration += totalDurationTicksForNode;
 
             final Map<Integer, Float> effOuts = new HashMap<>();
-            for (int i = 0; i < node.outputs.size(); i++) {
-                final int stackSize = node.outputs.get(i).getAmount();
+            for (int i = 0; i < node.getOutputs().size(); i++) {
+                final int stackSize = node.getOutputs().get(i).getAmount();
                 if (stackSize <= 0) continue;
-                final float chance = node.outputs.get(i).getChance();
+                final float chance = node.getOutputs().get(i).getChance();
                 final float total = opCount * stackSize * chance * cfg.outputMultiplier(i) * throughputFactor;
                 if (total <= 0) continue;
                 effOuts.put(i, total);
             }
 
             final Map<Integer, Float> effIns = new HashMap<>();
-            for (int i = 0; i < node.inputs.size(); i++) {
-                final int stackSize = node.inputs.get(i).getAmount();
+            for (int i = 0; i < node.getInputs().size(); i++) {
+                final int stackSize = node.getInputs().get(i).getAmount();
                 if (stackSize <= 0) continue;
-                final float chance = node.inputs.get(i).getChance();
+                final float chance = node.getInputs().get(i).getChance();
                 final float total = opCount * stackSize * chance * cfg.inputMultiplier(i) * throughputFactor;
                 if (total <= 0) continue;
                 effIns.put(i, total);
@@ -360,7 +360,7 @@ public final class Balancer {
                 node.id,
                 new NodeBalance(opCount, totalDurationTicksForNode, totalEnergy, durPerOp, effOuts, effIns));
 
-            for (final Map.Entry<RecipeProperty<?>, Object> entry : node.properties.entrySet()) {
+            for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties().entrySet()) {
                 final RecipeProperty<?> prop = entry.getKey();
                 final Object val = entry.getValue();
                 if (val instanceof final Number num) {

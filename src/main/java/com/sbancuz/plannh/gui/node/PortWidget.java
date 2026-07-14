@@ -1,19 +1,17 @@
 package com.sbancuz.plannh.gui.node;
 
-import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
-import com.cleanroommc.modularui.widgets.slot.ItemSlot;
-import com.gtnewhorizons.modularui.api.math.Size;
-import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.flowchart.Port;
 import gregtech.nei.GTNEIDefaultHandler;
+import it.unimi.dsi.fastutil.Pair;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import java.awt.Point;
-import java.util.List;
-import java.util.Objects;
 
 public class PortWidget extends Widget<PortWidget> {
 
@@ -24,18 +22,19 @@ public class PortWidget extends Widget<PortWidget> {
     // this specifies highlight color and dragging behaviour (start/end of arrow)
     private final boolean isInput;
 
-    public PortWidget(RecipeHandlerRef handlerRef, boolean isInput, PositionedStack stack) {
+    public PortWidget(RecipeHandlerRef handlerRef, boolean isInput, Pair<Integer, Integer> pos, Port<?> port) {
         this.handlerRef = handlerRef;
         this.isInput = isInput;
 
-        Point offset = new Point(1, -1);
-        if (handlerRef.handler instanceof GTNEIDefaultHandler)
-            offset.y = 7;
-
         background(new Rectangle().color(isInput? INPUT_COLOR : OUTPUT_COLOR).hollow());
         hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
-        pos(stack.relx + offset.x, stack.rely + offset.y);
-        tooltip(t -> t.addFromItem(stack.item));
-        addTooltipLine((float) stack.getChance() / 100 + "%");
+        // TODO make the offsets static and add docs
+        pos(pos.first() + 1, pos.second() - 1);
+
+        if(port.getType() == RecipePropertyAPI.ITEM)
+            tooltip(t -> t.addFromItem((ItemStack) port.getValue()));
+        if(port.getType() == RecipePropertyAPI.FLUID)
+            tooltip(t -> t.addFromFluid((FluidStack) port.getValue()));
+        addTooltipLine(port.getChance() * 100 + "%");
     }
 }
