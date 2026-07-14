@@ -11,7 +11,6 @@ import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Node;
 
 import codechicken.nei.recipe.FurnaceRecipeHandler;

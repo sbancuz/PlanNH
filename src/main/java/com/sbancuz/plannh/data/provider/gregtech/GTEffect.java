@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 import com.gtnewhorizons.angelica.shadow.javax.annotation.Nonnull;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.setting.Settings;
 
 import gregtech.api.util.OverclockCalculator;
 

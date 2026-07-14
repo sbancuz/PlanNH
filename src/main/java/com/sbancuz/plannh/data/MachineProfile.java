@@ -8,6 +8,8 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.data.setting.SettingDef;
+import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
 import codechicken.nei.NEIClientConfig;

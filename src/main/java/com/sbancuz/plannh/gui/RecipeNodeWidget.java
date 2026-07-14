@@ -21,7 +21,7 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.SettingDef;
+import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Group;

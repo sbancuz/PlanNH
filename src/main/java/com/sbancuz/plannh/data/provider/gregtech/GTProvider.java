@@ -19,8 +19,7 @@ import com.sbancuz.plannh.data.ProfileMatcher;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.Settings;
-import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.provider.EFRProvider;
 
