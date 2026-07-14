@@ -86,7 +86,15 @@ plannh.share.copy_from_clipboard=Plan imported from clipboard
 nei.options.plannh = "PlanNH";
 nei.options.plannh.item_columns=Item Columns
 nei.options.plannh.item_columns.tip=Number of columns in the NEI item panel (minimum: 6)
+nei.options.plannh.blur_strength=Blur Strength
+nei.options.plannh.blur_strength.tip=How much should the background be blurred (0 = off)
 nei.options.plannh.burnable_override=Show burnable setting
 nei.options.plannh.burnable_override.0=Off
 nei.options.plannh.burnable_override.1=On
 nei.options.plannh.burnable_override.tip=Hide/Show burnable setting override in recipe configs (may help if some items don't show when a recipes has multiple outputs)
+nei.options.plannh.show_grid=Show grid
+nei.options.plannh.show_grid.0=Off
+nei.options.plannh.show_grid.1=On
+nei.options.plannh.show_grid.tip=Hide/Show grid in the canvas
+nei.options.plannh.background_color=Background Color
+nei.options.plannh.background_color.tip=Canvas background color

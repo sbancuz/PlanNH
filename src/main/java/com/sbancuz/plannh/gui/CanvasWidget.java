@@ -18,7 +18,9 @@ import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.BufferBuilder;
+import com.cleanroommc.modularui.drawable.DynamicDrawable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
+import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.Stencil;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
@@ -29,6 +31,8 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.client.ScreenEffect;
+import com.sbancuz.plannh.client.UIBlurEffect;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
@@ -36,7 +40,10 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.nei.NEIPlanConfig;
 
+import codechicken.lib.config.ConfigTag;
+import codechicken.nei.NEIClientConfig;
 import lombok.Getter;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable, IViewport, IDraggable {
@@ -104,6 +111,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private final ModularPanel panel;
 
+    private final ScreenEffect effect = new UIBlurEffect();
+    private final ConfigTag showGrid;
+    private final ConfigTag backgroundColor;
+
     /**
      * Cached arrow routes (world-space waypoints) keyed by edge id, plus the layout they were built for.
      */
@@ -113,12 +124,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public CanvasWidget(Menu<?> menu, ModularPanel panel) {
         this.graph = Plan.getActiveGraph();
         this.panel = panel;
+
+        showGrid = NEIClientConfig.getSetting(NEIPlanConfig.ConfigShowGrid.KEY);
+        backgroundColor = NEIClientConfig.getSetting(NEIPlanConfig.ConfigBackgroundColor.KEY);
+
         full();
         marginBottom(18);
 
         contextMenu2 = menu;
         rebuildNoteWidgets();
         rebuildGroupWidgets();
+
+        background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
     }
 
     public void removeNode(final UUID nodeId) {
@@ -293,16 +310,27 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         child(widget);
     }
 
+    public int getBackgroundColor() {
+        return backgroundColor.getHexValue(PlannhColors.BACKGROUND.getColor());
+    }
+
+    public void setBackgroundColor(int color) {
+        backgroundColor.setHexValue(color);
+    }
+
     @Override
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
-        final int aw = getArea().width;
-        final int ah = getArea().height;
-        if (aw <= 0 || ah <= 0) return;
-
-        // TODO add toggle for grid
-        drawGrid(aw, ah);
+        final int width = getArea().width;
+        final int height = getArea().height;
+        final int x = getArea().x;
+        final int y = getArea().y;
+        if (width <= 0 || height <= 0) return;
 
         super.draw(context, widgetTheme);
+        effect.execute(x, y, width, height);
+        if (showGrid.getIntValue(NEIPlanConfig.ConfigShowGrid.ON) == NEIPlanConfig.ConfigShowGrid.ON) {
+            drawGrid(width, height);
+        }
 
         drawArrows();
 
@@ -878,8 +906,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
          * contextMenuAt(cmx, cmy, items);
          */
     }
-
-    // ── Hovered port labels ──
 
     private void drawHoveredPortLabels() {
         final int mouseX = getContext().getMouseX();

@@ -8,9 +8,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.api.IPanelHandler;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
+import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
@@ -25,6 +27,7 @@ import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.ColorPickerDialog;
 import com.cleanroommc.modularui.widgets.ListWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -76,6 +79,11 @@ public class FlowchartScreen extends ModularScreen {
         Menu<?> contextMenu = new Menu<>();
 
         final CanvasWidget canvas = new CanvasWidget(contextMenu, panel);
+
+        IPanelHandler colorPicker = IPanelHandler.simple(
+            canvas.getPanel(),
+            (_, _) -> new ColorPickerDialog(canvas::setBackgroundColor, canvas.getBackgroundColor(), true),
+            false);
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
@@ -242,7 +250,14 @@ public class FlowchartScreen extends ModularScreen {
                             .overlay(
                                 IKey.str("Im")
                                     .color(Color.YELLOW_ACCENT.main))
-                            .addTooltipLine("Import Graph"))))
+                            .addTooltipLine("Import Graph"))
+                        .child(
+                            new ButtonWidget<>().overlay(GuiTextures.COLOR_WHEEL)
+                                .onMousePressed(_ -> {
+                                    if (!colorPicker.isPanelOpen()) colorPicker.openPanel();
+                                    else colorPicker.closePanel();
+                                    return true;
+                                }))))
             .child(canvas);
 
         panel.child(mainColumn);
