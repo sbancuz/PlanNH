@@ -27,7 +27,7 @@ public class LayoutManagerMixin {
     @Unique
     private static final int FC_BUTTON_SIZE = 20;
 
-    @Inject(method = "updateWidgetVisiblities", at = @At("TAIL"), remap = false)
+    @Inject(method = "updateWidgetVisiblities", at = @At("TAIL"))
     private static void plannh$onUpdateWidgetVisiblities(final GuiContainer gui, final VisiblityData visiblity,
         final CallbackInfo ci) {
         if (!visiblity.showNEI) return;
