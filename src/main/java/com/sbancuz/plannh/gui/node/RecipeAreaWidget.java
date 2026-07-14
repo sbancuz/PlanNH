@@ -10,6 +10,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.gtnewhorizons.modularui.api.math.Size;
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
@@ -37,8 +38,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         neiWidget.showAsWidget(true);
         neiWidget.x = 2;
 
-        // TODO make the offsets static and add docs
-        if (handlerRef.handler instanceof GTNEIDefaultHandlerAccessor handler) {
+        if (Compat.GREGTECH.isLoaded && handlerRef.handler instanceof GTNEIDefaultHandlerAccessor handler) {
             Size size = handler.getNeiProperties().recipeBackgroundSize;
             size(size.width, size.height);
         } else {

@@ -25,6 +25,7 @@ import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.EnumCycleButtonWidget;
 import com.cleanroommc.modularui.widgets.ListWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -42,7 +43,6 @@ import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
 import codechicken.nei.LayoutManager;
-import gregtech.common.gui.modularui.widget.EnumCycleButtonWidget;
 import lombok.Getter;
 
 public class FlowchartScreen extends ModularScreen {
