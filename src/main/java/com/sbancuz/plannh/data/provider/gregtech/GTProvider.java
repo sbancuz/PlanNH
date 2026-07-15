@@ -41,6 +41,9 @@ import it.unimi.dsi.fastutil.Pair;
 
 public class GTProvider implements PropertyProvider {
 
+    // needed for proper positioning of ports
+    private static final int PORT_OFFSET_Y = 8;
+
     public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.<Integer>builder("special_value", 0)
         .build();
     static final RecipeProperty<Integer> GLASS_TIER = RecipeProperty.<Integer>builder("bartworks.glass_tier", 3)
@@ -239,8 +242,8 @@ public class GTProvider implements PropertyProvider {
                 return props;
             }
             // TODO test if this works
-            inputPositions = new ArrayList<>(cr.getIngredients().stream().map(ps -> Pair.of(ps.relx + 6, ps.rely)).toList());
-            outputPositions = new ArrayList<>(cr.getOtherStacks().stream().map(ps -> Pair.of(ps.relx + 6, ps.rely)).toList());
+            inputPositions = new ArrayList<>(cr.getIngredients().stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
+            outputPositions = new ArrayList<>(cr.getOtherStacks().stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
             outputPositions.addFirst(Pair.of(cr.getResult().relx, cr.getResult().rely));
 
         } else if (handler instanceof final GTNEIDefaultHandler gth) {
@@ -250,10 +253,9 @@ public class GTProvider implements PropertyProvider {
             final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
             r = cached.mRecipe;
             if (r == null) return props;
-            // TODO make the offsets static and add docs
             // TODO filter for oredict more inputs
-            inputPositions = new ArrayList<>(cached.mInputs.stream().map(ps -> Pair.of(ps.relx, ps.rely + 8)).toList());
-            outputPositions = new ArrayList<>(cached.mOutputs.stream().map(ps -> Pair.of(ps.relx, ps.rely + 8)).toList());
+            inputPositions = new ArrayList<>(cached.mInputs.stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
+            outputPositions = new ArrayList<>(cached.mOutputs.stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
 
         } else {
             return props;

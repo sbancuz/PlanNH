@@ -194,7 +194,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int ah = getArea().height;
         if (aw <= 0 || ah <= 0) return;
 
-        // TODO add toggle for grid
         drawGrid(aw, ah);
 
         super.draw(context, widgetTheme);

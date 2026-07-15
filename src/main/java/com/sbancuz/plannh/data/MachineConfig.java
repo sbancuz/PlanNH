@@ -37,8 +37,6 @@ public class MachineConfig {
         this.settings = new HashMap<>(settings);
 
         for (SettingDef<?> def : profile.settings()) this.settings.putIfAbsent(def.getKey(), def.getDefaultValue());
-
-        this.inputConsumption.put(0, 0f); // TODO remove, this is a test
     }
 
     @Nonnull

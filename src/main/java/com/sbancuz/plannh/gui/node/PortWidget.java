@@ -16,6 +16,9 @@ public class PortWidget extends Widget<PortWidget> {
 
     private static final int INPUT_COLOR = Color.GREEN.main;
     private static final int OUTPUT_COLOR = Color.BLUE.main;
+    // needed for proper positioning of ports
+    private static final int PORT_OFFSET_X = 1;
+    private static final int PORT_OFFSET_Y = -1;
 
     private final RecipeHandlerRef handlerRef;
     // this specifies highlight color and dragging behaviour (start/end of arrow)
@@ -29,8 +32,7 @@ public class PortWidget extends Widget<PortWidget> {
             new Rectangle().color(isInput ? INPUT_COLOR : OUTPUT_COLOR)
                 .hollow());
         hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
-        // TODO make the offsets static and add docs
-        pos(pos.first() + 1, pos.second() - 1);
+        pos(pos.first() + PORT_OFFSET_X, pos.second() + PORT_OFFSET_Y);
 
         if (port.getType() == RecipePropertyAPI.ITEM) tooltip(t -> t.addFromItem((ItemStack) port.getValue()));
         if (port.getType() == RecipePropertyAPI.FLUID) tooltip(t -> t.addFromFluid((FluidStack) port.getValue()));

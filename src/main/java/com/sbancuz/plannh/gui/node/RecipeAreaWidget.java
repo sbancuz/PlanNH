@@ -22,6 +22,9 @@ import codechicken.nei.recipe.RecipeHandlerRef;
 
 public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements IFlowchartDraggable {
 
+    // needed for proper positioning of the recipe
+    private static final int WIDGET_OFFSET_X = 2;
+
     private final NodeWidget parent;
     private final Node data;
     private final NEIRecipeWidget neiWidget;
@@ -36,7 +39,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         handlerRef = RecipeHandlerRef.of(data.getRecipeId());
         neiWidget = new NEIRecipeWidget(handlerRef);
         neiWidget.showAsWidget(true);
-        neiWidget.x = 2;
+        neiWidget.x = WIDGET_OFFSET_X;
 
         if (Compat.GREGTECH.isLoaded && handlerRef.handler instanceof GTNEIDefaultHandlerAccessor handler) {
             Size size = handler.getNeiProperties().recipeBackgroundSize;
