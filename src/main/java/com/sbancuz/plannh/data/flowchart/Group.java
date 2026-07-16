@@ -1,8 +1,10 @@
 package com.sbancuz.plannh.data.flowchart;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jetbrains.annotations.NotNull;
@@ -29,6 +31,8 @@ public class Group extends GraphData {
     private boolean coverChildren;
     @NotNull
     private final Map<UUID, GraphData> children = new HashMap<>();
+    @NotNull
+    private final Set<UUID> nodeIds = new HashSet<>();
 
     public Group() {
         super(UUID.randomUUID());

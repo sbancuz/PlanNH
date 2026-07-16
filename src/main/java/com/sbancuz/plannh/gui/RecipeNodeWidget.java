@@ -146,9 +146,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public RecipeNodeWidget(final Node node, final CanvasWidget canvas) {
         this.node = node;
         this.canvas = canvas;
-        final float z = canvas.getGraph()
-            .getZoom();
-        size(Math.round(BASE_W * z), Math.round(BASE_H * z));
+        size(BASE_W, BASE_H);
     }
 
     int getWorldWidth() {
@@ -169,14 +167,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final int sx = Math.round(node.x * zoom + panX);
         final int sy = Math.round(node.y * zoom + panY);
         pos(sx, sy);
-        resizeForZoom(zoom);
     }
 
     private int zq(final float v) {
-        return GuiHelper.zq(
-            v,
-            canvas.getGraph()
-                .getZoom());
+        return Math.round(v);
     }
 
     private int groupColor(final Group g) {
@@ -228,9 +222,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (handlerRef != null && neiWidget != null) {
             final int cw = getWorldWidth() - NEI_BORDER;
             final int ch = neiWidget.h + NEI_PAD_H + calcInfoHeight() + computeConfigPanelHeight();
-            setAreaSize(Math.round((cw + NEI_BORDER) * z), Math.round((ch + NEI_BORDER) * z));
+            setAreaSize(cw + NEI_BORDER, ch + NEI_BORDER);
         } else {
-            setAreaSize(Math.round(BASE_W * z), Math.round(BASE_H * z));
+            setAreaSize(BASE_W, BASE_H);
         }
     }
 
@@ -361,8 +355,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     private void drawCloseButtonPixel(final int w, final int h) {
         GuiHelper.drawCloseButton(
-            canvas.getGraph()
-                .getZoom(),
+            1.0f,
             w,
             CLOSE_W,
             CLOSE_MARGIN,
@@ -402,9 +395,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int portTopY(final int index) {
-        final float z = canvas.getGraph()
-            .getZoom();
-        return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * z);
+        return (index + 1) * PORT_SPACING + PORT_ORIGIN;
     }
 
     private void drawPorts() {
@@ -538,22 +529,15 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (mouseButton == 0) {
             final int mx = getContext().getMouseX();
             final int my = getContext().getMouseY();
-            if (GuiHelper.isInsideCloseButton(
-                mx,
-                my,
-                canvas.getGraph()
-                    .getZoom(),
-                getArea().width,
-                CLOSE_W,
-                CLOSE_MARGIN)) {
-                canvas.removeNode(node.id);
-                return Result.SUCCESS;
-            }
-
             final float z = canvas.getGraph()
                 .getZoom();
             final int ux = Math.round(mx / z);
             final int uy = Math.round(my / z);
+
+            if (GuiHelper.isInsideCloseButton(ux, uy, 1.0f, getArea().width, CLOSE_W, CLOSE_MARGIN)) {
+                canvas.removeNode(node.id);
+                return Result.SUCCESS;
+            }
 
             if (neiWidget != null) {
                 final int cw = neiWidget.w + NEI_PAD_W;
@@ -576,7 +560,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 }
             }
 
-            if (getOutputPortAt(mx, my) >= 0) return Result.IGNORE;
+            if (getOutputPortAt(ux, uy) >= 0) return Result.IGNORE;
 
             if (doubleClick.check()) {
                 doubleClickPending = true;
@@ -618,12 +602,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             node.x = nodeStartX + Math.round(dx / z);
             node.y = nodeStartY + Math.round(dy / z);
             canvas.clampNodeToGroup(node);
-            syncTransform(
-                z,
-                canvas.getGraph()
-                    .getPanX(),
-                canvas.getGraph()
-                    .getPanY());
+            pos(node.x, node.y);
         }
     }
 

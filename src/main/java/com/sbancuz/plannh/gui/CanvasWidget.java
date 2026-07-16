@@ -35,6 +35,7 @@ import com.sbancuz.plannh.client.ScreenEffect;
 import com.sbancuz.plannh.client.UIBlurEffect;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
@@ -132,17 +133,19 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         marginBottom(18);
 
         contextMenu2 = menu;
-        rebuildNoteWidgets();
         rebuildGroupWidgets();
+        rebuildNodeWidgets();
 
         background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
     }
 
     public void removeNode(final UUID nodeId) {
         graph.removeNode(nodeId);
-        // for (final Group group : graph.getGroups()) {
-        // group.nodeIds.remove(nodeId);
-        // }
+        for (final Group group : graph.getGroups()
+            .values()) {
+            group.getNodeIds()
+                .remove(nodeId);
+        }
         rebuildNodeWidgets();
     }
 
@@ -150,147 +153,157 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         this.graph = newGraph;
         removeAll();
         flowchartWidgets.clear();
-        rebuildNodeWidgets();
-        rebuildNoteWidgets();
         rebuildGroupWidgets();
+        rebuildNodeWidgets();
     }
 
     public void moveGroupNodes(final UUID groupId, final int deltaX, final int deltaY) {
-        /*
-         * final Group group = graph.groups.get(groupId);
-         * if (group == null) return;
-         * for (final UUID nodeId : group.nodeIds) {
-         * final Node node = graph.nodes.get(nodeId);
-         * if (node == null) continue;
-         * node.x += deltaX;
-         * node.y += deltaY;
-         * final RecipeNodeWidget w = nodeWidgets.get(nodeId);
-         * if (w != null) {
-         * // w.syncTransform(zoom, panX, graph.getPanY());
-         * }
-         * }
-         */
+        final Group group = graph.getGroups()
+            .get(groupId);
+        if (group == null) return;
+        for (final UUID nodeId : group.getNodeIds()) {
+            final Node node = graph.getNodes()
+                .get(nodeId);
+            if (node == null) continue;
+            node.x += deltaX;
+            node.y += deltaY;
+            final RecipeNodeWidget w = nodeWidgets.get(nodeId);
+            if (w != null) {
+                w.pos(node.x, node.y);
+            }
+        }
     }
 
     public void setGroupNodesVisible(final UUID groupId, final boolean visible) {
-        /*
-         * final Group group = graph.groups.get(groupId);
-         * if (group == null) return;
-         * for (final UUID nodeId : group.nodeIds) {
-         * if (visible) {
-         * if (nodeWidgets.containsKey(nodeId)) continue;
-         * final Node node = graph.nodes.get(nodeId);
-         * if (node == null) continue;
-         * addNodeWidget(node);
-         * } else {
-         * final RecipeNodeWidget w = nodeWidgets.remove(nodeId);
-         * if (w != null) remove(w);
-         * }
-         * }
-         */
+        final Group group = graph.getGroups()
+            .get(groupId);
+        if (group == null) return;
+        for (final UUID nodeId : group.getNodeIds()) {
+            if (visible) {
+                if (nodeWidgets.containsKey(nodeId)) continue;
+                final Node node = graph.getNodes()
+                    .get(nodeId);
+                if (node == null) continue;
+                addNodeWidget(node);
+            } else {
+                final RecipeNodeWidget w = nodeWidgets.remove(nodeId);
+                if (w != null) remove(w);
+            }
+        }
     }
 
     public void recheckMembershipAndFit() {
-        /*
-         * for (final Node node : graph.getNodes()) {
-         * updateNodeGroupMembership(node);
-         * }
-         * autoFitGroups();
-         */
+        for (final Node node : graph.getNodes()
+            .values()) {
+            updateNodeGroupMembership(node);
+        }
+        autoFitGroups();
     }
 
     @Nullable
     public Group getGroupForNode(final UUID nodeId) {
-        /*
-         * for (final Group g : graph.getGroups()) {
-         * if (g.nodeIds.contains(nodeId)) return g;
-         * }
-         */
+        for (final Group g : graph.getGroups()
+            .values()) {
+            if (g.getNodeIds()
+                .contains(nodeId)) return g;
+        }
         return null;
     }
 
     public void clampNodeToGroup(final Node node) {
-        /*
-         * final Group group = getGroupForNode(node.id);
-         * if (group == null || !group.clampNodes) return;
-         * if (node.x < group.x + CLAMP_MARGIN) node.x = group.x + CLAMP_MARGIN;
-         * if (node.y < group.y + CLAMP_MARGIN + HEADER_OFFSET) node.y = group.y + CLAMP_MARGIN + HEADER_OFFSET;
-         * if (node.x + NODE_W_ESTIMATE > group.x + group.width - CLAMP_MARGIN)
-         * node.x = group.x + group.width - CLAMP_MARGIN - NODE_W_ESTIMATE;
-         * if (node.y + NODE_H_ESTIMATE > group.y + group.height - CLAMP_MARGIN)
-         * node.y = group.y + group.height - CLAMP_MARGIN - NODE_H_ESTIMATE;
-         */
+        final Group group = getGroupForNode(node.id);
+        if (group == null || !group.isClampNodes()) return;
+        if (node.x < group.getX() + CLAMP_MARGIN) node.x = group.getX() + CLAMP_MARGIN;
+        if (node.y < group.getY() + CLAMP_MARGIN + HEADER_OFFSET) node.y = group.getY() + CLAMP_MARGIN + HEADER_OFFSET;
+        if (node.x + NODE_W_ESTIMATE > group.getX() + group.getWidth() - CLAMP_MARGIN)
+            node.x = group.getX() + group.getWidth() - CLAMP_MARGIN - NODE_W_ESTIMATE;
+        if (node.y + NODE_H_ESTIMATE > group.getY() + group.getHeight() - CLAMP_MARGIN)
+            node.y = group.getY() + group.getHeight() - CLAMP_MARGIN - NODE_H_ESTIMATE;
     }
 
     private void autoFitGroups() {
-        /*
-         * for (final Group group : graph.getGroups()) {
-         * if (!group.autoResize || group.nodeIds.isEmpty()) continue;
-         * fitGroupToChildren(group);
-         * }
-         */
+        for (final Group group : graph.getGroups()
+            .values()) {
+            if (!group.isCoverChildren() || group.getNodeIds()
+                .isEmpty()) continue;
+            fitGroupToChildren(group);
+        }
     }
 
     public void fitGroupToChildren(final Group group) {
-        /*
-         * if (group.nodeIds.isEmpty()) return;
-         * int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
-         * int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
-         * for (final UUID nid : group.nodeIds) {
-         * final Node n = graph.nodes.get(nid);
-         * if (n == null) continue;
-         * if (n.x < minX) minX = n.x;
-         * if (n.y < minY) minY = n.y;
-         * if (n.x + NODE_W_ESTIMATE > maxX) maxX = n.x + NODE_W_ESTIMATE;
-         * if (n.y + NODE_H_ESTIMATE > maxY) maxY = n.y + NODE_H_ESTIMATE;
-         * }
-         * if (minX == Integer.MAX_VALUE) return;
-         * group.x = minX - GROUP_FIT_PAD;
-         * group.y = minY - GROUP_FIT_PAD;
-         * group.width = maxX - minX + GROUP_FIT_PAD * 2;
-         * group.height = maxY - minY + GROUP_FIT_PAD * 2;
-         * final GroupWidget gw = groupWidgets.get(group.id);
-         * if (gw != null) {
-         * // gw.syncTransform(zoom, panX, graph.getPanY());
-         * }
-         * // Move all nodes into the group if auto-sizing
-         * for (final UUID nid : group.nodeIds) {
-         * final Node n = graph.nodes.get(nid);
-         * if (n == null) continue;
-         * clampNodeToGroup(n);
-         * final RecipeNodeWidget w = nodeWidgets.get(nid);
-         * // if (w != null) w.syncTransform(zoom, panX, graph.getPanY());
-         * }
-         */
+        if (group.getNodeIds()
+            .isEmpty()) return;
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+        for (final UUID nid : group.getNodeIds()) {
+            final Node n = graph.getNodes()
+                .get(nid);
+            if (n == null) continue;
+            if (n.x < minX) minX = n.x;
+            if (n.y < minY) minY = n.y;
+            if (n.x + NODE_W_ESTIMATE > maxX) maxX = n.x + NODE_W_ESTIMATE;
+            if (n.y + NODE_H_ESTIMATE > maxY) maxY = n.y + NODE_H_ESTIMATE;
+        }
+        // Also consider GraphData children (notes, nested groups)
+        for (final GraphData child : group.getChildren()
+            .values()) {
+            if (child.getX() < minX) minX = child.getX();
+            if (child.getY() < minY) minY = child.getY();
+        }
+        if (minX == Integer.MAX_VALUE) return;
+        group.setX(minX - GROUP_FIT_PAD);
+        group.setY(minY - GROUP_FIT_PAD);
+        group.setWidth(maxX - minX + GROUP_FIT_PAD * 2);
+        group.setHeight(maxY - minY + GROUP_FIT_PAD * 2);
+        // Clamp all member nodes
+        for (final UUID nid : group.getNodeIds()) {
+            final Node n = graph.getNodes()
+                .get(nid);
+            if (n == null) continue;
+            clampNodeToGroup(n);
+        }
     }
 
     private void updateNodeGroupMembership(final Node node) {
-        /*
-         * for (final Group group : graph.getGroups()) {
-         * if (group.collapsed) continue;
-         * final boolean inside = node.x >= group.x && node.x < group.x + group.width
-         * && node.y >= group.y
-         * && node.y < group.y + group.height;
-         * final boolean contained = group.nodeIds.contains(node.id);
-         * if (inside && !contained) {
-         * group.nodeIds.add(node.id);
-         * } else if (!inside && contained) {
-         * group.nodeIds.remove(node.id);
-         * }
-         * }
-         */
+        for (final Group group : graph.getGroups()
+            .values()) {
+            if (group.isCollapsed()) continue;
+            final boolean inside = node.x >= group.getX() && node.x < group.getX() + group.getWidth()
+                && node.y >= group.getY()
+                && node.y < group.getY() + group.getHeight();
+            final boolean contained = group.getNodeIds()
+                .contains(node.id);
+            if (inside && !contained) {
+                group.getNodeIds()
+                    .add(node.id);
+            } else if (!inside && contained) {
+                group.getNodeIds()
+                    .remove(node.id);
+            }
+        }
     }
 
     public void rebuildNodeWidgets() {
+        for (final RecipeNodeWidget w : nodeWidgets.values()) {
+            remove(w);
+        }
         nodeWidgets.clear();
-        /*
-         * removeAll();
-         * for (final Node node : graph.getNodes()) {
-         * addNodeWidget(node);
-         * updateNodeGroupMembership(node);
-         * }
-         * rebuildNoteWidgets();
-         */
+        for (final Node node : graph.getNodes()
+            .values()) {
+            if (isNodeInCollapsedGroup(node.id)) continue;
+            addNodeWidget(node);
+            updateNodeGroupMembership(node);
+        }
+        rebuildNoteWidgets();
+    }
+
+    private boolean isNodeInCollapsedGroup(final UUID nodeId) {
+        for (final Group group : graph.getGroups()
+            .values()) {
+            if (group.isCollapsed() && group.getNodeIds()
+                .contains(nodeId)) return true;
+        }
+        return false;
     }
 
     public void rebuildNoteWidgets() {
@@ -303,9 +316,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             .values()) child(new GroupWidget(this, group));
     }
 
+    public boolean isOutputPortHit(final int worldMx, final int worldMy) {
+        for (final RecipeNodeWidget w : nodeWidgets.values()) {
+            final int localMx = worldMx - Math.round(w.getNode().x);
+            final int localMy = worldMy - Math.round(w.getNode().y);
+            if (w.getOutputPortAt(localMx, localMy) >= 0) return true;
+        }
+        return false;
+    }
+
     private void addNodeWidget(final Node node) {
         final RecipeNodeWidget widget = new RecipeNodeWidget(node, this);
-        // widget.syncTransform(zoom, panX, graph.getPanY());
+        widget.pos(node.x, node.y);
         nodeWidgets.put(node.id, widget);
         child(widget);
     }
@@ -506,7 +528,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 continue;
             }
 
-            final int srcX = widgetX(srcWidget) + srcWidget.getArea().width;
+            final float z2 = graph.getZoom();
+            final int srcX = widgetX(srcWidget) + Math.round(worldWidth(srcWidget) * z2);
             final int srcY = widgetY(srcWidget) + portY(edge.sourceOutputIndex);
             final int dstX = widgetX(dstWidget);
             final int dstY = widgetY(dstWidget) + portY(edge.targetInputIndex);
@@ -551,7 +574,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
         if (srcWidget == null) return;
 
-        final int x1 = widgetX(srcWidget) + srcWidget.getArea().width;
+        final int x1 = widgetX(srcWidget) + Math.round(worldWidth(srcWidget) * graph.getZoom());
         final int y1 = widgetY(srcWidget) + portY(edgeSourcePortIndex);
 
         int x2 = edgeEndX;
@@ -662,9 +685,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (mouseButton == 0) {
             final int cmx = absMx - getArea().x;
             final int cmy = absMy - getArea().y;
+            final float z = graph.getZoom();
+            final int worldMx = Math.round((cmx - graph.getPanX()) / z);
+            final int worldMy = Math.round((cmy - graph.getPanY()) / z);
             for (final RecipeNodeWidget widget : nodeWidgets.values()) {
-                final int localMx = cmx - widgetX(widget);
-                final int localMy = cmy - widgetY(widget);
+                final int localMx = worldMx - Math.round(widget.getNode().x);
+                final int localMy = worldMy - Math.round(widget.getNode().y);
                 final int port = widget.getOutputPortAt(localMx, localMy);
                 if (port >= 0) {
                     creatingEdge = true;
@@ -766,10 +792,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
             if (srcWidget == null) return;
 
+            final float z = graph.getZoom();
+            final int worldDragMx = Math.round((cmx - graph.getPanX()) / z);
+            final int worldDragMy = Math.round((cmy - graph.getPanY()) / z);
             for (final RecipeNodeWidget widget : nodeWidgets.values()) {
                 if (widget == srcWidget) continue;
-                final int localMx = cmx - widgetX(widget);
-                final int localMy = cmy - widgetY(widget);
+                final int localMx = worldDragMx - Math.round(widget.getNode().x);
+                final int localMy = worldDragMy - Math.round(widget.getNode().y);
                 final int port = widget.getInputPortAt(localMx, localMy);
                 if (port >= 0 && canConnect(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode(), port)) {
                     edgeHoverNodeId = widget.getNode().id;
@@ -802,23 +831,25 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private boolean isMouseOverAnyGroup(final int mx, final int my) {
-        /*
-         * for (final GroupWidget gw : groupWidgets.values()) {
-         * final Area a = gw.getArea();
-         * if (containsPointInclusive(a, mx, my)) {
-         * return true;
-         * }
-         * }
-         */
+        for (final FlowchartWidget<?, ?> gw : flowchartWidgets.values()) {
+            if (!(gw instanceof GroupWidget)) continue;
+            final Area a = gw.getArea();
+            if (containsPointInclusive(a, mx, my)) {
+                return true;
+            }
+        }
         return false;
     }
 
     private boolean isMouseOverAnyNode(final int mx, final int my) {
+        final int cmx = mx - getArea().x;
+        final int cmy = my - getArea().y;
+        final float z = graph.getZoom();
+        final int worldMx = Math.round((cmx - graph.getPanX()) / z);
+        final int worldMy = Math.round((cmy - graph.getPanY()) / z);
         for (final RecipeNodeWidget widget : nodeWidgets.values()) {
             final Area a = widget.getArea();
-            if (containsPointInclusive(a, mx, my)) {
-                return true;
-            }
+            if (worldMx >= a.x && worldMx < a.x + a.width && worldMy >= a.y && worldMy < a.y + a.height) return true;
         }
         return false;
     }
@@ -910,56 +941,45 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private void drawHoveredPortLabels() {
         final int mouseX = getContext().getMouseX();
         final int mouseY = getContext().getMouseY();
-        final int ps = Math.max(1, Math.round(PORT_S * graph.getZoom()));
-        final int half = Math.round(PORT_HALF * graph.getZoom());
+        final float z = graph.getZoom();
+        final float px = graph.getPanX();
+        final float py = graph.getPanY();
+        final int ps = Math.max(1, Math.round(PORT_S * z));
 
         for (final RecipeNodeWidget w : nodeWidgets.values()) {
             final Node node = w.getNode();
-            final int widgetX = widgetX(w);
-            final int widgetY = widgetY(w);
-            final int widgetWidth = w.getArea().width;
+            final int worldW = w.getWorldWidth();
 
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                graph.getZoom(),
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.outputs,
-                true)) return;
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                graph.getZoom(),
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.inputs,
-                false)) return;
-        }
-    }
-
-    private boolean tryPortLabel(final int mouseX, final int mouseY, final float zoom, final int ps, final int half,
-        final int widgetX, final int widgetY, final int widgetWidth, final List<Port<?>> ports,
-        final boolean rightSide) {
-        for (int i = 0; i < ports.size(); i++) {
-            final int px = rightSide ? widgetX + widgetWidth - ps : widgetX;
-            final int pcY = widgetY + portY(i);
-            final int py = pcY - half;
-            if (mouseX >= px && mouseX < px + ps && mouseY >= py && mouseY < py + ps) {
-                final String label = portLabel(ports.get(i));
-                if (label != null) {
-                    drawPortLabel(label, rightSide ? widgetX + widgetWidth : widgetX, pcY, rightSide, zoom);
+            // Output ports (right side)
+            for (int i = 0; i < node.outputs.size(); i++) {
+                final int sx = Math.round((node.x + worldW - PORT_S) * z + px);
+                final int sy = Math.round((node.y + portWorldY(i) - PORT_HALF) * z + py);
+                if (mouseX >= sx && mouseX < sx + ps && mouseY >= sy && mouseY < sy + ps) {
+                    final String label = portLabel(node.outputs.get(i));
+                    if (label != null) {
+                        final int ax = Math.round((node.x + worldW) * z + px);
+                        final int ay = Math.round((node.y + portWorldY(i)) * z + py);
+                        drawPortLabel(label, ax, ay, true, z);
+                    }
+                    return;
                 }
-                return true;
+            }
+
+            // Input ports (left side)
+            for (int i = 0; i < node.inputs.size(); i++) {
+                final int sx = Math.round(node.x * z + px);
+                final int sy = Math.round((node.y + portWorldY(i) - PORT_HALF) * z + py);
+                if (mouseX >= sx && mouseX < sx + ps && mouseY >= sy && mouseY < sy + ps) {
+                    final String label = portLabel(node.inputs.get(i));
+                    if (label != null) {
+                        final int ax = Math.round(node.x * z + px);
+                        final int ay = Math.round((node.y + portWorldY(i)) * z + py);
+                        drawPortLabel(label, ax, ay, false, z);
+                    }
+                    return;
+                }
             }
         }
-        return false;
     }
 
     @Nullable
@@ -983,8 +1003,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Override
     public void transformChildren(IViewportStack stack) {
-        stack.translate(graph.getPanX(), graph.getPanY());
         stack.scale(graph.getZoom(), graph.getZoom());
+        stack.translate(graph.getPanX(), graph.getPanY());
     }
 
     @Override

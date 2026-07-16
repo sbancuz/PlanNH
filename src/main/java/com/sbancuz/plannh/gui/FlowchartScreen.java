@@ -54,6 +54,8 @@ public class FlowchartScreen extends ModularScreen {
     private static final int TOP_MARGIN = 30;
     private static final int BOTTOM_MARGIN = 30;
 
+    public static CanvasWidget canvas;
+
     private FlowchartScreen(final ModularPanel panel) {
         super(PlanNH.MODID, panel);
         getContext().setSettings(new UISettings());
@@ -78,7 +80,7 @@ public class FlowchartScreen extends ModularScreen {
 
         Menu<?> contextMenu = new Menu<>();
 
-        final CanvasWidget canvas = new CanvasWidget(contextMenu, panel);
+        canvas = new CanvasWidget(contextMenu, panel);
 
         IPanelHandler colorPicker = IPanelHandler.simple(
             canvas.getPanel(),

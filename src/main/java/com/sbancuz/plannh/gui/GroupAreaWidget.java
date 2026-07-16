@@ -99,12 +99,9 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
      */
 
     public void configureCoverChildren() {
-        if (data.isCoverChildren()) {
-            coverChildren(GROUP_MIN_W, GROUP_MIN_H);
-            scheduleResize();
-        } else {
-            disableCoverChildren();
-            size(Math.max(data.getWidth(), getMinDragWidth()), Math.max(data.getHeight(), getMinDragHeight()));
-        }
+        disableCoverChildren();
+        int w = Math.max(data.getWidth(), getMinDragWidth());
+        int h = Math.max(data.getHeight(), getMinDragHeight());
+        size(Math.max(w, GROUP_MIN_W), Math.max(h, GROUP_MIN_H));
     }
 }

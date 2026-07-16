@@ -7,9 +7,7 @@ In-game flowchart-based production planner for Minecraft 1.7.10 for the GTNH pac
 
 # Disclaimer
 
-We are currently in the middle of a big rewrite, master brach may not show everything, as a replacement you could try to compile the balancer branch that has a couple of bandaid fixes that were used just for testing, but you must add this [commit](https://github.com/sbancuz/PlanNH/commit/4061adb9a9dd2e2a15a31ba4f6ede2e6dfb10f3d) manually
-
-Also in the jar releases if you manage to launch in game, there is an already fixed bug: items with burn time will not show in the nodes
+We are currently in the middle of a big rewrite of the UI, master brach has a lot of UI bugs that will be resolved in the rewrite, please do not report any bugs relative do this
 
 ## Features
 

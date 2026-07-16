@@ -68,6 +68,7 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
         buttonRow.child(new CloseButtonWidget(this))
             .child(new ToggleButton().value(new BoolValue.Dynamic(data::isCoverChildren, val -> {
                 data.setCoverChildren(val);
+                if (val) canvas.fitGroupToChildren(data);
                 areaWidget.configureCoverChildren();
             }))
                 .overlay(
@@ -86,8 +87,11 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
                     .stateOverlay(true, IKey.str("^"))
                     .stateOverlay(false, IKey.str("V"))
                     .value(new BoolValue.Dynamic(data::isCollapsed, val -> {
+                        boolean was = data.isCollapsed();
                         data.setCollapsed(val);
                         scheduleResize();
+                        canvas.setGroupNodesVisible(data.getId(), !val);
+                        if (was && !val) canvas.rebuildNodeWidgets();
                     })));
 
         topRow.child(buttonRow);
@@ -105,6 +109,44 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
             .map(w -> (FlowchartWidget<?, ?>) w)
             .forEach(FlowchartWidget::removeFromGraph);
         super.removeFromGraph();
+    }
+
+    @Override
+    public boolean onDragStart(int mouseButton) {
+        if (mouseButton == 0) {
+            final float z = canvas.getGraph()
+                .getZoom();
+            final int worldMx = Math.round(
+                (getContext().getAbsMouseX() - canvas.getArea().x
+                    - canvas.getGraph()
+                        .getPanX())
+                    / z);
+            final int worldMy = Math.round(
+                (getContext().getAbsMouseY() - canvas.getArea().y
+                    - canvas.getGraph()
+                        .getPanY())
+                    / z);
+            if (canvas.isOutputPortHit(worldMx, worldMy)) return false;
+        }
+        return super.onDragStart(mouseButton);
+    }
+
+    @Override
+    public void onDrag(int mouseButton, long timeSinceLastClick) {
+        final int oldX = data.getX();
+        final int oldY = data.getY();
+        super.onDrag(mouseButton, timeSinceLastClick);
+        final int deltaX = data.getX() - oldX;
+        final int deltaY = data.getY() - oldY;
+        if (deltaX != 0 || deltaY != 0) {
+            canvas.moveGroupNodes(data.getId(), deltaX, deltaY);
+        }
+    }
+
+    @Override
+    public void onDragEnd(boolean successful) {
+        super.onDragEnd(successful);
+        canvas.recheckMembershipAndFit();
     }
 
     @Override

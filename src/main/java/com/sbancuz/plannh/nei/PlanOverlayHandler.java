@@ -60,7 +60,7 @@ public class PlanOverlayHandler implements IOverlayHandler {
 
         if (firstGui instanceof final GuiContainerWrapper wrapper
             && wrapper.getScreen() instanceof final FlowchartScreen screen) {
-//            screen.canvas.rebuildNodeWidgets();
+            screen.canvas.rebuildNodeWidgets();
         }
     }
 
