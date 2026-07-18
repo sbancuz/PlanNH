@@ -1003,8 +1003,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Override
     public void transformChildren(IViewportStack stack) {
-        stack.scale(graph.getZoom(), graph.getZoom());
         stack.translate(graph.getPanX(), graph.getPanY());
+        stack.scale(graph.getZoom(), graph.getZoom());
     }
 
     @Override
