@@ -246,7 +246,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             glColor4f(1, 1, 1, 1);
 
             glPushMatrix();
-            glScalef(z, z, 1);
+            glScalef(1, 1, 1);
 
             final int cw = neiWidget.w + NEI_PAD_W;
             final int ch = neiWidget.h + NEI_PAD_H;
@@ -527,12 +527,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     @Override
     public @Nonnull Result onMousePressed(final int mouseButton) {
         if (mouseButton == 0) {
-            final int mx = getContext().getMouseX();
-            final int my = getContext().getMouseY();
             final float z = canvas.getGraph()
                 .getZoom();
-            final int ux = Math.round(mx / z);
-            final int uy = Math.round(my / z);
+            final int ux = getContext().getMouseX();
+            final int uy = getContext().getMouseY();
 
             if (GuiHelper.isInsideCloseButton(ux, uy, 1.0f, getArea().width, CLOSE_W, CLOSE_MARGIN)) {
                 canvas.removeNode(node.id);
