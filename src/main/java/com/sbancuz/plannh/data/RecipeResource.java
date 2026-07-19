@@ -29,8 +29,6 @@ public class RecipeResource<T> extends RecipeProperty<T> {
     @lombok.Builder.Default
     private final Function<T, ItemStack> displayStackProvider = (v) -> null;
     @lombok.Builder.Default
-    private final BiPredicate<T, ItemStack> lookupMatcher = (v, stack) -> false;
-    @lombok.Builder.Default
     private final ToIntFunction<T> colorProvider = (v) -> -1;
 
     // Pin/arrow colors used when no per-value color is derivable. Opaque white so a resource
@@ -70,11 +68,6 @@ public class RecipeResource<T> extends RecipeProperty<T> {
     @Nullable
     public ItemStack displayStack(final T value) {
         return displayStackProvider.apply(value);
-    }
-
-    /** Whether an NEI lookup stack refers to this value. */
-    public boolean matchesLookup(final T value, final ItemStack lookup) {
-        return lookupMatcher.test(value, lookup);
     }
 
     /** Representative bare-RGB color for this value, or -1 when none is derivable. */

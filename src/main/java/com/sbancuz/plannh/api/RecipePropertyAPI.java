@@ -45,7 +45,6 @@ public final class RecipePropertyAPI {
             s -> 31 * s.getItem()
                 .hashCode() + s.getItemDamage())
         .displayStackProvider(stack -> stack)
-        .lookupMatcher(ItemStack::isItemEqual)
         .colorProvider(IngredientColors::itemColor)
         .pinInputColor(PlannhColors.PIN_INPUT.getColor())
         .pinOutputColor(PlannhColors.PIN_OUTPUT.getColor())
@@ -65,14 +64,9 @@ public final class RecipePropertyAPI {
         .hashCodeExtractor(
             fs -> fs.getFluid()
                 .hashCode())
-        // Guards sit inside the lambdas so GT classes only load if GT is present AND the
+        // Guard sits inside the lambda so GT classes only load if GT is present AND the
         // lambda actually runs (lambda bodies resolve their classes at call time, not here).
         .displayStackProvider(fs -> Compat.GREGTECH.isLoaded ? GTHooks.fluidDisplayStack(fs) : null)
-        .lookupMatcher((fs, lookup) -> {
-            if (!Compat.GREGTECH.isLoaded) return false;
-            final FluidStack lookupFluid = GTHooks.fluidFromDisplayStack(lookup);
-            return lookupFluid != null && lookupFluid.getFluid() == fs.getFluid();
-        })
         .colorProvider(IngredientColors::fluidColor)
         .pinInputColor(PlannhColors.PIN_FLUID_IN.getColor())
         .pinOutputColor(PlannhColors.PIN_FLUID_OUT.getColor())

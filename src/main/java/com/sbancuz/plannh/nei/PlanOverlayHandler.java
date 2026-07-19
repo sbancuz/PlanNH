@@ -7,7 +7,6 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.sbancuz.plannh.api.PlanAPI;
@@ -16,6 +15,7 @@ import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
@@ -78,16 +78,11 @@ public class PlanOverlayHandler implements IOverlayHandler {
     }
 
     /**
-     * If this recipe was added from an NEI lookup started on a node's ingredient (R/U on a
-     * PlanNH node), wire the new node to that origin - but only on the looked-up ingredient, so
-     * lookups that wandered several recipe layers deep don't create bogus edges.
-     *
-     * <p>
-     * The lookup DIRECTION follows which side of the added recipe carries the ingredient: a
-     * producer (what R lookups list) feeds the origin, a consumer (U lookups) is fed by it. The
-     * NEI screen type cannot decide this - GuiOverlayButton switches back to the flowchart
-     * before invoking the overlay handler, so the recipe screen is already gone here - and after
-     * wandering several layers deep it would not reflect the original R/U anyway.
+     * If this recipe was added from an NEI lookup started on a node's port (R/U on a PlanNH
+     * node), wire the new node to that exact port. Direction follows the port's side: an input
+     * port wanted a producer (what R lookups list), an output port wanted a consumer (U
+     * lookups). An unrelated recipe reached by wandering NEI layers deep has no port that
+     * {@code canConnect}s the origin port, so it wires nothing.
      *
      * <p>
      * A wired node is also placed beside its origin (producers left, consumers right) instead of
@@ -97,29 +92,27 @@ public class PlanOverlayHandler implements IOverlayHandler {
         @Nullable final NodeLookupContext lookupOrigin, final CanvasWidget canvas) {
         if (lookupOrigin == null) return;
         final Node origin = graph.nodes.get(lookupOrigin.nodeId());
-        final ItemStack lookup = lookupOrigin.stack();
-        if (origin == null || lookup == null || origin.id.equals(added.id)) return;
+        if (origin == null || origin.id.equals(added.id)) return;
+        final List<Port<?>> originPorts = lookupOrigin.output() ? origin.outputs : origin.inputs;
+        final int originIdx = lookupOrigin.portIndex();
+        if (originIdx < 0 || originIdx >= originPorts.size()) return;
 
-        if (connectOnIngredient(graph, added, origin, lookup)) {
-            canvas.placeBesideOrigin(added, origin, true);
-        } else if (connectOnIngredient(graph, origin, added, lookup)) {
-            canvas.placeBesideOrigin(added, origin, false);
-        }
-    }
-
-    /** Wires src's lookup-matching output to dst's first compatible input. */
-    private static boolean connectOnIngredient(final Graph graph, final Node src, final Node dst,
-        final ItemStack lookup) {
-        for (int out = 0; out < src.outputs.size(); out++) {
-            if (!src.outputs.get(out)
-                .matchesLookup(lookup)) continue;
-            final int in = graph.findCompatibleInput(src, out, dst);
+        if (lookupOrigin.output()) {
+            final int in = graph.findCompatibleInput(origin, originIdx, added);
             if (in >= 0) {
-                graph.addEdge(new Edge(UUID.randomUUID(), src.id, dst.id, out, in));
-                return true;
+                graph.addEdge(new Edge(UUID.randomUUID(), origin.id, added.id, originIdx, in));
+                canvas.placeBesideOrigin(added, origin, false);
+            }
+        } else {
+            final Port<?> originPort = originPorts.get(originIdx);
+            for (int out = 0; out < added.outputs.size(); out++) {
+                if (!added.outputs.get(out)
+                    .canConnect(originPort)) continue;
+                graph.addEdge(new Edge(UUID.randomUUID(), added.id, origin.id, out, originIdx));
+                canvas.placeBesideOrigin(added, origin, true);
+                break;
             }
         }
-        return false;
     }
 
     @Override

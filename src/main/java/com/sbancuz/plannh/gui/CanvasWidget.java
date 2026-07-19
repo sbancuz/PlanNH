@@ -120,7 +120,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (w != null) remove(w);
     }
 
-    public void setPendingLookup(final NodeLookupContext lookup) {
+    public void setPendingLookup(@Nullable final NodeLookupContext lookup) {
         pendingLookup = lookup;
     }
 
@@ -336,6 +336,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int ah = getArea().height;
         if (aw <= 0 || ah <= 0) return;
 
+        // MUI2 calls draw() before preDraw(), so the viewport stencil that clips the node
+        // widgets does not exist yet: clip explicitly, or world-space edges and the drag
+        // preview paint outside the canvas.
+        Stencil.applyAtZero(getArea(), context);
+
         // TODO add toggle for grid
         drawGrid(aw, ah);
 
@@ -346,6 +351,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (creatingEdge) {
             drawPreviewLine();
         }
+
+        Stencil.remove();
     }
 
     private void drawGrid(final int w, final int h) {

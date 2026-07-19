@@ -21,12 +21,6 @@ public final class GTHooks {
         return GTUtility.getFluidDisplayStack(fluidStack, false);
     }
 
-    /** Reverses {@link #fluidDisplayStack}; null if the stack is not a fluid display item. */
-    @Nullable
-    public static FluidStack fluidFromDisplayStack(final ItemStack stack) {
-        return GTUtility.getFluidFromDisplayStack(stack);
-    }
-
     /**
      * GT material color for MetaGeneratedItems (their renderer applies it, so the item icon API
      * lies about their color); white when the stack has none.

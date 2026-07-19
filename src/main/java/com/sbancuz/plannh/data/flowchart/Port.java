@@ -38,11 +38,6 @@ public class Port<T> {
         return type.displayStack(value);
     }
 
-    /** Whether an NEI lookup stack refers to this port's ingredient. */
-    public boolean matchesLookup(final ItemStack lookup) {
-        return type.matchesLookup(value, lookup);
-    }
-
     /** Pin color for this port's ingredient; the type's pin color when none is derivable. */
     public int getPinColor(final boolean input) {
         return colorOr(input ? type.getPinInputColor() : type.getPinOutputColor());

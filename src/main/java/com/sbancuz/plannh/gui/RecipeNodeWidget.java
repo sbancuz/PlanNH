@@ -802,54 +802,92 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     /**
      * Tells NEI what ingredient the mouse is over, which enables its native recipe/usage
      * lookups (R/U and bookmark keys) on node contents: the embedded recipe's stacks, the
-     * throughput list rows, and the port pins.
+     * throughput list rows, and the port pins. Also arms the pending-lookup origin so a recipe
+     * added from the upcoming lookup can be wired back to the originating port; a stack that
+     * maps to no port clears any stale origin.
      */
     @Override
     @Nullable
     public ItemStack getStackForRecipeViewer() {
-        final ItemStack result = stackUnderMouse();
-        if (result != null) {
-            // Remember the origin so a recipe added from the upcoming NEI lookup can be wired
-            // back to this node automatically.
-            canvas.setPendingLookup(new NodeLookupContext(node.id, result));
-        }
-        return result;
+        final IngredientHit hit = ingredientUnderMouse();
+        if (hit == null) return null;
+        canvas.setPendingLookup(hit.origin());
+        return hit.stack();
     }
 
     /**
      * The ingredient stack under the mouse, if any. Pure query, safe to call every frame (the
-     * screen's hover tooltip does); {@link #getStackForRecipeViewer} is NEI's lookup entry point
-     * and additionally arms the pending-lookup origin.
+     * screen's hover tooltip does); {@link #getStackForRecipeViewer} is NEI's lookup entry
+     * point and additionally arms the pending-lookup origin.
      */
     @Nullable
     public ItemStack stackUnderMouse() {
+        final IngredientHit hit = ingredientUnderMouse();
+        return hit == null ? null : hit.stack();
+    }
+
+    /**
+     * A hovered ingredient: the display stack NEI operates on, plus the port it came from -
+     * null when an embedded grid stack is no port's ingredient (catalysts, machine items).
+     */
+    private record IngredientHit(ItemStack stack, @Nullable NodeLookupContext origin) {}
+
+    @Nullable
+    private IngredientHit ingredientUnderMouse() {
         // World-space widget-local mouse; independent of whatever viewport state NEI calls us in.
         final int mx = canvas.getMouseCanvasX() - Math.round(node.x);
         final int my = canvas.getMouseCanvasY() - Math.round(node.y);
 
         if (neiWidget != null && handlerRef != null) {
-            final ItemStack recipeStack = neiWidget.getStackMouseOver(mx, my);
-            if (recipeStack != null) return recipeStack;
+            final ItemStack gridStack = neiWidget.getStackMouseOver(mx, my);
+            if (gridStack != null) return new IngredientHit(gridStack, portOriginFor(gridStack));
 
-            final ItemStack rowStack = throughputRowStackAt(mx, my);
-            if (rowStack != null) return rowStack;
+            final ThroughputRow row = throughputRowAt(mx, my);
+            if (row != null) return hitFor(row.port(), row.output(), row.index());
         }
 
         final int out = getOutputPortAt(mx, my);
-        if (out >= 0) return node.outputs.get(out)
-            .getDisplayStack();
+        if (out >= 0) return hitFor(node.outputs.get(out), true, out);
         final int in = getInputPortAt(mx, my);
-        if (in >= 0) return node.inputs.get(in)
-            .getDisplayStack();
+        if (in >= 0) return hitFor(node.inputs.get(in), false, in);
         return null;
     }
 
     @Nullable
-    private ItemStack throughputRowStackAt(final int mx, final int my) {
+    private IngredientHit hitFor(final Port<?> port, final boolean output, final int index) {
+        final ItemStack stack = port.getDisplayStack();
+        if (stack == null) return null;
+        return new IngredientHit(stack, new NodeLookupContext(node.id, output, index));
+    }
+
+    /**
+     * Which port an embedded recipe-grid stack refers to, by forward display-stack comparison
+     * (GT fluid display items encode their fluid in the damage value, so fluid ports need no
+     * reverse mapping). Inputs first: for recipes carrying an ingredient on both sides, the
+     * dominant workflow is R on an input ("how do I make this"). Null for stacks that are no
+     * port's ingredient.
+     */
+    @Nullable
+    private NodeLookupContext portOriginFor(final ItemStack gridStack) {
+        for (int i = 0; i < node.inputs.size(); i++) {
+            if (displayMatches(node.inputs.get(i), gridStack)) return new NodeLookupContext(node.id, false, i);
+        }
+        for (int i = 0; i < node.outputs.size(); i++) {
+            if (displayMatches(node.outputs.get(i), gridStack)) return new NodeLookupContext(node.id, true, i);
+        }
+        return null;
+    }
+
+    private static boolean displayMatches(final Port<?> port, final ItemStack stack) {
+        final ItemStack display = port.getDisplayStack();
+        return display != null && display.isItemEqual(stack);
+    }
+
+    @Nullable
+    private ThroughputRow throughputRowAt(final int mx, final int my) {
         if (mx < LEFT_CONTENT_X || mx >= getArea().width - LEFT_CONTENT_X) return null;
         for (final ThroughputRow row : throughputRows()) {
-            if (my >= row.y() && my < row.y() + LINE_H) return row.port()
-                .getDisplayStack();
+            if (my >= row.y() && my < row.y() + LINE_H) return row;
         }
         return null;
     }
