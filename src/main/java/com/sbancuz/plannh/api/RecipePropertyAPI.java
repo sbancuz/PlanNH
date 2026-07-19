@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.oredict.OreDictionary;
@@ -66,7 +67,17 @@ public final class RecipePropertyAPI {
                 .hashCode())
         // Guard sits inside the lambda so GT classes only load if GT is present AND the
         // lambda actually runs (lambda bodies resolve their classes at call time, not here).
-        .displayStackProvider(fs -> Compat.GREGTECH.isLoaded ? GTHooks.fluidDisplayStack(fs) : null)
+        .displayStackProvider(fs -> {
+            if (Compat.GREGTECH.isLoaded) {
+                final ItemStack display = GTHooks.fluidDisplayStack(fs);
+                if (display != null) return display;
+            }
+            // Forge's registry fills only from a full container's worth, so normalize the
+            // amount; null when the fluid has no registered container.
+            return FluidContainerRegistry.fillFluidContainer(
+                new FluidStack(fs.getFluid(), FluidContainerRegistry.BUCKET_VOLUME),
+                FluidContainerRegistry.EMPTY_BUCKET.copy());
+        })
         .colorProvider(IngredientColors::fluidColor)
         .pinInputColor(PlannhColors.PIN_FLUID_IN.getColor())
         .pinOutputColor(PlannhColors.PIN_FLUID_OUT.getColor())
