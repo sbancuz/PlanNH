@@ -97,7 +97,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static final int LEFT_CONTENT_X = 8;
     private static final int THROUGHPUT_GAP = 4;
     private static final int LIST_INDENT = 4;
-    private static final int ROW_HOVER = 0x40FFFFFF;
 
     // Settings panel
     private static final int CONFIG_PANEL_INSET = 2;
@@ -232,8 +231,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
         ensureRecipeHandler();
 
-        // Widget-local mouse while hovered; parked far away otherwise so hover highlights
-        // (NEI's white box, our row highlight) only show on the node actually under the mouse.
+        // Widget-local mouse while hovered; parked far away otherwise so NEI's stack hover box
+        // only shows on the node actually under the mouse.
         if (getContext().isHovered(this)) {
             hoverMx = canvas.getMouseCanvasX() - Math.round(node.x);
             hoverMy = canvas.getMouseCanvasY() - Math.round(node.y);
@@ -452,39 +451,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
         y += LINE_H;
 
-        for (final ThroughputRow row : throughputRows()) {
-            final String label = portLabel(row.port(), row.index(), nb, sec, ops, throughput, row.output());
-            if (label == null) continue;
-            if (hoverMy >= row.y() && hoverMy < row.y() + LINE_H && hoverMx >= x && hoverMx < getArea().width - x) {
-                // NEI-style hover box: tells the user the R/U keybinds work on this row.
-                GuiDraw.drawRect(x - 1, row.y() - 2, getArea().width - 2 * x + 2, LINE_H, ROW_HOVER);
-            }
-            final int color = portColor(row.port(), row.output());
-            GuiDraw.drawText(label, x + (row.output() ? LIST_INDENT : 0), row.y(), 1.0f, color, false);
-        }
+        y = drawPortList(x, y, node.inputs, nb, sec, ops, throughput, false);
+        drawPortList(x, y, node.outputs, nb, sec, ops, throughput, true);
     }
 
-    private record ThroughputRow(Port<?> port, int index, boolean output, int y) {}
-
-    /**
-     * The visible throughput rows in draw order with their widget-local y positions - the single
-     * source of row layout for both drawing and R/U hit-testing.
-     */
-    private List<ThroughputRow> throughputRows() {
-        assert neiWidget != null;
-        final List<ThroughputRow> rows = new ArrayList<>();
-        // The first row sits below the ops line.
-        int y = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + LINE_H;
-        y = collectRows(node.inputs, false, y, rows);
-        collectRows(node.outputs, true, y, rows);
-        return rows;
-    }
-
-    private int collectRows(final List<Port<?>> ports, final boolean output, int y, final List<ThroughputRow> rows) {
+    private int drawPortList(final int x, int y, final List<Port<?>> ports, final NodeBalance nb, final float sec,
+        final int ops, final int throughput, final boolean output) {
         for (int i = 0; i < ports.size(); i++) {
             final Port<?> port = ports.get(i);
-            if (!hasVisibleAmount(port)) continue;
-            rows.add(new ThroughputRow(port, i, output, y));
+            final String label = portLabel(port, i, nb, sec, ops, throughput, output);
+            if (label == null) continue;
+            GuiDraw.drawText(label, x + (output ? LIST_INDENT : 0), y, 1.0f, portColor(port, output), false);
             y += LINE_H;
         }
         return y;
@@ -801,10 +778,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     /**
      * Tells NEI what ingredient the mouse is over, which enables its native recipe/usage
-     * lookups (R/U and bookmark keys) on node contents: the embedded recipe's stacks, the
-     * throughput list rows, and the port pins. Also arms the pending-lookup origin so a recipe
-     * added from the upcoming lookup can be wired back to the originating port; a stack that
-     * maps to no port clears any stale origin.
+     * lookups (R/U and bookmark keys) on node contents: the embedded recipe's stacks and the
+     * port pins. Also arms the pending-lookup origin so a recipe added from the upcoming
+     * lookup can be wired back to the originating port; a stack that maps to no port clears
+     * any stale origin.
      */
     @Override
     @Nullable
@@ -841,9 +818,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         if (neiWidget != null && handlerRef != null) {
             final ItemStack gridStack = neiWidget.getStackMouseOver(mx, my);
             if (gridStack != null) return new IngredientHit(gridStack, portOriginFor(gridStack));
-
-            final ThroughputRow row = throughputRowAt(mx, my);
-            if (row != null) return hitFor(row.port(), row.output(), row.index());
         }
 
         final int out = getOutputPortAt(mx, my);
@@ -881,15 +855,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static boolean displayMatches(final Port<?> port, final ItemStack stack) {
         final ItemStack display = port.getDisplayStack();
         return display != null && display.isItemEqual(stack);
-    }
-
-    @Nullable
-    private ThroughputRow throughputRowAt(final int mx, final int my) {
-        if (mx < LEFT_CONTENT_X || mx >= getArea().width - LEFT_CONTENT_X) return null;
-        for (final ThroughputRow row : throughputRows()) {
-            if (my >= row.y() && my < row.y() + LINE_H) return row;
-        }
-        return null;
     }
 
     /** Whether the port draws a throughput row: it holds a value with a positive amount. */

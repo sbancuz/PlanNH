@@ -3,8 +3,8 @@ package com.sbancuz.plannh.nei;
 import java.util.UUID;
 
 /**
- * The port the user last ran an NEI recipe/usage lookup from (R/U on a node's pin, throughput
- * row, or embedded recipe stack), so a recipe added from that lookup can be wired back to it.
+ * The port the user last ran an NEI recipe/usage lookup from (R/U on a node's pin or embedded
+ * recipe stack), so a recipe added from that lookup can be wired back to it.
  * Held as a one-shot pending value on the canvas ({@code CanvasWidget#consumePendingLookup}),
  * whose lifetime bounds the lookup's.
  *
