@@ -190,7 +190,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         return lines * LINE_H + 6;
     }
 
-    private void ensureRecipeHandler() {
+    /**
+     * Loads the NEI handler that determines this widget's real size. Lazy - normally first
+     * draw does it, but MUI2 culls off-viewport widgets, so anything measuring node sizes
+     * (auto-layout) must call this first or off-screen nodes report stub dimensions.
+     */
+    void ensureRecipeHandler() {
         if (handlerRef != null || handlerInitFailed) return;
 
         final RecipeHandlerRef ref = RecipeHandlerRef.of(node.recipeId);

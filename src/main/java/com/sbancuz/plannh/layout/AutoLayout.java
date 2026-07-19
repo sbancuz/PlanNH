@@ -20,6 +20,7 @@ import org.eclipse.elk.alg.layered.options.OrderingStrategy;
 import org.eclipse.elk.core.data.LayoutMetaDataService;
 import org.eclipse.elk.core.options.CoreOptions;
 import org.eclipse.elk.core.options.Direction;
+import org.eclipse.elk.core.options.EdgeRouting;
 import org.eclipse.elk.core.options.PortConstraints;
 import org.eclipse.elk.core.options.PortSide;
 import org.eclipse.elk.core.util.BasicProgressMonitor;
@@ -54,8 +55,21 @@ public final class AutoLayout {
 
     /** Nodes above this count switch to the scalable placement strategy. */
     private static final int BIG_GRAPH_NODES = 300;
+    // Compact on purpose. The arrow router inflates nodes by a 12-unit margin per side, so
+    // layer spacing must stay above ~30 or the inter-layer corridors close entirely.
     private static final double LAYER_SPACING = 50.0;
     private static final double NODE_SPACING = 25.0;
+    // Per-edge channel width ELK reserves in a layer gap (the router uses 6-unit cells and
+    // keeps a cell of clearance between arrows, so ~2 cells per arrow), and the clearance
+    // between those channels and the nodes flanking the gap - generous so downstream nodes
+    // sit clear of descending edges and port approaches stay straight.
+    private static final double EDGE_CHANNEL_SPACING = 18.0;
+    private static final double EDGE_NODE_SPACING = 24.0;
+
+    // Pin geometry mirrored from RecipeNodeWidget (same constants CanvasWidget duplicates):
+    // port i sits at y = (i + 1) * PORT_SPACING + PORT_ORIGIN on its node edge.
+    private static final int PORT_SPACING = 18;
+    private static final int PORT_ORIGIN = 10;
 
     static {
         // We invoke LayeredLayoutProvider directly instead of going through ELK's plugin/service
@@ -80,6 +94,11 @@ public final class AutoLayout {
         root.setProperty(CoreOptions.RANDOM_SEED, 1);
         root.setProperty(CoreOptions.SPACING_NODE_NODE, NODE_SPACING);
         root.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, LAYER_SPACING);
+        // Orthogonal edge routing makes ELK reserve a channel per edge crossing each layer
+        // gap, so gaps widen with edge count instead of every corridor being LAYER_SPACING.
+        root.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
+        root.setProperty(LayeredOptions.SPACING_EDGE_EDGE_BETWEEN_LAYERS, EDGE_CHANNEL_SPACING);
+        root.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, EDGE_NODE_SPACING);
         root.setProperty(LayeredOptions.CROSSING_MINIMIZATION_STRATEGY, CrossingMinimizationStrategy.LAYER_SWEEP);
         root.setProperty(LayeredOptions.CYCLE_BREAKING_STRATEGY, CycleBreakingStrategy.DEPTH_FIRST);
         root.setProperty(LayeredOptions.THOROUGHNESS, 30);
@@ -103,24 +122,28 @@ public final class AutoLayout {
             final ElkNode n = ElkGraphUtil.createNode(root);
             n.setWidth(box.width());
             n.setHeight(box.height());
-            n.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_ORDER);
+            // Real pin coordinates, not just sides: node placement then straightens edges
+            // against the positions the canvas actually draws, so single connections line up
+            // horizontally instead of jogging by ELK's invented port spread.
+            n.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
             elkNodes.put(box.id(), n);
 
-            // FIXED_ORDER expects ports listed clockwise from the top-left corner:
-            // east side top-to-bottom, then west side bottom-to-top. That matches how
-            // RecipeNodeWidget stacks ports vertically by index on each side.
             final ElkPort[] outs = new ElkPort[box.outputPorts()];
             for (int i = 0; i < box.outputPorts(); i++) {
                 final ElkPort p = ElkGraphUtil.createPort(n);
                 p.setProperty(CoreOptions.PORT_SIDE, PortSide.EAST);
+                p.setX(box.width());
+                p.setY((i + 1) * PORT_SPACING + PORT_ORIGIN);
                 outs[i] = p;
             }
             outPorts.put(box.id(), outs);
 
             final ElkPort[] ins = new ElkPort[box.inputPorts()];
-            for (int i = box.inputPorts() - 1; i >= 0; i--) {
+            for (int i = 0; i < box.inputPorts(); i++) {
                 final ElkPort p = ElkGraphUtil.createPort(n);
                 p.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
+                p.setX(0);
+                p.setY((i + 1) * PORT_SPACING + PORT_ORIGIN);
                 ins[i] = p;
             }
             inPorts.put(box.id(), ins);

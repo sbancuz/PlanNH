@@ -25,6 +25,7 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
@@ -339,6 +340,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         int anchorY = Integer.MAX_VALUE;
         for (final Node node : graph.getNodes()) {
             final RecipeNodeWidget widget = nodeWidgets.get(node.id);
+            if (widget != null) widget.ensureRecipeHandler();
             final int width = widget != null ? widget.getWorldWidth() : 120;
             final int height = widget != null ? widget.getWorldHeight() : 80;
             boxes.add(
@@ -542,6 +544,65 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
 
         edgeRoutes.putAll(ARROW_ROUTER.route(obstacles, requests));
+
+        // The routing input replays headlessly (ArrowRouter is Minecraft-free); dump it at
+        // DEBUG on every recompute so any bad-looking route can be rebuilt from the dev log.
+        if (PlanNH.LOG.isDebugEnabled()) {
+            PlanNH.LOG.debug(reproDump(obstacles, requests));
+        }
+
+        // A route several times longer than its direct distance means the router wrapped
+        // around the chart; dump the full routing input once so the case can be replayed.
+        boolean dumped = false;
+        for (final ArrowRouter.Request q : requests) {
+            final List<int[]> path = edgeRoutes.get(q.key());
+            if (path == null) continue;
+            int len = 0;
+            for (int i = 1; i < path.size(); i++) {
+                len += Math.abs(path.get(i)[0] - path.get(i - 1)[0]) + Math.abs(path.get(i)[1] - path.get(i - 1)[1]);
+            }
+            final int direct = Math.abs(q.dx() - q.sx()) + Math.abs(q.dy() - q.sy());
+            if (len <= direct * 3 + 200) continue;
+            PlanNH.LOG.warn(
+                "Arrow route wrapped: edge {} ({},{})->({},{}) len={} direct={}",
+                q.key(),
+                q.sx(),
+                q.sy(),
+                q.dx(),
+                q.dy(),
+                len,
+                direct);
+            if (!dumped) {
+                dumped = true;
+                PlanNH.LOG.warn(reproDump(obstacles, requests));
+            }
+        }
+    }
+
+    private static String reproDump(final List<ArrowRouter.Rect> obstacles, final List<ArrowRouter.Request> requests) {
+        final StringBuilder sb = new StringBuilder("Route repro: obstacles=");
+        for (final ArrowRouter.Rect r : obstacles) {
+            sb.append(r.x())
+                .append(',')
+                .append(r.y())
+                .append(',')
+                .append(r.w())
+                .append(',')
+                .append(r.h())
+                .append(';');
+        }
+        sb.append(" requests=");
+        for (final ArrowRouter.Request r : requests) {
+            sb.append(r.sx())
+                .append(',')
+                .append(r.sy())
+                .append(',')
+                .append(r.dx())
+                .append(',')
+                .append(r.dy())
+                .append(';');
+        }
+        return sb.toString();
     }
 
     private long computeRouteSignature() {
