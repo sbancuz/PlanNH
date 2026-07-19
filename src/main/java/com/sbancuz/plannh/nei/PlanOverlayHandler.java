@@ -107,7 +107,7 @@ public class PlanOverlayHandler implements IOverlayHandler {
         }
     }
 
-    /** Wires src's lookup-matching output to dst's first compatible (preferably unfed) input. */
+    /** Wires src's lookup-matching output to dst's first compatible input. */
     private static boolean connectOnIngredient(final Graph graph, final Node src, final Node dst,
         final ItemStack lookup) {
         for (int out = 0; out < src.outputs.size(); out++) {
