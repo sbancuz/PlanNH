@@ -10,13 +10,18 @@ import javax.annotation.Nullable;
 
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.oredict.OreDictionary;
 
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipeResource;
+import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
+import com.sbancuz.plannh.gui.IngredientColors;
+import com.sbancuz.plannh.gui.PlannhColors;
 
 public final class RecipePropertyAPI {
 
@@ -40,6 +45,11 @@ public final class RecipePropertyAPI {
         .hashCodeExtractor(
             s -> 31 * s.getItem()
                 .hashCode() + s.getItemDamage())
+        .displayStackProvider(stack -> stack)
+        .colorProvider(IngredientColors::itemColor)
+        .pinInputColor(PlannhColors.PIN_INPUT.getColor())
+        .pinOutputColor(PlannhColors.PIN_OUTPUT.getColor())
+        .arrowColor(PlannhColors.ARROW_ITEM.getColor())
         .build();
 
     public static final RecipeResource<FluidStack> FLUID = RecipeResource
@@ -55,6 +65,23 @@ public final class RecipePropertyAPI {
         .hashCodeExtractor(
             fs -> fs.getFluid()
                 .hashCode())
+        // Guard sits inside the lambda so GT classes only load if GT is present AND the
+        // lambda actually runs (lambda bodies resolve their classes at call time, not here).
+        .displayStackProvider(fs -> {
+            if (Compat.GREGTECH.isLoaded) {
+                final ItemStack display = GTHooks.fluidDisplayStack(fs);
+                if (display != null) return display;
+            }
+            // Forge's registry fills only from a full container's worth, so normalize the
+            // amount; null when the fluid has no registered container.
+            return FluidContainerRegistry.fillFluidContainer(
+                new FluidStack(fs.getFluid(), FluidContainerRegistry.BUCKET_VOLUME),
+                FluidContainerRegistry.EMPTY_BUCKET.copy());
+        })
+        .colorProvider(IngredientColors::fluidColor)
+        .pinInputColor(PlannhColors.PIN_FLUID_IN.getColor())
+        .pinOutputColor(PlannhColors.PIN_FLUID_OUT.getColor())
+        .arrowColor(PlannhColors.ARROW_FLUID.getColor())
         .build();
 
     private static boolean itemsMatch(final ItemStack a, final ItemStack b) {

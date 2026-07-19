@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import net.minecraft.client.Minecraft;
-
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
@@ -27,13 +25,12 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
-import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import lombok.Getter;
 
@@ -43,15 +40,16 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int GRID_MAJOR = 5;
 
     private static final int ARROW_COLOR_ITEM = PlannhColors.ARROW_ITEM.getColor();
-    private static final int ARROW_COLOR_FLUID = PlannhColors.ARROW_FLUID.getColor();
+    private static final int EDGE_OUTLINE_EXTRA = 3;
     private static final int PREVIEW_COLOR = PlannhColors.PREVIEW_HIGHLIGHT.getColor();
     private static final int CLAMP_MARGIN = 4;
     private static final int NODE_W_ESTIMATE = 120;
     private static final int NODE_H_ESTIMATE = 80;
+    private static final int AUTO_PLACE_GAP_X = 80;
+    private static final int AUTO_PLACE_GAP_Y = 30;
+    private static final int AUTO_PLACE_STAGGER = 20;
     private static final int HEADER_OFFSET = 24;
-    private static final int PORT_S = 8;
     private static final int PORT_HALF = 4;
-    private static final int PORT_GAP = 6;
     private static final int PORT_SPACING = 18;
     private static final int PORT_ORIGIN = 10;
     private static final int MIN_GRID_SPACING = 4;
@@ -61,11 +59,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int LINE_THICK_MIN = 1;
     private static final float ARROW_HB_RATIO = 0.35f;
     private static final int EDGE_MARGIN_BASE = 4;
-    private static final int PORT_LABEL_MAX = 20;
-    private static final int PORT_LABEL_TRUNC = 19;
-    private static final int PORT_FONT_SIZE = 9;
-    private static final float PORT_FONT_SCALE = 0.9f;
-    private static final int PORT_LABEL_PAD = 2;
 
     private static final int GROUP_FIT_PAD = 12;
     private static final float ZOOM_STEP = 0.15f;
@@ -106,6 +99,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final Map<UUID, List<int[]>> edgeRoutes = new HashMap<>();
     private long routeSignature = Long.MIN_VALUE;
 
+    /** The pending NEI lookup origin, if the last R/U lookup started on one of our nodes. */
+    @Nullable
+    private NodeLookupContext pendingLookup;
+
     public CanvasWidget(final Graph graph, Menu<?> menu) {
         this.graph = graph;
         full();
@@ -121,6 +118,54 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         graph.removeNode(nodeId);
         final RecipeNodeWidget w = nodeWidgets.remove(nodeId);
         if (w != null) remove(w);
+    }
+
+    public void setPendingLookup(@Nullable final NodeLookupContext lookup) {
+        pendingLookup = lookup;
+    }
+
+    /** Returns and clears the pending lookup: it wires at most one added recipe. */
+    @Nullable
+    public NodeLookupContext consumePendingLookup() {
+        final NodeLookupContext result = pendingLookup;
+        pendingLookup = null;
+        return result;
+    }
+
+    /**
+     * Positions an auto-wired node beside its lookup origin: producers left, consumers right,
+     * in the first free slot down the column. Slots stagger outward and carry a half-port
+     * vertical nudge so parallel edges and port pins don't overlap. The added node's widget
+     * does not exist yet, so the origin's dimensions stand in for its own.
+     */
+    public void placeBesideOrigin(final Node added, final Node origin, final boolean addedFeedsOrigin) {
+        final RecipeNodeWidget originWidget = nodeWidgets.get(origin.id);
+        final int originW = originWidget != null ? originWidget.getWorldWidth() : NODE_W_ESTIMATE;
+        final int originH = originWidget != null ? originWidget.getWorldHeight() : NODE_H_ESTIMATE;
+        final int baseX = Math
+            .round(addedFeedsOrigin ? origin.x - originW - AUTO_PLACE_GAP_X : origin.x + originW + AUTO_PLACE_GAP_X);
+        final int baseY = Math.round(origin.y);
+        int x;
+        int y;
+        int slot = 0;
+        do {
+            final int stagger = slot * AUTO_PLACE_STAGGER;
+            x = addedFeedsOrigin ? baseX - stagger : baseX + stagger;
+            y = baseY + slot * (originH + AUTO_PLACE_GAP_Y) + (slot + 1) * (PORT_SPACING / 2);
+            slot++;
+        } while (overlapsAnyNode(x, y, originW, originH));
+        added.x = x;
+        added.y = y;
+    }
+
+    private boolean overlapsAnyNode(final int x, final int y, final int w, final int h) {
+        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
+            final Node n = widget.getNode();
+            if (x < n.x + widget.getWorldWidth() && n.x < x + w && y < n.y + widget.getWorldHeight() && n.y < y + h) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void setGraph(final Graph newGraph) {
@@ -286,6 +331,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int ah = getArea().height;
         if (aw <= 0 || ah <= 0) return;
 
+        // MUI2 calls draw() before preDraw(), so the viewport stencil that clips the node
+        // widgets does not exist yet: clip explicitly, or world-space edges and the drag
+        // preview paint outside the canvas.
+        Stencil.applyAtZero(getArea(), context);
+
         // TODO add toggle for grid
         drawGrid(aw, ah);
 
@@ -297,7 +347,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             drawPreviewLine();
         }
 
-        drawHoveredPortLabels();
+        Stencil.remove();
     }
 
     private void drawGrid(final int w, final int h) {
@@ -442,14 +492,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (srcWidget == null || dstWidget == null) continue;
 
             final Node srcNode = graph.nodes.get(edge.sourceNodeId);
-            final boolean isFluid = srcNode != null && edge.sourceOutputIndex >= 0
-                && edge.sourceOutputIndex < srcNode.outputs.size()
-                && srcNode.outputs.get(edge.sourceOutputIndex)
-                    .getType() == RecipePropertyAPI.FLUID;
+            final int color = edgeColor(srcNode, edge.sourceOutputIndex);
 
             final List<int[]> route = edgeRoutes.get(edge.id);
             if (route != null && route.size() >= 2) {
-                drawRoutedArrow(route, isFluid);
+                drawRoutedArrow(route, color);
                 continue;
             }
 
@@ -458,14 +505,23 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final int dstX = widgetX(dstWidget);
             final int dstY = widgetY(dstWidget) + portY(edge.targetInputIndex);
 
-            drawArrow(srcX, srcY, dstX, dstY, isFluid);
+            drawArrow(srcX, srcY, dstX, dstY, color);
         }
+    }
+
+    /** Edge color follows the ingredient flowing through it; type color as fallback. */
+    private static int edgeColor(@Nullable final Node srcNode, final int outputIndex) {
+        if (srcNode == null || outputIndex < 0 || outputIndex >= srcNode.outputs.size()) {
+            return ARROW_COLOR_ITEM;
+        }
+        return srcNode.outputs.get(outputIndex)
+            .getArrowColor();
     }
 
     /**
      * Draws a multi-segment orthogonal arrow from cached world-space waypoints.
      */
-    private void drawRoutedArrow(final List<int[]> route, final boolean fluid) {
+    private void drawRoutedArrow(final List<int[]> route, final int color) {
         final int n = route.size();
         final int[] sx = new int[n];
         final int[] sy = new int[n];
@@ -475,22 +531,28 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
 
         final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
-        final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
         final int x2 = sx[n - 1];
         final int y2 = sy[n - 1];
         // Stop the line at the arrow base so it does not poke through the head (last segment is horizontal).
         sx[n - 1] = Math.round(x2 - as);
 
-        drawLineStrip(sx, sy, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
+        final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
+        // Contrast underlay so the colored line stays readable over any world background.
+        final int outline = IngredientColors.outlineFor(color);
+        drawLineStrip(sx, sy, outline, thickness + EDGE_OUTLINE_EXTRA);
+        drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, outline);
+        drawLineStrip(sx, sy, color, thickness);
         drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO, color);
     }
 
-    private void drawArrow(final int x1, final int y1, final int x2, final int y2, final boolean fluid) {
+    private void drawArrow(final int x1, final int y1, final int x2, final int y2, final int color) {
         final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
         final int ex = Math.round(x2 - as);
-        final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
-        drawOrthogonalLine(x1, y1, x2, y2, ex, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
-
+        final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
+        final int outline = IngredientColors.outlineFor(color);
+        drawOrthogonalLine(x1, y1, x2, y2, ex, outline, thickness + EDGE_OUTLINE_EXTRA);
+        drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, outline);
+        drawOrthogonalLine(x1, y1, x2, y2, ex, color, thickness);
         drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO, color);
     }
 
@@ -719,7 +781,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 if (widget == srcWidget) continue;
                 final int localMx = worldDragMx - Math.round(widget.getNode().x);
                 final int localMy = worldDragMy - Math.round(widget.getNode().y);
-                final int port = widget.getInputPortAt(localMx, localMy);
+                int port = widget.getInputPortAt(localMx, localMy);
+                if (port < 0 && localMx >= 0
+                    && localMx < widget.getWorldWidth()
+                    && localMy >= 0
+                    && localMy < widget.getWorldHeight()) {
+                    // Dropped on the node body: wire into a matching input automatically.
+                    port = graph.findCompatibleInput(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode());
+                }
                 if (port >= 0 && canConnect(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode(), port)) {
                     edgeHoverNodeId = widget.getNode().id;
                     edgeHoverPortIndex = port;
@@ -735,7 +804,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         // menuOpen = false;
 
         float delta = direction == UpOrDown.UP ? ZOOM_STEP : -ZOOM_STEP;
-        delta *= Math.max(1, Math.abs(amount));
+        // Normalize LWJGL2-style +-120-per-notch wheel deltas to notch counts.
+        final int magnitude = Math.abs(amount);
+        delta *= Math.max(1, magnitude >= 120 ? magnitude / 120 : magnitude);
         final float oldZoom = graph.getZoom();
         graph.setZoom(Math.clamp(graph.getZoom() + delta, ZOOM_MIN, ZOOM_MAX));
         final float ratio = graph.getZoom() / oldZoom;
@@ -935,82 +1006,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
          * if (items.isEmpty()) return;
          * contextMenuAt(cmx, cmy, items);
          */
-    }
-
-    // ── Hovered port labels ──
-
-    private void drawHoveredPortLabels() {
-        final int mouseX = getContext().getMouseX();
-        final int mouseY = getContext().getMouseY();
-        final int ps = Math.max(1, Math.round(PORT_S * graph.getZoom()));
-        final int half = Math.round(PORT_HALF * graph.getZoom());
-
-        for (final RecipeNodeWidget w : nodeWidgets.values()) {
-            final Node node = w.getNode();
-            final int widgetX = widgetX(w);
-            final int widgetY = widgetY(w);
-            final int widgetWidth = Math.round(w.getArea().width * graph.getZoom());
-
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                graph.getZoom(),
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.outputs,
-                true)) return;
-            if (tryPortLabel(
-                mouseX,
-                mouseY,
-                graph.getZoom(),
-                ps,
-                half,
-                widgetX,
-                widgetY,
-                widgetWidth,
-                node.inputs,
-                false)) return;
-        }
-    }
-
-    private boolean tryPortLabel(final int mouseX, final int mouseY, final float zoom, final int ps, final int half,
-        final int widgetX, final int widgetY, final int widgetWidth, final List<Port<?>> ports,
-        final boolean rightSide) {
-        for (int i = 0; i < ports.size(); i++) {
-            final int px = rightSide ? widgetX + widgetWidth - ps : widgetX;
-            final int pcY = widgetY + portY(i);
-            final int py = pcY - half;
-            if (mouseX >= px && mouseX < px + ps && mouseY >= py && mouseY < py + ps) {
-                final String label = portLabel(ports.get(i));
-                if (label != null) {
-                    drawPortLabel(label, rightSide ? widgetX + widgetWidth : widgetX, pcY, rightSide, zoom);
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Nullable
-    private static String portLabel(final Port port) {
-        final String name = port.getDisplayName();
-        return name.isEmpty() ? null : name;
-    }
-
-    private static void drawPortLabel(String name, final int anchorX, final int centerY, final boolean rightSide,
-        final float z) {
-        if (name.length() > PORT_LABEL_MAX) name = name.substring(0, PORT_LABEL_TRUNC) + "…";
-        final int tw = Minecraft.getMinecraft().fontRenderer.getStringWidth(name);
-        final int fh = Math.round(PORT_FONT_SIZE * z * PORT_FONT_SCALE);
-        final int gap = Math.round(PORT_GAP * z);
-        final int labelX = rightSide ? anchorX + gap : anchorX - tw - gap;
-        final int labelY = centerY - fh / 2;
-        final int pad = Math.round(PORT_LABEL_PAD * z);
-        GuiDraw.drawRect(labelX - pad, labelY - pad, tw + pad * 2, fh + pad * 2, PlannhColors.PORT_LABEL_BG.getColor());
-        GuiDraw.drawText(name, labelX, labelY, z * 0.9f, PlannhColors.TEXT_WHITE.getColor(), false);
     }
 
     @Override

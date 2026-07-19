@@ -42,6 +42,7 @@ public final class PlannhColors {
     // ── Text Colors (opaque) ──
     public static final ColorResource
         TEXT_WHITE   = C.rgb("text_white",   "0xFFFFFF"),
+        TEXT_BLACK   = C.rgb("text_black",   "0x141414"),
         TEXT_LIGHT   = C.rgb("text_light",   "0xCCCCCC"),
         TEXT_MUTED   = C.rgb("text_muted",   "0xAAAAAA"),
         TEXT_DIM     = C.rgb("text_dim",     "0x888888"),
@@ -94,6 +95,11 @@ public final class PlannhColors {
         GRID_LINE      = C.argb("grid_line",       "0x18FFFFFF"),
         GRID_MAJOR     = C.argb("grid_major",      "0x30FFFFFF");
 
+    // ── Ingredient Edge/Pin Contrast Outlines ──
+    public static final ColorResource
+        EDGE_OUTLINE_DARK  = C.argb("edge_outline_dark",   "0xF00A0A0A"),
+        EDGE_OUTLINE_LIGHT = C.argb("edge_outline_light",  "0xF0F2F2F2");
+
     // ── Context Menu ──
     public static final ColorResource
         CONTEXT_BG     = C.argb("context_bg",      "0xE6323237"),
@@ -120,5 +126,14 @@ public final class PlannhColors {
         final int g = (rgb >> 8) & 0xFF;
         final int b = rgb & 0xFF;
         return Color.argb(200, r, g, b);
+    }
+
+    /**
+     * Text color that contrasts with the given background: dark text on light-to-mid
+     * backgrounds, white on dark ones. Keyed to perceived luminance so it stays correct however
+     * the header color is generated (e.g. dynamically from the recipe handler name).
+     */
+    public static int textOn(final int background) {
+        return Color.getLuminance(background) >= 0.35f ? TEXT_BLACK.getColor() : TEXT_WHITE.getColor();
     }
 }

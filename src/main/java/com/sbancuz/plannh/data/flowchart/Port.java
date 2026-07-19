@@ -1,5 +1,10 @@
 package com.sbancuz.plannh.data.flowchart;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.item.ItemStack;
+
+import com.cleanroommc.modularui.utils.Color;
 import com.sbancuz.plannh.data.RecipeResource;
 
 import lombok.Getter;
@@ -25,6 +30,29 @@ public class Port<T> {
 
     public String getDisplayName() {
         return type.formatDisplayName(value);
+    }
+
+    /** The ItemStack recipe viewers (NEI) show for this port's ingredient; null if none. */
+    @Nullable
+    public ItemStack getDisplayStack() {
+        return type.displayStack(value);
+    }
+
+    /** Pin color for this port's ingredient; the type's pin color when none is derivable. */
+    public int getPinColor(final boolean input) {
+        return colorOr(input ? type.getPinInputColor() : type.getPinOutputColor());
+    }
+
+    /** Edge-arrow color for this port's ingredient; the type's arrow color as fallback. */
+    public int getArrowColor() {
+        return colorOr(type.getArrowColor());
+    }
+
+    /** Representative color for this port's ingredient; {@code fallback}'s alpha is kept. */
+    private int colorOr(final int fallback) {
+        final int rgb = type.color(value);
+        if (rgb == -1) return fallback;
+        return Color.withAlpha(rgb, Color.getAlpha(fallback));
     }
 
     @SuppressWarnings("unchecked")

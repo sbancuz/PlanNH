@@ -1,12 +1,17 @@
 package com.sbancuz.plannh.gui;
 
+import static codechicken.lib.gui.GuiDraw.drawMultilineTip;
+
 import java.util.List;
 
 import javax.annotation.Nonnull;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
+
+import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
@@ -39,6 +44,7 @@ import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 import com.sbancuz.plannh.gui.components.CycleButton;
 
 import codechicken.nei.LayoutManager;
+import codechicken.nei.guihook.GuiContainerManager;
 
 public class FlowchartScreen extends ModularScreen {
 
@@ -235,6 +241,31 @@ public class FlowchartScreen extends ModularScreen {
     public void onClose() {
         PlanAPI.save();
         super.onClose();
+    }
+
+    @Override
+    public void drawForeground() {
+        super.drawForeground();
+        drawHoveredIngredientTooltip();
+    }
+
+    /**
+     * Mouse-anchored NEI tooltip for the hovered ingredient (recipe-grid stacks and port
+     * pins), drawn in the foreground phase with depth off so nodes can never bury it. NEI's
+     * own tooltip pass is suppressed on MUI screens while a widget is hovered.
+     */
+    private void drawHoveredIngredientTooltip() {
+        // stackUnderMouse, not getStackForRecipeViewer: the NEI entry point also arms the
+        // pending-lookup origin, and a per-frame tooltip must not mutate lookup state.
+        if (!(getContext().getHovered() instanceof final RecipeNodeWidget nodeWidget)) return;
+        final ItemStack stack = nodeWidget.stackUnderMouse();
+        if (stack == null) return;
+        final List<String> lines = GuiContainerManager.itemDisplayNameMultiline(stack, null, true);
+        if (lines.isEmpty()) return;
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        drawMultilineTip(getContext().getAbsMouseX() + 12, getContext().getAbsMouseY() - 12, lines);
+        GL11.glPopAttrib();
     }
 
     // ── Slot bar helpers ──
@@ -510,8 +541,10 @@ public class FlowchartScreen extends ModularScreen {
                 PlannhColors.SEPARATOR_DIM.getColor());
             ly += HELP_SEP_GAP;
             GuiDraw.drawText(
-                "Zoom: " + canvas.getGraph()
-                    .getZoom() * 100 + "%",
+                "Zoom: " + Math.round(
+                    canvas.getGraph()
+                        .getZoom() * 100)
+                    + "%",
                 ZOOM_TEXT_X,
                 ly,
                 0.9f,

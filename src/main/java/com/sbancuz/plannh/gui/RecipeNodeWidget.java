@@ -14,6 +14,7 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
+import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerIngredientProvider;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
@@ -27,7 +28,9 @@ import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.nei.NodeLookupContext;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.drawable.DrawableBuilder;
 import codechicken.nei.drawable.DrawableResource;
 import codechicken.nei.guihook.GuiContainerManager;
@@ -36,7 +39,7 @@ import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 
-public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Interactable {
+public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Interactable, RecipeViewerIngredientProvider {
 
     private static final int BASE_W = 120;
     private static final int BASE_H = 80;
@@ -135,6 +138,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private long lastHandlerUpdate = 0;
     private boolean configOpen = false;
     private final List<ClickZone> configZones = new ArrayList<>();
+    private int hoverMx = -10000;
+    private int hoverMy = -10000;
 
     private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action) {
 
@@ -227,6 +232,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
         ensureRecipeHandler();
 
+        // Widget-local mouse while hovered; parked far away otherwise so NEI's stack hover box
+        // only shows on the node actually under the mouse.
+        if (getContext().isHovered(this)) {
+            hoverMx = canvas.getMouseCanvasX() - Math.round(node.x);
+            hoverMy = canvas.getMouseCanvasY() - Math.round(node.y);
+        } else {
+            hoverMx = -10000;
+            hoverMy = -10000;
+        }
+
         if (neiWidget != null && handlerRef != null) {
             final long now = Minecraft.getSystemTime();
             if (now - lastHandlerUpdate > NEI_HANDLER_THROTTLE_MS) {
@@ -254,7 +269,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 (float) neiWidget.w / 2 - (float) titleW / 2,
                 TITLE_TEXT_Y,
                 1.0f,
-                PlannhColors.TEXT_WHITE.getColor(),
+                PlannhColors.textOn(titleCol),
                 false);
 
             if (node.machineConfig.hasAnyBoost()) {
@@ -277,7 +292,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 configOpen ? PlannhColors.ACCENT_GREEN.getColor() : PlannhColors.TEXT_DIM.getColor(),
                 false);
 
-            neiWidget.draw(CONTENT_INSET, CONTENT_TOP);
+            // Real mouse position enables NEI's own hover box on recipe stacks.
+            neiWidget.draw(hoverMx, hoverMy);
             drawThroughputInfo();
             drawConfigContent();
             drawCloseButtonPixel(getArea().width, getArea().height);
@@ -392,35 +408,18 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         for (int i = 0; i < node.outputs.size(); i++) {
             final int py = portTopY(i) - half;
-            final Port port = node.outputs.get(i);
-            if (port.getType() == RecipePropertyAPI.FLUID) {
-                GuiDraw.drawRect(
-                    getArea().width - ps - 1,
-                    py - 1,
-                    ps + 2,
-                    ps + 2,
-                    PlannhColors.PIN_FLUID_OUT_H.getColor());
-                GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_FLUID_OUT.getColor());
-            } else {
-                GuiDraw.drawRect(
-                    getArea().width - ps - 1,
-                    py - 1,
-                    ps + 2,
-                    ps + 2,
-                    PlannhColors.PIN_OUTPUT_HOVER.getColor());
-                GuiDraw.drawRect(getArea().width - ps, py, ps, ps, PlannhColors.PIN_OUTPUT.getColor());
-            }
+            final int color = node.outputs.get(i)
+                .getPinColor(false);
+            // Contrast outline keeps the pin visible against any world background.
+            GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, IngredientColors.outlineFor(color));
+            GuiDraw.drawRect(getArea().width - ps, py, ps, ps, color);
         }
         for (int i = 0; i < node.inputs.size(); i++) {
             final int py = portTopY(i) - half;
-            final Port port = node.inputs.get(i);
-            if (port.getType() == RecipePropertyAPI.FLUID) {
-                GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_FLUID_IN_H.getColor());
-                GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_FLUID_IN.getColor());
-            } else {
-                GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, PlannhColors.PIN_INPUT_HOVER.getColor());
-                GuiDraw.drawRect(0, py, ps, ps, PlannhColors.PIN_INPUT.getColor());
-            }
+            final int color = node.inputs.get(i)
+                .getPinColor(true);
+            GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, IngredientColors.outlineFor(color));
+            GuiDraw.drawRect(0, py, ps, ps, color);
         }
     }
 
@@ -459,11 +458,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private int drawPortList(final int x, int y, final List<Port<?>> ports, final NodeBalance nb, final float sec,
         final int ops, final int throughput, final boolean output) {
         for (int i = 0; i < ports.size(); i++) {
-            final Port port = ports.get(i);
+            final Port<?> port = ports.get(i);
             final String label = portLabel(port, i, nb, sec, ops, throughput, output);
             if (label == null) continue;
-            final int color = portColor(port, output);
-            GuiDraw.drawText(label, x + (output ? LIST_INDENT : 0), y, 1.0f, color, false);
+            GuiDraw.drawText(label, x + (output ? LIST_INDENT : 0), y, 1.0f, portColor(port, output), false);
             y += LINE_H;
         }
         return y;
@@ -472,9 +470,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     @Nullable
     private String portLabel(final Port<?> port, final int index, final NodeBalance nb, final float sec, final int ops,
         final int throughput, final boolean output) {
+        if (!hasVisibleAmount(port)) return null;
         if (port.getType() == RecipePropertyAPI.ITEM) {
             final ItemStack stack = (ItemStack) port.getValue();
-            if (stack == null || stack.stackSize <= 0) return null;
             final float total = (output ? nb.effectiveOutputs() : nb.effectiveInputs()).containsKey(index) ? output
                 ? nb.effectiveOutputs()
                     .get(index)
@@ -489,7 +487,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
         if (port.getType() == RecipePropertyAPI.FLUID) {
             final FluidStack fs = (FluidStack) port.getValue();
-            if (fs == null || fs.amount <= 0) return null;
             final float total;
             if (output) {
                 total = ops * (float) fs.amount * port.getChance() * throughput;
@@ -778,4 +775,105 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             }
         }
     }
+
+    /**
+     * Tells NEI what ingredient the mouse is over (enables R/U and bookmarks on the embedded
+     * recipe's stacks and the port pins).
+     */
+    @Override
+    @Nullable
+    public ItemStack getStackForRecipeViewer() {
+        final IngredientHit hit = ingredientUnderMouse();
+        if (hit == null) return null;
+        canvas.setPendingLookup(hit.origin());
+        return hit.stack();
+    }
+
+    @Nullable
+    public ItemStack stackUnderMouse() {
+        final IngredientHit hit = ingredientUnderMouse();
+        return hit == null ? null : hit.stack();
+    }
+
+    /**
+     * A hovered ingredient: the display stack NEI operates on, plus the port it came from -
+     * null when an embedded grid stack is no port's ingredient (catalysts, machine items).
+     */
+    private record IngredientHit(ItemStack stack, @Nullable NodeLookupContext origin) {}
+
+    @Nullable
+    private IngredientHit ingredientUnderMouse() {
+        // World-space widget-local mouse; independent of whatever viewport state NEI calls us in.
+        final int mx = canvas.getMouseCanvasX() - Math.round(node.x);
+        final int my = canvas.getMouseCanvasY() - Math.round(node.y);
+
+        if (neiWidget != null && handlerRef != null) {
+            final PositionedStack gridStack = neiWidget.getPositionedStackMouseOver(mx, my);
+            if (gridStack != null) {
+                return new IngredientHit(gridStack.item, portOriginFor(gridStack.item, gridSlotIsInput(gridStack)));
+            }
+        }
+
+        final int out = getOutputPortAt(mx, my);
+        if (out >= 0) return hitFor(node.outputs.get(out), true, out);
+        final int in = getInputPortAt(mx, my);
+        if (in >= 0) return hitFor(node.inputs.get(in), false, in);
+        return null;
+    }
+
+    @Nullable
+    private IngredientHit hitFor(final Port<?> port, final boolean output, final int index) {
+        final ItemStack stack = port.getDisplayStack();
+        if (stack == null) return null;
+        return new IngredientHit(stack, new NodeLookupContext(node.id, output, index));
+    }
+
+    /** Whether a hovered grid slot sits on the recipe's input side, by slot position. */
+    private boolean gridSlotIsInput(final PositionedStack hit) {
+        assert handlerRef != null;
+        for (final PositionedStack s : handlerRef.handler.getIngredientStacks(handlerRef.recipeIndex)) {
+            if (s != null && s.relx == hit.relx && s.rely == hit.rely) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Which port an embedded recipe-grid stack refers to, by forward display-stack comparison
+     * (covers fluids: GT display items encode the fluid in the damage value). The hovered
+     * slot's side disambiguates recipes carrying the same ingredient as both input and output;
+     * the opposite side is a fallback for slots that are no port of their own (e.g. catalysts).
+     */
+    @Nullable
+    private NodeLookupContext portOriginFor(final ItemStack gridStack, final boolean inputSide) {
+        final NodeLookupContext sameSide = portMatching(gridStack, !inputSide);
+        return sameSide != null ? sameSide : portMatching(gridStack, inputSide);
+    }
+
+    @Nullable
+    private NodeLookupContext portMatching(final ItemStack stack, final boolean output) {
+        final List<Port<?>> ports = output ? node.outputs : node.inputs;
+        for (int i = 0; i < ports.size(); i++) {
+            if (displayMatches(ports.get(i), stack)) return new NodeLookupContext(node.id, output, i);
+        }
+        return null;
+    }
+
+    private static boolean displayMatches(final Port<?> port, final ItemStack stack) {
+        final ItemStack display = port.getDisplayStack();
+        return display != null && display.isItemEqual(stack);
+    }
+
+    /** Whether the port draws a throughput row: it holds a value with a positive amount. */
+    private static boolean hasVisibleAmount(final Port<?> port) {
+        if (port.getType() == RecipePropertyAPI.ITEM) {
+            final ItemStack stack = (ItemStack) port.getValue();
+            return stack != null && stack.stackSize > 0;
+        }
+        if (port.getType() == RecipePropertyAPI.FLUID) {
+            final FluidStack fs = (FluidStack) port.getValue();
+            return fs != null && fs.amount > 0;
+        }
+        return false;
+    }
+
 }
