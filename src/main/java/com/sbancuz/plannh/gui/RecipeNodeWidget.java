@@ -30,6 +30,7 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.drawable.DrawableBuilder;
 import codechicken.nei.drawable.DrawableResource;
 import codechicken.nei.guihook.GuiContainerManager;
@@ -807,8 +808,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final int my = canvas.getMouseCanvasY() - Math.round(node.y);
 
         if (neiWidget != null && handlerRef != null) {
-            final ItemStack gridStack = neiWidget.getStackMouseOver(mx, my);
-            if (gridStack != null) return new IngredientHit(gridStack, portOriginFor(gridStack));
+            final PositionedStack gridStack = neiWidget.getPositionedStackMouseOver(mx, my);
+            if (gridStack != null) {
+                return new IngredientHit(gridStack.item, portOriginFor(gridStack.item, gridSlotIsInput(gridStack)));
+            }
         }
 
         final int out = getOutputPortAt(mx, my);
@@ -825,18 +828,32 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         return new IngredientHit(stack, new NodeLookupContext(node.id, output, index));
     }
 
+    /** Whether a hovered grid slot sits on the recipe's input side, by slot position. */
+    private boolean gridSlotIsInput(final PositionedStack hit) {
+        assert handlerRef != null;
+        for (final PositionedStack s : handlerRef.handler.getIngredientStacks(handlerRef.recipeIndex)) {
+            if (s != null && s.relx == hit.relx && s.rely == hit.rely) return true;
+        }
+        return false;
+    }
+
     /**
      * Which port an embedded recipe-grid stack refers to, by forward display-stack comparison
-     * (covers fluids: GT display items encode the fluid in the damage value). Inputs first,
-     * since R on an input is the dominant workflow; null for stacks that are no port's.
+     * (covers fluids: GT display items encode the fluid in the damage value). The hovered
+     * slot's side disambiguates recipes carrying the same ingredient as both input and output;
+     * the opposite side is a fallback for slots that are no port of their own (e.g. catalysts).
      */
     @Nullable
-    private NodeLookupContext portOriginFor(final ItemStack gridStack) {
-        for (int i = 0; i < node.inputs.size(); i++) {
-            if (displayMatches(node.inputs.get(i), gridStack)) return new NodeLookupContext(node.id, false, i);
-        }
-        for (int i = 0; i < node.outputs.size(); i++) {
-            if (displayMatches(node.outputs.get(i), gridStack)) return new NodeLookupContext(node.id, true, i);
+    private NodeLookupContext portOriginFor(final ItemStack gridStack, final boolean inputSide) {
+        final NodeLookupContext sameSide = portMatching(gridStack, !inputSide);
+        return sameSide != null ? sameSide : portMatching(gridStack, inputSide);
+    }
+
+    @Nullable
+    private NodeLookupContext portMatching(final ItemStack stack, final boolean output) {
+        final List<Port<?>> ports = output ? node.outputs : node.inputs;
+        for (int i = 0; i < ports.size(); i++) {
+            if (displayMatches(ports.get(i), stack)) return new NodeLookupContext(node.id, output, i);
         }
         return null;
     }
