@@ -14,9 +14,13 @@ import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.oredict.OreDictionary;
 
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipeResource;
+import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
+import com.sbancuz.plannh.gui.IngredientColors;
+import com.sbancuz.plannh.gui.PlannhColors;
 
 public final class RecipePropertyAPI {
 
@@ -40,6 +44,12 @@ public final class RecipePropertyAPI {
         .hashCodeExtractor(
             s -> 31 * s.getItem()
                 .hashCode() + s.getItemDamage())
+        .displayStackProvider(stack -> stack)
+        .lookupMatcher(ItemStack::isItemEqual)
+        .colorProvider(IngredientColors::itemColor)
+        .pinInputColor(PlannhColors.PIN_INPUT.getColor())
+        .pinOutputColor(PlannhColors.PIN_OUTPUT.getColor())
+        .arrowColor(PlannhColors.ARROW_ITEM.getColor())
         .build();
 
     public static final RecipeResource<FluidStack> FLUID = RecipeResource
@@ -55,6 +65,18 @@ public final class RecipePropertyAPI {
         .hashCodeExtractor(
             fs -> fs.getFluid()
                 .hashCode())
+        // Guards sit inside the lambdas so GT classes only load if GT is present AND the
+        // lambda actually runs (lambda bodies resolve their classes at call time, not here).
+        .displayStackProvider(fs -> Compat.GREGTECH.isLoaded ? GTHooks.fluidDisplayStack(fs) : null)
+        .lookupMatcher((fs, lookup) -> {
+            if (!Compat.GREGTECH.isLoaded) return false;
+            final FluidStack lookupFluid = GTHooks.fluidFromDisplayStack(lookup);
+            return lookupFluid != null && lookupFluid.getFluid() == fs.getFluid();
+        })
+        .colorProvider(IngredientColors::fluidColor)
+        .pinInputColor(PlannhColors.PIN_FLUID_IN.getColor())
+        .pinOutputColor(PlannhColors.PIN_FLUID_OUT.getColor())
+        .arrowColor(PlannhColors.ARROW_FLUID.getColor())
         .build();
 
     private static boolean itemsMatch(final ItemStack a, final ItemStack b) {

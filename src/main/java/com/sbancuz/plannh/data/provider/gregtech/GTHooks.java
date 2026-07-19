@@ -5,6 +5,8 @@ import javax.annotation.Nullable;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
+import com.cleanroommc.modularui.utils.Color;
+
 import gregtech.api.items.MetaGeneratedItem;
 import gregtech.api.util.GTUtility;
 
@@ -33,7 +35,7 @@ public final class GTHooks {
         if (stack.getItem() instanceof final MetaGeneratedItem gtItem) {
             final short[] rgba = gtItem.getRGBa(stack);
             if (rgba != null && rgba.length >= 3) {
-                return (rgba[0] & 0xFF) << 16 | (rgba[1] & 0xFF) << 8 | (rgba[2] & 0xFF);
+                return Color.rgb(rgba[0], rgba[1], rgba[2]) & 0xFFFFFF;
             }
         }
         return 0xFFFFFF;

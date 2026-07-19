@@ -21,7 +21,6 @@ import net.minecraft.util.StatCollector;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Serializer;
 import com.sbancuz.plannh.data.flowchart.SlotSet;
-import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
@@ -33,14 +32,6 @@ public final class PlanAPI {
 
     @Nullable
     private static SlotSet slotSet = null;
-
-    private static final NodeLookupContext LOOKUP_CONTEXT = new NodeLookupContext();
-
-    /** The session's pending NEI lookup origin (see {@link NodeLookupContext}). */
-    @Nonnull
-    public static NodeLookupContext lookupContext() {
-        return LOOKUP_CONTEXT;
-    }
 
     @Nonnull
     public static SlotSet getSlotSet() {

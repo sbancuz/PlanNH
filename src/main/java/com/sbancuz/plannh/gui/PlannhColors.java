@@ -134,8 +134,6 @@ public final class PlannhColors {
      * the header color is generated (e.g. dynamically from the recipe handler name).
      */
     public static int textOn(final int background) {
-        final float lum = (0.299f * Color.getRed(background) + 0.587f * Color.getGreen(background)
-            + 0.114f * Color.getBlue(background)) / 255f;
-        return lum >= 0.35f ? TEXT_BLACK.getColor() : TEXT_WHITE.getColor();
+        return Color.getLuminance(background) >= 0.35f ? TEXT_BLACK.getColor() : TEXT_WHITE.getColor();
     }
 }

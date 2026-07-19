@@ -4,29 +4,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiScreen;
+import javax.annotation.Nullable;
+
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
-import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.data.flowchart.Port;
-import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
+import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
-import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiOverlayButton;
-import codechicken.nei.recipe.GuiUsageRecipe;
 import codechicken.nei.recipe.IRecipeHandler;
 
 public class PlanOverlayHandler implements IOverlayHandler {
@@ -66,11 +61,18 @@ public class PlanOverlayHandler implements IOverlayHandler {
         final Node node = new Node(handler, recipeIndex, DEFAULT_NODE_X, DEFAULT_NODE_Y);
         final Graph graph = PlanAPI.getActiveGraph();
         graph.addNode(node);
-        autoConnectToLookupOrigin(graph, node);
-        PlanAPI.save();
 
-        if (firstGui instanceof final GuiContainerWrapper wrapper
-            && wrapper.getScreen() instanceof final FlowchartScreen screen) {
+        final FlowchartScreen screen = firstGui instanceof final GuiContainerWrapper wrapper
+            && wrapper.getScreen() instanceof final FlowchartScreen s ? s : null;
+        if (screen != null) {
+            autoConnectToLookupOrigin(
+                graph,
+                node,
+                screen.canvas.consumePendingLookup(),
+                screen.canvas);
+        }
+        PlanAPI.save();
+        if (screen != null) {
             screen.canvas.rebuildNodeWidgets();
         }
     }
@@ -81,25 +83,27 @@ public class PlanOverlayHandler implements IOverlayHandler {
      * lookups that wandered several recipe layers deep don't create bogus edges.
      *
      * <p>
-     * The lookup DIRECTION comes from the NEI screen the + was clicked on: a recipe screen
-     * (GuiCraftingRecipe, the R key) lists producers of the ingredient, so the added node feeds
-     * the origin; a usage screen (GuiUsageRecipe, the U key) lists consumers, so the origin
-     * feeds the added node. MUI2's ingredient provider cannot distinguish R from U at lookup
-     * time, which is why the flag is read here rather than stored in the context.
+     * The lookup DIRECTION follows which side of the added recipe carries the ingredient: a
+     * producer (what R lookups list) feeds the origin, a consumer (U lookups) is fed by it. The
+     * NEI screen type cannot decide this - GuiOverlayButton switches back to the flowchart
+     * before invoking the overlay handler, so the recipe screen is already gone here - and after
+     * wandering several layers deep it would not reflect the original R/U anyway.
+     *
+     * <p>
+     * A wired node is also placed beside its origin (producers left, consumers right) instead of
+     * at the default spawn position.
      */
-    private static void autoConnectToLookupOrigin(final Graph graph, final Node added) {
-        final NodeLookupContext.Origin lookupOrigin = PlanAPI.lookupContext()
-            .consume();
+    private static void autoConnectToLookupOrigin(final Graph graph, final Node added,
+        @Nullable final NodeLookupContext lookupOrigin, final CanvasWidget canvas) {
         if (lookupOrigin == null) return;
         final Node origin = graph.nodes.get(lookupOrigin.nodeId());
         final ItemStack lookup = lookupOrigin.stack();
         if (origin == null || lookup == null || origin.id.equals(added.id)) return;
 
-        final GuiScreen current = Minecraft.getMinecraft().currentScreen;
-        if (current instanceof GuiUsageRecipe) {
-            connectOnIngredient(graph, origin, added, lookup);
-        } else if (current instanceof GuiCraftingRecipe) {
-            connectOnIngredient(graph, added, origin, lookup);
+        if (connectOnIngredient(graph, added, origin, lookup)) {
+            canvas.placeBesideOrigin(added, origin, true);
+        } else if (connectOnIngredient(graph, origin, added, lookup)) {
+            canvas.placeBesideOrigin(added, origin, false);
         }
     }
 
@@ -107,40 +111,13 @@ public class PlanOverlayHandler implements IOverlayHandler {
     private static boolean connectOnIngredient(final Graph graph, final Node src, final Node dst,
         final ItemStack lookup) {
         for (int out = 0; out < src.outputs.size(); out++) {
-            final Port<?> outPort = src.outputs.get(out);
-            if (!portMatchesLookup(outPort, lookup)) continue;
-            int chosen = -1;
-            for (int in = 0; in < dst.inputs.size(); in++) {
-                if (!outPort.canConnect(dst.inputs.get(in))) continue;
-                if (chosen < 0) chosen = in;
-                if (!hasIncomingEdge(graph, dst.id, in)) {
-                    chosen = in;
-                    break;
-                }
-            }
-            if (chosen >= 0) {
-                graph.addEdge(new Edge(UUID.randomUUID(), src.id, dst.id, out, chosen));
+            if (!src.outputs.get(out)
+                .matchesLookup(lookup)) continue;
+            final int in = graph.findCompatibleInput(src, out, dst);
+            if (in >= 0) {
+                graph.addEdge(new Edge(UUID.randomUUID(), src.id, dst.id, out, in));
                 return true;
             }
-        }
-        return false;
-    }
-
-    private static boolean portMatchesLookup(final Port<?> port, final ItemStack lookup) {
-        final Object value = port.getValue();
-        if (value instanceof final ItemStack stack) {
-            return stack.isItemEqual(lookup);
-        }
-        if (value instanceof final FluidStack fluidValue && Compat.GREGTECH.isLoaded) {
-            final FluidStack lookupFluid = GTHooks.fluidFromDisplayStack(lookup);
-            return lookupFluid != null && lookupFluid.getFluid() == fluidValue.getFluid();
-        }
-        return false;
-    }
-
-    private static boolean hasIncomingEdge(final Graph graph, final UUID nodeId, final int inputIndex) {
-        for (final Edge edge : graph.getEdges()) {
-            if (edge.targetNodeId.equals(nodeId) && edge.targetInputIndex == inputIndex) return true;
         }
         return false;
     }

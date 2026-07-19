@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui;
 
+import static codechicken.lib.gui.GuiDraw.drawMultilineTip;
+
 import java.util.List;
 
 import javax.annotation.Nonnull;
@@ -15,7 +17,6 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.drawable.Rectangle;
-import com.cleanroommc.modularui.integration.recipeviewer.RecipeViewerIngredientProvider;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -43,6 +44,7 @@ import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 import com.sbancuz.plannh.gui.components.CycleButton;
 
 import codechicken.nei.LayoutManager;
+import codechicken.nei.guihook.GuiContainerManager;
 
 public class FlowchartScreen extends ModularScreen {
 
@@ -255,16 +257,16 @@ public class FlowchartScreen extends ModularScreen {
      * copy.
      */
     private void drawHoveredIngredientTooltip() {
-        if (!(getContext().getHovered() instanceof final RecipeViewerIngredientProvider provider)) return;
-        final ItemStack stack = provider.getStackForRecipeViewer();
+        // stackUnderMouse, not getStackForRecipeViewer: the NEI entry point also arms the
+        // pending-lookup origin, and a per-frame tooltip must not mutate lookup state.
+        if (!(getContext().getHovered() instanceof final RecipeNodeWidget nodeWidget)) return;
+        final ItemStack stack = nodeWidget.stackUnderMouse();
         if (stack == null) return;
-        final List<String> lines = codechicken.nei.guihook.GuiContainerManager
-            .itemDisplayNameMultiline(stack, null, true);
+        final List<String> lines = GuiContainerManager.itemDisplayNameMultiline(stack, null, true);
         if (lines.isEmpty()) return;
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_DEPTH_BUFFER_BIT);
         GL11.glDisable(GL11.GL_DEPTH_TEST);
-        codechicken.lib.gui.GuiDraw
-            .drawMultilineTip(getContext().getAbsMouseX() + 12, getContext().getAbsMouseY() - 12, lines);
+        drawMultilineTip(getContext().getAbsMouseX() + 12, getContext().getAbsMouseY() - 12, lines);
         GL11.glPopAttrib();
     }
 

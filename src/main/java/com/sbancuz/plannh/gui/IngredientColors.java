@@ -26,7 +26,6 @@ import org.lwjgl.opengl.GLContext;
 import com.cleanroommc.modularui.utils.Color;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
-import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
 
 import codechicken.nei.guihook.GuiContainerManager;
@@ -45,31 +44,16 @@ public final class IngredientColors {
 
     private static final Map<String, Integer> CACHE = new HashMap<>();
     private static final int ALPHA_OPAQUE_MIN = 128;
+    private static final int SAMPLE_SIZE = 16;
 
     private static final int UNKNOWN = -1;
     private static final int NO_TINT = 0xFFFFFF;
     private static final int RGB_MASK = 0xFFFFFF;
 
-    private IngredientColors() {}
+    /** A derived color and the opaque-pixel count that backs it (its weight when blending). */
+    private record ModalColor(int rgb, long weight) {}
 
-    /**
-     * Representative ARGB color for the port's ingredient; {@code fallback} (with its alpha) if
-     * unknown. Colors are true to the sprite - readability on arbitrary backgrounds comes from
-     * pairing them with {@link #outlineFor(int)}.
-     */
-    public static int of(final Port<?> port, final int fallback) {
-        final Object value = port.getValue();
-        final int rgb;
-        if (value instanceof final ItemStack stack) {
-            rgb = ofItem(stack);
-        } else if (value instanceof final FluidStack fluidStack) {
-            rgb = ofFluid(fluidStack);
-        } else {
-            rgb = UNKNOWN;
-        }
-        if (rgb == UNKNOWN) return fallback;
-        return Color.withAlpha(rgb, Color.getAlpha(fallback));
-    }
+    private IngredientColors() {}
 
     /**
      * Contrast outline for a color: light outline under dark colors, dark outline under light
@@ -77,36 +61,34 @@ public final class IngredientColors {
      * navy) and still read on any world background.
      */
     public static int outlineFor(final int color) {
-        final float lum = luminance(
-            Color.getRed(color) / 255f,
-            Color.getGreen(color) / 255f,
-            Color.getBlue(color) / 255f);
-        return lum < 0.5f ? PlannhColors.EDGE_OUTLINE_LIGHT.getColor() : PlannhColors.EDGE_OUTLINE_DARK.getColor();
+        return Color.getLuminance(color) < 0.5f ? PlannhColors.EDGE_OUTLINE_LIGHT.getColor()
+            : PlannhColors.EDGE_OUTLINE_DARK.getColor();
     }
 
-    private static float luminance(final float r, final float g, final float b) {
-        return 0.299f * r + 0.587f * g + 0.114f * b;
-    }
-
-    private static int ofItem(final ItemStack stack) {
+    /**
+     * Modal sprite color for an item stack, bare RGB, -1 when none is derivable; the ITEM
+     * resource's color provider. Colors are true to the sprite - readability on arbitrary
+     * backgrounds comes from pairing them with {@link #outlineFor(int)}.
+     */
+    public static int itemColor(final ItemStack stack) {
         if (stack == null || stack.getItem() == null) return UNKNOWN;
         final String key = "item:" + Item.itemRegistry.getNameForObject(stack.getItem()) + ":" + stack.getItemDamage();
         return CACHE.computeIfAbsent(key, k -> {
             try {
                 final Item item = stack.getItem();
-                // Multi-render-pass items (all GT material items: gems, dusts, cells...) carry a
-                // grayscale base sprite per pass, tinted by the per-pass color. Blend the passes
                 // Ground truth first: render the stack the way NEI draws it and sample the
                 // pixels. This is immune to the icon API misrepresenting custom renderers
                 // (GT material items, GT blocks, fluid display items...).
-                final long[] rendered = sampleRenderedStack(stack);
-                if (rendered != null) return logColor(k, (int) rendered[0], "render-sample");
+                final ModalColor rendered = sampleRenderedStack(stack);
+                if (rendered != null) return logColor(k, rendered.rgb(), "render-sample");
 
+                // Multi-render-pass items (all GT material items: gems, dusts, cells...) carry a
+                // grayscale base sprite per pass, tinted by the per-pass color. Blend the passes
                 // weighted by how many opaque pixels each contributes.
                 final int passes = item.requiresMultipleRenderPasses()
                     ? Math.max(1, item.getRenderPasses(stack.getItemDamage()))
                     : 1;
-                final int gtTint = gtMaterialTint(stack);
+                final int gtTint = Compat.GREGTECH.isLoaded ? GTHooks.materialTint(stack) : NO_TINT;
                 long r = 0, g = 0, b = 0, weight = 0;
                 for (int pass = 0; pass < passes; pass++) {
                     IIcon icon;
@@ -116,25 +98,28 @@ public final class IngredientColors {
                         icon = null;
                     }
                     if (icon == null && pass == 0) icon = item.getIconIndex(stack);
-                    final long[] modal = modalSpriteColor(icon, item.getSpriteNumber() == 0);
+                    final ModalColor modal = modalSpriteColor(icon, item.getSpriteNumber() == 0);
                     if (modal == null) continue;
-                    int rgb = (int) modal[0];
+                    int rgb = modal.rgb();
                     int tint = item.getColorFromItemStack(stack, pass);
                     // GT material items are grayscale sprites tinted by their custom renderer,
                     // not by getColorFromItemStack; apply the material color to the base pass.
                     if (pass == 0 && (tint & RGB_MASK) == NO_TINT) tint = gtTint;
                     if ((tint & RGB_MASK) != NO_TINT) rgb = multiplyRgb(rgb, tint);
-                    final long count = modal[1];
-                    r += (long) (rgb >> 16 & 0xFF) * count;
-                    g += (long) (rgb >> 8 & 0xFF) * count;
-                    b += (long) (rgb & 0xFF) * count;
+                    final long count = modal.weight();
+                    r += (long) Color.getRed(rgb) * count;
+                    g += (long) Color.getGreen(rgb) * count;
+                    b += (long) Color.getBlue(rgb) * count;
                     weight += count;
                 }
                 if (weight == 0) {
                     PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", k);
                     return UNKNOWN;
                 }
-                return logColor(k, (int) (r / weight) << 16 | (int) (g / weight) << 8 | (int) (b / weight), "sprite");
+                return logColor(
+                    k,
+                    Color.rgb((int) (r / weight), (int) (g / weight), (int) (b / weight)) & RGB_MASK,
+                    "sprite");
             } catch (final Exception e) {
                 PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", k, e.toString());
                 return UNKNOWN;
@@ -142,21 +127,19 @@ public final class IngredientColors {
         });
     }
 
-    private static int ofFluid(final FluidStack fluidStack) {
+    /** Fluid counterpart of {@link #itemColor}; the FLUID resource's color provider. */
+    public static int fluidColor(final FluidStack fluidStack) {
         if (fluidStack == null || fluidStack.getFluid() == null) return UNKNOWN;
         final Fluid fluid = fluidStack.getFluid();
         final String key = "fluid:" + fluid.getName();
         // Manual get/put instead of computeIfAbsent: the display-stack path recurses into
-        // ofItem, and nested computeIfAbsent on one map is illegal.
+        // itemColor, and nested computeIfAbsent on one map is illegal.
         final Integer cached = CACHE.get(key);
         if (cached != null) return cached;
         final int rgb = computeFluidColor(fluidStack, fluid, key);
         CACHE.put(key, rgb);
         return rgb;
     }
-
-    private static final int SAMPLE_SIZE = 16;
-    private static final int GL_FRAMEBUFFER_BINDING = 0x8CA6;
 
     /**
      * Renders the stack into a small offscreen framebuffer via NEI's item drawing (the exact
@@ -169,12 +152,12 @@ public final class IngredientColors {
      * can silently no-op its bind, which would make this read back whatever is currently on
      * screen. The binding is verified before anything is drawn.
      */
-    private static long[] sampleRenderedStack(final ItemStack stack) {
+    private static ModalColor sampleRenderedStack(final ItemStack stack) {
         final Minecraft mc = Minecraft.getMinecraft();
         if (mc == null || mc.getTextureManager() == null) return null;
         if (!GLContext.getCapabilities().OpenGL30) return null;
 
-        final int previousFbo = GL11.glGetInteger(GL_FRAMEBUFFER_BINDING);
+        final int previousFbo = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
         int fbo = 0;
         int colorTexture = 0;
         int depthBuffer = 0;
@@ -200,7 +183,7 @@ public final class IngredientColors {
 
             fbo = GL30.glGenFramebuffers();
             GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, fbo);
-            if (GL11.glGetInteger(GL_FRAMEBUFFER_BINDING) != fbo) {
+            if (GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING) != fbo) {
                 PlanNH.LOG.debug("FBO bind did not take for {}, falling back to sprites", stack);
                 return null;
             }
@@ -251,9 +234,9 @@ public final class IngredientColors {
                 final int g = buffer.get(i * 4 + 1) & 0xFF;
                 final int b = buffer.get(i * 4 + 2) & 0xFF;
                 final int a = buffer.get(i * 4 + 3) & 0xFF;
-                pixels[i] = a << 24 | r << 16 | g << 8 | b;
+                pixels[i] = Color.argb(r, g, b, a);
             }
-            final long[] result = modeWithOutlineFallback(pixels, SAMPLE_SIZE, SAMPLE_SIZE);
+            final ModalColor result = modeWithOutlineFallback(pixels, SAMPLE_SIZE, SAMPLE_SIZE);
             if (result == null) {
                 PlanNH.LOG.debug("Render sample of {} produced no opaque pixels", stack);
             }
@@ -289,17 +272,17 @@ public final class IngredientColors {
             if (Compat.GREGTECH.isLoaded) {
                 final ItemStack display = GTHooks.fluidDisplayStack(fluidStack);
                 if (display != null) {
-                    final int rgb = ofItem(display);
+                    final int rgb = itemColor(display);
                     if (rgb != UNKNOWN) return logColor(key, rgb, "fluid-display");
                 }
             }
 
-            final long[] modal = modalSpriteColor(fluid.getIcon(fluidStack), true);
+            final ModalColor modal = modalSpriteColor(fluid.getIcon(fluidStack), true);
             if (modal == null) {
                 PlanNH.LOG.debug("No sprite color derivable for {}, using type fallback", key);
                 return UNKNOWN;
             }
-            return logColor(key, (int) modal[0], "fluid-sprite");
+            return logColor(key, modal.rgb(), "fluid-sprite");
         } catch (final Exception e) {
             PlanNH.LOG.debug("Sprite color derivation failed for {}: {}", key, e.toString());
             return UNKNOWN;
@@ -307,8 +290,7 @@ public final class IngredientColors {
     }
 
     /**
-     * Modal opaque color of an atlas sprite as {@code [rgb, opaquePixelCount]}, or null if pixels
-     * are unavailable.
+     * Modal opaque color of an atlas sprite, or null if pixels are unavailable.
      *
      * <p>
      * Sprite outlines are excluded first: any opaque pixel touching a transparent one is part of
@@ -316,14 +298,14 @@ public final class IngredientColors {
      * heavy sprites like the diamond. If erosion leaves nothing (very thin sprites), the full
      * opaque set is used instead.
      */
-    private static long[] modalSpriteColor(final IIcon icon, final boolean blocksAtlas) {
+    private static ModalColor modalSpriteColor(final IIcon icon, final boolean blocksAtlas) {
         if (icon == null) return null;
         // Fast path: the stitched atlas' retained CPU-side frame data. Angelica (present in all
         // modern GTNH packs and this repo's dev runtime) frees that data, so fall back to reading
         // the sprite's source PNG through the resource manager - the same file the stitcher
         // loaded it from. Items that borrow icons from the other atlas (e.g. GT's fluid display
         // uses block-atlas fluid icons) get a cross-atlas retry.
-        long[] result = fromAtlasFrames(icon, blocksAtlas);
+        ModalColor result = fromAtlasFrames(icon, blocksAtlas);
         if (result == null) result = fromResourcePng(icon, blocksAtlas);
         if (result == null) result = fromAtlasFrames(icon, !blocksAtlas);
         if (result == null) result = fromResourcePng(icon, !blocksAtlas);
@@ -333,7 +315,7 @@ public final class IngredientColors {
         return result;
     }
 
-    private static long[] fromAtlasFrames(final IIcon icon, final boolean blocksAtlas) {
+    private static ModalColor fromAtlasFrames(final IIcon icon, final boolean blocksAtlas) {
         try {
             final TextureMap atlas = (TextureMap) Minecraft.getMinecraft()
                 .getTextureManager()
@@ -352,7 +334,7 @@ public final class IngredientColors {
         }
     }
 
-    private static long[] fromResourcePng(final IIcon icon, final boolean blocksAtlas) {
+    private static ModalColor fromResourcePng(final IIcon icon, final boolean blocksAtlas) {
         final String name = icon.getIconName();
         if (name == null || name.isEmpty()) return null;
         final int colon = name.indexOf(':');
@@ -381,26 +363,26 @@ public final class IngredientColors {
         }
     }
 
-    private static long[] modeWithOutlineFallback(final int[] pixels, final int width, final int height) {
-        long[] result = histogramMode(pixels, width, height, true);
+    private static ModalColor modeWithOutlineFallback(final int[] pixels, final int width, final int height) {
+        ModalColor result = histogramMode(pixels, width, height, true);
         if (result == null) result = histogramMode(pixels, width, height, false);
         return result;
     }
 
     /** Bin at 5 bits/channel; per-bin sums let the winning bin be averaged smoothly. */
-    private static long[] histogramMode(final int[] pixels, final int width, final int height,
+    private static ModalColor histogramMode(final int[] pixels, final int width, final int height,
         final boolean erodeOutline) {
         final Map<Integer, long[]> bins = new HashMap<>();
         long opaque = 0;
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 final int argb = pixels[y * width + x];
-                if ((argb >>> 24) < ALPHA_OPAQUE_MIN) continue;
+                if (Color.getAlpha(argb) < ALPHA_OPAQUE_MIN) continue;
                 if (erodeOutline && touchesTransparency(pixels, width, height, x, y)) continue;
                 opaque++;
-                final int r = argb >> 16 & 0xFF;
-                final int g = argb >> 8 & 0xFF;
-                final int b = argb & 0xFF;
+                final int r = Color.getRed(argb);
+                final int g = Color.getGreen(argb);
+                final int b = Color.getBlue(argb);
                 final int bin = (r >> 3) << 10 | (g >> 3) << 5 | b >> 3;
                 final long[] acc = bins.computeIfAbsent(bin, x2 -> new long[4]);
                 acc[0]++;
@@ -428,8 +410,9 @@ public final class IngredientColors {
             }
         }
         if (best == null) return null;
-        final int rgb = (int) (best[1] / best[0]) << 16 | (int) (best[2] / best[0]) << 8 | (int) (best[3] / best[0]);
-        return new long[] { rgb, opaque };
+        final int rgb = Color.rgb((int) (best[1] / best[0]), (int) (best[2] / best[0]), (int) (best[3] / best[0]))
+            & RGB_MASK;
+        return new ModalColor(rgb, opaque);
     }
 
     /** True if a 4-neighbor is transparent; out-of-bounds neighbors count as opaque. */
@@ -443,7 +426,7 @@ public final class IngredientColors {
     private static boolean isTransparent(final int[] pixels, final int width, final int height, final int x,
         final int y) {
         if (x < 0 || x >= width || y < 0 || y >= height) return false;
-        return (pixels[y * width + x] >>> 24) < ALPHA_OPAQUE_MIN;
+        return Color.getAlpha(pixels[y * width + x]) < ALPHA_OPAQUE_MIN;
     }
 
     private static int logColor(final String key, final int rgb, final String source) {
@@ -457,10 +440,5 @@ public final class IngredientColors {
             Color.getRed(rgb) * Color.getRed(tint) / 255,
             Color.getGreen(rgb) * Color.getGreen(tint) / 255,
             Color.getBlue(rgb) * Color.getBlue(tint) / 255) & RGB_MASK;
-    }
-
-    /** GT material color for MetaGeneratedItems (their renderer applies it, so the item API lies). */
-    private static int gtMaterialTint(final ItemStack stack) {
-        return Compat.GREGTECH.isLoaded ? GTHooks.materialTint(stack) : NO_TINT;
     }
 }

@@ -19,8 +19,6 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
-import com.sbancuz.plannh.Compat;
-import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -30,9 +28,8 @@ import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
-import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
+import com.sbancuz.plannh.nei.NodeLookupContext;
 
-import codechicken.nei.PositionedStack;
 import codechicken.nei.drawable.DrawableBuilder;
 import codechicken.nei.drawable.DrawableResource;
 import codechicken.nei.guihook.GuiContainerManager;
@@ -412,20 +409,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
         for (int i = 0; i < node.outputs.size(); i++) {
             final int py = portTopY(i) - half;
-            final Port<?> port = node.outputs.get(i);
-            final int fallback = port.getType() == RecipePropertyAPI.FLUID ? PlannhColors.PIN_FLUID_OUT.getColor()
-                : PlannhColors.PIN_OUTPUT.getColor();
-            final int color = IngredientColors.of(port, fallback);
-            // Dark outline keeps the pin visible against any world background.
+            final int color = node.outputs.get(i)
+                .getPinColor(false);
+            // Contrast outline keeps the pin visible against any world background.
             GuiDraw.drawRect(getArea().width - ps - 1, py - 1, ps + 2, ps + 2, IngredientColors.outlineFor(color));
             GuiDraw.drawRect(getArea().width - ps, py, ps, ps, color);
         }
         for (int i = 0; i < node.inputs.size(); i++) {
             final int py = portTopY(i) - half;
-            final Port<?> port = node.inputs.get(i);
-            final int fallback = port.getType() == RecipePropertyAPI.FLUID ? PlannhColors.PIN_FLUID_IN.getColor()
-                : PlannhColors.PIN_INPUT.getColor();
-            final int color = IngredientColors.of(port, fallback);
+            final int color = node.inputs.get(i)
+                .getPinColor(true);
             GuiDraw.drawRect(-1, py - 1, ps + 2, ps + 2, IngredientColors.outlineFor(color));
             GuiDraw.drawRect(0, py, ps, ps, color);
         }
@@ -459,22 +452,39 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
         y += LINE_H;
 
-        y = drawPortList(x, y, node.inputs, nb, sec, ops, throughput, false);
-        drawPortList(x, y, node.outputs, nb, sec, ops, throughput, true);
+        for (final ThroughputRow row : throughputRows()) {
+            final String label = portLabel(row.port(), row.index(), nb, sec, ops, throughput, row.output());
+            if (label == null) continue;
+            if (hoverMy >= row.y() && hoverMy < row.y() + LINE_H && hoverMx >= x && hoverMx < getArea().width - x) {
+                // NEI-style hover box: tells the user the R/U keybinds work on this row.
+                GuiDraw.drawRect(x - 1, row.y() - 2, getArea().width - 2 * x + 2, LINE_H, ROW_HOVER);
+            }
+            final int color = portColor(row.port(), row.output());
+            GuiDraw.drawText(label, x + (row.output() ? LIST_INDENT : 0), row.y(), 1.0f, color, false);
+        }
     }
 
-    private int drawPortList(final int x, int y, final List<Port<?>> ports, final NodeBalance nb, final float sec,
-        final int ops, final int throughput, final boolean output) {
+    private record ThroughputRow(Port<?> port, int index, boolean output, int y) {}
+
+    /**
+     * The visible throughput rows in draw order with their widget-local y positions - the single
+     * source of row layout for both drawing and R/U hit-testing.
+     */
+    private List<ThroughputRow> throughputRows() {
+        assert neiWidget != null;
+        final List<ThroughputRow> rows = new ArrayList<>();
+        // The first row sits below the ops line.
+        int y = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + LINE_H;
+        y = collectRows(node.inputs, false, y, rows);
+        collectRows(node.outputs, true, y, rows);
+        return rows;
+    }
+
+    private int collectRows(final List<Port<?>> ports, final boolean output, int y, final List<ThroughputRow> rows) {
         for (int i = 0; i < ports.size(); i++) {
-            final Port port = ports.get(i);
-            final String label = portLabel(port, i, nb, sec, ops, throughput, output);
-            if (label == null) continue;
-            if (hoverMy >= y && hoverMy < y + LINE_H && hoverMx >= x && hoverMx < getArea().width - x) {
-                // NEI-style hover box: tells the user the R/U keybinds work on this row.
-                GuiDraw.drawRect(x - 1, y - 2, getArea().width - 2 * x + 2, LINE_H, ROW_HOVER);
-            }
-            final int color = portColor(port, output);
-            GuiDraw.drawText(label, x + (output ? LIST_INDENT : 0), y, 1.0f, color, false);
+            final Port<?> port = ports.get(i);
+            if (!hasVisibleAmount(port)) continue;
+            rows.add(new ThroughputRow(port, i, output, y));
             y += LINE_H;
         }
         return y;
@@ -483,9 +493,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     @Nullable
     private String portLabel(final Port<?> port, final int index, final NodeBalance nb, final float sec, final int ops,
         final int throughput, final boolean output) {
+        if (!hasVisibleAmount(port)) return null;
         if (port.getType() == RecipePropertyAPI.ITEM) {
             final ItemStack stack = (ItemStack) port.getValue();
-            if (stack == null || stack.stackSize <= 0) return null;
             final float total = (output ? nb.effectiveOutputs() : nb.effectiveInputs()).containsKey(index) ? output
                 ? nb.effectiveOutputs()
                     .get(index)
@@ -500,7 +510,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
         if (port.getType() == RecipePropertyAPI.FLUID) {
             final FluidStack fs = (FluidStack) port.getValue();
-            if (fs == null || fs.amount <= 0) return null;
             final float total;
             if (output) {
                 total = ops * (float) fs.amount * port.getChance() * throughput;
@@ -798,24 +807,28 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     @Override
     @Nullable
     public ItemStack getStackForRecipeViewer() {
-        final ItemStack result = findStackForRecipeViewer();
+        final ItemStack result = stackUnderMouse();
         if (result != null) {
             // Remember the origin so a recipe added from the upcoming NEI lookup can be wired
             // back to this node automatically.
-            PlanAPI.lookupContext()
-                .set(node.id, result);
+            canvas.setPendingLookup(new NodeLookupContext(node.id, result));
         }
         return result;
     }
 
+    /**
+     * The ingredient stack under the mouse, if any. Pure query, safe to call every frame (the
+     * screen's hover tooltip does); {@link #getStackForRecipeViewer} is NEI's lookup entry point
+     * and additionally arms the pending-lookup origin.
+     */
     @Nullable
-    private ItemStack findStackForRecipeViewer() {
+    public ItemStack stackUnderMouse() {
         // World-space widget-local mouse; independent of whatever viewport state NEI calls us in.
         final int mx = canvas.getMouseCanvasX() - Math.round(node.x);
         final int my = canvas.getMouseCanvasY() - Math.round(node.y);
 
         if (neiWidget != null && handlerRef != null) {
-            final ItemStack recipeStack = recipeStackAt(mx, my);
+            final ItemStack recipeStack = neiWidget.getStackMouseOver(mx, my);
             if (recipeStack != null) return recipeStack;
 
             final ItemStack rowStack = throughputRowStackAt(mx, my);
@@ -823,51 +836,26 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
 
         final int out = getOutputPortAt(mx, my);
-        if (out >= 0) return stackForPort(node.outputs.get(out));
+        if (out >= 0) return node.outputs.get(out)
+            .getDisplayStack();
         final int in = getInputPortAt(mx, my);
-        if (in >= 0) return stackForPort(node.inputs.get(in));
-        return null;
-    }
-
-    @Nullable
-    private ItemStack recipeStackAt(final int mx, final int my) {
-        assert neiWidget != null && handlerRef != null;
-        final int lx = mx - neiWidget.x;
-        final int ly = my - neiWidget.y
-            - neiWidget.getHandlerInfo()
-                .getYShift();
-        final int idx = handlerRef.recipeIndex;
-        for (final PositionedStack stack : handlerRef.handler.getIngredientStacks(idx)) {
-            if (stack != null && stack.contains(lx, ly)) return stack.item;
-        }
-        for (final PositionedStack stack : handlerRef.handler.getOtherStacks(idx)) {
-            if (stack != null && stack.contains(lx, ly)) return stack.item;
-        }
-        final PositionedStack result = handlerRef.handler.getResultStack(idx);
-        if (result != null && result.contains(lx, ly)) return result.item;
+        if (in >= 0) return node.inputs.get(in)
+            .getDisplayStack();
         return null;
     }
 
     @Nullable
     private ItemStack throughputRowStackAt(final int mx, final int my) {
-        assert neiWidget != null;
         if (mx < LEFT_CONTENT_X || mx >= getArea().width - LEFT_CONTENT_X) return null;
-        // Mirror drawThroughputInfo's row sequence: ops line, inputs, then outputs.
-        int y = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + LINE_H;
-        for (final Port<?> port : node.inputs) {
-            if (!hasVisibleRow(port)) continue;
-            if (my >= y && my < y + LINE_H) return stackForPort(port);
-            y += LINE_H;
-        }
-        for (final Port<?> port : node.outputs) {
-            if (!hasVisibleRow(port)) continue;
-            if (my >= y && my < y + LINE_H) return stackForPort(port);
-            y += LINE_H;
+        for (final ThroughputRow row : throughputRows()) {
+            if (my >= row.y() && my < row.y() + LINE_H) return row.port()
+                .getDisplayStack();
         }
         return null;
     }
 
-    private static boolean hasVisibleRow(final Port<?> port) {
+    /** Whether the port draws a throughput row: it holds a value with a positive amount. */
+    private static boolean hasVisibleAmount(final Port<?> port) {
         if (port.getType() == RecipePropertyAPI.ITEM) {
             final ItemStack stack = (ItemStack) port.getValue();
             return stack != null && stack.stackSize > 0;
@@ -879,13 +867,4 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         return false;
     }
 
-    @Nullable
-    private static ItemStack stackForPort(final Port<?> port) {
-        if (port.getType() == RecipePropertyAPI.ITEM) return (ItemStack) port.getValue();
-        if (port.getType() == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) {
-            final FluidStack fs = (FluidStack) port.getValue();
-            if (fs != null) return GTHooks.fluidDisplayStack(fs);
-        }
-        return null;
-    }
 }

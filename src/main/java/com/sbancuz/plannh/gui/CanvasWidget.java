@@ -25,13 +25,12 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
-import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import lombok.Getter;
 
@@ -41,12 +40,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int GRID_MAJOR = 5;
 
     private static final int ARROW_COLOR_ITEM = PlannhColors.ARROW_ITEM.getColor();
-    private static final int ARROW_COLOR_FLUID = PlannhColors.ARROW_FLUID.getColor();
     private static final int EDGE_OUTLINE_EXTRA = 3;
     private static final int PREVIEW_COLOR = PlannhColors.PREVIEW_HIGHLIGHT.getColor();
     private static final int CLAMP_MARGIN = 4;
     private static final int NODE_W_ESTIMATE = 120;
     private static final int NODE_H_ESTIMATE = 80;
+    private static final int AUTO_PLACE_GAP_X = 80;
+    private static final int AUTO_PLACE_GAP_Y = 30;
+    private static final int AUTO_PLACE_STAGGER = 20;
     private static final int HEADER_OFFSET = 24;
     private static final int PORT_HALF = 4;
     private static final int PORT_SPACING = 18;
@@ -98,6 +99,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final Map<UUID, List<int[]>> edgeRoutes = new HashMap<>();
     private long routeSignature = Long.MIN_VALUE;
 
+    /** The pending NEI lookup origin, if the last R/U lookup started on one of our nodes. */
+    @Nullable
+    private NodeLookupContext pendingLookup;
+
     public CanvasWidget(final Graph graph, Menu<?> menu) {
         this.graph = graph;
         full();
@@ -113,6 +118,59 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         graph.removeNode(nodeId);
         final RecipeNodeWidget w = nodeWidgets.remove(nodeId);
         if (w != null) remove(w);
+    }
+
+    public void setPendingLookup(final NodeLookupContext lookup) {
+        pendingLookup = lookup;
+    }
+
+    /** Returns and clears the pending lookup: it wires at most one added recipe. */
+    @Nullable
+    public NodeLookupContext consumePendingLookup() {
+        final NodeLookupContext result = pendingLookup;
+        pendingLookup = null;
+        return result;
+    }
+
+    /**
+     * Positions an auto-wired node beside its lookup origin: nodes feeding the origin sit to its
+     * left, nodes fed by it to its right, in the first slot down the column that no existing
+     * node occupies. Each successive slot also staggers outward horizontally so the wired edges
+     * run in distinct vertical channels instead of stacking on one line, and every slot carries
+     * a cumulative half-port vertical nudge so port pins (and the horizontal edge runs leaving
+     * them) sit between the origin's port lines rather than on them. The added node's widget
+     * does not exist yet (rebuild happens after placement), so the origin's dimensions (machine
+     * nodes are similarly sized) stand in for its own - and the overlap scan naturally never
+     * sees it.
+     */
+    public void placeBesideOrigin(final Node added, final Node origin, final boolean addedFeedsOrigin) {
+        final RecipeNodeWidget originWidget = nodeWidgets.get(origin.id);
+        final int originW = originWidget != null ? originWidget.getWorldWidth() : NODE_W_ESTIMATE;
+        final int originH = originWidget != null ? originWidget.getWorldHeight() : NODE_H_ESTIMATE;
+        final int baseX = Math
+            .round(addedFeedsOrigin ? origin.x - originW - AUTO_PLACE_GAP_X : origin.x + originW + AUTO_PLACE_GAP_X);
+        final int baseY = Math.round(origin.y);
+        int x;
+        int y;
+        int slot = 0;
+        do {
+            final int stagger = slot * AUTO_PLACE_STAGGER;
+            x = addedFeedsOrigin ? baseX - stagger : baseX + stagger;
+            y = baseY + slot * (originH + AUTO_PLACE_GAP_Y) + (slot + 1) * (PORT_SPACING / 2);
+            slot++;
+        } while (overlapsAnyNode(x, y, originW, originH));
+        added.x = x;
+        added.y = y;
+    }
+
+    private boolean overlapsAnyNode(final int x, final int y, final int w, final int h) {
+        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
+            final Node n = widget.getNode();
+            if (x < n.x + widget.getWorldWidth() && n.x < x + w && y < n.y + widget.getWorldHeight() && n.y < y + h) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void setGraph(final Graph newGraph) {
@@ -454,9 +512,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (srcNode == null || outputIndex < 0 || outputIndex >= srcNode.outputs.size()) {
             return ARROW_COLOR_ITEM;
         }
-        final Port<?> port = srcNode.outputs.get(outputIndex);
-        final int fallback = port.getType() == RecipePropertyAPI.FLUID ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
-        return IngredientColors.of(port, fallback);
+        return srcNode.outputs.get(outputIndex)
+            .getArrowColor();
     }
 
     /**
@@ -729,7 +786,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     && localMy >= 0
                     && localMy < widget.getWorldHeight()) {
                     // Dropped on the node body: wire into a matching input automatically.
-                    port = findCompatibleInputPort(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode());
+                    port = graph.findCompatibleInput(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode());
                 }
                 if (port >= 0 && canConnect(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode(), port)) {
                     edgeHoverNodeId = widget.getNode().id;
@@ -738,27 +795,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 }
             }
         }
-    }
-
-    /**
-     * First input port of {@code dstNode} that accepts the dragged ingredient, preferring ports
-     * that nothing feeds yet.
-     */
-    private int findCompatibleInputPort(final Node srcNode, final int srcOutIdx, final Node dstNode) {
-        int firstCompatible = -1;
-        for (int i = 0; i < dstNode.inputs.size(); i++) {
-            if (!canConnect(srcNode, srcOutIdx, dstNode, i)) continue;
-            if (firstCompatible < 0) firstCompatible = i;
-            if (!hasIncomingEdge(dstNode.id, i)) return i;
-        }
-        return firstCompatible;
-    }
-
-    private boolean hasIncomingEdge(final UUID nodeId, final int inputIndex) {
-        for (final Edge edge : graph.getEdges()) {
-            if (edge.targetNodeId.equals(nodeId) && edge.targetInputIndex == inputIndex) return true;
-        }
-        return false;
     }
 
     @Override
