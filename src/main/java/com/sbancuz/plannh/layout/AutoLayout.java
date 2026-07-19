@@ -28,6 +28,8 @@ import org.eclipse.elk.graph.ElkNode;
 import org.eclipse.elk.graph.ElkPort;
 import org.eclipse.elk.graph.util.ElkGraphUtil;
 
+import com.sbancuz.plannh.gui.PortGeometry;
+
 /**
  * Deterministic layered auto-layout over the machine digraph.
  *
@@ -65,11 +67,6 @@ public final class AutoLayout {
     // sit clear of descending edges and port approaches stay straight.
     private static final double EDGE_CHANNEL_SPACING = 18.0;
     private static final double EDGE_NODE_SPACING = 24.0;
-
-    // Pin geometry mirrored from RecipeNodeWidget (same constants CanvasWidget duplicates):
-    // port i sits at y = (i + 1) * PORT_SPACING + PORT_ORIGIN on its node edge.
-    private static final int PORT_SPACING = 18;
-    private static final int PORT_ORIGIN = 10;
 
     static {
         // We invoke LayeredLayoutProvider directly instead of going through ELK's plugin/service
@@ -133,7 +130,7 @@ public final class AutoLayout {
                 final ElkPort p = ElkGraphUtil.createPort(n);
                 p.setProperty(CoreOptions.PORT_SIDE, PortSide.EAST);
                 p.setX(box.width());
-                p.setY((i + 1) * PORT_SPACING + PORT_ORIGIN);
+                p.setY(PortGeometry.portY(i));
                 outs[i] = p;
             }
             outPorts.put(box.id(), outs);
@@ -143,7 +140,7 @@ public final class AutoLayout {
                 final ElkPort p = ElkGraphUtil.createPort(n);
                 p.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
                 p.setX(0);
-                p.setY((i + 1) * PORT_SPACING + PORT_ORIGIN);
+                p.setY(PortGeometry.portY(i));
                 ins[i] = p;
             }
             inPorts.put(box.id(), ins);

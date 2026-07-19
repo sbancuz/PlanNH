@@ -52,8 +52,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int AUTO_PLACE_STAGGER = 20;
     private static final int HEADER_OFFSET = 24;
     private static final int PORT_HALF = 4;
-    private static final int PORT_SPACING = 18;
-    private static final int PORT_ORIGIN = 10;
     private static final int MIN_GRID_SPACING = 4;
     private static final int ARROW_SIZE = 6;
     private static final int ARROW_MIN_SIZE = 4;
@@ -153,7 +151,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         do {
             final int stagger = slot * AUTO_PLACE_STAGGER;
             x = addedFeedsOrigin ? baseX - stagger : baseX + stagger;
-            y = baseY + slot * (originH + AUTO_PLACE_GAP_Y) + (slot + 1) * (PORT_SPACING / 2);
+            y = baseY + slot * (originH + AUTO_PLACE_GAP_Y) + (slot + 1) * (PortGeometry.SPACING / 2);
             slot++;
         } while (overlapsAnyNode(x, y, originW, originH));
         added.x = x;
@@ -469,14 +467,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private int portY(final int index) {
-        return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * graph.getZoom());
+        return Math.round(PortGeometry.portY(index) * graph.getZoom());
     }
 
     /**
      * World-space (un-zoomed) Y of a port relative to the node's top-left corner.
      */
     private static int portWorldY(final int index) {
-        return (index + 1) * PORT_SPACING + PORT_ORIGIN;
+        return PortGeometry.portY(index);
     }
 
     private int worldWidth(final RecipeNodeWidget w) {
@@ -547,6 +545,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         // The routing input replays headlessly (ArrowRouter is Minecraft-free); dump it at
         // DEBUG on every recompute so any bad-looking route can be rebuilt from the dev log.
+        // TODO: gate routing diagnostics behind a debug flag for the 1.0 cleanup.
         if (PlanNH.LOG.isDebugEnabled()) {
             PlanNH.LOG.debug(reproDump(obstacles, requests));
         }

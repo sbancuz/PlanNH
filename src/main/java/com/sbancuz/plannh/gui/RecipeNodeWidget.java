@@ -47,8 +47,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static final int CLOSE_MARGIN = 2;
     private static final int PORT_SIZE = 8;
     private static final int PORT_HALF = PORT_SIZE / 2;
-    private static final int PORT_SPACING = 18;
-    private static final int PORT_ORIGIN = 10;
     private static final int LINE_H = 11;
     private static final int ALPHA_BAR = 180;
 
@@ -404,7 +402,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     private int portTopY(final int index) {
-        return (index + 1) * PORT_SPACING + PORT_ORIGIN;
+        return PortGeometry.portY(index);
     }
 
     private void drawPorts() {

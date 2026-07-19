@@ -2,6 +2,7 @@ package com.sbancuz.plannh.gui;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -26,31 +27,23 @@ public final class ArrowRouter {
 
     /** Per-cell movement cost. */
     private static final int STEP = 1;
-    /**
-     * Extra cost for changing direction. High relative to STEP so paths never micro-dodge
-     * around mild congestion - a single sideways jog costs two turns, which no small
-     * occupancy saving can justify.
-     */
+    /** Extra cost per direction change; high relative to STEP so paths don't micro-dodge. */
     private static final int TURN = 24;
     /**
-     * Extra cost per cell that already carries another arrow. Kept low relative to STEP so
-     * that sharing even a long congested corridor stays cheaper than detouring around the
-     * outside of the chart.
+     * Extra cost per cell already carrying another arrow; low, so sharing a long corridor
+     * stays cheaper than detouring around the chart.
      */
     private static final int ARROW = 2;
     /** Smaller penalty around an occupied cell, so arrows keep at least one cell of clearance. */
     private static final int NEAR = 1;
     /**
-     * Penalty per cell inside a node's margin ring. The ring is deliberately soft, not blocked:
-     * nodes placed with a gap smaller than two margins would otherwise seal the gap shut and
-     * force absurd whole-chart detours. Arrows avoid hugging nodes when there is room, but can
-     * squeeze through tight gaps when there is not.
+     * Penalty per cell in a node's margin ring. Soft rather than blocked: hard margins seal
+     * any gap narrower than two margins and force whole-chart detours.
      */
     private static final int MARGIN_COST = 8;
     /**
-     * Penalty for routing through another edge's port anchor (the straight approach run just
-     * right of an output pin / just left of an input pin). Anchors stay visually clear so every
-     * arrow's first and last segment reads as belonging to its port.
+     * Penalty for crossing another edge's port anchor (the straight approach run beside a
+     * pin), keeping each pin's first and last segment visually its own.
      */
     private static final int ANCHOR_COST = 30;
 
@@ -330,7 +323,7 @@ public final class ArrowRouter {
                 cells.add(new int[] { idx % cols, idx / cols });
                 s = cameFrom[s];
             }
-            java.util.Collections.reverse(cells);
+            Collections.reverse(cells);
             return cells;
         }
 
