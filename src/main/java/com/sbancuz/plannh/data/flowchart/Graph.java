@@ -88,6 +88,13 @@ public class Graph {
     }
 
     public void addEdge(final Edge edge) {
+        // A source-port/target-port pair carries at most one edge: re-wiring it replaces the
+        // existing edge instead of stacking a duplicate.
+        edges.values()
+            .removeIf(
+                e -> e.sourceNodeId.equals(edge.sourceNodeId) && e.sourceOutputIndex == edge.sourceOutputIndex
+                    && e.targetNodeId.equals(edge.targetNodeId)
+                    && e.targetInputIndex == edge.targetInputIndex);
         edges.put(edge.id, edge);
         markDirty();
     }
@@ -97,28 +104,18 @@ public class Graph {
         markDirty();
     }
 
-    public boolean hasIncomingEdge(final UUID nodeId, final int inputIndex) {
-        for (final Edge edge : edges.values()) {
-            if (edge.targetNodeId.equals(nodeId) && edge.targetInputIndex == inputIndex) return true;
-        }
-        return false;
-    }
-
     /**
-     * First input port of {@code dst} that accepts {@code src}'s given output, preferring ports
-     * that nothing feeds yet; -1 when none is compatible. The single auto-wiring policy for both
-     * drop-on-node-body connects and NEI lookup auto-connects.
+     * First input port of {@code dst} that accepts {@code src}'s given output; -1 when none is
+     * compatible. The single auto-wiring rule for both drop-on-node-body connects and NEI
+     * lookup auto-connects.
      */
     public int findCompatibleInput(final Node src, final int srcOutIdx, final Node dst) {
         if (src == dst || srcOutIdx < 0 || srcOutIdx >= src.outputs.size()) return -1;
         final Port<?> out = src.outputs.get(srcOutIdx);
-        int firstCompatible = -1;
         for (int i = 0; i < dst.inputs.size(); i++) {
-            if (!out.canConnect(dst.inputs.get(i))) continue;
-            if (firstCompatible < 0) firstCompatible = i;
-            if (!hasIncomingEdge(dst.id, i)) return i;
+            if (out.canConnect(dst.inputs.get(i))) return i;
         }
-        return firstCompatible;
+        return -1;
     }
 
     public void removeGroup(final UUID id) {
