@@ -250,11 +250,9 @@ public class FlowchartScreen extends ModularScreen {
     }
 
     /**
-     * Mouse-anchored tooltip (full NEI item tooltip, including handler lines) for the hovered
-     * ingredient: recipe-grid stacks, throughput rows, and port pins. Drawn in the foreground
-     * phase - the last thing rendered, depth off - so it can never be buried by nodes. NEI's own
-     * tooltip pass is suppressed on MUI screens while a widget is hovered, so this is the only
-     * copy.
+     * Mouse-anchored NEI tooltip for the hovered ingredient (recipe-grid stacks and port
+     * pins), drawn in the foreground phase with depth off so nodes can never bury it. NEI's
+     * own tooltip pass is suppressed on MUI screens while a widget is hovered.
      */
     private void drawHoveredIngredientTooltip() {
         // stackUnderMouse, not getStackForRecipeViewer: the NEI entry point also arms the

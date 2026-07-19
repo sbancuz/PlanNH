@@ -31,8 +31,7 @@ public class RecipeResource<T> extends RecipeProperty<T> {
     @lombok.Builder.Default
     private final ToIntFunction<T> colorProvider = (v) -> -1;
 
-    // Pin/arrow colors used when no per-value color is derivable. Opaque white so a resource
-    // type that declares none still renders visibly instead of vanishing.
+    // Pin/arrow fallback colors; opaque white so a type that declares none stays visible.
     @Getter
     @lombok.Builder.Default
     private final int pinInputColor = 0xFFFFFFFF;

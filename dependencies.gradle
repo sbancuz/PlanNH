@@ -60,8 +60,7 @@ dependencies {
     implementation('org.ojalgo:ojalgo:47.3.1')
 
     // Opt-in GTNH pack recipes for the dev client: `./gradlew runClient -PgtnhRecipes`.
-    // Loads the GTNH coremod (dreamcraft) and its transitive mods so NEI shows the pack's
-    // recipe tweaks in dev instead of base GT5U recipes. Useful for flowchart behavior checking
+    // Loads the GTNH coremod (dreamcraft) so NEI shows the pack's recipe tweaks in dev.
     if (project.hasProperty('gtnhRecipes')) {
         runtimeOnlyNonPublishable('com.github.GTNewHorizons:NewHorizonsCoreMod:2.9.13:dev')
     }

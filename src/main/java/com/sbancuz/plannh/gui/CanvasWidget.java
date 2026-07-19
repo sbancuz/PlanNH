@@ -133,15 +133,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     /**
-     * Positions an auto-wired node beside its lookup origin: nodes feeding the origin sit to its
-     * left, nodes fed by it to its right, in the first slot down the column that no existing
-     * node occupies. Each successive slot also staggers outward horizontally so the wired edges
-     * run in distinct vertical channels instead of stacking on one line, and every slot carries
-     * a cumulative half-port vertical nudge so port pins (and the horizontal edge runs leaving
-     * them) sit between the origin's port lines rather than on them. The added node's widget
-     * does not exist yet (rebuild happens after placement), so the origin's dimensions (machine
-     * nodes are similarly sized) stand in for its own - and the overlap scan naturally never
-     * sees it.
+     * Positions an auto-wired node beside its lookup origin: producers left, consumers right,
+     * in the first free slot down the column. Slots stagger outward and carry a half-port
+     * vertical nudge so parallel edges and port pins don't overlap. The added node's widget
+     * does not exist yet, so the origin's dimensions stand in for its own.
      */
     public void placeBesideOrigin(final Node added, final Node origin, final boolean addedFeedsOrigin) {
         final RecipeNodeWidget originWidget = nodeWidgets.get(origin.id);
@@ -542,8 +537,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         sx[n - 1] = Math.round(x2 - as);
 
         final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
-        // Contrast underlay (light under dark colors, dark under light ones) so the colored
-        // line stays readable over any world background.
+        // Contrast underlay so the colored line stays readable over any world background.
         final int outline = IngredientColors.outlineFor(color);
         drawLineStrip(sx, sy, outline, thickness + EDGE_OUTLINE_EXTRA);
         drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, outline);
@@ -1013,10 +1007,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
          * contextMenuAt(cmx, cmy, items);
          */
     }
-
-    // Port-anchored name labels used to be drawn here on pin hover; they were painted inside
-    // the canvas viewport and therefore buried under adjacent nodes. The mouse-anchored full
-    // tooltip (FlowchartScreen.drawHoveredIngredientTooltip) replaced them.
 
     @Override
     public void transformChildren(IViewportStack stack) {

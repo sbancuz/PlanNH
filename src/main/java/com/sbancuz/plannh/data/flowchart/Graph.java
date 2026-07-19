@@ -106,8 +106,7 @@ public class Graph {
 
     /**
      * First input port of {@code dst} that accepts {@code src}'s given output; -1 when none is
-     * compatible. The single auto-wiring rule for both drop-on-node-body connects and NEI
-     * lookup auto-connects.
+     * compatible.
      */
     public int findCompatibleInput(final Node src, final int srcOutIdx, final Node dst) {
         if (src == dst || srcOutIdx < 0 || srcOutIdx >= src.outputs.size()) return -1;

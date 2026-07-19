@@ -291,8 +291,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 configOpen ? PlannhColors.ACCENT_GREEN.getColor() : PlannhColors.TEXT_DIM.getColor(),
                 false);
 
-            // Passing the real mouse position enables NEI's own hover box on recipe stacks,
-            // signaling that the R/U keybinds work there.
+            // Real mouse position enables NEI's own hover box on recipe stacks.
             neiWidget.draw(hoverMx, hoverMy);
             drawThroughputInfo();
             drawConfigContent();
@@ -777,11 +776,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     }
 
     /**
-     * Tells NEI what ingredient the mouse is over, which enables its native recipe/usage
-     * lookups (R/U and bookmark keys) on node contents: the embedded recipe's stacks and the
-     * port pins. Also arms the pending-lookup origin so a recipe added from the upcoming
-     * lookup can be wired back to the originating port; a stack that maps to no port clears
-     * any stale origin.
+     * Tells NEI what ingredient the mouse is over (enables R/U and bookmarks on the embedded
+     * recipe's stacks and the port pins).
      */
     @Override
     @Nullable
@@ -792,11 +788,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         return hit.stack();
     }
 
-    /**
-     * The ingredient stack under the mouse, if any. Pure query, safe to call every frame (the
-     * screen's hover tooltip does); {@link #getStackForRecipeViewer} is NEI's lookup entry
-     * point and additionally arms the pending-lookup origin.
-     */
     @Nullable
     public ItemStack stackUnderMouse() {
         final IngredientHit hit = ingredientUnderMouse();
@@ -836,10 +827,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     /**
      * Which port an embedded recipe-grid stack refers to, by forward display-stack comparison
-     * (GT fluid display items encode their fluid in the damage value, so fluid ports need no
-     * reverse mapping). Inputs first: for recipes carrying an ingredient on both sides, the
-     * dominant workflow is R on an input ("how do I make this"). Null for stacks that are no
-     * port's ingredient.
+     * (covers fluids: GT display items encode the fluid in the damage value). Inputs first,
+     * since R on an input is the dominant workflow; null for stacks that are no port's.
      */
     @Nullable
     private NodeLookupContext portOriginFor(final ItemStack gridStack) {

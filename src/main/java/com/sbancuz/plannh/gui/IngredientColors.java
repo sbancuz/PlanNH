@@ -57,8 +57,7 @@ public final class IngredientColors {
 
     /**
      * Contrast outline for a color: light outline under dark colors, dark outline under light
-     * ones. This lets derived colors keep their true luminance (brown stays brown, navy stays
-     * navy) and still read on any world background.
+     * ones, so derived colors read on any world background.
      */
     public static int outlineFor(final int color) {
         return Color.getLuminance(color) < 0.5f ? PlannhColors.EDGE_OUTLINE_LIGHT.getColor()
@@ -67,8 +66,7 @@ public final class IngredientColors {
 
     /**
      * Modal sprite color for an item stack, bare RGB, -1 when none is derivable; the ITEM
-     * resource's color provider. Colors are true to the sprite - readability on arbitrary
-     * backgrounds comes from pairing them with {@link #outlineFor(int)}.
+     * resource's color provider.
      */
     public static int itemColor(final ItemStack stack) {
         if (stack == null || stack.getItem() == null) return UNKNOWN;
@@ -76,9 +74,8 @@ public final class IngredientColors {
         return CACHE.computeIfAbsent(key, k -> {
             try {
                 final Item item = stack.getItem();
-                // Ground truth first: render the stack the way NEI draws it and sample the
-                // pixels. This is immune to the icon API misrepresenting custom renderers
-                // (GT material items, GT blocks, fluid display items...).
+                // Ground truth first: render the stack the way NEI draws it and sample it,
+                // immune to the icon API misrepresenting custom renderers (GT items/blocks).
                 final ModalColor rendered = sampleRenderedStack(stack);
                 if (rendered != null) return logColor(k, rendered.rgb(), "render-sample");
 
@@ -219,7 +216,7 @@ public final class IngredientColors {
             GuiContainerManager.enable2DRender();
             // The sampler is invoked mid-GUI-draw, typically right after untextured rect
             // drawing: texturing must be re-enabled or vanilla-path icons render as flat
-            // white/tint quads (custom renderers that bind their own textures were unaffected).
+            // white/tint quads.
             GL11.glEnable(GL11.GL_TEXTURE_2D);
             GL11.glColor4f(1f, 1f, 1f, 1f);
             // Empty quantity string suppresses the white amount text (fluid displays carry
@@ -263,7 +260,6 @@ public final class IngredientColors {
 
     private static int computeFluidColor(final FluidStack fluidStack, final Fluid fluid, final String key) {
         try {
-            // The fluid's own color if it defines one.
             final int tint = fluid.getColor(fluidStack);
             if ((tint & RGB_MASK) != NO_TINT) return logColor(key, tint & RGB_MASK, "fluid-color");
 

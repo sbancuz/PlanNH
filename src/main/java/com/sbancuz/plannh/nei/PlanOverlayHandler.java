@@ -78,15 +78,9 @@ public class PlanOverlayHandler implements IOverlayHandler {
     }
 
     /**
-     * If this recipe was added from an NEI lookup started on a node's port (R/U on a PlanNH
-     * node), wire the new node to that exact port. Direction follows the port's side: an input
-     * port wanted a producer (what R lookups list), an output port wanted a consumer (U
-     * lookups). An unrelated recipe reached by wandering NEI layers deep has no port that
-     * {@code canConnect}s the origin port, so it wires nothing.
-     *
-     * <p>
-     * A wired node is also placed beside its origin (producers left, consumers right) instead of
-     * at the default spawn position.
+     * If this recipe was added from an NEI lookup started on a node's port, wire the new node
+     * to that exact port and place it beside the origin node. Direction follows the port's side: an
+     * inputs on the left, outputs on the right.
      */
     private static void autoConnectToLookupOrigin(final Graph graph, final Node added,
         @Nullable final NodeLookupContext lookupOrigin, final CanvasWidget canvas) {
