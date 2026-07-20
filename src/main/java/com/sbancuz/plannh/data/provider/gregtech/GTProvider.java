@@ -275,8 +275,9 @@ public class GTProvider implements PropertyProvider {
         node.inputs.clear();
         node.outputs.clear();
 
+        // GT recipe arrays may contain null slots (e.g. gap outputs); skip them.
         for (int i = 0; i < r.mInputs.length; i++) {
-            if (r.mInputs[i].stackSize <= 0) continue;
+            if (r.mInputs[i] == null || r.mInputs[i].stackSize <= 0) continue;
             node.inputs.add(
                 new Port<>(
                     RecipePropertyAPI.ITEM,
@@ -284,6 +285,7 @@ public class GTProvider implements PropertyProvider {
                     r.mInputChances != null ? r.mInputChances[i] / 100.0f : 1.f));
         }
         for (int i = 0; i < r.mOutputs.length; i++) {
+            if (r.mOutputs[i] == null) continue;
             node.outputs.add(
                 new Port<>(
                     RecipePropertyAPI.ITEM,
@@ -291,7 +293,7 @@ public class GTProvider implements PropertyProvider {
                     r.mOutputChances != null ? r.mOutputChances[i] / 100.0f : 1.f));
         }
         for (int i = 0; i < r.mFluidInputs.length; i++) {
-            if (r.mFluidInputs[i].amount <= 0) continue;
+            if (r.mFluidInputs[i] == null || r.mFluidInputs[i].amount <= 0) continue;
             node.inputs.add(
                 new Port<>(
                     RecipePropertyAPI.FLUID,
@@ -299,6 +301,7 @@ public class GTProvider implements PropertyProvider {
                     r.mFluidInputChances != null ? r.mFluidInputChances[i] / 100.0f : 1.f));
         }
         for (int i = 0; i < r.mFluidOutputs.length; i++) {
+            if (r.mFluidOutputs[i] == null) continue;
             node.outputs.add(
                 new Port<>(
                     RecipePropertyAPI.FLUID,
