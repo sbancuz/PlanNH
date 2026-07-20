@@ -25,10 +25,7 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
         JsonObject obj = new JsonObject();
         MachineProfile profile = src.getProfile();
 
-        if (!MachineProfileRegistry.defaultId()
-            .equals(src.getProfileId())) {
-            obj.addProperty("profile", src.getProfileId());
-        }
+        obj.addProperty("profile", src.getProfileId());
 
         JsonObject settingsObj = new JsonObject();
         for (SettingDef<?> def : profile.settings()) {
@@ -73,7 +70,7 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
         Type mapType = new TypeToken<Map<Integer, Float>>() {}.getType();
 
         return new MachineConfig(
-            p != null ? p : MachineProfileRegistry.get(MachineProfileRegistry.defaultId()),
+            p,
             settings,
             Serializer.GSON.fromJson(obj.get("inputConsumption"), mapType),
             Serializer.GSON.fromJson(obj.get("outputProductivity"), mapType));

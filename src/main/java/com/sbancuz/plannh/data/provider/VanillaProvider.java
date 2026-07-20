@@ -16,12 +16,14 @@ import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.ShapedRecipeHandler;
 
 public class VanillaProvider implements PropertyProvider {
 
     @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(new FurnaceRecipeHandler().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(new ShapedRecipeHandler().getOverlayIdentifier(), this);
         MachineProfileRegistry.register(
             MachineProfile.builder("minecraft", "Default")
                 .setting(Settings.MACHINES.def())
