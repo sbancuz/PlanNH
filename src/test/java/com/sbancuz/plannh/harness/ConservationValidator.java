@@ -5,78 +5,58 @@ import java.util.Map;
 
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
-import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Node;
 
 /**
- * Independent conservation check over a balance result - never trust a solver's status code:
- * every solution is validated against the graph itself.
- *
- * <p>
- * For each ingredient that is both produced and consumed across a drawn edge, the summed
- * per-second production must match the summed per-second consumption. Ports with no edges are
- * terminals (free externals) and are exempt. Returns per-ingredient residuals (positive =
- * overproduction).
+ * Independent aggregation over a balance result: per-ingredient production and consumption,
+ * summed across every port and normalized to the balance's common cycle. This is the same
+ * accounting the summary widget displays, recomputed from the raw node balances, so tests can
+ * assert the summary against it without trusting the summary's own code.
  */
 public final class ConservationValidator {
 
     private ConservationValidator() {}
 
-    public static Map<String, Double> residuals(final GtnhFlowLoader.LoadedChart chart, final BalanceResult result) {
-        final Map<String, Double> produced = new LinkedHashMap<>();
-        final Map<String, Double> consumed = new LinkedHashMap<>();
+    /** Per-ingredient totals over one common cycle; the summary shows {@link #net()} lines. */
+    public record Flows(double produced, double consumed) {
 
-        // Only ports touched by an edge participate; unconnected ports are terminals.
-        for (final Edge edge : chart.graph()
-            .getEdges()) {
-            final Node src = chart.graph().nodes.get(edge.sourceNodeId);
-            final Node dst = chart.graph().nodes.get(edge.targetNodeId);
-            final String ingredient = TestIngredients.nameOf(src.outputs.get(edge.sourceOutputIndex));
-            produced.putIfAbsent(ingredient, 0.0);
-            consumed.putIfAbsent(ingredient, 0.0);
+        public double net() {
+            return produced - consumed;
         }
+    }
 
+    public static Map<String, Flows> flows(final GtnhFlowLoader.LoadedChart chart, final BalanceResult result) {
+        int cycleTicks = 0;
+        for (final Node node : chart.machines()) {
+            final NodeBalance nb = result.nodeBalances()
+                .get(node.id);
+            if (nb != null) cycleTicks = Math.max(cycleTicks, nb.durationPerOp());
+        }
+        if (cycleTicks == 0) cycleTicks = 20;
+
+        final Map<String, Flows> flows = new LinkedHashMap<>();
         for (final Node node : chart.machines()) {
             final NodeBalance nb = result.nodeBalances()
                 .get(node.id);
             if (nb == null) continue;
-            final double perSecond = 20.0 / Math.max(1, nb.durationPerOp());
+            final double scale = (double) cycleTicks / Math.max(1, nb.durationPerOp());
             for (final Map.Entry<Integer, Float> out : nb.effectiveOutputs()
                 .entrySet()) {
-                final String ingredient = TestIngredients.nameOf(node.outputs.get(out.getKey()));
-                if (produced.containsKey(ingredient) && isConnectedOutput(chart, node, out.getKey())) {
-                    produced.merge(ingredient, out.getValue() * perSecond, Double::sum);
-                }
+                if (out.getValue() <= 0) continue;
+                flows.merge(
+                    TestIngredients.nameOf(node.outputs.get(out.getKey())),
+                    new Flows(out.getValue() * scale, 0),
+                    (a, b) -> new Flows(a.produced() + b.produced(), a.consumed()));
             }
             for (final Map.Entry<Integer, Float> in : nb.effectiveInputs()
                 .entrySet()) {
-                final String ingredient = TestIngredients.nameOf(node.inputs.get(in.getKey()));
-                if (consumed.containsKey(ingredient) && isConnectedInput(chart, node, in.getKey())) {
-                    consumed.merge(ingredient, in.getValue() * perSecond, Double::sum);
-                }
+                if (in.getValue() <= 0) continue;
+                flows.merge(
+                    TestIngredients.nameOf(node.inputs.get(in.getKey())),
+                    new Flows(0, in.getValue() * scale),
+                    (a, b) -> new Flows(a.produced(), a.consumed() + b.consumed()));
             }
         }
-
-        final Map<String, Double> residuals = new LinkedHashMap<>();
-        for (final String ingredient : produced.keySet()) {
-            residuals.put(ingredient, produced.get(ingredient) - consumed.getOrDefault(ingredient, 0.0));
-        }
-        return residuals;
-    }
-
-    private static boolean isConnectedOutput(final GtnhFlowLoader.LoadedChart chart, final Node node, final int port) {
-        for (final Edge edge : chart.graph()
-            .getEdges()) {
-            if (edge.sourceNodeId.equals(node.id) && edge.sourceOutputIndex == port) return true;
-        }
-        return false;
-    }
-
-    private static boolean isConnectedInput(final GtnhFlowLoader.LoadedChart chart, final Node node, final int port) {
-        for (final Edge edge : chart.graph()
-            .getEdges()) {
-            if (edge.targetNodeId.equals(node.id) && edge.targetInputIndex == port) return true;
-        }
-        return false;
+        return flows;
     }
 }
