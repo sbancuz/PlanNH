@@ -34,7 +34,7 @@ import com.sbancuz.plannh.gui.PortGeometry;
  * Deterministic layered auto-layout over the machine digraph.
  *
  * <p>
- * Uses ELK layered with the option set tuned in the flowv2 research corpus: DEPTH_FIRST cycle
+ * Uses ELK layered with an option set tuned on real recipe charts: DEPTH_FIRST cycle
  * breaking (halves crossings on recycle-heavy charts vs the GREEDY default), NETWORK_SIMPLEX
  * layering, thoroughness 30 and post-compaction. NETWORK_SIMPLEX node placement blows up past a
  * few hundred nodes, so large graphs fall back to BRANDES_KOEPF.
