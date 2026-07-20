@@ -2,6 +2,7 @@ package com.sbancuz.plannh.gui.components;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,6 +18,8 @@ public class CycleButton<E extends Enum<E>> extends ButtonWidget<CycleButton<E>>
     private Function<E, IKey> overlayFn;
     @Nullable
     private Consumer<E> onCycle;
+    @Nullable
+    private Supplier<E> source;
 
     public CycleButton(final Class<E> enumClass) {
         this.values = enumClass.getEnumConstants();
@@ -40,10 +43,22 @@ public class CycleButton<E extends Enum<E>> extends ButtonWidget<CycleButton<E>>
         return this;
     }
 
+    /**
+     * Live value getter: the overlay follows it and cycling starts from it, so the button
+     * can't desync when the value changes elsewhere (e.g. a graph swap).
+     */
+    public CycleButton<E> source(final Supplier<E> source) {
+        this.source = source;
+        if (overlayFn != null) {
+            overlay(IKey.dynamicKey(() -> overlayFn.apply(source.get())));
+        }
+        return this;
+    }
+
     public E cycle(final E old) {
         final int nextOrdinal = (old.ordinal() + 1) % values.length;
         current = values[nextOrdinal];
-        if (overlayFn != null) {
+        if (overlayFn != null && source == null) {
             overlay(overlayFn.apply(current));
         }
         return current;
@@ -57,7 +72,7 @@ public class CycleButton<E extends Enum<E>> extends ButtonWidget<CycleButton<E>>
     @Override
     public @NotNull Result onMousePressed(final int mouseButton) {
         if (onCycle == null) return Result.IGNORE;
-        final E next = cycle(current);
+        final E next = cycle(source != null ? source.get() : current);
         onCycle.accept(next);
         return Result.SUCCESS;
     }
