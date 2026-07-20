@@ -39,10 +39,12 @@ public final class PlanAPI {
      */
     public static void shareGraph(final Graph graph) {
         final String encoded = Serializer.encodeGraph(graph);
-        final ItemStack stack = createShareStack();
-        stack.getTagCompound()
-            .setString(PLANNH_DATA_KEY, encoded);
-        NEIClientUtils.sendChatItemLink(stack);
+//        final ItemStack stack = createShareStack();
+//        stack.getTagCompound()
+//            .setString(PLANNH_DATA_KEY, encoded);
+        NBTTagCompound message = new NBTTagCompound();
+        message.setString(PLANNH_DATA_KEY, encoded);
+        NEIClientUtils.sendChatItemLink(message);
     }
 
     /** Copies the serialised graph to the system clipboard. */
@@ -79,10 +81,10 @@ public final class PlanAPI {
     public static Graph importFromNBT(final String nbtString) {
         try {
             final NBTTagCompound nbt = (NBTTagCompound) JsonToNBT.func_150315_a(nbtString);
-            if (!nbt.hasKey("tag")) return null;
-            final NBTTagCompound tag = nbt.getCompoundTag("tag");
-            if (!tag.hasKey(PLANNH_DATA_KEY)) return null;
-            return Serializer.decodeGraph(tag.getString(PLANNH_DATA_KEY));
+//            if (!nbt.hasKey("tag")) return null;
+//            final NBTTagCompound tag = nbt.getCompoundTag("tag");
+            if (!nbt.hasKey(PLANNH_DATA_KEY)) return null;
+            return Serializer.decodeGraph(nbt.getString(PLANNH_DATA_KEY));
         } catch (final NBTException e) {
             return null;
         }

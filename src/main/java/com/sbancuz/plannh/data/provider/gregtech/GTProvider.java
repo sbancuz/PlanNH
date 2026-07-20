@@ -254,8 +254,8 @@ public class GTProvider implements PropertyProvider {
             r = cached.mRecipe;
             if (r == null) return props;
             // TODO filter for oredict more inputs
-            inputPositions = new ArrayList<>(cached.mInputs.stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
-            outputPositions = new ArrayList<>(cached.mOutputs.stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
+            inputPositions = new ArrayList<>(cached.mInputs.stream().filter(ps -> ps.item.stackSize != 0).map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
+            outputPositions = new ArrayList<>(cached.mOutputs.stream().filter(ps -> ps.item.stackSize != 0).map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
 
         } else {
             return props;
