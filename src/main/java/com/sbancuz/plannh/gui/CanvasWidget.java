@@ -140,8 +140,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      */
     public void placeBesideOrigin(final Node added, final Node origin, final boolean addedFeedsOrigin) {
         final RecipeNodeWidget originWidget = nodeWidgets.get(origin.id);
-        final int originW = originWidget != null ? originWidget.getWorldWidth() : NODE_W_ESTIMATE;
-        final int originH = originWidget != null ? originWidget.getWorldHeight() : NODE_H_ESTIMATE;
+        final int originW = originWidget != null ? originWidget.worldWidth() : NODE_W_ESTIMATE;
+        final int originH = originWidget != null ? originWidget.worldHeight() : NODE_H_ESTIMATE;
         final int baseX = Math
             .round(addedFeedsOrigin ? origin.x - originW - AUTO_PLACE_GAP_X : origin.x + originW + AUTO_PLACE_GAP_X);
         final int baseY = Math.round(origin.y);
@@ -161,7 +161,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean overlapsAnyNode(final int x, final int y, final int w, final int h) {
         for (final RecipeNodeWidget widget : nodeWidgets.values()) {
             final Node n = widget.getNode();
-            if (x < n.x + widget.getWorldWidth() && n.x < x + w && y < n.y + widget.getWorldHeight() && n.y < y + h) {
+            if (x < n.x + widget.worldWidth() && n.x < x + w && y < n.y + widget.worldHeight() && n.y < y + h) {
                 return true;
             }
         }
@@ -329,37 +329,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (graph.getNodes()
             .isEmpty()) return;
 
-        final List<AutoLayout.NodeBox> boxes = new ArrayList<>();
+        // The widgets ARE the layout input (they implement LayoutNode); measure them first
+        // because MUI2 culls off-viewport widgets and unmeasured nodes report stub sizes.
         int anchorX = Integer.MAX_VALUE;
         int anchorY = Integer.MAX_VALUE;
         for (final Node node : graph.getNodes()) {
             final RecipeNodeWidget widget = nodeWidgets.get(node.id);
             if (widget != null) widget.ensureRecipeHandler();
-            final int width = widget != null ? widget.getWorldWidth() : 120;
-            final int height = widget != null ? widget.getWorldHeight() : 80;
-            boxes.add(
-                new AutoLayout.NodeBox(
-                    node.id,
-                    node.machineName == null ? "" : node.machineName,
-                    width,
-                    height,
-                    node.inputs.size(),
-                    node.outputs.size()));
             anchorX = Math.min(anchorX, node.x);
             anchorY = Math.min(anchorY, node.y);
         }
 
-        final List<AutoLayout.Link> links = new ArrayList<>();
-        for (final Edge edge : graph.getEdges()) {
-            links.add(
-                new AutoLayout.Link(
-                    edge.sourceNodeId,
-                    edge.sourceOutputIndex,
-                    edge.targetNodeId,
-                    edge.targetInputIndex));
-        }
-
-        final Map<UUID, int[]> positions = AutoLayout.layout(boxes, links);
+        final Map<UUID, int[]> positions = AutoLayout.layout(nodeWidgets.values(), graph.getEdges());
         if (positions.isEmpty()) return;
 
         // Anchor the new layout's top-left where the chart's top-left used to be.
@@ -455,11 +436,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private int worldWidth(final RecipeNodeWidget w) {
-        return w.getWorldWidth();
+        return w.worldWidth();
     }
 
     private int worldHeight(final RecipeNodeWidget w) {
-        return w.getWorldHeight();
+        return w.worldHeight();
     }
 
     /**
@@ -906,9 +887,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 final int localMy = worldDragMy - Math.round(widget.getNode().y);
                 int port = widget.getInputPortAt(localMx, localMy);
                 if (port < 0 && localMx >= 0
-                    && localMx < widget.getWorldWidth()
+                    && localMx < widget.worldWidth()
                     && localMy >= 0
-                    && localMy < widget.getWorldHeight()) {
+                    && localMy < widget.worldHeight()) {
                     // Dropped on the node body: wire into a matching input automatically.
                     port = graph.findCompatibleInput(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode());
                 }

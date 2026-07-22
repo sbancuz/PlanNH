@@ -4,6 +4,7 @@ import static org.lwjgl.opengl.GL11.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -28,6 +29,7 @@ import com.sbancuz.plannh.data.flowchart.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import codechicken.nei.PositionedStack;
@@ -39,7 +41,8 @@ import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 
-public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Interactable, RecipeViewerIngredientProvider {
+public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
+    implements Interactable, RecipeViewerIngredientProvider, AutoLayout.LayoutNode {
 
     private static final int BASE_W = 120;
     private static final int BASE_H = 80;
@@ -152,14 +155,36 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         size(BASE_W, BASE_H);
     }
 
-    int getWorldWidth() {
+    @Override
+    public UUID id() {
+        return node.id;
+    }
+
+    @Override
+    public String machineName() {
+        return node.machineName;
+    }
+
+    @Override
+    public int inputCount() {
+        return node.inputs.size();
+    }
+
+    @Override
+    public int outputCount() {
+        return node.outputs.size();
+    }
+
+    @Override
+    public int worldWidth() {
         if (handlerRef != null && neiWidget != null) {
             return neiWidget.w + NEI_PAD_W + NEI_BORDER;
         }
         return BASE_W;
     }
 
-    int getWorldHeight() {
+    @Override
+    public int worldHeight() {
         if (handlerRef != null && neiWidget != null) {
             return neiWidget.h + NEI_PAD_H + calcInfoHeight() + computeConfigPanelHeight() + NEI_BORDER;
         }
@@ -193,7 +218,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
      * draw does it, but MUI2 culls off-viewport widgets, so anything measuring node sizes
      * (auto-layout) must call this first or off-screen nodes report stub dimensions.
      */
-    void ensureRecipeHandler() {
+    public void ensureRecipeHandler() {
         if (handlerRef != null || handlerInitFailed) return;
 
         final RecipeHandlerRef ref = RecipeHandlerRef.of(node.recipeId);
@@ -223,7 +248,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
 
     private void resizeForZoom(final float z) {
         if (handlerRef != null && neiWidget != null) {
-            final int cw = getWorldWidth() - NEI_BORDER;
+            final int cw = worldWidth() - NEI_BORDER;
             final int ch = neiWidget.h + NEI_PAD_H + calcInfoHeight() + computeConfigPanelHeight();
             setAreaSize(cw + NEI_BORDER, ch + NEI_BORDER);
         } else {

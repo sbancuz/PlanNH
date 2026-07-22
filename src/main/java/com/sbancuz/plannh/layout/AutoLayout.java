@@ -2,6 +2,7 @@ package com.sbancuz.plannh.layout;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
@@ -30,6 +31,7 @@ import org.eclipse.elk.graph.ElkNode;
 import org.eclipse.elk.graph.ElkPort;
 import org.eclipse.elk.graph.util.ElkGraphUtil;
 
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.gui.PortGeometry;
 
 /**
@@ -52,11 +54,25 @@ import com.sbancuz.plannh.gui.PortGeometry;
  */
 public final class AutoLayout {
 
-    /** World-space size and port counts of one machine node. */
-    public record NodeBox(UUID id, String name, int width, int height, int inputPorts, int outputPorts) {}
+    /**
+     * Read view of one machine node: identity, world-space size, and port counts. The GUI's node
+     * widget implements this directly, so layout consumes the existing objects instead of a
+     * copied model, while this class stays free of Minecraft imports.
+     */
+    public interface LayoutNode {
 
-    /** One drawn edge: source node output port -> target node input port. */
-    public record Link(UUID source, int outputIndex, UUID target, int inputIndex) {}
+        UUID id();
+
+        String machineName();
+
+        int worldWidth();
+
+        int worldHeight();
+
+        int inputCount();
+
+        int outputCount();
+    }
 
     /** Nodes above this count switch to the scalable placement strategy. */
     private static final int BIG_GRAPH_NODES = 300;
@@ -83,11 +99,11 @@ public final class AutoLayout {
      * Computes new world-space top-left positions for every node. Positions are relative to an
      * arbitrary origin; callers anchor the result wherever they want.
      */
-    public static Map<UUID, int[]> layout(final List<NodeBox> nodes, final List<Link> links) {
+    public static Map<UUID, int[]> layout(final Collection<? extends LayoutNode> nodes, final Collection<Edge> links) {
         final Map<UUID, int[]> result = new HashMap<>();
         if (nodes.isEmpty()) return result;
 
-        final List<NodeBox> ordered = canonicalOrder(nodes, links);
+        final List<LayoutNode> ordered = canonicalOrder(nodes, links);
 
         // ELK consumes edges in model order too, so links follow the node canonicalization:
         // source position, then port, then target position.
@@ -98,12 +114,12 @@ public final class AutoLayout {
                     .id(),
                 i);
         }
-        final List<Link> orderedLinks = new ArrayList<>(links);
+        final List<Edge> orderedLinks = new ArrayList<>(links);
         orderedLinks.sort(
-            Comparator.<Link>comparingInt(link -> orderIndex.getOrDefault(link.source(), -1))
-                .thenComparingInt(Link::outputIndex)
-                .thenComparingInt(link -> orderIndex.getOrDefault(link.target(), -1))
-                .thenComparingInt(Link::inputIndex));
+            Comparator.<Edge>comparingInt(link -> orderIndex.getOrDefault(link.sourceNodeId, -1))
+                .thenComparingInt(link -> link.sourceOutputIndex)
+                .thenComparingInt(link -> orderIndex.getOrDefault(link.targetNodeId, -1))
+                .thenComparingInt(link -> link.targetInputIndex));
 
         final ElkNode root = ElkGraphUtil.createGraph();
         root.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
@@ -134,44 +150,44 @@ public final class AutoLayout {
         final Map<UUID, ElkPort[]> inPorts = new HashMap<>();
         final Map<UUID, ElkPort[]> outPorts = new HashMap<>();
 
-        for (final NodeBox box : ordered) {
+        for (final LayoutNode node : ordered) {
             final ElkNode n = ElkGraphUtil.createNode(root);
-            n.setWidth(box.width());
-            n.setHeight(box.height());
+            n.setWidth(node.worldWidth());
+            n.setHeight(node.worldHeight());
             // Real pin coordinates, not just sides: node placement then straightens edges
             // against the positions the canvas actually draws, so single connections line up
             // horizontally instead of jogging by ELK's invented port spread.
             n.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
-            elkNodes.put(box.id(), n);
+            elkNodes.put(node.id(), n);
 
-            final ElkPort[] outs = new ElkPort[box.outputPorts()];
-            for (int i = 0; i < box.outputPorts(); i++) {
+            final ElkPort[] outs = new ElkPort[node.outputCount()];
+            for (int i = 0; i < node.outputCount(); i++) {
                 final ElkPort p = ElkGraphUtil.createPort(n);
                 p.setProperty(CoreOptions.PORT_SIDE, PortSide.EAST);
-                p.setX(box.width());
+                p.setX(node.worldWidth());
                 p.setY(PortGeometry.portY(i));
                 outs[i] = p;
             }
-            outPorts.put(box.id(), outs);
+            outPorts.put(node.id(), outs);
 
-            final ElkPort[] ins = new ElkPort[box.inputPorts()];
-            for (int i = 0; i < box.inputPorts(); i++) {
+            final ElkPort[] ins = new ElkPort[node.inputCount()];
+            for (int i = 0; i < node.inputCount(); i++) {
                 final ElkPort p = ElkGraphUtil.createPort(n);
                 p.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
                 p.setX(0);
                 p.setY(PortGeometry.portY(i));
                 ins[i] = p;
             }
-            inPorts.put(box.id(), ins);
+            inPorts.put(node.id(), ins);
         }
 
-        for (final Link link : orderedLinks) {
-            final ElkPort[] outs = outPorts.get(link.source());
-            final ElkPort[] ins = inPorts.get(link.target());
+        for (final Edge link : orderedLinks) {
+            final ElkPort[] outs = outPorts.get(link.sourceNodeId);
+            final ElkPort[] ins = inPorts.get(link.targetNodeId);
             if (outs == null || ins == null) continue;
-            if (link.outputIndex() < 0 || link.outputIndex() >= outs.length) continue;
-            if (link.inputIndex() < 0 || link.inputIndex() >= ins.length) continue;
-            ElkGraphUtil.createSimpleEdge(outs[link.outputIndex()], ins[link.inputIndex()]);
+            if (link.sourceOutputIndex < 0 || link.sourceOutputIndex >= outs.length) continue;
+            if (link.targetInputIndex < 0 || link.targetInputIndex >= ins.length) continue;
+            ElkGraphUtil.createSimpleEdge(outs[link.sourceOutputIndex], ins[link.targetInputIndex]);
         }
 
         new LayeredLayoutProvider().layout(root, new BasicProgressMonitor());
@@ -187,12 +203,12 @@ public final class AutoLayout {
      * Orders nodes by SCC-condensation height (sources first), then name, then wiring color,
      * then id, so the layout is independent of the order recipes were added in NEI.
      */
-    static List<NodeBox> canonicalOrder(final List<NodeBox> nodes, final List<Link> links) {
+    static List<LayoutNode> canonicalOrder(final Collection<? extends LayoutNode> nodes, final Collection<Edge> links) {
         final Map<UUID, List<UUID>> adjacency = new HashMap<>();
-        for (final NodeBox box : nodes) adjacency.put(box.id(), new ArrayList<>());
-        for (final Link link : links) {
-            final List<UUID> next = adjacency.get(link.source());
-            if (next != null && adjacency.containsKey(link.target())) next.add(link.target());
+        for (final LayoutNode node : nodes) adjacency.put(node.id(), new ArrayList<>());
+        for (final Edge link : links) {
+            final List<UUID> next = adjacency.get(link.sourceNodeId);
+            if (next != null && adjacency.containsKey(link.targetNodeId)) next.add(link.targetNodeId);
         }
 
         final Map<UUID, Integer> sccOf = tarjanScc(adjacency);
@@ -204,9 +220,9 @@ public final class AutoLayout {
             sccAdjacency.putIfAbsent(scc, new ArrayList<>());
             inDegree.putIfAbsent(scc, 0);
         }
-        for (final Link link : links) {
-            final Integer a = sccOf.get(link.source());
-            final Integer b = sccOf.get(link.target());
+        for (final Edge link : links) {
+            final Integer a = sccOf.get(link.sourceNodeId);
+            final Integer b = sccOf.get(link.targetNodeId);
             if (a == null || b == null || a.equals(b)) continue;
             sccAdjacency.get(a)
                 .add(b);
@@ -233,8 +249,8 @@ public final class AutoLayout {
         }
 
         final Map<UUID, Integer> nodeHeight = new HashMap<>();
-        for (final NodeBox box : nodes) {
-            nodeHeight.put(box.id(), height.getOrDefault(sccOf.get(box.id()), 0));
+        for (final LayoutNode node : nodes) {
+            nodeHeight.put(node.id(), height.getOrDefault(sccOf.get(node.id()), 0));
         }
 
         // Ids are random at creation, so an id tiebreak alone would let two same-name machines at
@@ -242,18 +258,18 @@ public final class AutoLayout {
         // first leaves the id ordering only true structural twins, and swapping twins does not
         // change the picture.
         final Map<UUID, String> names = new HashMap<>();
-        for (final NodeBox box : nodes) {
-            names.put(box.id(), box.name() == null ? "" : box.name());
+        for (final LayoutNode node : nodes) {
+            names.put(node.id(), node.machineName() == null ? "" : node.machineName());
         }
         final Map<UUID, Integer> color = wiringColors(nodes, links, names, nodeHeight);
 
-        final List<NodeBox> ordered = new ArrayList<>(nodes);
+        final List<LayoutNode> ordered = new ArrayList<>(nodes);
         ordered.sort(
-            Comparator.<NodeBox>comparingInt(box -> nodeHeight.get(box.id()))
-                .thenComparing(box -> names.get(box.id()))
-                .thenComparingInt(box -> color.get(box.id()))
+            Comparator.<LayoutNode>comparingInt(node -> nodeHeight.get(node.id()))
+                .thenComparing(node -> names.get(node.id()))
+                .thenComparingInt(node -> color.get(node.id()))
                 .thenComparing(
-                    box -> box.id()
+                    node -> node.id()
                         .toString()));
         return ordered;
     }
@@ -267,47 +283,49 @@ public final class AutoLayout {
      * round before the fixpoint splits a color class, which bounds the work by
      * O(V * (V + E) * log V); real charts settle within a few rounds.
      */
-    private static Map<UUID, Integer> wiringColors(final List<NodeBox> nodes, final List<Link> links,
-        final Map<UUID, String> names, final Map<UUID, Integer> nodeHeight) {
+    private static Map<UUID, Integer> wiringColors(final Collection<? extends LayoutNode> nodes,
+        final Collection<Edge> links, final Map<UUID, String> names, final Map<UUID, Integer> nodeHeight) {
         record LinkEnd(String head, UUID peer) {}
 
         final Map<UUID, List<LinkEnd>> ends = new HashMap<>();
-        for (final NodeBox box : nodes) {
-            ends.put(box.id(), new ArrayList<>());
+        for (final LayoutNode node : nodes) {
+            ends.put(node.id(), new ArrayList<>());
         }
-        for (final Link link : links) {
-            final List<LinkEnd> atSource = ends.get(link.source());
-            final List<LinkEnd> atTarget = ends.get(link.target());
+        for (final Edge link : links) {
+            final List<LinkEnd> atSource = ends.get(link.sourceNodeId);
+            final List<LinkEnd> atTarget = ends.get(link.targetNodeId);
             if (atSource == null || atTarget == null) continue;
-            atSource.add(new LinkEnd("o" + link.outputIndex() + ":" + link.inputIndex() + ">", link.target()));
-            atTarget.add(new LinkEnd("i" + link.inputIndex() + ":" + link.outputIndex() + "<", link.source()));
+            atSource
+                .add(new LinkEnd("o" + link.sourceOutputIndex + ":" + link.targetInputIndex + ">", link.targetNodeId));
+            atTarget
+                .add(new LinkEnd("i" + link.targetInputIndex + ":" + link.sourceOutputIndex + "<", link.sourceNodeId));
         }
 
         Map<UUID, Integer> colors = null;
         int distinct = 0;
         while (true) {
             final Map<UUID, String> signatures = new HashMap<>();
-            for (final NodeBox box : nodes) {
+            for (final LayoutNode node : nodes) {
                 if (colors == null) {
                     signatures.put(
-                        box.id(),
-                        box.width() + "x"
-                            + box.height()
+                        node.id(),
+                        node.worldWidth() + "x"
+                            + node.worldHeight()
                             + ":"
-                            + box.inputPorts()
+                            + node.inputCount()
                             + ":"
-                            + box.outputPorts()
+                            + node.outputCount()
                             + ":"
-                            + nodeHeight.get(box.id())
+                            + nodeHeight.get(node.id())
                             + ":"
-                            + names.get(box.id()));
+                            + names.get(node.id()));
                 } else {
                     final List<String> entries = new ArrayList<>();
-                    for (final LinkEnd end : ends.get(box.id())) {
+                    for (final LinkEnd end : ends.get(node.id())) {
                         entries.add(end.head() + colors.get(end.peer()));
                     }
                     Collections.sort(entries);
-                    signatures.put(box.id(), colors.get(box.id()) + "|" + String.join(",", entries));
+                    signatures.put(node.id(), colors.get(node.id()) + "|" + String.join(",", entries));
                 }
             }
 
