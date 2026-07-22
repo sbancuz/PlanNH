@@ -25,6 +25,7 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
+import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
@@ -501,16 +502,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         edgeRoutes.putAll(ARROW_ROUTER.route(obstacles, requests));
 
-        // The routing input replays headlessly (ArrowRouter is Minecraft-free); dump it at
-        // DEBUG on every recompute so any bad-looking route can be rebuilt from the dev log.
-        // TODO: gate routing diagnostics behind a debug flag for the 1.0 cleanup.
-        if (PlanNH.LOG.isDebugEnabled()) {
-            PlanNH.LOG.debug(reproDump(obstacles, requests));
-        }
+        if (!Config.debugRouteDump) return;
+
+        // The routing input replays headlessly (ArrowRouter is Minecraft-free); dump it on
+        // every recompute so any bad-looking route can be rebuilt from the dev log.
+        PlanNH.LOG.info(reproDump(obstacles, requests));
 
         // A route several times longer than its direct distance means the router wrapped
-        // around the chart; dump the full routing input once so the case can be replayed.
-        boolean dumped = false;
+        // around the chart; call it out so the dump above gets looked at.
         for (final ArrowRouter.Request q : requests) {
             final List<int[]> path = edgeRoutes.get(q.key());
             if (path == null) continue;
@@ -520,7 +519,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
             final int direct = Math.abs(q.dx() - q.sx()) + Math.abs(q.dy() - q.sy());
             if (len <= direct * 3 + 200) continue;
-            PlanNH.LOG.warn(
+            PlanNH.LOG.info(
                 "Arrow route wrapped: edge {} ({},{})->({},{}) len={} direct={}",
                 q.key(),
                 q.sx(),
@@ -529,10 +528,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 q.dy(),
                 len,
                 direct);
-            if (!dumped) {
-                dumped = true;
-                PlanNH.LOG.warn(reproDump(obstacles, requests));
-            }
         }
     }
 
