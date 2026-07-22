@@ -1,10 +1,20 @@
 // Applied by gtnhgradle's AddonScriptModule alongside the standard convention scripts.
 
-// The shaded ELK distribution ships its documentation-site illustrations (images/**) and
-// EMF design-time metamodels (model/**); both are dead weight at runtime.
+// The shaded ELK distribution ships its documentation-site illustrations (images/**), EMF
+// design-time metamodels (model/** and schema/**), Eclipse plugin descriptors, and docs;
+// all dead weight at runtime, and the descriptors would sit at the jar's top level.
 tasks.matching { it.name == 'shadowJar' }.configureEach {
     exclude 'images/**'
     exclude 'model/**'
+    exclude 'schema/**'
+    exclude 'docs/**'
+    exclude 'about.*'
+    exclude 'plugin.xml'
+    exclude 'plugin.properties'
+    exclude 'modeling32.png'
+    exclude 'META-INF/maven/**'
+    exclude 'META-INF/LICENSE*'
+    exclude 'META-INF/NOTICE*'
 }
 
 // ELK declares guava as the open range [15.0,), which re-resolves to the newest guava on
