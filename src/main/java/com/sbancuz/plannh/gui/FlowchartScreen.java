@@ -125,7 +125,10 @@ public class FlowchartScreen extends ModularScreen {
         mainColumn.child(
             Flow.row()
                 .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-                .height(16)
+                // MUI2's default widget height is 18: a 16-tall row makes the coverChildren
+                // button rows overflow the cross axis, and SimpleFlow then logs a padding
+                // warning for each of them on EVERY relayout (the log-spam bug).
+                .height(18)
                 .fullWidth()
                 .child(
                     Flow.row()
@@ -189,8 +192,8 @@ public class FlowchartScreen extends ModularScreen {
                                 }))
                         .child(
                             new CycleButton<>(BalanceMode.class).overlay(v -> IKey.str(CycleButton.shortName(v)))
-                                .current(
-                                    canvas.getGraph()
+                                .source(
+                                    () -> canvas.getGraph()
                                         .getBalanceMode())
                                 .onCycle(next -> {
                                     canvas.getGraph()

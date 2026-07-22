@@ -109,6 +109,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static final int SETTING_BTN_W = 22;
     private static final int SETTING_INC_X = SETTING_DEC_X + SETTING_BTN_W;
     private static final int EXTRACTOR_BTN_W = 100;
+    private static final int HOLD_REPEAT_DELAY_MS = 350;
+    private static final int HOLD_REPEAT_INTERVAL_MS = 50;
 
     private static final DrawableResource BG_TEXTURE = new DrawableBuilder(
         "nei:textures/gui/recipebg.png",
@@ -143,7 +145,15 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private int hoverMx = -10000;
     private int hoverMy = -10000;
 
-    private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action) {
+    private boolean zoneHeld = false;
+    private int heldZoneMx, heldZoneMy;
+    private long zoneHoldStart, zoneLastRepeat;
+
+    private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action, boolean repeat) {
+
+        ClickZone(final int ux1, final int uy1, final int ux2, final int uy2, final Runnable action) {
+            this(ux1, uy1, ux2, uy2, action, false);
+        }
 
         boolean contains(final int ux, final int uy) {
             return ux >= ux1 && ux < ux2 && uy >= uy1 && uy < uy2;
@@ -298,6 +308,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             neiWidget.draw(hoverMx, hoverMy);
             drawThroughputInfo();
             drawConfigContent();
+            repeatHeldZone();
             drawCloseButtonPixel(getArea().width, getArea().height);
             drawPorts();
             drawGroupMembershipBar();
@@ -545,8 +556,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                             final String before = PlanAPI.undoHistory()
                                 .beginEdit(canvas.getGraph());
                             zone.action.run();
+                            // Held [-]/[+] repeats mutate without their own bracket; they fold
+                            // into this entry, so one undo reverts the whole hold.
                             PlanAPI.undoHistory()
                                 .commitEdit(before, canvas.getGraph());
+                            if (zone.repeat()) {
+                                zoneHeld = true;
+                                heldZoneMx = mx;
+                                heldZoneMy = my;
+                                zoneHoldStart = System.currentTimeMillis();
+                                zoneLastRepeat = zoneHoldStart;
+                            }
                             return Result.SUCCESS;
                         }
                     }
@@ -575,6 +595,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     @Override
     public boolean onMouseRelease(final int mouseButton) {
         if (mouseButton == 0) {
+            zoneHeld = false;
             if (doubleClickPending) {
                 doubleClickPending = false;
                 openNeiRecipe();
@@ -682,6 +703,23 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         }
     }
 
+    /**
+     * Re-fires the held [-]/[+] zone. Zones are rebuilt every frame, so re-hit-testing the
+     * press point picks up the closure holding the current value.
+     */
+    private void repeatHeldZone() {
+        if (!zoneHeld || !configOpen) return;
+        final long now = System.currentTimeMillis();
+        if (now - zoneHoldStart < HOLD_REPEAT_DELAY_MS || now - zoneLastRepeat < HOLD_REPEAT_INTERVAL_MS) return;
+        for (final ClickZone zone : configZones) {
+            if (zone.repeat() && zone.contains(heldZoneMx, heldZoneMy)) {
+                zone.action.run();
+                zoneLastRepeat = now;
+                return;
+            }
+        }
+    }
+
     private int drawSetting(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
         if (def.type == Integer.class) {
             return drawConfigIntField(x, y, def.label, c.getInt(def.key), def.minInt, def.maxInt, v -> {
@@ -718,12 +756,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 final int cur = def.options.indexOf(c.getString(def.key));
                 c.setString(def.key, def.options.get(Math.max(0, (Math.max(cur, 0)) - 1)));
                 onConfigChanged();
-            }));
+            }, true));
             configZones.add(new ClickZone(incX, y, incX + SETTING_BTN_W, y + CLICK_H, () -> {
                 final int cur = def.options.indexOf(c.getString(def.key));
                 c.setString(def.key, def.options.get(Math.min(def.options.size() - 1, (Math.max(cur, 0)) + 1)));
                 onConfigChanged();
-            }));
+            }, true));
             return y + LINE_H;
         }
         return y + LINE_H;
@@ -751,14 +789,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 y,
                 x + SETTING_INC_X,
                 y + CLICK_H,
-                () -> { if (value > min) setter.accept(value - 1); }));
+                () -> { if (value > min) setter.accept(value - 1); },
+                true));
         configZones.add(
             new ClickZone(
                 x + SETTING_INC_X,
                 y,
                 x + SETTING_INC_X + SETTING_BTN_W,
                 y + CLICK_H,
-                () -> { if (value < max) setter.accept(value + 1); }));
+                () -> { if (value < max) setter.accept(value + 1); },
+                true));
         return y + LINE_H;
     }
 
