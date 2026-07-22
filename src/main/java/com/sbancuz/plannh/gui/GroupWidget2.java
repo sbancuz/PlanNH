@@ -3,6 +3,8 @@ package com.sbancuz.plannh.gui;
 import java.util.Map;
 import java.util.UUID;
 
+import org.lwjgl.input.Mouse;
+
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IDragResizeable;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -11,6 +13,7 @@ import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ToggleButton;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Group;
 
 public class GroupWidget2 extends FlowchartWidget<GroupWidget2, Group> implements IDragResizeable {
@@ -47,10 +50,14 @@ public class GroupWidget2 extends FlowchartWidget<GroupWidget2, Group> implement
                         .reverseLayout()
                         .child(new CloseButtonWidget(this))
                         .child(new ToggleButton().value(new BoolValue.Dynamic(data::isCoverChildren, val -> {
+                            final String before = PlanAPI.undoHistory()
+                                .beginEdit(canvas.getGraph());
                             data.setCoverChildren(val);
                             if (data.isCoverChildren()) coverChildren(GROUP_MIN_W, GROUP_MIN_H);
                             else disableCoverChildren();
                             scheduleResize();
+                            PlanAPI.undoHistory()
+                                .commitEdit(before, canvas.getGraph());
                         }))
                             .overlay(
                                 IKey.str("CC")
@@ -106,6 +113,30 @@ public class GroupWidget2 extends FlowchartWidget<GroupWidget2, Group> implement
     @Override
     public boolean keepPosOnDragResize() {
         return false;
+    }
+
+    // Edge-drag resizing has no end callback: the panel calls onDragResize per moved pixel and
+    // swallows the release. Begin the undo bracket on the first tick of a gesture and commit
+    // on the first update with the button up.
+    private String resizeEditToken;
+
+    @Override
+    public void onDragResize() {
+        if (resizeEditToken == null) {
+            resizeEditToken = PlanAPI.undoHistory()
+                .beginEdit(canvas.getGraph());
+        }
+        IDragResizeable.super.onDragResize();
+    }
+
+    @Override
+    public void onUpdate() {
+        super.onUpdate();
+        if (resizeEditToken != null && !Mouse.isButtonDown(0)) {
+            PlanAPI.undoHistory()
+                .commitEdit(resizeEditToken, canvas.getGraph());
+            resizeEditToken = null;
+        }
     }
 
     @Override

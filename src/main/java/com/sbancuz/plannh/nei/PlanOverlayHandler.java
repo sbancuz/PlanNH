@@ -60,6 +60,8 @@ public class PlanOverlayHandler implements IOverlayHandler {
     private static void addRecipe(final GuiContainer firstGui, final IRecipeHandler handler, final int recipeIndex) {
         final Node node = new Node(handler, recipeIndex, DEFAULT_NODE_X, DEFAULT_NODE_Y);
         final Graph graph = PlanAPI.getActiveGraph();
+        final String before = PlanAPI.undoHistory()
+            .beginEdit(graph);
         graph.addNode(node);
 
         final FlowchartScreen screen = firstGui instanceof final GuiContainerWrapper wrapper
@@ -71,6 +73,8 @@ public class PlanOverlayHandler implements IOverlayHandler {
                 screen.canvas.consumePendingLookup(),
                 screen.canvas);
         }
+        PlanAPI.undoHistory()
+            .commitEdit(before, graph);
         PlanAPI.save();
         if (screen != null) {
             screen.canvas.rebuildNodeWidgets();

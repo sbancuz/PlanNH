@@ -19,6 +19,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -125,6 +126,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private boolean dragging = false;
     private int dragStartMouseX, dragStartMouseY;
     private int nodeStartX, nodeStartY;
+    private String dragEditToken;
 
     private boolean doubleClickPending = false;
     private final GuiHelper.DoubleClickDetector doubleClick = new GuiHelper.DoubleClickDetector();
@@ -540,7 +542,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 if (configOpen) {
                     for (final ClickZone zone : configZones) {
                         if (zone.contains(mx, my)) {
+                            final String before = PlanAPI.undoHistory()
+                                .beginEdit(canvas.getGraph());
                             zone.action.run();
+                            PlanAPI.undoHistory()
+                                .commitEdit(before, canvas.getGraph());
                             return Result.SUCCESS;
                         }
                     }
@@ -555,6 +561,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             }
             doubleClickPending = false;
             dragging = true;
+            dragEditToken = PlanAPI.undoHistory()
+                .beginEdit(canvas.getGraph());
             dragStartMouseX = getContext().getAbsMouseX();
             dragStartMouseY = getContext().getAbsMouseY();
             nodeStartX = node.x;
@@ -574,6 +582,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
             }
             dragging = false;
             canvas.recheckMembershipAndFit();
+            PlanAPI.undoHistory()
+                .commitEdit(dragEditToken, canvas.getGraph());
+            dragEditToken = null;
             return true;
         }
         return false;
