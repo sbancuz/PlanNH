@@ -16,7 +16,11 @@ import com.sbancuz.plannh.harness.TestIngredients;
  */
 class GtnhFlowLoadTest {
 
-    /** The corpus lives on the test classpath; the loader itself only knows streams. */
+    /**
+     * The corpus lives on the test classpath (src/test/resources), so this lookup resolves
+     * identically under gradle, IDE runners and CI. getResourceAsStream returns null instead of
+     * throwing when the resource is missing; the loader's null guard names the chart.
+     */
     private static LoadedChart corpus(final String name) {
         return GtnhFlowLoader.load(name, GtnhFlowLoadTest.class.getResourceAsStream("/gtnh-flow/" + name + ".yaml"));
     }
