@@ -23,6 +23,11 @@ import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
  */
 class BalancerSmokeTest {
 
+    /** The corpus lives on the test classpath; the loader itself only knows streams. */
+    private static LoadedChart corpus(final String name) {
+        return GtnhFlowLoader.load(name, BalancerSmokeTest.class.getResourceAsStream("/gtnh-flow/" + name + ".yaml"));
+    }
+
     // KNOWN RED: target pins anchor the sink counts (nanocircuits: 400 asslines for 1/s), and
     // the current solver needs ~19s for that chart against this budget (6.7s un-anchored). The
     // budget is the requirement, not the variable - the failure stands until the solver closes
@@ -34,7 +39,7 @@ class BalancerSmokeTest {
         strings = { "mk1", "loopGraph", "light_fuel", "light_fuel_hydrogen_loop", "230_platline", "palladium_line",
             "nanocircuits" })
     void noneModeUsesConfiguredCounts(final String name) {
-        final LoadedChart chart = GtnhFlowLoader.load(name);
+        final LoadedChart chart = corpus(name);
         final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.NONE, false);
         assertNotNull(result);
         for (final Node node : chart.machines()) {
@@ -50,7 +55,7 @@ class BalancerSmokeTest {
         strings = { "mk1", "loopGraph", "light_fuel", "light_fuel_hydrogen_loop", "230_platline", "palladium_line",
             "nanocircuits" })
     void outputModeStaysWithinBudget(final String name) {
-        final LoadedChart chart = GtnhFlowLoader.load(name);
+        final LoadedChart chart = corpus(name);
         final BalanceResult result = assertTimeoutPreemptively(
             BUDGET,
             () -> Balancer.balance(chart.graph(), BalanceMode.OUTPUT, false),

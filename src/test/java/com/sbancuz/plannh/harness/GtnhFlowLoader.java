@@ -70,18 +70,12 @@ public final class GtnhFlowLoader {
 
     private GtnhFlowLoader() {}
 
-    /** Convenience for the bundled corpus: loads {@code /gtnh-flow/<name>.yaml} from test resources. */
-    public static LoadedChart load(final String name) {
-        final InputStream in = GtnhFlowLoader.class.getResourceAsStream("/gtnh-flow/" + name + ".yaml");
-        Objects.requireNonNull(in, "missing gtnh-flow fixture: " + name);
-        return load(name, in);
-    }
-
     /**
      * Loads a gtnh-flow YAML chart from any stream. {@code name} seeds the deterministic
      * node/edge ids, so the same chart loads to the same ids wherever it comes from.
      */
     public static LoadedChart load(final String name, final InputStream in) {
+        Objects.requireNonNull(in, "null yaml stream for chart: " + name);
         ensureDefaultMachineProfile();
         final List<Map<String, Object>> raw = new Yaml().load(in);
 
