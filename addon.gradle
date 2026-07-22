@@ -1,0 +1,9 @@
+// Applied automatically by the GTNH convention plugin after the main buildscript.
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'short'
+    }
+}
