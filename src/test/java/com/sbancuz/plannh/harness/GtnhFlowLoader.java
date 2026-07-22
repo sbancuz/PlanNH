@@ -1,6 +1,8 @@
 package com.sbancuz.plannh.harness;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -50,6 +52,10 @@ public final class GtnhFlowLoader {
 
     private static final int TICKS_PER_SECOND = 20;
 
+    /** The bundled corpus, one entry per fixture under {@code /gtnh-flow/}. */
+    public static final String[] CORPUS = { "mk1", "loopGraph", "light_fuel", "light_fuel_hydrogen_loop",
+        "230_platline", "palladium_line", "nanocircuits" };
+
     /**
      * Machine profiles are normally registered during mod init; headless tests need the default
      * profile present before any MachineConfig is constructed. The record is built directly
@@ -76,9 +82,12 @@ public final class GtnhFlowLoader {
      * null instead of throwing when the resource is missing, hence the guard.
      */
     public static LoadedChart load(final String name) {
-        final InputStream in = GtnhFlowLoader.class.getResourceAsStream("/gtnh-flow/" + name + ".yaml");
-        Objects.requireNonNull(in, "missing gtnh-flow fixture: " + name);
-        return load(name, in);
+        try (InputStream in = GtnhFlowLoader.class.getResourceAsStream("/gtnh-flow/" + name + ".yaml")) {
+            Objects.requireNonNull(in, "missing gtnh-flow fixture: " + name);
+            return load(name, in);
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**

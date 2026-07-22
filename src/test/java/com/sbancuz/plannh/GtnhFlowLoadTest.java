@@ -121,8 +121,7 @@ class GtnhFlowLoadTest {
 
     @Test
     void everyChartHasEdges() {
-        for (final String name : new String[] { "mk1", "loopGraph", "light_fuel", "light_fuel_hydrogen_loop",
-            "230_platline", "palladium_line", "nanocircuits" }) {
+        for (final String name : GtnhFlowLoader.CORPUS) {
             final LoadedChart chart = GtnhFlowLoader.load(name);
             assertTrue(
                 chart.graph()

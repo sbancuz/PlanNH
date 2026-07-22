@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.Duration;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.sbancuz.plannh.data.flowchart.Balancer;
 import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
@@ -17,7 +17,7 @@ import com.sbancuz.plannh.harness.GtnhFlowLoader;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
 
 /**
- * Behavior of the balancer over the corpus: it must never crash, never exceed the 15s per-solve
+ * Behavior of the balancer over the corpus: it must never crash, never exceed the per-solve
  * budget, and always return a usable result (the ILP falls back to configured counts when
  * infeasible).
  */
@@ -29,10 +29,12 @@ class BalancerSmokeTest {
     // the gap.
     private static final Duration BUDGET = Duration.ofSeconds(15);
 
+    static String[] corpus() {
+        return GtnhFlowLoader.CORPUS;
+    }
+
     @ParameterizedTest
-    @ValueSource(
-        strings = { "mk1", "loopGraph", "light_fuel", "light_fuel_hydrogen_loop", "230_platline", "palladium_line",
-            "nanocircuits" })
+    @MethodSource("corpus")
     void noneModeUsesConfiguredCounts(final String name) {
         final LoadedChart chart = GtnhFlowLoader.load(name);
         final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.NONE, false);
@@ -46,15 +48,13 @@ class BalancerSmokeTest {
     }
 
     @ParameterizedTest
-    @ValueSource(
-        strings = { "mk1", "loopGraph", "light_fuel", "light_fuel_hydrogen_loop", "230_platline", "palladium_line",
-            "nanocircuits" })
+    @MethodSource("corpus")
     void outputModeStaysWithinBudget(final String name) {
         final LoadedChart chart = GtnhFlowLoader.load(name);
         final BalanceResult result = assertTimeoutPreemptively(
             BUDGET,
             () -> Balancer.balance(chart.graph(), BalanceMode.OUTPUT, false),
-            name + " exceeded the 15s solve budget");
+            name + " exceeded the " + BUDGET.toSeconds() + "s solve budget");
         assertNotNull(result);
         for (final Node node : chart.machines()) {
             final double ops = result.nodeBalances()
