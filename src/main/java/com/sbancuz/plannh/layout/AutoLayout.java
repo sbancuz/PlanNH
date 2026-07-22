@@ -95,6 +95,29 @@ public final class AutoLayout {
 
     private AutoLayout() {}
 
+    /** Guards the one-time ELK warm-up. */
+    private static volatile boolean warmedUp;
+
+    /**
+     * Runs one tiny layout so ELK's class loading and metadata registration happen off the
+     * first real click. Safe to race with {@link #layout}: both run the same stateless static
+     * path, the flag only skips repeat warm-ups. Failures are ignored - the first real layout
+     * would surface them anyway.
+     */
+    public static void warmup() {
+        if (warmedUp) return;
+        record WarmupNode(UUID id, String machineName, int worldWidth, int worldHeight, int inputCount, int outputCount)
+            implements LayoutNode {}
+        try {
+            final UUID a = new UUID(0, 1);
+            final UUID b = new UUID(0, 2);
+            layout(
+                List.of(new WarmupNode(a, "a", 100, 80, 0, 1), new WarmupNode(b, "b", 100, 80, 1, 0)),
+                List.of(new Edge(new UUID(0, 3), a, b, 0, 0)));
+            warmedUp = true;
+        } catch (final Exception ignored) {}
+    }
+
     /**
      * Computes new world-space top-left positions for every node. Positions are relative to an
      * arbitrary origin; callers anchor the result wherever they want.
