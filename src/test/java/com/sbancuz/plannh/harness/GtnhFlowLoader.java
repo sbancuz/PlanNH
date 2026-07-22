@@ -71,6 +71,17 @@ public final class GtnhFlowLoader {
     private GtnhFlowLoader() {}
 
     /**
+     * Loads {@code /gtnh-flow/<name>.yaml} from the test classpath (src/test/resources), so the
+     * corpus resolves identically under gradle, IDE runners and CI. getResourceAsStream returns
+     * null instead of throwing when the resource is missing, hence the guard.
+     */
+    public static LoadedChart load(final String name) {
+        final InputStream in = GtnhFlowLoader.class.getResourceAsStream("/gtnh-flow/" + name + ".yaml");
+        Objects.requireNonNull(in, "missing gtnh-flow fixture: " + name);
+        return load(name, in);
+    }
+
+    /**
      * Loads a gtnh-flow YAML chart from any stream. {@code name} seeds the deterministic
      * node/edge ids, so the same chart loads to the same ids wherever it comes from.
      */
