@@ -32,8 +32,9 @@ import com.sbancuz.plannh.data.flowchart.Node;
  * <ul>
  * <li>{@code number: N} - the machine count is fixed to N (maps to PlanNH's fixed machine
  * count).</li>
- * <li>{@code target: {ingredient: rate}} - a desired output rate; PlanNH has no equivalent yet,
- * so it is surfaced on the {@link LoadedChart} for the solver work to consume.</li>
+ * <li>{@code target: {ingredient: rate}} - a desired output rate; approximated by fixing the
+ * machine count to {@code ceil(target / perMachineRate)}, and surfaced on the
+ * {@link LoadedChart} so the future AUT solver mode can treat it as a real constraint.</li>
  * </ul>
  */
 public final class GtnhFlowLoader {
@@ -152,7 +153,34 @@ public final class GtnhFlowLoader {
             }
         }
 
+        applyTargetPins(machines, pins);
+
         return new LoadedChart(name, graph, machines, pins);
+    }
+
+    /**
+     * Approximates a target pin the way a player would: fix the machine count to
+     * {@code ceil(target / perMachineRate)} so OUTPUT/INPUT mode solves anchor on it. Only valid
+     * for those modes - the future AUT solver mode replaces this with a real target constraint,
+     * which is why the pins stay surfaced on {@link LoadedChart#pins()}.
+     */
+    private static void applyTargetPins(final List<Node> machines, final List<Pin> pins) {
+        for (final Pin pin : pins) {
+            if (!"target".equals(pin.kind())) continue;
+            final Node node = machines.get(pin.machineIndex());
+            double perOp = 0;
+            for (final var port : node.outputs) {
+                if (TestIngredients.nameOf(port)
+                    .equals(pin.ingredient())) {
+                    perOp = TestIngredients.quantityOf(port);
+                    break;
+                }
+            }
+            if (perOp <= 0 || node.durationTicks <= 0) continue;
+            final double perMachineRate = perOp * TICKS_PER_SECOND / node.durationTicks;
+            node.machineConfig.setMachineCount((int) Math.ceil(pin.value() / perMachineRate));
+            node.setMachineCountFixed(true);
+        }
     }
 
     private static Map<String, Double> ioMap(final Object raw) {

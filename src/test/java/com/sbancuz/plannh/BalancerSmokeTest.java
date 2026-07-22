@@ -23,6 +23,10 @@ import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
  */
 class BalancerSmokeTest {
 
+    // KNOWN RED: target pins anchor the sink counts (nanocircuits: 400 asslines for 1/s), and
+    // the current solver needs ~19s for that chart against this budget (6.7s un-anchored). The
+    // budget is the requirement, not the variable - the failure stands until the solver closes
+    // the gap.
     private static final Duration BUDGET = Duration.ofSeconds(15);
 
     @ParameterizedTest

@@ -53,6 +53,11 @@ class GtnhFlowLoadTest {
         final Node fusion = chart.machine(0);
         assertEquals("fusion reactor", fusion.machineName);
         assertEquals(5, fusion.durationTicks);
+
+        // The target pin fixes the count: 100 fuel per 5t = 400/s per machine, so 10/s needs
+        // ceil(10 / 400) = 1 machine.
+        assertTrue(fusion.isMachineCountFixed(), "target: pin must fix the machine count");
+        assertEquals(1, fusion.machineConfig.getMachineCount());
     }
 
     @Test
