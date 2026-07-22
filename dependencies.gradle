@@ -64,4 +64,10 @@ dependencies {
     if (project.hasProperty('gtnhRecipes')) {
         runtimeOnlyNonPublishable('com.github.GTNewHorizons:NewHorizonsCoreMod:2.9.13:dev')
     }
+
+    // Auto-layout engine. 0.8.x is the last Java 8 compatible ELK release line.
+    shadowImplementation('org.eclipse.elk:org.eclipse.elk.alg.layered:0.8.1') {
+        // XMI is EMF's file serialization; PlanNH only builds ELK graphs programmatically.
+        exclude group: 'org.eclipse.emf', module: 'org.eclipse.emf.ecore.xmi'
+    }
 }

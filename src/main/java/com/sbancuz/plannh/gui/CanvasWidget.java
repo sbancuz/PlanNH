@@ -25,11 +25,14 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
+import com.sbancuz.plannh.Config;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
+import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import lombok.Getter;
@@ -50,8 +53,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int AUTO_PLACE_STAGGER = 20;
     private static final int HEADER_OFFSET = 24;
     private static final int PORT_HALF = 4;
-    private static final int PORT_SPACING = 18;
-    private static final int PORT_ORIGIN = 10;
     private static final int MIN_GRID_SPACING = 4;
     private static final int ARROW_SIZE = 6;
     private static final int ARROW_MIN_SIZE = 4;
@@ -140,8 +141,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      */
     public void placeBesideOrigin(final Node added, final Node origin, final boolean addedFeedsOrigin) {
         final RecipeNodeWidget originWidget = nodeWidgets.get(origin.id);
-        final int originW = originWidget != null ? originWidget.getWorldWidth() : NODE_W_ESTIMATE;
-        final int originH = originWidget != null ? originWidget.getWorldHeight() : NODE_H_ESTIMATE;
+        final int originW = originWidget != null ? originWidget.worldWidth() : NODE_W_ESTIMATE;
+        final int originH = originWidget != null ? originWidget.worldHeight() : NODE_H_ESTIMATE;
         final int baseX = Math
             .round(addedFeedsOrigin ? origin.x - originW - AUTO_PLACE_GAP_X : origin.x + originW + AUTO_PLACE_GAP_X);
         final int baseY = Math.round(origin.y);
@@ -151,7 +152,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         do {
             final int stagger = slot * AUTO_PLACE_STAGGER;
             x = addedFeedsOrigin ? baseX - stagger : baseX + stagger;
-            y = baseY + slot * (originH + AUTO_PLACE_GAP_Y) + (slot + 1) * (PORT_SPACING / 2);
+            y = baseY + slot * (originH + AUTO_PLACE_GAP_Y) + (slot + 1) * (PortGeometry.SPACING / 2);
             slot++;
         } while (overlapsAnyNode(x, y, originW, originH));
         added.x = x;
@@ -161,7 +162,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean overlapsAnyNode(final int x, final int y, final int w, final int h) {
         for (final RecipeNodeWidget widget : nodeWidgets.values()) {
             final Node n = widget.getNode();
-            if (x < n.x + widget.getWorldWidth() && n.x < x + w && y < n.y + widget.getWorldHeight() && n.y < y + h) {
+            if (x < n.x + widget.worldWidth() && n.x < x + w && y < n.y + widget.worldHeight() && n.y < y + h) {
                 return true;
             }
         }
@@ -325,6 +326,50 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         child(widget);
     }
 
+    public void autoLayoutNodes() {
+        if (graph.getNodes()
+            .isEmpty()) return;
+
+        // The widgets ARE the layout input (they implement LayoutNode); measure them first
+        // because MUI2 culls off-viewport widgets and unmeasured nodes report stub sizes.
+        int anchorX = Integer.MAX_VALUE;
+        int anchorY = Integer.MAX_VALUE;
+        for (final Node node : graph.getNodes()) {
+            final RecipeNodeWidget widget = nodeWidgets.get(node.id);
+            if (widget != null) widget.ensureRecipeHandler();
+            anchorX = Math.min(anchorX, node.x);
+            anchorY = Math.min(anchorY, node.y);
+        }
+
+        final Map<UUID, int[]> positions = AutoLayout.layout(nodeWidgets.values(), graph.getEdges());
+        if (positions.isEmpty()) return;
+
+        // Anchor the new layout's top-left where the chart's top-left used to be.
+        int layoutMinX = Integer.MAX_VALUE;
+        int layoutMinY = Integer.MAX_VALUE;
+        for (final int[] pos : positions.values()) {
+            layoutMinX = Math.min(layoutMinX, pos[0]);
+            layoutMinY = Math.min(layoutMinY, pos[1]);
+        }
+        final int offsetX = anchorX - layoutMinX;
+        final int offsetY = anchorY - layoutMinY;
+
+        for (final Node node : graph.getNodes()) {
+            final int[] pos = positions.get(node.id);
+            if (pos == null) continue;
+            node.x = pos[0] + offsetX;
+            node.y = pos[1] + offsetY;
+        }
+        applyNodePositions();
+    }
+
+    private void applyNodePositions() {
+        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
+            widget.syncTransform(graph.getZoom(), graph.getPanX(), graph.getPanY());
+        }
+        recheckMembershipAndFit();
+    }
+
     @Override
     public void draw(final ModularGuiContext context, final WidgetThemeEntry<?> widgetTheme) {
         final int aw = getArea().width;
@@ -381,22 +426,22 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private int portY(final int index) {
-        return Math.round(((index + 1) * PORT_SPACING + PORT_ORIGIN) * graph.getZoom());
+        return Math.round(PortGeometry.portY(index) * graph.getZoom());
     }
 
     /**
      * World-space (un-zoomed) Y of a port relative to the node's top-left corner.
      */
     private static int portWorldY(final int index) {
-        return (index + 1) * PORT_SPACING + PORT_ORIGIN;
+        return PortGeometry.portY(index);
     }
 
     private int worldWidth(final RecipeNodeWidget w) {
-        return w.getWorldWidth();
+        return w.worldWidth();
     }
 
     private int worldHeight(final RecipeNodeWidget w) {
-        return w.getWorldHeight();
+        return w.worldHeight();
     }
 
     /**
@@ -456,6 +501,60 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
 
         edgeRoutes.putAll(ARROW_ROUTER.route(obstacles, requests));
+
+        if (!Config.debugRouteDump) return;
+
+        // The routing input replays headlessly (ArrowRouter is Minecraft-free); dump it on
+        // every recompute so any bad-looking route can be rebuilt from the dev log.
+        PlanNH.LOG.info(reproDump(obstacles, requests));
+
+        // A route several times longer than its direct distance means the router wrapped
+        // around the chart; call it out so the dump above gets looked at.
+        for (final ArrowRouter.Request q : requests) {
+            final List<int[]> path = edgeRoutes.get(q.key());
+            if (path == null) continue;
+            int len = 0;
+            for (int i = 1; i < path.size(); i++) {
+                len += Math.abs(path.get(i)[0] - path.get(i - 1)[0]) + Math.abs(path.get(i)[1] - path.get(i - 1)[1]);
+            }
+            final int direct = Math.abs(q.dx() - q.sx()) + Math.abs(q.dy() - q.sy());
+            if (len <= direct * 3 + 200) continue;
+            PlanNH.LOG.info(
+                "Arrow route wrapped: edge {} ({},{})->({},{}) len={} direct={}",
+                q.key(),
+                q.sx(),
+                q.sy(),
+                q.dx(),
+                q.dy(),
+                len,
+                direct);
+        }
+    }
+
+    private static String reproDump(final List<ArrowRouter.Rect> obstacles, final List<ArrowRouter.Request> requests) {
+        final StringBuilder sb = new StringBuilder("Route repro: obstacles=");
+        for (final ArrowRouter.Rect r : obstacles) {
+            sb.append(r.x())
+                .append(',')
+                .append(r.y())
+                .append(',')
+                .append(r.w())
+                .append(',')
+                .append(r.h())
+                .append(';');
+        }
+        sb.append(" requests=");
+        for (final ArrowRouter.Request r : requests) {
+            sb.append(r.sx())
+                .append(',')
+                .append(r.sy())
+                .append(',')
+                .append(r.dx())
+                .append(',')
+                .append(r.dy())
+                .append(';');
+        }
+        return sb.toString();
     }
 
     private long computeRouteSignature() {
@@ -783,9 +882,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 final int localMy = worldDragMy - Math.round(widget.getNode().y);
                 int port = widget.getInputPortAt(localMx, localMy);
                 if (port < 0 && localMx >= 0
-                    && localMx < widget.getWorldWidth()
+                    && localMx < widget.worldWidth()
                     && localMy >= 0
-                    && localMy < widget.getWorldHeight()) {
+                    && localMy < widget.worldHeight()) {
                     // Dropped on the node body: wire into a matching input automatically.
                     port = graph.findCompatibleInput(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode());
                 }

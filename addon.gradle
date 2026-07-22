@@ -1,0 +1,26 @@
+// Applied by gtnhgradle's AddonScriptModule alongside the standard convention scripts.
+
+// The shaded ELK distribution ships its documentation-site illustrations (images/**), EMF
+// design-time metamodels (model/** and schema/**), Eclipse plugin descriptors, and docs;
+// all dead weight at runtime, and the descriptors would sit at the jar's top level.
+tasks.matching { it.name == 'shadowJar' }.configureEach {
+    exclude 'images/**'
+    exclude 'model/**'
+    exclude 'schema/**'
+    exclude 'docs/**'
+    exclude 'about.*'
+    exclude 'plugin.xml'
+    exclude 'plugin.properties'
+    exclude 'modeling32.png'
+    exclude 'META-INF/maven/**'
+    exclude 'META-INF/LICENSE*'
+    exclude 'META-INF/NOTICE*'
+}
+
+// ELK declares guava as the open range [15.0,), which re-resolves to the newest guava on
+// every fresh resolution - unreproducible builds and a needlessly fat shaded jar. Pin the
+// ELK-0.8-era release. Scoped to the shadow configurations so the dev/runtime classpath
+// (which must keep Minecraft's guava) is untouched.
+configurations.matching { it.name.toLowerCase(Locale.ROOT).contains('shadow') }.configureEach {
+    resolutionStrategy.force('com.google.guava:guava:30.1-jre')
+}
