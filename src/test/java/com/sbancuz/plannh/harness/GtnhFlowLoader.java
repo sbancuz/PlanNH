@@ -49,10 +49,6 @@ public final class GtnhFlowLoader {
 
     private static final int TICKS_PER_SECOND = 20;
 
-    static {
-        ensureDefaultMachineProfile();
-    }
-
     /**
      * Machine profiles are normally registered during mod init; headless tests need the default
      * profile present before any MachineConfig is constructed. The record is built directly
@@ -73,10 +69,19 @@ public final class GtnhFlowLoader {
 
     private GtnhFlowLoader() {}
 
-    /** Loads {@code /gtnh-flow/<name>.yaml} from test resources. */
+    /** Convenience for the bundled corpus: loads {@code /gtnh-flow/<name>.yaml} from test resources. */
     public static LoadedChart load(final String name) {
         final InputStream in = GtnhFlowLoader.class.getResourceAsStream("/gtnh-flow/" + name + ".yaml");
         Objects.requireNonNull(in, "missing gtnh-flow fixture: " + name);
+        return load(name, in);
+    }
+
+    /**
+     * Loads a gtnh-flow YAML chart from any stream. {@code name} seeds the deterministic
+     * node/edge ids, so the same chart loads to the same ids wherever it comes from.
+     */
+    public static LoadedChart load(final String name, final InputStream in) {
+        ensureDefaultMachineProfile();
         final List<Map<String, Object>> raw = new Yaml().load(in);
 
         final Graph graph = new Graph();
