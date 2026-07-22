@@ -2,11 +2,13 @@ package com.sbancuz.plannh.layout;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import org.eclipse.elk.alg.layered.LayeredLayoutProvider;
@@ -42,7 +44,8 @@ import com.sbancuz.plannh.gui.PortGeometry;
  * <p>
  * Layered engines consume nodes in model order, so the same chart built in a different NEI click
  * order would lay out differently. Nodes are therefore canonicalized first: SCC condensation
- * height, then name, then id. Same graph, same layout, always.
+ * height, then name, then wiring, then id - and links follow the node order. Same graph, same
+ * layout, always.
  *
  * <p>
  * This class is deliberately free of Minecraft/NEI imports so it can be exercised headlessly.
@@ -85,6 +88,22 @@ public final class AutoLayout {
         if (nodes.isEmpty()) return result;
 
         final List<NodeBox> ordered = canonicalOrder(nodes, links);
+
+        // ELK consumes edges in model order too, so links follow the node canonicalization:
+        // source position, then port, then target position.
+        final Map<UUID, Integer> orderIndex = new HashMap<>();
+        for (int i = 0; i < ordered.size(); i++) {
+            orderIndex.put(
+                ordered.get(i)
+                    .id(),
+                i);
+        }
+        final List<Link> orderedLinks = new ArrayList<>(links);
+        orderedLinks.sort(
+            Comparator.<Link>comparingInt(link -> orderIndex.getOrDefault(link.source(), -1))
+                .thenComparingInt(Link::outputIndex)
+                .thenComparingInt(link -> orderIndex.getOrDefault(link.target(), -1))
+                .thenComparingInt(Link::inputIndex));
 
         final ElkNode root = ElkGraphUtil.createGraph();
         root.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
@@ -146,7 +165,7 @@ public final class AutoLayout {
             inPorts.put(box.id(), ins);
         }
 
-        for (final Link link : links) {
+        for (final Link link : orderedLinks) {
             final ElkPort[] outs = outPorts.get(link.source());
             final ElkPort[] ins = inPorts.get(link.target());
             if (outs == null || ins == null) continue;
@@ -165,8 +184,8 @@ public final class AutoLayout {
     }
 
     /**
-     * Orders nodes by SCC-condensation height (sources first), then name, then id, so the layout
-     * is independent of the order recipes were added in NEI.
+     * Orders nodes by SCC-condensation height (sources first), then name, then wiring color,
+     * then id, so the layout is independent of the order recipes were added in NEI.
      */
     static List<NodeBox> canonicalOrder(final List<NodeBox> nodes, final List<Link> links) {
         final Map<UUID, List<UUID>> adjacency = new HashMap<>();
@@ -213,14 +232,102 @@ public final class AutoLayout {
             }
         }
 
+        final Map<UUID, Integer> nodeHeight = new HashMap<>();
+        for (final NodeBox box : nodes) {
+            nodeHeight.put(box.id(), height.getOrDefault(sccOf.get(box.id()), 0));
+        }
+
+        // Ids are random at creation, so an id tiebreak alone would let two same-name machines at
+        // the same height swap between rebuilds of the same chart. Tie-breaking on wiring colors
+        // first leaves the id ordering only true structural twins, and swapping twins does not
+        // change the picture.
+        final Map<UUID, String> names = new HashMap<>();
+        for (final NodeBox box : nodes) {
+            names.put(box.id(), box.name() == null ? "" : box.name());
+        }
+        final Map<UUID, Integer> color = wiringColors(nodes, links, names, nodeHeight);
+
         final List<NodeBox> ordered = new ArrayList<>(nodes);
         ordered.sort(
-            Comparator.<NodeBox>comparingInt(box -> height.getOrDefault(sccOf.get(box.id()), 0))
-                .thenComparing(box -> box.name() == null ? "" : box.name())
+            Comparator.<NodeBox>comparingInt(box -> nodeHeight.get(box.id()))
+                .thenComparing(box -> names.get(box.id()))
+                .thenComparingInt(box -> color.get(box.id()))
                 .thenComparing(
                     box -> box.id()
                         .toString()));
         return ordered;
+    }
+
+    /**
+     * Canonical wiring color per node by iterated neighborhood refinement. Nodes start colored
+     * by shape - size, port counts, height, name - then are repeatedly recolored by their own
+     * color plus the sorted list of (own port, direction, peer color) link entries, until the
+     * partition stops splitting. Two nodes share a final color only if no chain of links
+     * distinguishes them, so an id tiebreak after this orders only interchangeable twins. Every
+     * round before the fixpoint splits a color class, which bounds the work by
+     * O(V * (V + E) * log V); real charts settle within a few rounds.
+     */
+    private static Map<UUID, Integer> wiringColors(final List<NodeBox> nodes, final List<Link> links,
+        final Map<UUID, String> names, final Map<UUID, Integer> nodeHeight) {
+        record LinkEnd(String head, UUID peer) {}
+
+        final Map<UUID, List<LinkEnd>> ends = new HashMap<>();
+        for (final NodeBox box : nodes) {
+            ends.put(box.id(), new ArrayList<>());
+        }
+        for (final Link link : links) {
+            final List<LinkEnd> atSource = ends.get(link.source());
+            final List<LinkEnd> atTarget = ends.get(link.target());
+            if (atSource == null || atTarget == null) continue;
+            atSource.add(new LinkEnd("o" + link.outputIndex() + ":" + link.inputIndex() + ">", link.target()));
+            atTarget.add(new LinkEnd("i" + link.inputIndex() + ":" + link.outputIndex() + "<", link.source()));
+        }
+
+        Map<UUID, Integer> colors = null;
+        int distinct = 0;
+        while (true) {
+            final Map<UUID, String> signatures = new HashMap<>();
+            for (final NodeBox box : nodes) {
+                if (colors == null) {
+                    signatures.put(
+                        box.id(),
+                        box.width() + "x"
+                            + box.height()
+                            + ":"
+                            + box.inputPorts()
+                            + ":"
+                            + box.outputPorts()
+                            + ":"
+                            + nodeHeight.get(box.id())
+                            + ":"
+                            + names.get(box.id()));
+                } else {
+                    final List<String> entries = new ArrayList<>();
+                    for (final LinkEnd end : ends.get(box.id())) {
+                        entries.add(end.head() + colors.get(end.peer()));
+                    }
+                    Collections.sort(entries);
+                    signatures.put(box.id(), colors.get(box.id()) + "|" + String.join(",", entries));
+                }
+            }
+
+            // New colors are ranks in the sorted distinct signatures, so they depend only on
+            // signature content, never on node iteration order.
+            final List<String> sorted = new ArrayList<>(new TreeSet<>(signatures.values()));
+            final Map<String, Integer> rankOf = new HashMap<>();
+            for (int i = 0; i < sorted.size(); i++) {
+                rankOf.put(sorted.get(i), i);
+            }
+            final Map<UUID, Integer> next = new HashMap<>();
+            for (final Map.Entry<UUID, String> entry : signatures.entrySet()) {
+                next.put(entry.getKey(), rankOf.get(entry.getValue()));
+            }
+            if (colors != null && sorted.size() == distinct) {
+                return next;
+            }
+            distinct = sorted.size();
+            colors = next;
+        }
     }
 
     /** Iterative Tarjan; returns SCC index per node. */
