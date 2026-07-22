@@ -167,6 +167,22 @@ public class FlowchartScreen extends ModularScreen {
                         .coverChildren()
                         .childPadding(2)
                         .child(
+                            new ButtonWidget<>().overlay(
+                                IKey.str("\u21ba")
+                                    .scale(2f))
+                                .onMousePressed(_ -> {
+                                    canvas.undoGraph();
+                                    return true;
+                                }))
+                        .child(
+                            new ButtonWidget<>().overlay(
+                                IKey.str("\u21bb")
+                                    .scale(2f))
+                                .onMousePressed(_ -> {
+                                    canvas.redoGraph();
+                                    return true;
+                                }))
+                        .child(
                             new ButtonWidget<>().overlay(IKey.str("S2G"))
                                 .onMousePressed(_ -> {
                                     final Graph g = canvas.getGraph();

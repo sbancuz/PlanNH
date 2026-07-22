@@ -6,6 +6,7 @@ import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.textfield.BaseTextFieldWidget;
+import com.sbancuz.plannh.api.PlanAPI;
 
 import it.unimi.dsi.fastutil.Pair;
 
@@ -16,6 +17,8 @@ public abstract class FlowchartTextFieldWidget extends BaseTextFieldWidget<Flowc
     protected final GuiHelper.DoubleClickDetector doubleClick = new GuiHelper.DoubleClickDetector();
 
     protected boolean isEditing = false;
+    // Text mutates the model per keystroke, so the whole focus session is one undo step.
+    private String editToken;
 
     public FlowchartTextFieldWidget(FlowchartWidget<?, ?> parent) {
         this.parent = parent;
@@ -36,12 +39,22 @@ public abstract class FlowchartTextFieldWidget extends BaseTextFieldWidget<Flowc
     public void onFocus(ModularGuiContext context) {
         super.onFocus(context);
         isEditing = true;
+        editToken = PlanAPI.undoHistory()
+            .beginEdit(
+                parent.getCanvas()
+                    .getGraph());
     }
 
     @Override
     public void onRemoveFocus(ModularGuiContext context) {
         super.onRemoveFocus(context);
         isEditing = false;
+        PlanAPI.undoHistory()
+            .commitEdit(
+                editToken,
+                parent.getCanvas()
+                    .getGraph());
+        editToken = null;
     }
 
     @Override

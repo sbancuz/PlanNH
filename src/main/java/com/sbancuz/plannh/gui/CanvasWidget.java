@@ -6,8 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.minecraft.client.gui.GuiScreen;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.UpOrDown;
@@ -25,11 +28,13 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
+import com.sbancuz.plannh.data.flowchart.UndoHistory;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import lombok.Getter;
@@ -115,9 +120,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void removeNode(final UUID nodeId) {
+        final String before = PlanAPI.undoHistory()
+            .beginEdit(graph);
         graph.removeNode(nodeId);
         final RecipeNodeWidget w = nodeWidgets.remove(nodeId);
         if (w != null) remove(w);
+        PlanAPI.undoHistory()
+            .commitEdit(before, graph);
     }
 
     public void setPendingLookup(@Nullable final NodeLookupContext lookup) {
@@ -173,6 +182,33 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildNodeWidgets();
         rebuildNoteWidgets();
         rebuildGroupWidgets();
+    }
+
+    /** Swaps in the previous undo state, keeping the current camera. */
+    public void undoGraph() {
+        final UndoHistory history = PlanAPI.undoHistory();
+        if (!history.canUndo()) return;
+        adoptRestoredGraph(history.undo(graph));
+    }
+
+    /** Swaps in the state the last undo backed out of, keeping the current camera. */
+    public void redoGraph() {
+        final UndoHistory history = PlanAPI.undoHistory();
+        if (!history.canRedo()) return;
+        adoptRestoredGraph(history.redo(graph));
+    }
+
+    // Snapshots store content only, so the current camera and grid preference carry over,
+    // and the active slot must adopt the restored graph or closing the GUI would save the
+    // pre-undo state right back.
+    private void adoptRestoredGraph(final Graph restored) {
+        restored.setZoom(graph.getZoom());
+        restored.setPanX(graph.getPanX());
+        restored.setPanY(graph.getPanY());
+        restored.setSnapToGrid(graph.isSnapToGrid());
+        PlanAPI.getSlotSet()
+            .setActiveGraph(restored);
+        setGraph(restored);
     }
 
     public void moveGroupNodes(final UUID groupId, final int deltaX, final int deltaY) {
@@ -691,7 +727,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (!isMouseOverAnyNode(absMx, absMy) && !isMouseOverAnyGroup(absMx, absMy)) {
                 final Edge clicked = getEdgeAt(absMx, absMy);
                 if (clicked != null) {
+                    final String before = PlanAPI.undoHistory()
+                        .beginEdit(graph);
                     graph.removeEdge(clicked.id);
+                    PlanAPI.undoHistory()
+                        .commitEdit(before, graph);
                     return Result.SUCCESS;
                 }
                 return Result.ACCEPT;
@@ -744,6 +784,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                 final Node srcNode = graph.nodes.get(edgeSourceNodeId);
                 final Node dstNode = graph.nodes.get(edgeHoverNodeId);
                 if (srcNode != null && dstNode != null) {
+                    final String before = PlanAPI.undoHistory()
+                        .beginEdit(graph);
                     graph.addEdge(
                         new Edge(
                             UUID.randomUUID(),
@@ -751,6 +793,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                             edgeHoverNodeId,
                             edgeSourcePortIndex,
                             edgeHoverPortIndex));
+                    PlanAPI.undoHistory()
+                        .commitEdit(before, graph);
                 }
             }
             creatingEdge = false;
@@ -847,23 +891,31 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void addNote() {
+        final String before = PlanAPI.undoHistory()
+            .beginEdit(graph);
         final Note note = new Note();
         note.setX(getMouseCanvasX());
         note.setY(getMouseCanvasY());
 
         graph.notes.put(note.getId(), note);
         child(new NoteWidget(this, note));
+        PlanAPI.undoHistory()
+            .commitEdit(before, graph);
 
         menuOpen = false;
     }
 
     public void addGroup() {
+        final String before = PlanAPI.undoHistory()
+            .beginEdit(graph);
         final Group group = new Group();
         group.setX(getMouseCanvasX());
         group.setY(getMouseCanvasY());
 
         graph.groups.put(group.getId(), group);
         child(new GroupWidget2(this, group));
+        PlanAPI.undoHistory()
+            .commitEdit(before, graph);
 
         menuOpen = false;
     }
@@ -886,6 +938,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Override
     public @NotNull Result onKeyPressed(final char typedChar, final int keyCode) {
+        if (GuiScreen.isCtrlKeyDown() && keyCode == Keyboard.KEY_Z) {
+            if (GuiScreen.isShiftKeyDown()) {
+                redoGraph();
+            } else {
+                undoGraph();
+            }
+            return Result.SUCCESS;
+        }
+        if (GuiScreen.isCtrlKeyDown() && keyCode == Keyboard.KEY_Y) {
+            redoGraph();
+            return Result.SUCCESS;
+        }
         if (editingGroupId != null) {
             /*
              * final GroupWidget gw = groupWidgets.get(editingGroupId);

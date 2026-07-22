@@ -21,6 +21,7 @@ import net.minecraft.util.StatCollector;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Serializer;
 import com.sbancuz.plannh.data.flowchart.SlotSet;
+import com.sbancuz.plannh.data.flowchart.UndoHistory;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
@@ -49,6 +50,10 @@ public final class PlanAPI {
     @Nonnull
     public static Graph getActiveGraph() {
         return getSlotSet().getActiveGraph();
+    }
+
+    public static UndoHistory undoHistory() {
+        return getSlotSet().getActiveUndoHistory();
     }
 
     public static void save() {
