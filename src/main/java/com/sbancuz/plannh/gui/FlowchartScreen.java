@@ -165,15 +165,9 @@ public class FlowchartScreen extends ModularScreen {
                         .childPadding(2)
                         .child(
                             new ButtonWidget<>().overlay(IKey.str("AL"))
-                                .tooltipStatic(
-                                    t -> t.addLine(IKey.str("Auto layout"))
-                                        .addLine(IKey.str("Shift-click to restore previous positions")))
+                                .tooltipStatic(t -> t.addLine(IKey.str("Auto layout")))
                                 .onMousePressed(_ -> {
-                                    if (Interactable.hasShiftDown()) {
-                                        canvas.restoreLayoutSnapshot();
-                                    } else {
-                                        canvas.autoLayoutNodes();
-                                    }
+                                    canvas.autoLayoutNodes();
                                     PlanAPI.save();
                                     return true;
                                 }))

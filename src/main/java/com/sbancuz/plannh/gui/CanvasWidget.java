@@ -325,10 +325,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         child(widget);
     }
 
-    /** Pre-auto-layout node positions, so a layout can be undone with shift-click. */
-    @Nullable
-    private Map<UUID, int[]> layoutSnapshot;
-
     public void autoLayoutNodes() {
         if (graph.getNodes()
             .isEmpty()) return;
@@ -366,12 +362,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final Map<UUID, int[]> positions = AutoLayout.layout(boxes, links);
         if (positions.isEmpty()) return;
 
-        final Map<UUID, int[]> snapshot = new HashMap<>();
-        for (final Node node : graph.getNodes()) {
-            snapshot.put(node.id, new int[] { node.x, node.y });
-        }
-        layoutSnapshot = snapshot;
-
         // Anchor the new layout's top-left where the chart's top-left used to be.
         int layoutMinX = Integer.MAX_VALUE;
         int layoutMinY = Integer.MAX_VALUE;
@@ -388,19 +378,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             node.x = pos[0] + offsetX;
             node.y = pos[1] + offsetY;
         }
-        applyNodePositions();
-    }
-
-    /** Restores the positions captured by the last {@link #autoLayoutNodes()} call. */
-    public void restoreLayoutSnapshot() {
-        if (layoutSnapshot == null) return;
-        for (final Node node : graph.getNodes()) {
-            final int[] pos = layoutSnapshot.get(node.id);
-            if (pos == null) continue;
-            node.x = pos[0];
-            node.y = pos[1];
-        }
-        layoutSnapshot = null;
         applyNodePositions();
     }
 
