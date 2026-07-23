@@ -1,14 +1,19 @@
 package com.sbancuz.plannh.data.provider.gregtech;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -37,12 +42,14 @@ import gregtech.api.util.recipe.Sievert;
 import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
+import gtnhlanth.common.item.ItemParticle;
 import it.unimi.dsi.fastutil.Pair;
 
 public class GTProvider implements PropertyProvider {
 
     // needed for proper positioning of ports
     private static final int PORT_OFFSET_Y = 8;
+    private static final int PORT_OFFSET_Y_FURNACE = 6;
 
     public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.<Integer>builder("special_value", 0)
         .build();
@@ -206,8 +213,8 @@ public class GTProvider implements PropertyProvider {
     public Map<RecipeProperty<?>, Object> extract(final @NotNull Node node, final @NotNull IRecipeHandler handler, final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         GTRecipe r;
-        List<Pair<Integer, Integer>> inputPositions = new ArrayList<>();
-        List<Pair<Integer, Integer>> outputPositions = new ArrayList<>();
+        List<Pair<Integer, Integer>> inputPositions;
+        List<Pair<Integer, Integer>> outputPositions;
 
         if (handler instanceof final FurnaceRecipeHandler fh) {
             final List<TemplateRecipeHandler.CachedRecipe> fRecipes = RecipeHandlerAccess.getArecipes(fh);
@@ -242,9 +249,9 @@ public class GTProvider implements PropertyProvider {
                 return props;
             }
             // TODO test if this works
-            inputPositions = new ArrayList<>(cr.getIngredients().stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
-            outputPositions = new ArrayList<>(cr.getOtherStacks().stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
-            outputPositions.addFirst(Pair.of(cr.getResult().relx, cr.getResult().rely));
+            inputPositions = cr.getIngredients().stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y_FURNACE )).toList();
+            outputPositions = new ArrayList<>(cr.getOtherStacks().stream().map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y_FURNACE)).toList());
+            outputPositions.addFirst(Pair.of(cr.getResult().relx, cr.getResult().rely + PORT_OFFSET_Y_FURNACE));
 
         } else if (handler instanceof final GTNEIDefaultHandler gth) {
             final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
@@ -254,8 +261,8 @@ public class GTProvider implements PropertyProvider {
             r = cached.mRecipe;
             if (r == null) return props;
             // TODO filter for oredict more inputs
-            inputPositions = new ArrayList<>(cached.mInputs.stream().filter(ps -> ps.item.stackSize != 0).map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
-            outputPositions = new ArrayList<>(cached.mOutputs.stream().filter(ps -> ps.item.stackSize != 0).map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList());
+            inputPositions = cached.mInputs.stream().filter(GTProvider::isValidStack).map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList();
+            outputPositions = cached.mOutputs.stream().filter(GTProvider::isValidStack).map(ps -> Pair.of(ps.relx, ps.rely + PORT_OFFSET_Y)).toList();
 
         } else {
             return props;
@@ -289,40 +296,50 @@ public class GTProvider implements PropertyProvider {
         node.getInputs().clear();
         node.getOutputs().clear();
 
-        for (int i = 0; i < r.mInputs.length; i++) {
-            if (r.mInputs[i].stackSize <= 0) continue;
+        // filter for missing (null) stacks TODO chances?
+        ItemStack[] filteredInputs = Arrays.stream(r.mInputs).filter(Objects::nonNull).filter(s -> s.stackSize > 0).toArray(ItemStack[]::new);
+        FluidStack[] filteredFluidInputs = Arrays.stream(r.mFluidInputs).filter(Objects::nonNull).toArray(FluidStack[]::new);
+        ItemStack[] filteredOutputs = Arrays.stream(r.mOutputs).filter(Objects::nonNull).filter(s -> s.stackSize > 0).toArray(ItemStack[]::new);
+        FluidStack[] filteredFluidOutputs = Arrays.stream(r.mFluidOutputs).filter(Objects::nonNull).toArray(FluidStack[]::new);
+
+        for (int i = 0; i < filteredInputs.length; i++) {
+            if (filteredInputs[i].stackSize <= 0) continue;
             node.getInputs().add(
                 new Port<>(
                     RecipePropertyAPI.ITEM,
-                    r.mInputs[i],
+                    filteredInputs[i].copy(),
+                    null,
                     r.mInputChances != null ? r.mInputChances[i] / 10_000f : 1,
                     inputPositions.get(i)
                     ));
         }
-        for (int i = 0; i < r.mOutputs.length; i++) {
+        for (int i = 0; i < filteredOutputs.length; i++) {
             node.getOutputs().add(
                 new Port<>(
                     RecipePropertyAPI.ITEM,
-                    r.mOutputs[i],
+                    filteredOutputs[i].copy(),
+                    null,
                     r.mOutputChances != null ? r.mOutputChances[i] / 10_000f : 1,
                     outputPositions.get(i)));
         }
-        for (int i = 0; i < r.mFluidInputs.length; i++) {
-            if (r.mFluidInputs[i].amount <= 0) continue;
+        for (int i = 0; i < filteredFluidInputs.length; i++) {
+            if (filteredFluidInputs[i].amount <= 0) continue;
             node.getInputs().add(
                 new Port<>(
                     RecipePropertyAPI.FLUID,
-                    r.mFluidInputs[i],
+                    filteredFluidInputs[i].copy(),
+                    null,
                     r.mFluidInputChances != null ? r.mFluidInputChances[i] / 10_000f : 1,
-                    inputPositions.get(r.mInputs.length + i)));
+                    inputPositions.get(filteredInputs.length + i)));
         }
-        for (int i = 0; i < r.mFluidOutputs.length; i++) {
+        for (int i = 0; i < filteredFluidOutputs.length; i++) {
             node.getOutputs().add(
                 new Port<>(
                     RecipePropertyAPI.FLUID,
-                    r.mFluidOutputs[i],
+                    filteredFluidOutputs[i].copy(),
+                    null,
                     r.mFluidOutputChances != null ? r.mFluidOutputChances[i] / 10_000f : 1,
-                    outputPositions.get(r.mOutputs.length + i)));
+                    outputPositions.get(filteredOutputs.length + i)));
         }
 
         node.getInputs().removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
@@ -331,4 +348,17 @@ public class GTProvider implements PropertyProvider {
         return props;
     }
 
+    private static boolean isValidStack(PositionedStack positionedStack) {
+        ItemStack itemStack = positionedStack.item;
+
+        return itemStack.stackSize > 0 && isValidType(
+            itemStack.getItem()
+                .getClass());
+    }
+
+    private static final Set<Class<? extends Item>> ignoredItemTypes = Set.of(ItemParticle.class);
+
+    private static boolean isValidType(Class<? extends Item> type) {
+        return !ignoredItemTypes.contains(type);
+    }
 }
