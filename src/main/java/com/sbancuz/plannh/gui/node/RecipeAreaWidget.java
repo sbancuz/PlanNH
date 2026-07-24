@@ -110,17 +110,20 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
     @Override
     public void onInit() {
-        handlers.computeIfPresent(handlerRef, (_, i) -> i + 1);
-        handlers.putIfAbsent(handlerRef, 1);
-        widgets.add(neiWidget);
+        if (success) {
+            handlers.computeIfPresent(handlerRef, (_, i) -> i + 1);
+            handlers.putIfAbsent(handlerRef, 1);
+            widgets.add(neiWidget);
+        }
     }
 
     @Override
     public void dispose() {
-        handlers.computeIfPresent(handlerRef, (_, i) -> i - 1);
-        if (handlers.get(handlerRef) == 0) handlers.remove(handlerRef);
-        widgets.remove(neiWidget);
-
+        if (success) {
+            handlers.computeIfPresent(handlerRef, (_, i) -> i - 1);
+            if (handlers.get(handlerRef) == 0) handlers.remove(handlerRef);
+            widgets.remove(neiWidget);
+        }
         super.dispose();
     }
 }
