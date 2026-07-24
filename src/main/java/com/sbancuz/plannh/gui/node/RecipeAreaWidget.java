@@ -30,13 +30,22 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
     private final NEIRecipeWidget neiWidget;
     private final RecipeHandlerRef handlerRef;
 
-    private long lastHandlerUpdate = 0;
+    private static long lastHandlerUpdate = 0;
+    private boolean success = true;
 
     public RecipeAreaWidget(NodeWidget parent) {
         this.parent = parent;
         this.data = parent.getData();
 
         handlerRef = RecipeHandlerRef.of(data.getRecipeId());
+        if (handlerRef == null) {
+            neiWidget = null;
+            success = false;
+            child(
+                IKey.str("AN ERROR OCCURED DURING LOADING")
+                    .asWidget());
+            return;
+        }
         neiWidget = new NEIRecipeWidget(handlerRef);
         neiWidget.showAsWidget(true);
         neiWidget.x = WIDGET_OFFSET_X;
@@ -64,6 +73,8 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
     @Override
     public void draw(ModularGuiContext context, WidgetThemeEntry<?> widgetTheme) {
+        if (!success) return;
+
         final long now = Minecraft.getSystemTime();
         if (now - lastHandlerUpdate > 50) {
             lastHandlerUpdate = now;
