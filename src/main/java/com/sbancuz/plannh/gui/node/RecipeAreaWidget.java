@@ -69,19 +69,22 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
             size(neiWidget.w, neiWidget.h);
         }
 
-        // inputs
         NEIRecipeWidgetAccessor accessor = (NEIRecipeWidgetAccessor) neiWidget;
+        int yShift = accessor.getHandlerInfo()
+            .getYShift();
+
+        // inputs
         List<PositionedStack> inputs = new ArrayList<>(accessor.callGetInputs());
         inputs.addAll(accessor.callGetCatalysts());
         inputs.removeIf(ps -> ps.item.stackSize <= 0);
         if (data.getInputs() != null) for (Port<?> port : data.getInputs()) port.getIndices()
-            .forEach(i -> child(new PortWidget(inputs.get(i), true, port, handlerRef)));
+            .forEach(i -> child(new PortWidget(inputs.get(i), true, port, yShift)));
 
         // outputs
         List<PositionedStack> outputs = new ArrayList<>(accessor.callGetOutputs());
         outputs.removeIf(ps -> ps.item.stackSize <= 0);
         if (data.getOutputs() != null) for (Port<?> port : data.getOutputs()) port.getIndices()
-            .forEach(i -> child(new PortWidget(outputs.get(i), false, port, handlerRef)));
+            .forEach(i -> child(new PortWidget(outputs.get(i), false, port, yShift)));
     }
 
     @Override
