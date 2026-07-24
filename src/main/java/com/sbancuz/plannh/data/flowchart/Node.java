@@ -85,12 +85,14 @@ public class Node extends GraphData {
         if (properties == null) properties = new HashMap<>();
         else properties.clear();
 
+        int inputIndex = 0;
         List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
         for (PositionedStack ps : ins)
-            if (ps != null && ps.item != null && ps.item.stackSize > 0) inputs.add(Port.itemPort(ps));
+            if (ps != null && ps.item != null && ps.item.stackSize > 0) inputs.add(Port.itemPort(ps, inputIndex++));
 
+        int outputIndex = 0;
         PositionedStack result = handler.getResultStack(recipeIndex);
-        if (result != null && result.item != null) outputs.add(Port.itemPort(result));
+        if (result != null && result.item != null) outputs.add(Port.itemPort(result, outputIndex++));
 
         List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (PositionedStack ps : others) {
@@ -99,12 +101,13 @@ public class Node extends GraphData {
                     .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
                     if (machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
                         .equals("IN")) {
-                        inputs.add(Port.itemPort(ps));
+                        inputs.add(Port.itemPort(ps, inputIndex++));
                     } else if (machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
                         .equals("OUT")) {
-                            outputs.add(Port.itemPort(ps));
+                            outputs.add(Port.itemPort(ps, outputIndex++));
                         }
-                } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) outputs.add(Port.itemPort(ps));
+                } else
+                    if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) outputs.add(Port.itemPort(ps, outputIndex++));
             }
         }
 

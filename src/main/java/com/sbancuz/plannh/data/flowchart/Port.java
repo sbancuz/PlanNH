@@ -9,7 +9,6 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.RecipeResource;
 
 import codechicken.nei.PositionedStack;
-import it.unimi.dsi.fastutil.Pair;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,15 +18,15 @@ public class Port<T> {
 
     private final RecipeResource<T> type;
     private final T value;
-    private final List<Pair<Integer, Integer>> positions;
+    private final List<Integer> indices; // corresponding indices for this resource in the recipe
     private float chance;
 
-    public Port(final RecipeResource<T> type, final T value, final float chance, Pair<Integer, Integer> position) {
+    public Port(final RecipeResource<T> type, final T value, final float chance, int index) {
         this.type = type;
         this.value = value;
         this.chance = chance;
-        this.positions = new ArrayList<>();
-        positions.add(position);
+        this.indices = new ArrayList<>();
+        indices.add(index);
     }
 
     public int getAmount() {
@@ -47,15 +46,11 @@ public class Port<T> {
     public void merge(final Port<?> other) {
         final int newAmount = getAmount() + other.getAmount();
         this.chance = (this.getAmount() * this.chance + other.getAmount() * other.chance) / newAmount;
-        this.positions.addAll(other.positions);
+        this.indices.addAll(other.indices);
         type.setAmount(value, newAmount);
     }
 
-    public static Port<ItemStack> itemPort(PositionedStack ps) {
-        return new Port<>(
-            RecipePropertyAPI.ITEM,
-            ps.item.copy(),
-            (float) ps.getChance() / 10_000,
-            Pair.of(ps.relx, ps.rely));
+    public static Port<ItemStack> itemPort(PositionedStack ps, int index) {
+        return new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), (float) ps.getChance() / 10_000, index);
     }
 }

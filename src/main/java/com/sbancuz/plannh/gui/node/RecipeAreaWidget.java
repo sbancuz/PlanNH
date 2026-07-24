@@ -4,8 +4,16 @@ import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
 import static org.lwjgl.opengl.GL11.glDisable;
 import static org.lwjgl.opengl.GL11.glEnable;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import net.minecraft.client.Minecraft;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.ParentWidget;
@@ -16,7 +24,9 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
 import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
+import com.sbancuz.plannh.mixins.NEIRecipeWidgetAccessor;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 
@@ -24,6 +34,8 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
     // needed for proper positioning of the recipe
     private static final int WIDGET_OFFSET_X = 2;
+    private static final Map<RecipeHandlerRef, Integer> handlers = new HashMap<>();
+    private static final Set<NEIRecipeWidget> widgets = new HashSet<>();
 
     private final NodeWidget parent;
     private final Node data;
@@ -58,12 +70,18 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         }
 
         // inputs
-        for (Port<?> port : data.getInputs()) port.getPositions()
-            .forEach(pos -> child(new PortWidget(handlerRef, true, pos, port)));
+        NEIRecipeWidgetAccessor accessor = (NEIRecipeWidgetAccessor) neiWidget;
+        List<PositionedStack> inputs = new ArrayList<>(accessor.callGetInputs());
+        inputs.addAll(accessor.callGetCatalysts());
+        inputs.removeIf(ps -> ps.item.stackSize <= 0);
+        if (data.getInputs() != null) for (Port<?> port : data.getInputs()) port.getIndices()
+            .forEach(i -> child(new PortWidget(inputs.get(i), true, port, handlerRef)));
 
         // outputs
-        for (Port<?> port : data.getOutputs()) port.getPositions()
-            .forEach(pos -> child(new PortWidget(handlerRef, false, pos, port)));
+        List<PositionedStack> outputs = new ArrayList<>(accessor.callGetOutputs());
+        outputs.removeIf(ps -> ps.item.stackSize <= 0);
+        if (data.getOutputs() != null) for (Port<?> port : data.getOutputs()) port.getIndices()
+            .forEach(i -> child(new PortWidget(outputs.get(i), false, port, handlerRef)));
     }
 
     @Override
@@ -78,12 +96,31 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         final long now = Minecraft.getSystemTime();
         if (now - lastHandlerUpdate > 50) {
             lastHandlerUpdate = now;
-            handlerRef.handler.onUpdate();
+
+            handlers.keySet()
+                .forEach(handlerRef -> handlerRef.handler.onUpdate());
+            widgets.forEach(neiWidget -> ((NEIRecipeWidgetAccessor) neiWidget).setUpdate(true));
         }
 
         glEnable(GL_TEXTURE_2D);
         neiWidget.draw(0, 0);
 
         glDisable(GL_TEXTURE_2D);
+    }
+
+    @Override
+    public void onInit() {
+        handlers.computeIfPresent(handlerRef, (_, i) -> i + 1);
+        handlers.putIfAbsent(handlerRef, 1);
+        widgets.add(neiWidget);
+    }
+
+    @Override
+    public void dispose() {
+        handlers.computeIfPresent(handlerRef, (_, i) -> i - 1);
+        if (handlers.get(handlerRef) == 0) handlers.remove(handlerRef);
+        widgets.remove(neiWidget);
+
+        super.dispose();
     }
 }
