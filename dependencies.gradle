@@ -70,9 +70,4 @@ dependencies {
         // XMI is EMF's file serialization; PlanNH only builds ELK graphs programmatically.
         exclude group: 'org.eclipse.emf', module: 'org.eclipse.emf.ecore.xmi'
     }
-
-    // Headless test harness (corpus charts are gtnh-flow style YAML)
-    testImplementation('org.junit.jupiter:junit-jupiter:5.10.2')
-    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.10.2')
-    testImplementation('org.yaml:snakeyaml:2.2')
 }

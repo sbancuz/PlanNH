@@ -1,13 +1,5 @@
 // Applied by gtnhgradle's AddonScriptModule alongside the standard convention scripts.
 
-test {
-    useJUnitPlatform()
-    testLogging {
-        events 'passed', 'skipped', 'failed'
-        exceptionFormat 'short'
-    }
-}
-
 // The shaded ELK distribution ships its documentation-site illustrations (images/**), EMF
 // design-time metamodels (model/** and schema/**), Eclipse plugin descriptors, and docs;
 // all dead weight at runtime, and the descriptors would sit at the jar's top level.
