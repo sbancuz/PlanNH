@@ -4,6 +4,7 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
@@ -45,7 +46,6 @@ import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
 import codechicken.nei.LayoutManager;
-import gregtech.common.gui.modularui.widget.EnumCycleButtonWidget;
 
 public class FlowchartScreen extends ModularScreen {
 
@@ -179,7 +179,7 @@ public class FlowchartScreen extends ModularScreen {
                                 .overlay(IKey.str("S2G"))
                                 .addTooltipLine("Snap to Grid"))
                         .child(
-                            new EnumCycleButtonWidget<>(BalanceMode.class)
+                            new CycleButtonWidget()
                                 .value(
                                     new EnumValue.Dynamic<>(
                                         BalanceMode.class,
@@ -187,14 +187,12 @@ public class FlowchartScreen extends ModularScreen {
                                             .getBalanceMode(),
                                         val -> Plan.getActiveGraph()
                                             .setBalanceMode(val)))
-                                .overlay(val -> IKey.str("M:" + switch (val) {
-                                case NONE -> "-";
-                                case FORWARD -> "F";
-                                case BACKWARD -> "B";
-                                }))
+                                .stateOverlay(BalanceMode.NONE, IKey.str("M:-"))
+                                .stateOverlay(BalanceMode.FORWARD, IKey.str("M:F"))
+                                .stateOverlay(BalanceMode.BACKWARD, IKey.str("M:B"))
                                 .addTooltipLine("Cycle Balance Modes"))
                         .child(
-                            new EnumCycleButtonWidget<>(SummaryMode.class)
+                            new CycleButtonWidget()
                                 .value(
                                     new EnumValue.Dynamic<>(
                                         SummaryMode.class,
@@ -202,7 +200,8 @@ public class FlowchartScreen extends ModularScreen {
                                             .getSummaryMode(),
                                         val -> Plan.getInstance()
                                             .setSummaryMode(val)))
-                                .overlay(val -> IKey.str("S:" + (val == SummaryMode.CYCLES ? "C" : "T")))
+                                .stateOverlay(SummaryMode.CYCLES, IKey.str("S:C"))
+                                .stateOverlay(SummaryMode.THROUGHPUT, IKey.str("S:T"))
                                 .addTooltipLine("Cycle Summary Modes"))
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
                             canvas.addGroup(canvas.getCanvasScreenCenterX(), canvas.getCanvasScreenCenterY());
