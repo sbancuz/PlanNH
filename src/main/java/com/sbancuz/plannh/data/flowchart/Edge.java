@@ -8,20 +8,20 @@ public class Edge {
 
     @Nonnull
     public final UUID id;
-    /// Nodes
+    /// Source/target
     @Nonnull
-    public final UUID sourceNodeId;
+    public final UUID sourceId;
     @Nonnull
-    public final UUID targetNodeId;
+    public final UUID targetId;
     /// Recipe source/targets inside the nodes
     public int sourceOutputIndex;
     public int targetInputIndex;
 
-    public Edge(final UUID id, final UUID sourceNodeId, final UUID targetNodeId, final int sourceOutputIndex,
+    public Edge(final UUID id, final UUID sourceId, final UUID targetId, final int sourceOutputIndex,
         final int targetInputIndex) {
         this.id = id;
-        this.sourceNodeId = sourceNodeId;
-        this.targetNodeId = targetNodeId;
+        this.sourceId = sourceId;
+        this.targetId = targetId;
         this.sourceOutputIndex = sourceOutputIndex;
         this.targetInputIndex = targetInputIndex;
     }

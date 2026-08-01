@@ -18,6 +18,10 @@ public final class PlannhColors {
         NOTE_BG_EDITING   = C.argb("note_bg_editing",    "0xE6FFFAE0"),
         SETTINGS_PANEL_BG = C.argb("settings_panel_bg",  "0xAA202020");
 
+    // ── Stuff ──
+    public static final ColorResource
+        TRANSPARENT = C.argb("transparent",        "0x00000000");
+
     // ── Borders / Lines / Separators ──
     public static final ColorResource
         SLOT_BAR_LINE      = C.argb("slot_bar_line",       "0x6464A0DC"),
@@ -47,7 +51,8 @@ public final class PlannhColors {
         TEXT_FAINT   = C.rgb("text_faint",   "0x666666"),
         TEXT_DARK    = C.rgb("text_dark",    "0x444444"),
         TEXT_NOTE    = C.rgb("text_note",    "0x555555"),
-        TEXT_BADGE   = C.rgb("text_badge",   "0xAAFFFF");
+        TEXT_BADGE   = C.rgb("text_badge",   "0xAAFFFF"),
+        TEXT_BLACK   = C.rgb("text_black",   "0x000000");
 
     // ── Accent Text Colors (opaque) ──
     public static final ColorResource

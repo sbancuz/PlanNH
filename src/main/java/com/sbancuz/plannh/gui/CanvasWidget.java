@@ -41,6 +41,8 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.flowchart.Step;
+import com.sbancuz.plannh.gui.step.StepWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
 import codechicken.lib.config.ConfigTag;
@@ -92,6 +94,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Getter
     private Graph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
+    private final Map<UUID, StepWidget> sinkWidgets = new HashMap<>();
     @Getter
     private final Map<UUID, FlowchartWidget<?, ?>> flowchartWidgets = new HashMap<>();
 
@@ -135,6 +138,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         contextMenu2 = menu;
         rebuildGroupWidgets();
         rebuildNodeWidgets();
+        rebuildSinkWidgets();
 
         background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
     }
@@ -155,6 +159,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         flowchartWidgets.clear();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
+        rebuildSinkWidgets();
     }
 
     public void moveGroupNodes(final UUID groupId, final int deltaX, final int deltaY) {
@@ -464,16 +469,40 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         for (final RecipeNodeWidget w : nodeWidgets.values()) {
             obstacles.add(new ArrowRouter.Rect(w.getNode().x, w.getNode().y, worldWidth(w), worldHeight(w)));
         }
+        for (final StepWidget w : sinkWidgets.values()) {
+            obstacles.add(
+                new ArrowRouter.Rect(
+                    w.getData()
+                        .getX(),
+                    w.getData()
+                        .getY(),
+                    w.getWorldWidth(),
+                    w.getWorldHeight()));
+        }
         final List<ArrowRouter.Request> requests = new ArrayList<>();
         for (final Edge edge : graph.getEdges()
             .values()) {
-            final RecipeNodeWidget src = nodeWidgets.get(edge.sourceNodeId);
-            final RecipeNodeWidget dst = nodeWidgets.get(edge.targetNodeId);
-            if (src == null || dst == null) continue;
-            final int sx = src.getNode().x + worldWidth(src);
-            final int sy = src.getNode().y + portWorldY(edge.sourceOutputIndex);
-            final int dx = dst.getNode().x;
-            final int dy = dst.getNode().y + portWorldY(edge.targetInputIndex);
+            final RecipeNodeWidget srcNode = nodeWidgets.get(edge.sourceId);
+            final StepWidget srcSink = srcNode != null ? null : sinkWidgets.get(edge.sourceId);
+            final RecipeNodeWidget dstNode = nodeWidgets.get(edge.targetId);
+            final StepWidget dstSink = dstNode != null ? null : sinkWidgets.get(edge.targetId);
+            if (srcNode == null && srcSink == null) continue;
+            if (dstNode == null && dstSink == null) continue;
+
+            final int sx = srcNode != null ? srcNode.getNode().x + worldWidth(srcNode)
+                : srcSink.getData()
+                    .getX() + srcSink.getWorldWidth();
+            final int sy = srcNode != null ? srcNode.getNode().y + portWorldY(edge.sourceOutputIndex)
+                : srcSink.getData()
+                    .getY() + srcSink.getWorldHeight() / 2;
+
+            final int dx = dstNode != null ? dstNode.getNode().x
+                : dstSink.getData()
+                    .getX();
+            final int dy = dstNode != null ? dstNode.getNode().y + portWorldY(edge.targetInputIndex)
+                : dstSink.getData()
+                    .getY() + dstSink.getWorldHeight() / 2;
+
             requests.add(new ArrowRouter.Request(edge.id, sx, sy, dx, dy));
         }
 
@@ -484,21 +513,53 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         long sig = ROUTE_HASH_SEED;
         for (final Edge edge : graph.getEdges()
             .values()) {
-            final RecipeNodeWidget src = nodeWidgets.get(edge.sourceNodeId);
-            final RecipeNodeWidget dst = nodeWidgets.get(edge.targetNodeId);
-            if (src == null || dst == null) continue;
+            final RecipeNodeWidget srcNode = nodeWidgets.get(edge.sourceId);
+            final StepWidget srcSink = srcNode != null ? null : sinkWidgets.get(edge.sourceId);
+            final RecipeNodeWidget dstNode = nodeWidgets.get(edge.targetId);
+            final StepWidget dstSink = dstNode != null ? null : sinkWidgets.get(edge.targetId);
+            if (srcNode == null && srcSink == null) continue;
+            if (dstNode == null && dstSink == null) continue;
+
             sig = mixRouteHash(sig, edge.id.getMostSignificantBits());
             sig = mixRouteHash(sig, edge.id.getLeastSignificantBits());
             sig = mixRouteHash(sig, edge.sourceOutputIndex);
             sig = mixRouteHash(sig, edge.targetInputIndex);
-            sig = mixRouteHash(sig, src.getNode().x);
-            sig = mixRouteHash(sig, src.getNode().y);
-            sig = mixRouteHash(sig, worldWidth(src));
-            sig = mixRouteHash(sig, worldHeight(src));
-            sig = mixRouteHash(sig, dst.getNode().x);
-            sig = mixRouteHash(sig, dst.getNode().y);
-            sig = mixRouteHash(sig, worldWidth(dst));
-            sig = mixRouteHash(sig, worldHeight(dst));
+
+            if (srcNode != null) {
+                sig = mixRouteHash(sig, srcNode.getNode().x);
+                sig = mixRouteHash(sig, srcNode.getNode().y);
+                sig = mixRouteHash(sig, worldWidth(srcNode));
+                sig = mixRouteHash(sig, worldHeight(srcNode));
+            } else {
+                sig = mixRouteHash(
+                    sig,
+                    srcSink.getData()
+                        .getX());
+                sig = mixRouteHash(
+                    sig,
+                    srcSink.getData()
+                        .getY());
+                sig = mixRouteHash(sig, srcSink.getWorldWidth());
+                sig = mixRouteHash(sig, srcSink.getWorldHeight());
+            }
+
+            if (dstNode != null) {
+                sig = mixRouteHash(sig, dstNode.getNode().x);
+                sig = mixRouteHash(sig, dstNode.getNode().y);
+                sig = mixRouteHash(sig, worldWidth(dstNode));
+                sig = mixRouteHash(sig, worldHeight(dstNode));
+            } else {
+                sig = mixRouteHash(
+                    sig,
+                    dstSink.getData()
+                        .getX());
+                sig = mixRouteHash(
+                    sig,
+                    dstSink.getData()
+                        .getY());
+                sig = mixRouteHash(sig, dstSink.getWorldWidth());
+                sig = mixRouteHash(sig, dstSink.getWorldHeight());
+            }
         }
         return sig;
     }
@@ -511,16 +572,25 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         ensureRoutes();
         for (final Edge edge : graph.getEdges()
             .values()) {
-            final RecipeNodeWidget srcWidget = nodeWidgets.get(edge.sourceNodeId);
-            final RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
-            if (srcWidget == null || dstWidget == null) continue;
+            final RecipeNodeWidget srcNodeW = nodeWidgets.get(edge.sourceId);
+            final StepWidget srcSinkW = srcNodeW != null ? null : sinkWidgets.get(edge.sourceId);
+            final RecipeNodeWidget dstNodeW = nodeWidgets.get(edge.targetId);
+            final StepWidget dstSinkW = dstNodeW != null ? null : sinkWidgets.get(edge.targetId);
+            if (srcNodeW == null && srcSinkW == null) continue;
+            if (dstNodeW == null && dstSinkW == null) continue;
 
-            final Node srcNode = graph.getNodes()
-                .get(edge.sourceNodeId);
-            final boolean isFluid = srcNode != null && edge.sourceOutputIndex >= 0
-                && edge.sourceOutputIndex < srcNode.outputs.size()
-                && srcNode.outputs.get(edge.sourceOutputIndex)
+            final boolean isFluid;
+            if (srcNodeW != null) {
+                final Node srcNode = srcNodeW.getNode();
+                isFluid = edge.sourceOutputIndex >= 0 && edge.sourceOutputIndex < srcNode.outputs.size()
+                    && srcNode.outputs.get(edge.sourceOutputIndex)
+                        .getType() == RecipePropertyAPI.FLUID;
+            } else {
+                final List<Port<?>> outs = srcSinkW.getData()
+                    .getOutputs();
+                isFluid = !outs.isEmpty() && outs.getFirst()
                     .getType() == RecipePropertyAPI.FLUID;
+            }
 
             final List<int[]> route = edgeRoutes.get(edge.id);
             if (route != null && route.size() >= 2) {
@@ -529,13 +599,29 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
 
             final float z2 = graph.getZoom();
-            final int srcX = widgetX(srcWidget) + Math.round(worldWidth(srcWidget) * z2);
-            final int srcY = widgetY(srcWidget) + portY(edge.sourceOutputIndex);
-            final int dstX = widgetX(dstWidget);
-            final int dstY = widgetY(dstWidget) + portY(edge.targetInputIndex);
+            final int srcX = srcNodeW != null ? widgetX(srcNodeW) + Math.round(worldWidth(srcNodeW) * z2)
+                : sinkX(srcSinkW) + Math.round(srcSinkW.getWorldWidth() * z2);
+            final int srcY = srcNodeW != null ? widgetY(srcNodeW) + portY(edge.sourceOutputIndex)
+                : sinkY(srcSinkW) + Math.round((srcSinkW.getWorldHeight() / 2) * z2);
+
+            final int dstX = dstNodeW != null ? widgetX(dstNodeW) : sinkX(dstSinkW);
+            final int dstY = dstNodeW != null ? widgetY(dstNodeW) + portY(edge.targetInputIndex)
+                : sinkY(dstSinkW) + Math.round((dstSinkW.getWorldHeight() / 2) * z2);
 
             drawArrow(srcX, srcY, dstX, dstY, isFluid);
         }
+    }
+
+    private int sinkX(final StepWidget w) {
+        return Math.round(
+            w.getData()
+                .getX() * graph.getZoom() + graph.getPanX());
+    }
+
+    private int sinkY(final StepWidget w) {
+        return Math.round(
+            w.getData()
+                .getY() * graph.getZoom() + graph.getPanY());
     }
 
     /**
@@ -571,20 +657,28 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void drawPreviewLine() {
-        final RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
-        if (srcWidget == null) return;
+        final float z2 = graph.getZoom();
+        final RecipeNodeWidget srcNodeW = nodeWidgets.get(edgeSourceNodeId);
+        final StepWidget srcSinkW = srcNodeW != null ? null : sinkWidgets.get(edgeSourceNodeId);
+        if (srcNodeW == null && srcSinkW == null) return;
 
-        final int x1 = widgetX(srcWidget) + Math.round(worldWidth(srcWidget) * graph.getZoom());
-        final int y1 = widgetY(srcWidget) + portY(edgeSourcePortIndex);
+        final int x1 = srcNodeW != null ? widgetX(srcNodeW) + Math.round(worldWidth(srcNodeW) * z2)
+            : sinkX(srcSinkW) + Math.round(srcSinkW.getWorldWidth() * z2);
+        final int y1 = srcNodeW != null ? widgetY(srcNodeW) + portY(edgeSourcePortIndex)
+            : sinkY(srcSinkW) + Math.round((srcSinkW.getWorldHeight() / 2) * z2);
 
         int x2 = edgeEndX;
         int y2 = edgeEndY;
 
         if (edgeHoverNodeId != null) {
-            final RecipeNodeWidget dstWidget = nodeWidgets.get(edgeHoverNodeId);
-            if (dstWidget != null) {
-                x2 = widgetX(dstWidget);
-                y2 = widgetY(dstWidget) + portY(edgeHoverPortIndex);
+            final RecipeNodeWidget dstNodeW = nodeWidgets.get(edgeHoverNodeId);
+            final StepWidget dstSinkW = dstNodeW != null ? null : sinkWidgets.get(edgeHoverNodeId);
+            if (dstNodeW != null) {
+                x2 = widgetX(dstNodeW);
+                y2 = widgetY(dstNodeW) + portY(edgeHoverPortIndex);
+            } else if (dstSinkW != null) {
+                x2 = sinkX(dstSinkW);
+                y2 = sinkY(dstSinkW) + Math.round((dstSinkW.getWorldHeight() / 2) * z2);
             }
         }
 
@@ -666,14 +760,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return null;
     }
 
-    private boolean canConnect(final Node srcNode, final int srcOutIdx, final Node dstNode, final int dstInIdx) {
-        if (srcNode == dstNode) return false;
-        if (srcOutIdx < 0 || dstInIdx < 0) return false;
-        if (srcOutIdx >= srcNode.outputs.size() || dstInIdx >= dstNode.inputs.size()) return false;
-        return srcNode.outputs.get(srcOutIdx)
-            .canConnect(dstNode.inputs.get(dstInIdx));
-    }
-
     @Override
     public @NotNull Result onMousePressed(final int mouseButton) {
         final int absMx = getContext().getAbsMouseX();
@@ -696,6 +782,30 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
                     creatingEdge = true;
                     edgeSourceNodeId = widget.getNode().id;
                     edgeSourcePortIndex = port;
+                    edgeEndX = cmx;
+                    edgeEndY = cmy;
+                    edgeHoverNodeId = null;
+                    edgeHoverPortIndex = -1;
+                    return Result.SUCCESS;
+                }
+            }
+
+            // Check sink output ports
+            for (final StepWidget stepWidget : sinkWidgets.values()) {
+                if (stepWidget.getData()
+                    .getOutputs()
+                    .isEmpty()) continue;
+                final int localMx = worldMx - Math.round(
+                    stepWidget.getData()
+                        .getX());
+                final int localMy = worldMy - Math.round(
+                    stepWidget.getData()
+                        .getY());
+                if (stepWidget.getOutputPortAt(localMx, localMy) >= 0) {
+                    creatingEdge = true;
+                    edgeSourceNodeId = stepWidget.getData()
+                        .getId();
+                    edgeSourcePortIndex = 0;
                     edgeEndX = cmx;
                     edgeEndY = cmy;
                     edgeHoverNodeId = null;
@@ -758,12 +868,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public boolean onMouseRelease(final int mouseButton) {
         if (creatingEdge) {
             if (edgeHoverNodeId != null) {
-                final Node srcNode = graph.getNodes()
-                    .get(edgeSourceNodeId);
-                final Node dstNode = graph.getNodes()
-                    .get(edgeHoverNodeId);
-                if (srcNode != null && dstNode != null) {
-                    UUID id = UUID.randomUUID();
+                final boolean validSrc = nodeWidgets.containsKey(edgeSourceNodeId)
+                    || sinkWidgets.containsKey(edgeSourceNodeId);
+                final boolean validDst = nodeWidgets.containsKey(edgeHoverNodeId)
+                    || sinkWidgets.containsKey(edgeHoverNodeId);
+                if (validSrc && validDst) {
+                    final UUID id = UUID.randomUUID();
                     graph.getEdges()
                         .put(
                             id,
@@ -789,21 +899,60 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             edgeHoverNodeId = null;
             edgeHoverPortIndex = -1;
 
-            final RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
-            if (srcWidget == null) return;
-
             final float z = graph.getZoom();
             final int worldDragMx = Math.round((cmx - graph.getPanX()) / z);
             final int worldDragMy = Math.round((cmy - graph.getPanY()) / z);
+
+            // Determine source port
+            final Port<?> srcPort;
+            final boolean srcIsNode = nodeWidgets.containsKey(edgeSourceNodeId);
+            if (srcIsNode) {
+                final RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
+                final Node srcNode = srcWidget.getNode();
+                if (edgeSourcePortIndex < 0 || edgeSourcePortIndex >= srcNode.outputs.size()) return;
+                srcPort = srcNode.outputs.get(edgeSourcePortIndex);
+            } else {
+                final StepWidget srcSink = sinkWidgets.get(edgeSourceNodeId);
+                if (srcSink == null) return;
+                final List<Port<?>> outs = srcSink.getData()
+                    .getOutputs();
+                if (outs.isEmpty()) return;
+                srcPort = (Port<?>) outs.getFirst();
+            }
+
+            // Check node input ports
             for (final RecipeNodeWidget widget : nodeWidgets.values()) {
-                if (widget == srcWidget) continue;
+                if (srcIsNode && widget.getNode().id.equals(edgeSourceNodeId)) continue;
                 final int localMx = worldDragMx - Math.round(widget.getNode().x);
                 final int localMy = worldDragMy - Math.round(widget.getNode().y);
-                final int port = widget.getInputPortAt(localMx, localMy);
-                if (port >= 0 && canConnect(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode(), port)) {
+                final int portIdx = widget.getInputPortAt(localMx, localMy);
+                if (portIdx >= 0 && portIdx < widget.getNode().inputs.size()
+                    && srcPort.canConnect(widget.getNode().inputs.get(portIdx))) {
                     edgeHoverNodeId = widget.getNode().id;
-                    edgeHoverPortIndex = port;
-                    break;
+                    edgeHoverPortIndex = portIdx;
+                    return;
+                }
+            }
+
+            // Check sink input ports
+            for (final StepWidget stepWidget : sinkWidgets.values()) {
+                if (stepWidget.getData()
+                    .getId()
+                    .equals(edgeSourceNodeId)) continue;
+                final List<Port<?>> ins = stepWidget.getData()
+                    .getInputs();
+                if (ins.isEmpty()) continue;
+                final int localMx = worldDragMx - Math.round(
+                    stepWidget.getData()
+                        .getX());
+                final int localMy = worldDragMy - Math.round(
+                    stepWidget.getData()
+                        .getY());
+                if (stepWidget.getInputPortAt(localMx, localMy) >= 0 && srcPort.canConnect(ins.getFirst())) {
+                    edgeHoverNodeId = stepWidget.getData()
+                        .getId();
+                    edgeHoverPortIndex = 0;
+                    return;
                 }
             }
         }
@@ -851,6 +1000,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final Area a = widget.getArea();
             if (worldMx >= a.x && worldMx < a.x + a.width && worldMy >= a.y && worldMy < a.y + a.height) return true;
         }
+        for (final StepWidget widget : sinkWidgets.values()) {
+            final Area a = widget.getArea();
+            if (worldMx >= a.x && worldMx < a.x + a.width && worldMy >= a.y && worldMy < a.y + a.height) return true;
+        }
         return false;
     }
 
@@ -876,6 +1029,35 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         child(new GroupWidget(this, group));
 
         menuOpen = false;
+    }
+
+    public void addSink(int x, int y) {
+        final Step step = new Step();
+        step.setX(x);
+        step.setY(y);
+
+        graph.getSteps()
+            .put(step.getId(), step);
+        addSinkWidget(step);
+
+        menuOpen = false;
+    }
+
+    public void rebuildSinkWidgets() {
+        for (final StepWidget w : sinkWidgets.values()) {
+            remove(w);
+        }
+        sinkWidgets.clear();
+        for (final Step step : graph.getSteps()
+            .values()) {
+            addSinkWidget(step);
+        }
+    }
+
+    private void addSinkWidget(final Step step) {
+        final StepWidget widget = new StepWidget(this, step);
+        sinkWidgets.put(step.getId(), widget);
+        child(widget);
     }
 
     @Nullable
@@ -1077,4 +1259,5 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public @NotNull ModularPanel getPanel() {
         return panel;
     }
+
 }

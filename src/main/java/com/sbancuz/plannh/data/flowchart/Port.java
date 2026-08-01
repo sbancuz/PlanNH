@@ -38,4 +38,8 @@ public class Port<T> {
         this.chance = (this.getAmount() * this.chance + other.getAmount() * other.chance) / newAmount;
         type.setAmount(value, newAmount);
     }
+
+    public void setAmount(final int newAmount) {
+        type.setAmount(value, newAmount);
+    }
 }

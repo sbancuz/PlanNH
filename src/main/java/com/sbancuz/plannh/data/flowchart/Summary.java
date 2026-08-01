@@ -2,8 +2,10 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipeResource;
@@ -16,7 +18,7 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
         THROUGHPUT
     }
 
-    public record Line<T> (RecipeProperty<T> label, T resource, float amount) {
+    public record Line<T> (RecipeProperty<T> label, T resource, float amount, boolean perSecond) {
 
         public String displayName() {
             return label.formatDisplayName(resource);
@@ -38,8 +40,8 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
                 return new ResourceKey<>((RecipeResource<Object>) port.getType(), port.getValue());
             }
 
-            Line<?> toLine(final float amount) {
-                return new Line<>(type, resource, amount);
+            Line<?> toLine(final float amount, final boolean perSecond) {
+                return new Line<>(type, resource, amount, perSecond);
             }
 
             @Override
@@ -63,32 +65,32 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
         final Map<LineKey, Float> outputMap = new HashMap<>();
         final Map<LineKey, Float> inputMap = new HashMap<>();
         final Map<LineKey, Float> propertyMap = new HashMap<>();
+        final Set<LineKey> stepSourcedOutputs = new HashSet<>();
+        final Set<LineKey> stepSourcedInputs = new HashSet<>();
 
-        // Pass 1: accumulate all node outputs before any netting.
-        for (final Node node : graph.getNodes()
-            .values()) {
-            final var nb = balance.nodeBalances()
-                .get(node.id);
-            if (nb == null) continue;
-
-            for (int i = 0; i < node.outputs.size(); i++) {
-                final Float total = nb.effectiveOutputs.get(i);
+        // Pass 1: accumulate the outputs of every participant (machines + steps)
+        // before any netting. Steps contribute their raw amount, with no scaling.
+        for (final FlowData participant : graph.getFlowParticipants()) {
+            final List<Port<?>> outs = participant.getOutputs();
+            final Map<Integer, Float> effOuts = participant.effectiveOutputs(balance);
+            for (int i = 0; i < outs.size(); i++) {
+                final Float total = effOuts.get(i);
                 if (total == null || total <= 0) continue;
-                outputMap.merge(LineKey.ResourceKey.of(node.outputs.get(i)), total, Float::sum);
+                final LineKey key = LineKey.ResourceKey.of(outs.get(i));
+                outputMap.merge(key, total, Float::sum);
+                if (participant instanceof Step) stepSourcedOutputs.add(key);
             }
         }
 
         // Pass 2: net inputs against the fully-populated output map.
-        for (final Node node : graph.getNodes()
-            .values()) {
-            final var nb = balance.nodeBalances()
-                .get(node.id);
-            if (nb == null) continue;
-
-            for (int i = 0; i < node.inputs.size(); i++) {
-                final Float total = nb.effectiveInputs.get(i);
+        for (final FlowData participant : graph.getFlowParticipants()) {
+            final List<Port<?>> ins = participant.getInputs();
+            final Map<Integer, Float> effIns = participant.effectiveInputs(balance);
+            for (int i = 0; i < ins.size(); i++) {
+                final Float total = effIns.get(i);
                 if (total == null || total <= 0) continue;
-                final LineKey key = LineKey.ResourceKey.of(node.inputs.get(i));
+                final LineKey key = LineKey.ResourceKey.of(ins.get(i));
+                if (participant instanceof Step) stepSourcedInputs.add(key);
                 final float existing = outputMap.getOrDefault(key, 0f);
                 final float consumed = Math.min(existing, total);
                 if (consumed > 0) {
@@ -106,17 +108,21 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
             propertyMap.merge(new LineKey.PropertyKey(entry.getKey()), (float) entry.getValue(), Float::sum);
         }
 
-        return new Summary(flatten(outputMap), flatten(inputMap), flatten(propertyMap));
+        return new Summary(
+            flatten(outputMap, stepSourcedOutputs),
+            flatten(inputMap, stepSourcedInputs),
+            flatten(propertyMap, Set.of()));
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static List<Line<?>> flatten(final Map<LineKey, Float> map) {
+    private static List<Line<?>> flatten(final Map<LineKey, Float> map, final Set<LineKey> stepSourced) {
         final List<Line<?>> result = new ArrayList<>();
         for (final var entry : map.entrySet()) {
             if (entry.getValue() <= 0) continue;
+            final boolean perSecond = stepSourced.contains(entry.getKey());
             final Line<?> line = switch (entry.getKey()) {
-                case LineKey.ResourceKey rk -> rk.toLine(entry.getValue());
-                case LineKey.PropertyKey pk   -> new Line(pk.prop(), pk.prop().getDefaultValue(), entry.getValue());
+                case LineKey.ResourceKey rk -> rk.toLine(entry.getValue(), perSecond);
+                case LineKey.PropertyKey pk -> new Line(pk.prop(), pk.prop().getDefaultValue(), entry.getValue(), false);
             };
             result.add(line);
         }

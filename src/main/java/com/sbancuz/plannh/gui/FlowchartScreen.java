@@ -4,7 +4,6 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
-import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
@@ -29,6 +28,7 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.ColorPickerDialog;
+import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.ListWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -45,6 +45,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 
+import codechicken.nei.ItemPanels;
 import codechicken.nei.LayoutManager;
 
 public class FlowchartScreen extends ModularScreen {
@@ -105,6 +106,18 @@ public class FlowchartScreen extends ModularScreen {
                                 .color(PlannhColors.CONTEXT_BORDER.getColor()))
                         .overlay(
                             IKey.str("Add Note")
+                                .color(Color.WHITE.main)))
+                    .child(new ButtonWidget<>().onMousePressed(_ -> {
+                        canvas.addSink(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
+                        return true;
+                    })
+                        .fullWidth()
+                        .background(
+                            new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                            new Rectangle().hollow()
+                                .color(PlannhColors.CONTEXT_BORDER.getColor()))
+                        .overlay(
+                            IKey.str("Add Step")
                                 .color(Color.WHITE.main)))
                     .child(new ButtonWidget<>().onMousePressed(_ -> {
                         canvas.addGroup(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
@@ -272,6 +285,26 @@ public class FlowchartScreen extends ModularScreen {
     public void onClose() {
         PlanAPI.save();
         super.onClose();
+    }
+
+    @Override
+    public boolean onMousePressed(final int mouseButton) {
+        final var result = super.onMousePressed(mouseButton);
+        if (ItemPanels.itemPanel.draggedStack != null) {
+            ItemPanels.itemPanel.draggedStack = null;
+        }
+        if (ItemPanels.bookmarkPanel.draggedStack != null) {
+            ItemPanels.bookmarkPanel.draggedStack = null;
+        }
+        return result;
+    }
+
+    @Override
+    public boolean onMouseRelease(final int mouseButton) {
+        if (ItemPanels.itemPanel.draggedStack != null || ItemPanels.bookmarkPanel.draggedStack != null) {
+            return false;
+        }
+        return super.onMouseRelease(mouseButton);
     }
 
     private static void refreshGraph(CanvasWidget canvas) {
@@ -574,8 +607,11 @@ public class FlowchartScreen extends ModularScreen {
                 false);
             ly += SECTION_H;
             for (final var item : items) {
-                final String text = item.displayAmount(isCycle ? item.amount() : item.amount() / cycleSecs)
-                    + (isCycle ? " x " : "/s ")
+                // Step-sourced lines are already per second; machine lines are per
+                // cycle and need dividing by the cycle length for THROUGHPUT mode.
+                final String text = item
+                    .displayAmount(item.perSecond() || isCycle ? item.amount() : item.amount() / cycleSecs)
+                    + (item.perSecond() ? "/s " : isCycle ? " x " : "/s ")
                     + item.displayName();
 
                 GuiDraw.drawText(text, ITEM_TEXT_X, ly, 0.8f, itemColor, false);

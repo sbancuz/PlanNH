@@ -24,13 +24,15 @@ import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 import lombok.Setter;
 
-public class Node {
+public class Node implements FlowData {
 
     public final UUID id;
     public int x;
     public int y;
 
+    @Getter
     public final List<Port<?>> inputs = new ArrayList<>();
+    @Getter
     public final List<Port<?>> outputs = new ArrayList<>();
 
     public String machineName;
@@ -120,9 +122,7 @@ public class Node {
 
         final Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
         if (props != null && !props.isEmpty()) {
-            for (final var entry : props.entrySet()) {
-                this.properties.put(entry.getKey(), entry.getValue());
-            }
+            this.properties.putAll(props);
         }
 
         if (this.properties.containsKey(RecipePropertyAPI.DURATION_TICKS)) {
@@ -168,6 +168,26 @@ public class Node {
         }
 
         refresh();
+    }
+
+    @Override
+    public float secondsPerCycle() {
+        final var eff = machineConfig.computeEffect(properties, durationTicks);
+        return (float) eff.durationTicks() / 20f;
+    }
+
+    @Override
+    public Map<Integer, Float> effectiveOutputs(final Balancer.BalanceResult balance) {
+        final Balancer.NodeBalance nb = balance.nodeBalances()
+            .get(id);
+        return nb == null ? Map.of() : nb.effectiveOutputs;
+    }
+
+    @Override
+    public Map<Integer, Float> effectiveInputs(final Balancer.BalanceResult balance) {
+        final Balancer.NodeBalance nb = balance.nodeBalances()
+            .get(id);
+        return nb == null ? Map.of() : nb.effectiveInputs;
     }
 
     private PropertyProvider pickBestExtractor(final IRecipeHandler handler, final int recipeIndex) {
