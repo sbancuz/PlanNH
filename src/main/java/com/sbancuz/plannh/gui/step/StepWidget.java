@@ -9,6 +9,7 @@ import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Step;
@@ -56,10 +57,19 @@ public class StepWidget extends FlowchartWidget<StepWidget, Step> {
                 .setTextColor(PlannhColors.NODE_TITLE_LINE.getColor()));
 
         topRow.child(new CloseButtonWidget(this));
+        final var amountWidget = new AmountTextFieldWidget(this);
+        Flow amountRow = FlowchartFlow.row(this)
+            .fullWidth()
+            .coverChildrenHeight()
+            .mainAxisAlignment(Alignment.MainAxis.CENTER);
+        amountRow.child(amountWidget);
+        amountRow.child(
+            new TextWidget<>("/s").color(amountWidget::getTextColor)
+                .scale(1f));
 
         mainColumn.child(topRow)
             .child(new StepAreaWidget(this))
-            .child(new AmountTextFieldWidget(this));
+            .child(amountRow);
 
         child(mainColumn);
     }

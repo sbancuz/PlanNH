@@ -11,17 +11,17 @@ public interface FlowData {
     List<Port<?>> getOutputs();
 
     /**
-     * Effective per-port output amounts, keyed by port index, used by the summary
-     * netting. Node recipes override this with the balancer-scaled amounts; the
-     * default returns the raw port amounts (steps/sinks, whose amount is already
-     * expressed in its final per-second units).
+     * Effective per-port output amounts for one full balance cycle, keyed by port
+     * index, used by the summary netting. Node recipes override this with the
+     * balancer-scaled per-cycle totals; the default converts the raw per-second
+     * port amounts (steps/sinks) to per-cycle by multiplying by the cycle duration.
      */
     default Map<Integer, Float> effectiveOutputs(final Balancer.BalanceResult balance) {
-        return amountByPort(getOutputs());
+        return perCycleAmount(getOutputs(), balance);
     }
 
     default Map<Integer, Float> effectiveInputs(final Balancer.BalanceResult balance) {
-        return amountByPort(getInputs());
+        return perCycleAmount(getInputs(), balance);
     }
 
     /**
@@ -34,13 +34,14 @@ public interface FlowData {
         return 1.0f;
     }
 
-    private static Map<Integer, Float> amountByPort(final List<Port<?>> ports) {
+    private static Map<Integer, Float> perCycleAmount(final List<Port<?>> ports, final Balancer.BalanceResult balance) {
+        final float cycleSecs = balance.totalDurationTicks() > 0 ? (float) balance.totalDurationTicks() / 20f : 1f;
         final Map<Integer, Float> result = new HashMap<>();
         for (int i = 0; i < ports.size(); i++) {
             result.put(
                 i,
-                (float) ports.get(i)
-                    .getAmount());
+                ports.get(i)
+                    .getAmount() * cycleSecs);
         }
         return result;
     }

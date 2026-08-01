@@ -607,11 +607,8 @@ public class FlowchartScreen extends ModularScreen {
                 false);
             ly += SECTION_H;
             for (final var item : items) {
-                // Step-sourced lines are already per second; machine lines are per
-                // cycle and need dividing by the cycle length for THROUGHPUT mode.
-                final String text = item
-                    .displayAmount(item.perSecond() || isCycle ? item.amount() : item.amount() / cycleSecs)
-                    + (item.perSecond() ? "/s " : isCycle ? " x " : "/s ")
+                final String text = item.displayAmount(isCycle ? item.amount() : item.amount() / cycleSecs)
+                    + (isCycle ? " x " : "/s ")
                     + item.displayName();
 
                 GuiDraw.drawText(text, ITEM_TEXT_X, ly, 0.8f, itemColor, false);

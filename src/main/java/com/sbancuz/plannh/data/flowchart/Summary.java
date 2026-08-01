@@ -2,10 +2,8 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.sbancuz.plannh.data.RecipeProperty;
 import com.sbancuz.plannh.data.RecipeResource;
@@ -18,7 +16,7 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
         THROUGHPUT
     }
 
-    public record Line<T> (RecipeProperty<T> label, T resource, float amount, boolean perSecond) {
+    public record Line<T> (RecipeProperty<T> label, T resource, float amount) {
 
         public String displayName() {
             return label.formatDisplayName(resource);
@@ -40,8 +38,8 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
                 return new ResourceKey<>((RecipeResource<Object>) port.getType(), port.getValue());
             }
 
-            Line<?> toLine(final float amount, final boolean perSecond) {
-                return new Line<>(type, resource, amount, perSecond);
+            Line<?> toLine(final float amount) {
+                return new Line<>(type, resource, amount);
             }
 
             @Override
@@ -65,20 +63,18 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
         final Map<LineKey, Float> outputMap = new HashMap<>();
         final Map<LineKey, Float> inputMap = new HashMap<>();
         final Map<LineKey, Float> propertyMap = new HashMap<>();
-        final Set<LineKey> stepSourcedOutputs = new HashSet<>();
-        final Set<LineKey> stepSourcedInputs = new HashSet<>();
 
         // Pass 1: accumulate the outputs of every participant (machines + steps)
-        // before any netting. Steps contribute their raw amount, with no scaling.
+        // before any netting. All amounts are expressed per cycle: steps convert
+        // their per-second values via effectiveOutputs, so they net against the
+        // machines' per-cycle totals.
         for (final FlowData participant : graph.getFlowParticipants()) {
             final List<Port<?>> outs = participant.getOutputs();
             final Map<Integer, Float> effOuts = participant.effectiveOutputs(balance);
             for (int i = 0; i < outs.size(); i++) {
                 final Float total = effOuts.get(i);
                 if (total == null || total <= 0) continue;
-                final LineKey key = LineKey.ResourceKey.of(outs.get(i));
-                outputMap.merge(key, total, Float::sum);
-                if (participant instanceof Step) stepSourcedOutputs.add(key);
+                outputMap.merge(LineKey.ResourceKey.of(outs.get(i)), total, Float::sum);
             }
         }
 
@@ -90,7 +86,6 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
                 final Float total = effIns.get(i);
                 if (total == null || total <= 0) continue;
                 final LineKey key = LineKey.ResourceKey.of(ins.get(i));
-                if (participant instanceof Step) stepSourcedInputs.add(key);
                 final float existing = outputMap.getOrDefault(key, 0f);
                 final float consumed = Math.min(existing, total);
                 if (consumed > 0) {
@@ -108,21 +103,17 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
             propertyMap.merge(new LineKey.PropertyKey(entry.getKey()), (float) entry.getValue(), Float::sum);
         }
 
-        return new Summary(
-            flatten(outputMap, stepSourcedOutputs),
-            flatten(inputMap, stepSourcedInputs),
-            flatten(propertyMap, Set.of()));
+        return new Summary(flatten(outputMap), flatten(inputMap), flatten(propertyMap));
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static List<Line<?>> flatten(final Map<LineKey, Float> map, final Set<LineKey> stepSourced) {
+    private static List<Line<?>> flatten(final Map<LineKey, Float> map) {
         final List<Line<?>> result = new ArrayList<>();
         for (final var entry : map.entrySet()) {
             if (entry.getValue() <= 0) continue;
-            final boolean perSecond = stepSourced.contains(entry.getKey());
             final Line<?> line = switch (entry.getKey()) {
-                case LineKey.ResourceKey rk -> rk.toLine(entry.getValue(), perSecond);
-                case LineKey.PropertyKey pk -> new Line(pk.prop(), pk.prop().getDefaultValue(), entry.getValue(), false);
+                case LineKey.ResourceKey rk -> rk.toLine(entry.getValue());
+                case LineKey.PropertyKey pk -> new Line(pk.prop(), pk.prop().getDefaultValue(), entry.getValue());
             };
             result.add(line);
         }
