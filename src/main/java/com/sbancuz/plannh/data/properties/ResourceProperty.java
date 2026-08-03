@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data;
+package com.sbancuz.plannh.data.properties;
 
 import java.util.Objects;
 import java.util.function.BiConsumer;
@@ -8,7 +8,7 @@ import java.util.function.ToIntFunction;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder(builderMethodName = "emptyBuilder")
-public class RecipeResource<T> extends RecipeProperty<T> {
+public class ResourceProperty<T> extends SummaryProperty<T> {
 
     @lombok.Builder.Default
     private final ToIntFunction<T> amountExtractor = (v) -> 1;
@@ -41,8 +41,8 @@ public class RecipeResource<T> extends RecipeProperty<T> {
         return hashCodeExtractor.applyAsInt(value);
     }
 
-    public static <B> RecipeResourceBuilder<B, ?, ?> builder(final String key, final B defaultValue) {
-        return RecipeResource.<B>emptyBuilder()
+    public static <B> ResourcePropertyBuilder<B, ?, ?> builder(final String key, final B defaultValue) {
+        return ResourceProperty.<B>emptyBuilder()
             .key(key)
             .defaultValue(defaultValue);
     }

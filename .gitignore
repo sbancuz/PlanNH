@@ -38,3 +38,4 @@ layout.json
 /renderdoc_1.45/
 renderdoc_1.45.tar.gz
 *.rdc
+/.deps

@@ -607,8 +607,12 @@ public class FlowchartScreen extends ModularScreen {
                 false);
             ly += SECTION_H;
             for (final var item : items) {
-                final String text = item.displayAmount(isCycle ? item.amount() : item.amount() / cycleSecs)
-                    + (isCycle ? " x " : "/s ")
+                final String text = item.displayAmount(
+                    isCycle || !item.label()
+                        .isPerSec() ? item.amount() : item.amount() / cycleSecs)
+                    + (isCycle ? " x "
+                        : item.label()
+                            .isPerSec() ? "/s " : " ")
                     + item.displayName();
 
                 GuiDraw.drawText(text, ITEM_TEXT_X, ly, 0.8f, itemColor, false);

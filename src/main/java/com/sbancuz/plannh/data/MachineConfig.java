@@ -5,7 +5,9 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 public class MachineConfig {
 
@@ -65,17 +67,16 @@ public class MachineConfig {
     }
 
     @Nonnull
-    public MachineProfile.EffectResult computeEffect(final Map<RecipeProperty<?>, Object> properties,
-        final int recipeDuration) {
+    public EffectResult computeEffect(final Map<RecipeProperty<?>, Object> properties) {
         final MachineProfile profile = getProfile();
-        MachineProfile.EffectResult result = profile.effectComputer()
-            .compute(settings, new MachineProfile.RecipeContext(properties, recipeDuration));
+        EffectResult result = profile.effectComputer()
+            .compute(settings, new RecipeContext(properties));
         final int tickMod = MachineProfile.getInt(settings, Settings.TICK_MODIFIER.key(), 100);
         if (tickMod > 0 && tickMod != 100) {
             final double factor = 100.0 / tickMod;
             final int newDuration = Math.max(1, (int) Math.round(result.durationTicks() * factor));
             final long newEnergyPerT = Math.round(result.energyPerT() / factor);
-            result = new MachineProfile.EffectResult(newDuration, newEnergyPerT, result.throughputFactor());
+            result = new EffectResult(newDuration, newEnergyPerT, result.throughputFactor());
         }
         return result;
     }

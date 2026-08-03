@@ -2,8 +2,11 @@
 
 ## Settings
 ## Settings - General
+plannh.settings.duration_ticks=Duration
 plannh.settings.tick_modifier=Accel
 plannh.settings.machines=Mach
+plannh.settings.energy_per_tick=Energy/t
+plannh.settings.inputs_per_tick=Inputs/t
 plannh.settings.burnable_override=Burnable
 
 ## Settings - GT
@@ -11,6 +14,7 @@ plannh.settings.voltage=Tier
 plannh.settings.amp=Amp
 plannh.settings.speed=Speed
 plannh.settings.parallels=Par
+plannh.settings.gt_multiblock=Multiblock
 plannh.settings.machine_heat=M. Heat
 plannh.settings.recipe_heat=R. Heat
 plannh.settings.heat_discount_mult=HD Mult.%
@@ -27,6 +31,8 @@ plannh.settings.heat_discount=Heat Disc.
 plannh.settings.laser_oc=Laser OC
 plannh.settings.unlimited_skips=Unl. Skips
 plannh.settings.no_overclock=No OC
+plannh.settings.catalyst_astral_arrays=Astral Arrays
+plannh.settings.catalyst_accel_card=Accel. Card
 
 ## Settings - Botania
 plannh.settings.mana_per_tick=Mana/t
@@ -34,40 +40,63 @@ plannh.settings.mana_per_tick=Mana/t
 ## Settings - Thaumcraft (and friends)
 plannh.settings.vis_per_tick=Vis/t
 
+## Settings - Forestry
+plannh.settings.forestry_rf_per_tick=For. RF/t
+
+## Settings - BloodMagic
+plannh.settings.lp_per_tick=BM LP/t
+
 ## Settings - Cofh core
 plannh.settings.rf_per_tick=RF/t
+
+## Settings - Steam
+plannh.settings.steam_eut_discount=Steam EU%
+plannh.settings.steam_duration_modifier=Steam Spd%
 
 ## Properties
 ## Properties - General
 plannh.properties.duration_ticks=Duration
-plannh.properties.num_components=Components
 
 ## Properties - GT (and friends)
-plannh.properties.special_value=Special Value
-plannh.properties.bartworks.glass_tier=Glass Tier
-plannh.properties.bartworks.sievert=Sievert
-plannh.properties.bartworks.sievert_exact=Exact Sievert
-plannh.properties.bartworks.mass=Mass
-plannh.properties.total_eu=Total EU
-plannh.properties.eu_per_tick=EU/t
+plannh.properties.gt.special_value=Special Value
+plannh.properties.gt.bartworks.glass_tier=Glass Tier
+plannh.properties.gt.bartworks.sievert=Sievert
+plannh.properties.gt.bartworks.sievert_exact=Exact Sievert
+plannh.properties.gt.bartworks.mass=Mass
+plannh.properties.gt.total_eu=Total EU
+plannh.properties.gt.eu_per_tick=EU/t
+plannh.properties.gt.coil_heat=Coil Heat
+plannh.properties.gt.fusion_threshold=Fusion Threshold
+plannh.properties.gt.recipe_map=Recipe Map
+plannh.properties.gt.steam_eu_pert=Steam/t
+plannh.properties.gt.total_steam_eu=Total Steam
+
+## Properties - Avaritia
+plannh.properties.avaritia.compression_cost=Compression Cost
 
 ## Properties - Botania
-plannh.properties.mana_cost=Mana Cost
+plannh.properties.botania.mana_cost=Mana Cost
+
+## Properties - BloodMagic
+plannh.properties.bloodmagic.lp_amount=LP Cost
+plannh.properties.bloodmagic.lp_tier=LP Tier
 
 ## Properties - Thaumcraft (and friends)
-plannh.properties.vis_cost=Vis Cost
-plannh.properties.instability=Instability
-plannh.properties.total_vis=Total Vis
-plannh.properties.research_key=Research Key
+plannh.properties.thaumcraft.vis_cost=Vis Cost
+plannh.properties.thaumcraft.instability=Instability
+plannh.properties.thaumcraft.total_vis=Total Vis
+plannh.properties.thaumcraft.research_key=Research Key
+plannh.properties.thaumcraft.num_components=Components
 
 ## Properties - Forestry
 plannh.properties.forestry.processing_time=Processing Time
 
 ## Properties - Cofh core
-plannh.properties.rf_total=RF Total
+plannh.properties.cofh.rf_total=RF Total
+plannh.properties.cofh.rf_per_t=RF/t
 
 ## Properties - Ender IO
-plannh.properties.experience=Experience
+plannh.properties.enderio.experience=Experience
 
 ## Share messages
 plannh.share.import_link=> PlanNH Import

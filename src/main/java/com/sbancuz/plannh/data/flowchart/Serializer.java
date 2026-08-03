@@ -201,7 +201,6 @@ public final class Serializer {
             obj.addProperty("machine", node.machineName);
             obj.add("recipeId", node.recipeId.toJsonObject());
             obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
-            obj.addProperty("extractorIndex", node.getExtractorIndex());
 
             obj.add("inputs", portListToJson(node.inputs));
             obj.add("outputs", portListToJson(node.outputs));
@@ -287,9 +286,6 @@ public final class Serializer {
                     .getAsJsonObject());
             node.handlerRecipeIndex = obj.has("handlerRecipeIndex") ? obj.get("handlerRecipeIndex")
                 .getAsInt() : 0;
-            node.setExtractorIndex(
-                obj.has("extractorIndex") ? obj.get("extractorIndex")
-                    .getAsInt() : 0);
             node.initExtractor();
             node.refresh();
 

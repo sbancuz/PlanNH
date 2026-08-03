@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 public final class Balancer {
 
@@ -93,7 +93,7 @@ public final class Balancer {
         for (final Node node : graph.getNodes()
             .values()) {
             final MachineConfig cfg = node.machineConfig;
-            final var eff = cfg.computeEffect(node.properties, node.durationTicks);
+            final var eff = cfg.computeEffect(node.properties);
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
@@ -203,7 +203,7 @@ public final class Balancer {
         for (final Node node : graph.getNodes()
             .values()) {
             final MachineConfig cfg = node.machineConfig;
-            final var eff = cfg.computeEffect(node.properties, node.durationTicks);
+            final var eff = cfg.computeEffect(node.properties);
             throughputFactors.put(node.id, eff.throughputFactor());
         }
 
@@ -411,8 +411,7 @@ public final class Balancer {
 
             final MachineConfig cfg = node.machineConfig;
 
-            final int recipeDuration = node.durationTicks;
-            final var eff = cfg.computeEffect(node.properties, recipeDuration);
+            final var eff = cfg.computeEffect(node.properties);
             final long eutPerOp = eff.energyPerT();
             final int durPerOp = eff.durationTicks();
             final int throughputFactor = eff.throughputFactor();

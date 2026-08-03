@@ -6,18 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import net.minecraft.tileentity.TileEntityFurnace;
-
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.PropertyProvider;
-import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.Settings;
-import com.sbancuz.plannh.nei.NEIPlanConfig;
+import com.sbancuz.plannh.data.properties.PropertyProvider;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.provider.DefaultProvider;
 
-import codechicken.nei.NEIClientConfig;
-import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.RecipeHandlerRef;
@@ -36,7 +31,6 @@ public class Node implements FlowData {
     public final List<Port<?>> outputs = new ArrayList<>();
 
     public String machineName;
-    public int durationTicks = 0;
 
     public Recipe.RecipeId recipeId;
     public int handlerRecipeIndex;
@@ -62,14 +56,13 @@ public class Node implements FlowData {
         this.recipeId = Recipe.RecipeId.of(handler, recipeIndex);
         this.handlerRecipeIndex = recipeIndex;
 
-        this.availableExtractors = RecipePropertyAPI.getExtractors(handler.getOverlayIdentifier());
-        if (availableExtractors.isEmpty()) {
-            this.extractor = null;
-            this.machineConfig = new MachineConfig(this);
-            return;
-        }
+        this.availableExtractors = RecipePropertyAPI.getExtractors(handler.getClass());
         this.extractorIndex = 0;
-        this.extractor = pickBestExtractor(handler, recipeIndex);
+        if (availableExtractors.isEmpty()) {
+            this.extractor = DefaultProvider.INSTANCE;
+        } else {
+            this.extractor = pickBestExtractor(handler, recipeIndex);
+        }
 
         final String pid = this.extractor.getProfileId(handler, recipeIndex);
         if (pid != null && !MachineProfileRegistry.defaultId()
@@ -91,42 +84,9 @@ public class Node implements FlowData {
         outputs.clear();
         properties.clear();
 
-        final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
-        for (final PositionedStack ps : ins) {
-            if (ps != null && ps.item != null && ps.item.stackSize > 0) {
-                this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-            }
-        }
-
-        final PositionedStack result = handler.getResultStack(recipeIndex);
-        if (result != null && result.item != null) {
-            this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, result.item.copy(), 1.f));
-        }
-        final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
-        for (final PositionedStack ps : others) {
-            if (ps != null && ps.item != null) {
-                if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
-                    .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
-                    if (this.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
-                        .equals("IN")) {
-                        this.inputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-                    } else if (this.machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
-                        .equals("OUT")) {
-                            this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-                        }
-                } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
-                    this.outputs.add(new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), 1.f));
-                }
-            }
-        }
-
         final Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
         if (props != null && !props.isEmpty()) {
             this.properties.putAll(props);
-        }
-
-        if (this.properties.containsKey(RecipePropertyAPI.DURATION_TICKS)) {
-            this.durationTicks = (int) this.properties.get(RecipePropertyAPI.DURATION_TICKS);
         }
 
         deduplicate(inputs);
@@ -136,7 +96,7 @@ public class Node implements FlowData {
     private static void deduplicate(final List<Port<?>> ports) {
         final List<Port<?>> aggregate = new ArrayList<>(ports);
         for (int i = 0; i < aggregate.size(); i++) {
-            for (int j = i + 1; j < aggregate.size(); j++) { // 1. Start at i + 1 to avoid self-merging
+            for (int j = i + 1; j < aggregate.size(); j++) {
                 if (aggregate.get(i)
                     .canConnect(aggregate.get(j))) {
                     aggregate.get(i)
@@ -197,6 +157,10 @@ public class Node implements FlowData {
         return availableExtractors.getFirst();
     }
 
+    public int getRecipeDuration() {
+        return (int) properties.getOrDefault(RecipePropertyAPI.DURATION_TICKS, 0);
+    }
+
     public void initExtractor() {
         final RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
         if (ref == null) {
@@ -204,11 +168,12 @@ public class Node implements FlowData {
             this.availableExtractors = List.of();
             return;
         }
-        this.availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getOverlayIdentifier());
+        this.availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getClass());
         if (this.extractorIndex >= this.availableExtractors.size()) {
             this.extractorIndex = 0;
         }
-        this.extractor = this.availableExtractors.isEmpty() ? null : this.availableExtractors.get(this.extractorIndex);
+        this.extractor = this.availableExtractors.isEmpty() ? DefaultProvider.INSTANCE
+            : this.availableExtractors.get(this.extractorIndex);
     }
 
     /**
