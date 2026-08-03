@@ -132,7 +132,7 @@ public class Node implements FlowData {
 
     @Override
     public float secondsPerCycle() {
-        final var eff = machineConfig.computeEffect(properties, durationTicks);
+        final var eff = machineConfig.computeEffect(properties);
         return (float) eff.durationTicks() / 20f;
     }
 
