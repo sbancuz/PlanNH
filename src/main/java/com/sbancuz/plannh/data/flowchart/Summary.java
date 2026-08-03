@@ -64,31 +64,28 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
         final Map<LineKey, Float> inputMap = new HashMap<>();
         final Map<LineKey, Float> propertyMap = new HashMap<>();
 
-        // Pass 1: accumulate all node outputs before any netting.
-        for (final Node node : graph.getNodes()
-            .values()) {
-            final var nb = balance.nodeBalances()
-                .get(node.id);
-            if (nb == null) continue;
-
-            for (int i = 0; i < node.outputs.size(); i++) {
-                final Float total = nb.effectiveOutputs.get(i);
+        // Pass 1: accumulate the outputs of every participant (machines + steps)
+        // before any netting. All amounts are expressed per cycle: steps convert
+        // their per-second values via effectiveOutputs, so they net against the
+        // machines' per-cycle totals.
+        for (final FlowData participant : graph.getFlowParticipants()) {
+            final List<Port<?>> outs = participant.getOutputs();
+            final Map<Integer, Float> effOuts = participant.effectiveOutputs(balance);
+            for (int i = 0; i < outs.size(); i++) {
+                final Float total = effOuts.get(i);
                 if (total == null || total <= 0) continue;
-                outputMap.merge(LineKey.ResourceKey.of(node.outputs.get(i)), total, Float::sum);
+                outputMap.merge(LineKey.ResourceKey.of(outs.get(i)), total, Float::sum);
             }
         }
 
         // Pass 2: net inputs against the fully-populated output map.
-        for (final Node node : graph.getNodes()
-            .values()) {
-            final var nb = balance.nodeBalances()
-                .get(node.id);
-            if (nb == null) continue;
-
-            for (int i = 0; i < node.inputs.size(); i++) {
-                final Float total = nb.effectiveInputs.get(i);
+        for (final FlowData participant : graph.getFlowParticipants()) {
+            final List<Port<?>> ins = participant.getInputs();
+            final Map<Integer, Float> effIns = participant.effectiveInputs(balance);
+            for (int i = 0; i < ins.size(); i++) {
+                final Float total = effIns.get(i);
                 if (total == null || total <= 0) continue;
-                final LineKey key = LineKey.ResourceKey.of(node.inputs.get(i));
+                final LineKey key = LineKey.ResourceKey.of(ins.get(i));
                 final float existing = outputMap.getOrDefault(key, 0f);
                 final float consumed = Math.min(existing, total);
                 if (consumed > 0) {
@@ -120,7 +117,7 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
             if (entry.getValue() <= 0) continue;
             final Line<?> line = switch (entry.getKey()) {
                 case LineKey.ResourceKey rk -> rk.toLine(entry.getValue());
-                case LineKey.PropertyKey pk   -> new Line(pk.prop(), pk.prop().getDefaultValue(), entry.getValue());
+                case LineKey.PropertyKey pk -> new Line(pk.prop(), pk.prop().getDefaultValue(), entry.getValue());
             };
             result.add(line);
         }

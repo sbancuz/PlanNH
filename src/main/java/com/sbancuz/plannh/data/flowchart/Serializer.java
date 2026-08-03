@@ -14,6 +14,8 @@ import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.item.ItemStack;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -33,6 +35,7 @@ public final class Serializer {
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
         .enableComplexMapKeySerialization()
         .registerTypeAdapter(GraphData.class, new GraphDataAdapter())
+        .registerTypeAdapter(ItemStack.class, new ItemStackAdapter())
         .create();
 
     // ── Public API ──
@@ -136,8 +139,21 @@ public final class Serializer {
 
         for (final Edge edge : graph.getEdges()
             .values()) {
-            final String srcId = mermaidId(edge.sourceNodeId);
-            final String dstId = mermaidId(edge.targetNodeId);
+            final Node srcNode = graph.getNodes()
+                .get(edge.sourceId);
+            final Step srcStep = srcNode != null ? null
+                : graph.getSteps()
+                    .get(edge.sourceId);
+            final Node dstNode = graph.getNodes()
+                .get(edge.targetId);
+            @SuppressWarnings("unused")
+            final Step dstStep = dstNode != null ? null
+                : graph.getSteps()
+                    .get(edge.targetId);
+            if (srcNode == null && srcStep == null) continue;
+            if (dstNode == null && dstStep == null) continue;
+            final String srcId = mermaidId(edge.sourceId);
+            final String dstId = mermaidId(edge.targetId);
             final String label = edgeLabel(graph, edge);
             sb.append("    ")
                 .append(srcId)
@@ -202,8 +218,8 @@ public final class Serializer {
             .values()) {
             final JsonObject obj = new JsonObject();
             obj.addProperty("id", edge.id.toString());
-            obj.addProperty("src", edge.sourceNodeId.toString());
-            obj.addProperty("dst", edge.targetNodeId.toString());
+            obj.addProperty("src", edge.sourceId.toString());
+            obj.addProperty("dst", edge.targetId.toString());
             obj.addProperty("srcOut", edge.sourceOutputIndex);
             obj.addProperty("dstIn", edge.targetInputIndex);
             edgesArray.add(obj);
@@ -219,6 +235,11 @@ public final class Serializer {
         for (Group group : graph.getGroups()
             .values()) groupsArray.add(GSON.toJsonTree(group));
         root.add("groups", groupsArray);
+
+        final JsonArray sinksArray = new JsonArray();
+        for (final Step step : graph.getSteps()
+            .values()) sinksArray.add(GSON.toJsonTree(step));
+        root.add("steps", sinksArray);
 
         return root;
     }
@@ -315,10 +336,17 @@ public final class Serializer {
                 .put(group.getId(), group);
         }
 
+        if (root.has("steps")) {
+            for (final JsonElement elem : root.getAsJsonArray("steps")) {
+                final Step step = GSON.fromJson(elem, Step.class);
+                step.init();
+                graph.getSteps()
+                    .put(step.getId(), step);
+            }
+        }
+
         return graph;
     }
-
-    // ── Port helpers ──
 
     @Nonnull
     private static JsonArray portListToJson(final List<Port<?>> ports) {
@@ -455,14 +483,23 @@ public final class Serializer {
 
     @Nonnull
     private static String edgeLabel(final Graph graph, final Edge edge) {
-        final Node src = graph.getNodes()
-            .get(edge.sourceNodeId);
-        if (src == null) return "";
-
-        final int idx = edge.sourceOutputIndex;
-        if (idx >= 0 && idx < src.outputs.size()) {
-            final Port port = src.outputs.get(idx);
-            return port.getDisplayName();
+        final Node srcNode = graph.getNodes()
+            .get(edge.sourceId);
+        if (srcNode != null) {
+            final int idx = edge.sourceOutputIndex;
+            if (idx >= 0 && idx < srcNode.outputs.size()) {
+                return srcNode.outputs.get(idx)
+                    .getDisplayName();
+            }
+        } else {
+            final Step srcStep = graph.getSteps()
+                .get(edge.sourceId);
+            if (srcStep != null && !srcStep.getOutputs()
+                .isEmpty()) {
+                return srcStep.getOutputs()
+                    .getFirst()
+                    .getDisplayName();
+            }
         }
         return "";
     }

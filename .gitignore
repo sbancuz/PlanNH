@@ -35,6 +35,7 @@ addon.local.gradle.kts
 addon.late.local.gradle
 addon.late.local.gradle.kts
 layout.json
-/renderdoc*
+/renderdoc_1.45/
+renderdoc_1.45.tar.gz
 *.rdc
 /.deps

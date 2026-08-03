@@ -34,6 +34,31 @@ public final class Balancer {
         };
     }
 
+    /**
+     * Builds outEdges/inEdges maps for every FlowData participant (nodes + sinks),
+     * so that edge endpoints are never missing from the map.
+     */
+    @Nonnull
+    private static EdgeMaps buildEdgeMaps(final Graph graph) {
+        final Map<UUID, List<Edge>> outEdges = new HashMap<>();
+        final Map<UUID, List<Edge>> inEdges = new HashMap<>();
+        for (final FlowData fd : graph.getFlowParticipants()) {
+            final UUID id = fd instanceof Node n ? n.id : ((Step) fd).getId();
+            outEdges.put(id, new ArrayList<>());
+            inEdges.put(id, new ArrayList<>());
+        }
+        for (final Edge edge : graph.getEdges()
+            .values()) {
+            final List<Edge> out = outEdges.get(edge.sourceId);
+            final List<Edge> in = inEdges.get(edge.targetId);
+            if (out != null) out.add(edge);
+            if (in != null) in.add(edge);
+        }
+        return new EdgeMaps(outEdges, inEdges);
+    }
+
+    private record EdgeMaps(Map<UUID, List<Edge>> outEdges, Map<UUID, List<Edge>> inEdges) {}
+
     @Nonnull
     private static BalanceResult balanceNone(final Graph graph) {
         final Map<UUID, Integer> ops = new HashMap<>();
@@ -46,20 +71,9 @@ public final class Balancer {
 
     @Nonnull
     private static BalanceResult balanceForward(final Graph graph) {
-        final Map<UUID, List<Edge>> outEdges = new HashMap<>();
-        final Map<UUID, List<Edge>> inEdges = new HashMap<>();
-        for (final Node node : graph.getNodes()
-            .values()) {
-            outEdges.put(node.id, new ArrayList<>());
-            inEdges.put(node.id, new ArrayList<>());
-        }
-        for (final Edge edge : graph.getEdges()
-            .values()) {
-            outEdges.get(edge.sourceNodeId)
-                .add(edge);
-            inEdges.get(edge.targetNodeId)
-                .add(edge);
-        }
+        final EdgeMaps edgeMaps = buildEdgeMaps(graph);
+        final Map<UUID, List<Edge>> outEdges = edgeMaps.outEdges;
+        final Map<UUID, List<Edge>> inEdges = edgeMaps.inEdges;
 
         final List<UUID> topoOrder = topologicalSort(graph, inEdges);
         if (topoOrder == null) {
@@ -92,8 +106,19 @@ public final class Balancer {
             if (currentOps <= 0) continue;
 
             for (final Edge edge : outEdges.get(nodeId)) {
+                final Step targetStep = graph.getSteps()
+                    .get(edge.targetId);
+                if (targetStep != null) {
+                    // Sink step: its per-second input demand forces this producer up.
+                    final float demandPerSec = stepDemand(targetStep);
+                    if (demandPerSec <= 0) continue;
+                    final int needed = opsToMeetStepDemand(node, edge, throughputFactors.get(nodeId), demandPerSec);
+                    if (needed > currentOps) ops.put(nodeId, needed);
+                    continue;
+                }
+
                 final Node target = graph.getNodes()
-                    .get(edge.targetNodeId);
+                    .get(edge.targetId);
                 if (target == null) continue;
 
                 final int myOutputCount = node.outputs.get(edge.sourceOutputIndex)
@@ -111,7 +136,7 @@ public final class Balancer {
                 final MachineConfig cfg = node.machineConfig;
                 final MachineConfig tgtCfg = target.machineConfig;
                 final int srcThroughput = throughputFactors.get(nodeId);
-                final int tgtThroughput = throughputFactors.get(edge.targetNodeId);
+                final int tgtThroughput = throughputFactors.get(edge.targetId);
 
                 final float yield = currentOps * myOutputCount
                     * outputChance
@@ -125,9 +150,9 @@ public final class Balancer {
                 if (demandPerOp <= 0) continue;
 
                 final int needed = (int) Math.ceil(yield / demandPerOp);
-                final int existing = ops.get(edge.targetNodeId);
+                final int existing = ops.get(edge.targetId);
                 if (needed > existing) {
-                    ops.put(edge.targetNodeId, needed);
+                    ops.put(edge.targetId, needed);
                 }
             }
         }
@@ -143,26 +168,19 @@ public final class Balancer {
 
     @Nonnull
     private static BalanceResult balanceBackward(final Graph graph) {
-        final Map<UUID, List<Edge>> outEdges = new HashMap<>();
-        final Map<UUID, List<Edge>> inEdges = new HashMap<>();
-        for (final Node node : graph.getNodes()
-            .values()) {
-            outEdges.put(node.id, new ArrayList<>());
-            inEdges.put(node.id, new ArrayList<>());
-        }
-        for (final Edge edge : graph.getEdges()
-            .values()) {
-            outEdges.get(edge.sourceNodeId)
-                .add(edge);
-            inEdges.get(edge.targetNodeId)
-                .add(edge);
-        }
+        final EdgeMaps edgeMaps = buildEdgeMaps(graph);
+        final Map<UUID, List<Edge>> outEdges = edgeMaps.outEdges;
+        final Map<UUID, List<Edge>> inEdges = edgeMaps.inEdges;
 
         final Set<UUID> leafNodes = new HashSet<>();
         for (final Node node : graph.getNodes()
             .values()) {
-            if (outEdges.get(node.id)
-                .isEmpty()) {
+            final boolean hasNodeOut = outEdges.get(node.id)
+                .stream()
+                .anyMatch(
+                    e -> graph.getNodes()
+                        .containsKey(e.targetId));
+            if (!hasNodeOut) {
                 leafNodes.add(node.id);
             }
         }
@@ -198,12 +216,26 @@ public final class Balancer {
 
             final Map<Integer, Float> itemsNeededPerPort = new HashMap<>();
             final Map<Integer, Float> yieldPerPort = new HashMap<>();
+            int maxDemand = 0;
             for (final Edge edge : outEdges.get(nodeId)) {
+                final Step targetStep = graph.getSteps()
+                    .get(edge.targetId);
+                if (targetStep != null) {
+                    // Sink step: its per-second input demand forces this producer up.
+                    final float demandPerSec = stepDemand(targetStep);
+                    if (demandPerSec > 0) {
+                        maxDemand = Math.max(
+                            maxDemand,
+                            opsToMeetStepDemand(node, edge, throughputFactors.get(nodeId), demandPerSec));
+                    }
+                    continue;
+                }
+
                 final Node target = graph.getNodes()
-                    .get(edge.targetNodeId);
+                    .get(edge.targetId);
                 if (target == null) continue;
 
-                final int targetOps = ops.get(edge.targetNodeId);
+                final int targetOps = ops.get(edge.targetId);
                 if (targetOps <= 0) continue;
 
                 final int targetInputCount = target.inputs.get(edge.targetInputIndex)
@@ -221,25 +253,27 @@ public final class Balancer {
                 final MachineConfig cfg = node.machineConfig;
                 final MachineConfig tgtCfg = target.machineConfig;
                 final int srcThroughput = throughputFactors.get(nodeId);
-                final int tgtThroughput = throughputFactors.get(edge.targetNodeId);
+                final int tgtThroughput = throughputFactors.get(edge.targetId);
 
                 final float yield = myOutputCount * outputChance
                     * cfg.outputMultiplier(edge.sourceOutputIndex)
                     * srcThroughput;
+                if (yield <= 0) continue;
 
+                // A source step feeding this target's input port covers part of its
+                // demand, so the upstream producer does not need to provide it all.
+                final float stepSupply = stepSupplyPerSec(graph, inEdges, edge.targetId, edge.targetInputIndex);
                 final float itemsNeeded = targetOps * targetInputCount
                     * inputChance
                     * tgtCfg.inputMultiplier(edge.targetInputIndex)
-                    * tgtThroughput;
-
-                if (yield <= 0) continue;
+                    * tgtThroughput - stepSupply * targetOps * target.secondsPerCycle();
+                if (itemsNeeded <= 0) continue;
 
                 final int port = edge.sourceOutputIndex;
                 itemsNeededPerPort.merge(port, itemsNeeded, Float::sum);
                 yieldPerPort.put(port, yield);
             }
 
-            int maxDemand = 0;
             for (final Map.Entry<Integer, Float> entry : itemsNeededPerPort.entrySet()) {
                 final int port = entry.getKey();
                 final float itemsNeeded = entry.getValue();
@@ -256,6 +290,54 @@ public final class Balancer {
         }
 
         return buildResult(graph, ops);
+    }
+
+    /**
+     * Per-second input demand of a sink step (its input port amount). Returns 0
+     * for source steps, whose input port carries no amount.
+     */
+    private static float stepDemand(final Step step) {
+        final List<Port<?>> inputs = step.getInputs();
+        return inputs.isEmpty() ? 0f
+            : inputs.getFirst()
+                .getAmount();
+    }
+
+    /**
+     * Operator count the given producer needs so its output at the edge's source
+     * port produces at least {@code demandPerSec} items per second.
+     */
+    private static int opsToMeetStepDemand(final Node producer, final Edge edge, final int throughputFactor,
+        final float demandPerSec) {
+        if (demandPerSec <= 0) return 0;
+        final Port<?> out = producer.outputs.get(edge.sourceOutputIndex);
+        final int outCount = out.getAmount();
+        if (outCount <= 0) return 0;
+        final float yield = outCount * out.getChance()
+            * producer.machineConfig.outputMultiplier(edge.sourceOutputIndex)
+            * throughputFactor;
+        if (yield <= 0) return 0;
+        return (int) Math.ceil(demandPerSec * producer.secondsPerCycle() / yield);
+    }
+
+    /**
+     * Combined per-second supply that source steps feed into the given input port
+     * of the target node. 0 if that port is not fed by any source step.
+     */
+    private static float stepSupplyPerSec(final Graph graph, final Map<UUID, List<Edge>> inEdges, final UUID targetId,
+        final int targetInputIndex) {
+        float supply = 0f;
+        for (final Edge edge : inEdges.get(targetId)) {
+            if (edge.targetInputIndex != targetInputIndex) continue;
+            final Step src = graph.getSteps()
+                .get(edge.sourceId);
+            if (src == null) continue;
+            final List<Port<?>> outs = src.getOutputs();
+            if (outs.isEmpty()) continue;
+            supply += outs.getFirst()
+                .getAmount();
+        }
+        return supply;
     }
 
     @Nullable
@@ -282,17 +364,20 @@ public final class Balancer {
         }
         for (final Edge edge : graph.getEdges()
             .values()) {
-            out.get(edge.sourceNodeId)
-                .add(edge);
+            final List<Edge> list = out.get(edge.sourceId);
+            if (list == null) continue;
+            list.add(edge);
         }
 
         while (!queue.isEmpty()) {
             final UUID id = queue.poll();
             result.add(id);
             for (final Edge edge : out.get(id)) {
-                final int deg = inDegree.get(edge.targetNodeId) - 1;
-                inDegree.put(edge.targetNodeId, deg);
-                if (deg == 0) queue.add(edge.targetNodeId);
+                if (!graph.getNodes()
+                    .containsKey(edge.targetId)) continue;
+                final int deg = inDegree.get(edge.targetId) - 1;
+                inDegree.put(edge.targetId, deg);
+                if (deg == 0) queue.add(edge.targetId);
             }
         }
 
