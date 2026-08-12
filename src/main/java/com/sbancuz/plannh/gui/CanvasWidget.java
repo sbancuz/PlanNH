@@ -38,6 +38,7 @@ import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
+import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
@@ -126,6 +127,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildNoteWidgets();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
+
+        // TODO remove after testing
+        child(new ArrowWidget());
     }
 
     public void removeNode(final UUID nodeId) {
