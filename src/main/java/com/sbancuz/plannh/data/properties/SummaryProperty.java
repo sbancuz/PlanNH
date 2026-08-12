@@ -1,0 +1,23 @@
+package com.sbancuz.plannh.data.properties;
+
+import java.util.Objects;
+import java.util.function.Function;
+
+import lombok.experimental.SuperBuilder;
+
+@SuperBuilder(builderMethodName = "emptyBuilder")
+public class SummaryProperty<T> extends RecipeProperty<T> {
+
+    @lombok.Builder.Default
+    private final Function<Float, String> amountFormatter = Objects::toString;
+
+    public String formatAmount(final float value) {
+        return amountFormatter.apply(value);
+    }
+
+    public static <B> SummaryPropertyBuilder<B, ?, ?> builder(final String key, final B defaultValue) {
+        return SummaryProperty.<B>emptyBuilder()
+            .key(key)
+            .defaultValue(defaultValue);
+    }
+}

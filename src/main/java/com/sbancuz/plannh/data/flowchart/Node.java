@@ -2,22 +2,18 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import net.minecraft.tileentity.TileEntityFurnace;
-
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.PropertyProvider;
-import com.sbancuz.plannh.data.RecipeProperty;
-import com.sbancuz.plannh.data.setting.Settings;
-import com.sbancuz.plannh.nei.NEIPlanConfig;
+import com.sbancuz.plannh.data.properties.PropertyProvider;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.provider.DefaultProvider;
 
-import codechicken.nei.NEIClientConfig;
-import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.RecipeHandlerRef;
@@ -27,17 +23,27 @@ import lombok.Setter;
 @Getter
 public class Node extends GraphData {
 
-    // needed for coloring to be machine specific
-    private final String machineName;
-    private int durationTicks = 0;
-
     // cant be final because of transient deserialization resulting in null
     private transient List<Port<?>> inputs = new ArrayList<>();
     private transient List<Port<?>> outputs = new ArrayList<>();
+
+    // needed for coloring to be machine specific
+    private final String machineName;
+    private final Recipe.RecipeId recipeId;
+
+    private final MachineConfig machineConfig;
     private transient Map<RecipeProperty<?>, Object> properties = new HashMap<>();
 
-    private final Recipe.RecipeId recipeId;
-    private final MachineConfig machineConfig;
+    @Setter
+    private boolean machineCountFixed;
+
+    /**
+     * Target production rates by output port index, in ingredient units per second. A target is
+     * a pin: AUTO holds the machine's extent so the targeted output hits the rate exactly, and
+     * the rest of the chart follows. With several targets on one machine the largest implied
+     * extent wins - parallel outputs share one extent, so only the tightest can be exact.
+     */
+    private final Map<Integer, Double> targetOutputRates = new LinkedHashMap<>();
 
     private transient PropertyProvider extractor;
     private transient List<PropertyProvider> availableExtractors;
@@ -52,14 +58,13 @@ public class Node extends GraphData {
             .trim();
         header = machineName;
 
-        availableExtractors = RecipePropertyAPI.getExtractors(handler.getOverlayIdentifier());
-        if (availableExtractors.isEmpty()) {
-            extractor = null;
-            machineConfig = new MachineConfig();
-            return;
-        }
+        availableExtractors = RecipePropertyAPI.getExtractors(handler.getClass());
         extractorIndex = 0;
-        extractor = pickBestExtractor(handler, recipeIndex);
+        if (availableExtractors.isEmpty()) {
+            extractor = DefaultProvider.INSTANCE;
+        } else {
+            extractor = pickBestExtractor(handler, recipeIndex);
+        }
 
         String pid = extractor.getProfileId(handler, recipeIndex);
         if (pid != null && !MachineProfileRegistry.defaultId()
@@ -78,50 +83,16 @@ public class Node extends GraphData {
         IRecipeHandler handler = ref.handler;
         int recipeIndex = ref.recipeIndex;
 
-        if (inputs == null) inputs = new ArrayList<>();
-        else inputs.clear();
-        if (outputs == null) outputs = new ArrayList<>();
-        else outputs.clear();
-        if (properties == null) properties = new HashMap<>();
-        else properties.clear();
-
-        int inputIndex = 0;
-        List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
-        for (PositionedStack ps : ins)
-            if (ps != null && ps.item != null && ps.item.stackSize > 0) inputs.add(Port.itemPort(ps, inputIndex++));
-
-        int outputIndex = 0;
-        PositionedStack result = handler.getResultStack(recipeIndex);
-        if (result != null && result.item != null) outputs.add(Port.itemPort(result, outputIndex++));
-
-        List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
-        for (PositionedStack ps : others) {
-            if (ps != null && ps.item != null) {
-                if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
-                    .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
-                    if (machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
-                        .equals("IN")) {
-                        inputs.add(Port.itemPort(ps, inputIndex++));
-                    } else if (machineConfig.getString(Settings.BURNABLE_OVERRIDE.key())
-                        .equals("OUT")) {
-                            outputs.add(Port.itemPort(ps, outputIndex++));
-                        }
-                } else
-                    if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) outputs.add(Port.itemPort(ps, outputIndex++));
-            }
-        }
+        inputs.clear();
+        outputs.clear();
+        properties.clear();
 
         Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
-        if (props != null && !props.isEmpty()) {
-            properties.putAll(props);
-        }
-
-        if (properties.containsKey(RecipePropertyAPI.DURATION_TICKS)) {
-            durationTicks = (int) properties.get(RecipePropertyAPI.DURATION_TICKS);
-        }
+        if (props != null && !props.isEmpty()) properties.putAll(props);
 
         deduplicate(inputs);
         deduplicate(outputs);
+        machineConfig.seedRouteDefaults(properties); // todo test if this works
     }
 
     private static void deduplicate(List<Port<?>> ports) {
@@ -176,11 +147,11 @@ public class Node extends GraphData {
             availableExtractors = List.of();
             return;
         }
-        availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getOverlayIdentifier());
+        availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getClass());
         if (extractorIndex >= availableExtractors.size()) {
             extractorIndex = 0;
         }
-        extractor = availableExtractors.isEmpty() ? null : availableExtractors.get(extractorIndex);
+        extractor = availableExtractors.isEmpty() ? DefaultProvider.INSTANCE : availableExtractors.get(extractorIndex);
 
         refresh();
     }

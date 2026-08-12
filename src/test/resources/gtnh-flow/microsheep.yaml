@@ -1,0 +1,18 @@
+- m: smelt
+  tier: HV
+  I:
+    iron ore: 1
+  O:
+    iron ingot: 1
+  eut: 30
+  dur: 15
+- m: craft
+  tier: HV
+  I:
+    iron ingot: 1
+  O:
+    iron nugget: 9
+  eut: 30
+  dur: 15
+  target:
+    iron nugget: 9

@@ -1,11 +1,13 @@
 package com.sbancuz.plannh.data;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.data.effect.EffectResult;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
@@ -18,25 +20,33 @@ public class MachineConfig {
 
     private String profileId;
     private final Map<String, Object> settings;
-    private final Map<Integer, Float> inputConsumption;
-    private final Map<Integer, Float> outputProductivity;
+    private final Map<Integer, Float> inputConsumption = new HashMap<>();
+    private final Map<Integer, Float> outputProductivity = new HashMap<>();
 
     public MachineConfig() {
         this(MachineProfileRegistry.get(MachineProfileRegistry.defaultId()));
     }
 
-    public MachineConfig(final MachineProfile profile) {
-        this(profile, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap());
+    public MachineConfig(@Nullable final MachineProfile requested) {
+        this(requested, Map.of());
     }
 
-    public MachineConfig(final MachineProfile profile, Map<String, Object> settings,
-        Map<Integer, Float> inputConsumption, Map<Integer, Float> outputProductivity) {
-        this.profileId = profile.id();
-        this.inputConsumption = new HashMap<>(inputConsumption);
-        this.outputProductivity = new HashMap<>(outputProductivity);
+    public MachineConfig(@Nullable final MachineProfile requested, Map<String, Object> settings) {
+        // An unknown profile id means the chart was saved with a mod (or a mod version) that is
+        // not present now. That is a chart to degrade, not a save to lose: fall back to the
+        // default profile, exactly as getProfile() does for the same reason.
+        MachineProfile profile = requested != null ? requested
+            : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
+        profileId = profile.id();
+
         this.settings = new HashMap<>(settings);
 
-        for (SettingDef<?> def : profile.settings()) this.settings.putIfAbsent(def.getKey(), def.getDefaultValue());
+        for (final SettingDef<?> def : profile.settings()) settings.putIfAbsent(def.getKey(), def.getDefaultValue());
+
+        settings.putIfAbsent(
+            Settings.MACHINES.key(),
+            Settings.MACHINES.def()
+                .getDefaultValue());
     }
 
     @Nonnull
@@ -72,20 +82,58 @@ public class MachineConfig {
         settings.put(key, value);
     }
 
-    @Nonnull
-    public MachineProfile.EffectResult computeEffect(final Map<RecipeProperty<?>, Object> properties,
-        final int recipeDuration) {
+    /**
+     * Applies the profile's per-recipe-map route defaults (e.g. Perfect OC on for specific recipe
+     * machines) to the settings. Only values still at the profile default are overridden, so a
+     * user's explicit choice is never clobbered.
+     */
+    public void seedRouteDefaults(Map<RecipeProperty<?>, Object> properties) {
+        final RecipeContext ctx = new RecipeContext(properties);
         final MachineProfile profile = getProfile();
-        MachineProfile.EffectResult result = profile.effectComputer()
-            .compute(settings, new MachineProfile.RecipeContext(properties, recipeDuration));
+        final Map<String, Object> defaults = profile.effectComputer()
+            .routeDefaults(ctx);
+        if (defaults.isEmpty()) return;
+        for (final Map.Entry<String, Object> e : defaults.entrySet()) {
+            final Object current = settings.get(e.getKey());
+            if (current == null) {
+                settings.put(e.getKey(), e.getValue());
+                continue;
+            }
+            final Object profileDefault = profile.settings()
+                .stream()
+                .filter(
+                    def -> def.getKey()
+                        .equals(e.getKey()))
+                .map(SettingDef::getDefaultValue)
+                .findFirst()
+                .orElse(null);
+            if (current.equals(profileDefault)) {
+                settings.put(e.getKey(), e.getValue());
+            }
+        }
+    }
+
+    @Nonnull
+    public EffectResult computeEffect(final Map<RecipeProperty<?>, Object> properties) {
+        final MachineProfile profile = getProfile();
+        EffectResult result = profile.effectComputer()
+            .compute(settings, new RecipeContext(properties));
         final int tickMod = MachineProfile.getInt(settings, Settings.TICK_MODIFIER.key(), 100);
         if (tickMod > 0 && tickMod != 100) {
             final double factor = 100.0 / tickMod;
             final int newDuration = Math.max(1, (int) Math.round(result.durationTicks() * factor));
             final long newEnergyPerT = Math.round(result.energyPerT() / factor);
-            result = new MachineProfile.EffectResult(newDuration, newEnergyPerT, result.throughputFactor());
+            result = new EffectResult(newDuration, newEnergyPerT, result.throughputFactor());
         }
         return result;
+    }
+
+    public int getMachineCount() {
+        return getInt(Settings.MACHINES.key());
+    }
+
+    public void setMachineCount(final int count) {
+        settings.put(Settings.MACHINES.key(), count);
     }
 
     public float inputMultiplier(final int inputIndex) {

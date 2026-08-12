@@ -1,0 +1,99 @@
+# Two independent questions on one chart: the alpha/beta branches and the gamma/delta branches
+# never touch, so where each pair leaves its surplus is decided separately. This is the shape that
+# makes a flat choices list unreadable - six answers to two different questions - and the reason
+# they are grouped by the decision they belong to.
+- m: alpha blast furnace
+  tier: MV
+  I:
+    alpha dust: 10
+  O:
+    alpha ingot: 10
+  eut: 120
+  dur: 1
+  number: 1
+
+- m: beta blast furnace
+  tier: MV
+  I:
+    beta dust: 10
+  O:
+    beta ingot: 10
+  eut: 120
+  dur: 1
+  number: 1
+
+- m: alpha bender
+  tier: MV
+  I:
+    alpha ingot: 10
+  O:
+    plate: 10
+  eut: 120
+  dur: 1
+
+- m: beta bender
+  tier: MV
+  I:
+    beta ingot: 10
+  O:
+    plate: 10
+  eut: 120
+  dur: 1
+
+- m: final assembler
+  tier: MV
+  I:
+    plate: 15
+  O:
+    machine casing: 1
+  eut: 120
+  dur: 1
+  number: 1
+
+- m: gamma blast furnace
+  tier: MV
+  I:
+    gamma dust: 10
+  O:
+    gamma ingot: 10
+  eut: 120
+  dur: 1
+  number: 1
+
+- m: delta blast furnace
+  tier: MV
+  I:
+    delta dust: 10
+  O:
+    delta ingot: 10
+  eut: 120
+  dur: 1
+  number: 1
+
+- m: gamma bender
+  tier: MV
+  I:
+    gamma ingot: 10
+  O:
+    rotor: 10
+  eut: 120
+  dur: 1
+
+- m: delta bender
+  tier: MV
+  I:
+    delta ingot: 10
+  O:
+    rotor: 10
+  eut: 120
+  dur: 1
+
+- m: final assembler
+  tier: MV
+  I:
+    rotor: 15
+  O:
+    machine hull: 1
+  eut: 120
+  dur: 1
+  number: 1

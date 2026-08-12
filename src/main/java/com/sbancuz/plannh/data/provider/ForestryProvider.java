@@ -12,10 +12,12 @@ import net.minecraft.item.ItemStack;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.effect.Effects;
+import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.properties.PropertyProvider;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
@@ -35,42 +37,65 @@ import forestry.factory.recipes.nei.NEIHandlerStill;
 
 public class ForestryProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> PROCESSING_TIME = RecipeProperty
-        .<Integer>builder("forestry.processing_time", 0)
-        .build();
+    private static final String PROFILE_ID = "forestry:basic";
+
+    private static final int GAME_TICKS_PER_WORK_TICK = 5;
+
+    // TODO: Make a PR to expose these constants
+    // TileBottler: TICKS_PER_RECIPE_TIME=5, ENERGY_PER_RECIPE_TIME=1000
+    private static final int BOTTLER_TICKS = 5;
+    private static final int BOTTLER_RF = 1000;
+
+    // TileCentrifuge: ENERGY_PER_RECIPE_TIME=160
+    private static final int CENTRIFUGE_RF_PER_WORK_TICK = 160;
+
+    // TileSqueezer: ENERGY_PER_RECIPE_TIME=200
+    private static final int SQUEEZER_RF_PER_WORK_TICK = 200;
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(new NEIHandlerBottler().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new NEIHandlerCarpenter().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new NEIHandlerCentrifuge().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new NEIHandlerFabricator().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new NEIHandlerFermenter().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new NEIHandlerMoistener().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new NEIHandlerSqueezer().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new NEIHandlerStill().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(NEIHandlerBottler.class, this);
+        RecipePropertyAPI.registerExtractor(NEIHandlerCarpenter.class, this);
+        RecipePropertyAPI.registerExtractor(NEIHandlerCentrifuge.class, this);
+        RecipePropertyAPI.registerExtractor(NEIHandlerFabricator.class, this);
+        RecipePropertyAPI.registerExtractor(NEIHandlerFermenter.class, this);
+        RecipePropertyAPI.registerExtractor(NEIHandlerMoistener.class, this);
+        RecipePropertyAPI.registerExtractor(NEIHandlerSqueezer.class, this);
+        RecipePropertyAPI.registerExtractor(NEIHandlerStill.class, this);
 
         MachineProfileRegistry.register(
-            MachineProfile.builder("forestry:basic", "Forestry")
+            MachineProfile.builder(PROFILE_ID, "Forestry")
                 .setting(Settings.MACHINES.def())
-                .setting(Settings.RF_PER_TICK.def())
                 .setting(Settings.TICK_MODIFIER.def())
-                .effect(ForestryProvider::simpleEffect)
+                .effect(
+                    Effects.durationFromHandler()
+                        .amortizeCost(CoFHCompat.RF_COST)
+                        .applyParallelism())
                 .build());
     }
 
-    @Nonnull
-    private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
-        final MachineProfile.RecipeContext ctx) {
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        final int rate = MachineProfile.getInt(s, Settings.RF_PER_TICK.key(), 10);
-        return new MachineProfile.EffectResult(ctx.recipeDuration(), rate, machines);
+    @Override
+    public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
+        return getProfileId(handler, recipeIndex) != null;
+    }
+
+    @Override
+    @Nullable
+    public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
+        return switch (handler) {
+            case NEIHandlerBottler _, NEIHandlerCarpenter _, NEIHandlerCentrifuge _,
+                 NEIHandlerFabricator _, NEIHandlerFermenter _, NEIHandlerMoistener _,
+                 NEIHandlerSqueezer _, NEIHandlerStill _ -> PROFILE_ID;
+            default -> null;
+        };
     }
 
     @Override
     @Nonnull
-    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+    public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
+        final int recipeIndex) {
+        final Map<RecipeProperty<?>, Object> props = new HashMap<>(
+            PropertyProvider.super.extract(node, handler, recipeIndex));
         if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
 
         final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
@@ -78,20 +103,32 @@ public class ForestryProvider implements PropertyProvider {
 
         final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
 
-        if (handler instanceof NEIHandlerSqueezer && cached instanceof final CachedSqueezerRecipe s) {
-            if (s.processingTime > 0) {
-                props.put(PROCESSING_TIME, s.processingTime);
-                props.put(RecipePropertyAPI.DURATION_TICKS, s.processingTime);
+        switch (handler) {
+            case NEIHandlerBottler _ -> {
+                props.put(RecipePropertyAPI.DURATION_TICKS, BOTTLER_TICKS);
+                props.put(CoFHCompat.RF_COST, (long) BOTTLER_RF);
             }
-        } else if (handler instanceof NEIHandlerCentrifuge && cached instanceof final CachedCentrifugeRecipe c) {
-            final int time = lookupCentrifugeTime(c.inputs.item);
-            if (time > 0) {
-                props.put(PROCESSING_TIME, time);
-                props.put(RecipePropertyAPI.DURATION_TICKS, time);
-            }
+            case NEIHandlerCentrifuge _ when cached instanceof final CachedCentrifugeRecipe c ->
+                extractCentrifuge(props, c);
+            case NEIHandlerSqueezer _ when cached instanceof final CachedSqueezerRecipe s ->
+                extractSqueezer(props, s);
+            default -> {}
         }
 
         return props;
+    }
+
+    private static void extractSqueezer(final Map<RecipeProperty<?>, Object> props, final CachedSqueezerRecipe s) {
+        if (s.processingTime <= 0) return;
+        props.put(RecipePropertyAPI.DURATION_TICKS, s.processingTime * GAME_TICKS_PER_WORK_TICK);
+        props.put(CoFHCompat.RF_COST, (long) s.processingTime * SQUEEZER_RF_PER_WORK_TICK);
+    }
+
+    private static void extractCentrifuge(final Map<RecipeProperty<?>, Object> props, final CachedCentrifugeRecipe c) {
+        final int workTicks = lookupCentrifugeTime(c.inputs.item);
+        if (workTicks <= 0) return;
+        props.put(RecipePropertyAPI.DURATION_TICKS, workTicks * GAME_TICKS_PER_WORK_TICK);
+        props.put(CoFHCompat.RF_COST, (long) workTicks * CENTRIFUGE_RF_PER_WORK_TICK);
     }
 
     private static int lookupCentrifugeTime(final @Nullable ItemStack input) {

@@ -1,6 +1,6 @@
 package com.sbancuz.plannh.gui.node;
 
-import java.util.Map;
+import java.util.SortedMap;
 import java.util.UUID;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -63,7 +63,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     }
 
     @Override
-    protected Map<UUID, Node> getDefaultContainer() {
+    protected SortedMap<UUID, Node> getDefaultContainer() {
         return canvas.getGraph()
             .getNodes();
     }

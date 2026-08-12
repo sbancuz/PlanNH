@@ -35,6 +35,14 @@ public class Plan {
 
     private Plan() {}
 
+    /** A fresh empty plan for tests that need a multi-slot canvas without touching the save file. */
+    public static Plan createEmpty() {
+        final Plan plan = new Plan();
+        plan.getGraphs()
+            .add(new Graph("Slot 1"));
+        return plan;
+    }
+
     public static Plan getInstance() {
         if (INSTANCE == null) {
             INSTANCE = loadPlan();
@@ -61,10 +69,7 @@ public class Plan {
                 return Serializer.decodePlan(data);
             }
         } catch (final Exception ignored) {}
-        final Plan plan = new Plan();
-        plan.getGraphs()
-            .add(new Graph("Slot 1"));
-        return plan;
+        return createEmpty();
     }
 
     public static void unloadPlan() {

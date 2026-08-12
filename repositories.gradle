@@ -2,4 +2,8 @@
 
 repositories {
     mavenLocal()
+    mavenCentral()
+    maven {
+        url "https://maven.neoforged.net/releases/"
+    }
 }

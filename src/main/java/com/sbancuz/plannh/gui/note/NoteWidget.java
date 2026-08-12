@@ -1,6 +1,6 @@
 package com.sbancuz.plannh.gui.note;
 
-import java.util.Map;
+import java.util.SortedMap;
 import java.util.UUID;
 
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -38,7 +38,7 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
     }
 
     @Override
-    protected Map<UUID, Note> getDefaultContainer() {
+    protected SortedMap<UUID, Note> getDefaultContainer() {
         return canvas.getGraph()
             .getNotes();
     }

@@ -1,0 +1,82 @@
+package com.sbancuz.plannh.data.properties;
+
+import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.ToIntFunction;
+
+import javax.annotation.Nullable;
+
+import net.minecraft.item.ItemStack;
+
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
+
+@SuperBuilder(builderMethodName = "emptyBuilder")
+public class ResourceProperty<T> extends SummaryProperty<T> {
+
+    @lombok.Builder.Default
+    private final ToIntFunction<T> amountExtractor = _ -> 1;
+    @lombok.Builder.Default
+    private final BiConsumer<T, Integer> amountUpdater = (_, _) -> {};
+
+    @lombok.Builder.Default
+    private final BiPredicate<T, T> connectionChecker = (_, _) -> true;
+    @lombok.Builder.Default
+    private final ToIntFunction<T> hashCodeExtractor = Objects::hashCode;
+
+    @lombok.Builder.Default
+    private final Function<T, ItemStack> displayStackProvider = _ -> null;
+    @lombok.Builder.Default
+    private final ToIntFunction<T> colorProvider = _ -> -1;
+
+    // Pin/arrow fallback colors; opaque white so a type that declares none stays visible.
+    @Getter
+    @lombok.Builder.Default
+    private final int pinInputColor = 0xFFFFFFFF;
+    @Getter
+    @lombok.Builder.Default
+    private final int pinOutputColor = 0xFFFFFFFF;
+    @Getter
+    @lombok.Builder.Default
+    private final int arrowColor = 0xFFFFFFFF;
+
+    @Override
+    public String displayName() {
+        return getKey();
+    }
+
+    public int extractAmount(final T value) {
+        return amountExtractor.applyAsInt(value);
+    }
+
+    public void setAmount(final T value, final int newAmount) {
+        amountUpdater.accept(value, newAmount);
+    }
+
+    public boolean canConnect(final T a, final T b) {
+        return connectionChecker.test(a, b);
+    }
+
+    public int hashValue(final T value) {
+        return hashCodeExtractor.applyAsInt(value);
+    }
+
+    /** The ItemStack recipe viewers (NEI) show for this value; null if it has none. */
+    @Nullable
+    public ItemStack displayStack(final T value) {
+        return displayStackProvider.apply(value);
+    }
+
+    /** Representative bare-RGB color for this value, or -1 when none is derivable. */
+    public int color(final T value) {
+        return colorProvider.applyAsInt(value);
+    }
+
+    public static <B> ResourcePropertyBuilder<B, ?, ?> builder(final String key, final B defaultValue) {
+        return ResourceProperty.<B>emptyBuilder()
+            .key(key)
+            .defaultValue(defaultValue);
+    }
+}

@@ -1,7 +1,7 @@
 package com.sbancuz.plannh.gui.common;
 
 import java.util.List;
-import java.util.Map;
+import java.util.SortedMap;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
 
@@ -14,6 +14,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.widget.AbstractWidget;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -40,14 +41,15 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     private int dragStartX, dragStartY;
     @Getter
     @Setter
-    private Map<UUID, GraphData> dataContainer;
+    private SortedMap<UUID, GraphData> dataContainer;
+    private String dragEditToken;
     private List<FlowchartWidget<?, ?>> dragStartIntersect;
 
     @SuppressWarnings("unchecked")
     protected FlowchartWidget(CanvasWidget canvas, D data) {
         this.canvas = canvas;
         this.data = data;
-        dataContainer = (Map<UUID, GraphData>) getDefaultContainer();
+        dataContainer = (SortedMap<UUID, GraphData>) getDefaultContainer();
         pos(data.getX(), data.getY());
         canvas.getFlowchartWidgets()
             .put(data.getId(), this);
@@ -64,6 +66,8 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     public boolean onDragStartWithOffset(int mouseButton, int x, int y) {
         if (mouseButton == 0 && canvas.isMouseInsideCanvas()) {
             ModularGuiContext context = getContext();
+            dragEditToken = PlanAPI.undoHistory()
+                .beginEdit(canvas.getGraph());
             dragStartX = data.getX();
             dragStartY = data.getY();
             dragOffsetX = x + context.getMouseX();
@@ -88,15 +92,18 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             data.setX(dragStartX);
             data.setY(dragStartY);
             reposition();
-            return;
+        } else {
+            if (Plan.getInstance()
+                .isSnapToGrid()) {
+                data.setX((int) (Math.round((double) data.getX() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
+                data.setY((int) (Math.round((double) data.getY() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
+                reposition();
+            }
+            adjustGroupMembership();
         }
-        if (Plan.getInstance()
-            .isSnapToGrid()) {
-            data.setX((int) (Math.round((double) data.getX() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
-            data.setY((int) (Math.round((double) data.getY() / CanvasWidget.GRID_SIZE) * CanvasWidget.GRID_SIZE));
-            reposition();
-        }
-        adjustGroupMembership();
+        PlanAPI.undoHistory()
+            .commitEdit(dragEditToken, canvas.getGraph());
+        dragEditToken = null;
     }
 
     @Override
@@ -142,7 +149,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         dataContainer.remove(data.getId());
     }
 
-    protected abstract Map<UUID, D> getDefaultContainer();
+    protected abstract SortedMap<UUID, D> getDefaultContainer();
 
     protected void reposition() {
         pos(data.getX(), data.getY());
@@ -173,7 +180,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
                 data.setY(groupWidget.getMouseGroupY() - dragOffsetY);
             } else {
                 newParent.child(this);
-                dataContainer = (Map<UUID, GraphData>) getDefaultContainer();
+                dataContainer = (SortedMap<UUID, GraphData>) getDefaultContainer();
                 data.setX(canvas.getCanvasMouseX() - dragOffsetX);
                 data.setY(canvas.getCanvasMouseY() - dragOffsetY);
             }

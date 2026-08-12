@@ -4,7 +4,6 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.google.common.reflect.TypeToken;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -41,9 +40,6 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
         }
         obj.add("settings", settingsObj);
 
-        obj.add("inputConsumption", Serializer.GSON.toJsonTree(src.getInputConsumption()));
-        obj.add("outputProductivity", Serializer.GSON.toJsonTree(src.getOutputProductivity()));
-
         return obj;
     }
 
@@ -67,12 +63,6 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
             }
         }
 
-        Type mapType = new TypeToken<Map<Integer, Float>>() {}.getType();
-
-        return new MachineConfig(
-            p,
-            settings,
-            Serializer.GSON.fromJson(obj.get("inputConsumption"), mapType),
-            Serializer.GSON.fromJson(obj.get("outputProductivity"), mapType));
+        return new MachineConfig(p, settings);
     }
 }

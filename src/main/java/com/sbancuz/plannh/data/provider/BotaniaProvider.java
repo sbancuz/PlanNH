@@ -10,10 +10,12 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.properties.PropertyProvider;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
@@ -31,27 +33,35 @@ import vazkii.botania.client.integration.nei.recipe.RecipeHandlerRunicAltar.Cach
 
 public class BotaniaProvider implements PropertyProvider {
 
-    public static final RecipeProperty<Integer> MANA_COST = RecipeProperty.<Integer>builder("mana_cost", 0)
+    public static final RecipeProperty<Integer> MANA_COST = SummaryProperty.builder("botania.mana_cost", 0)
         .build();
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(new RecipeHandlerFloatingFlowers().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new RecipeHandlerPetalApothecary().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new RecipeHandlerRunicAltar().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new RecipeHandlerManaPool().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new RecipeHandlerElvenTrade().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new RecipeHandlerBrewery().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new RecipeHandlerPureDaisy().getOverlayIdentifier(), this);
-        RecipePropertyAPI.registerExtractor(new RecipeHandlerLexicaBotania().getOverlayIdentifier(), this);
+        RecipePropertyAPI.registerExtractor(RecipeHandlerFloatingFlowers.class, this);
+        RecipePropertyAPI.registerExtractor(RecipeHandlerPetalApothecary.class, this);
+        RecipePropertyAPI.registerExtractor(RecipeHandlerRunicAltar.class, this);
+        RecipePropertyAPI.registerExtractor(RecipeHandlerManaPool.class, this);
+        RecipePropertyAPI.registerExtractor(RecipeHandlerElvenTrade.class, this);
+        RecipePropertyAPI.registerExtractor(RecipeHandlerBrewery.class, this);
+        RecipePropertyAPI.registerExtractor(RecipeHandlerPureDaisy.class, this);
+        RecipePropertyAPI.registerExtractor(RecipeHandlerLexicaBotania.class, this);
 
         MachineProfileRegistry.register(
             MachineProfile.builder("botania:basic", "Botania")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.MANA_PER_TICK.def())
                 .setting(Settings.TICK_MODIFIER.def())
-                .effect(BotaniaProvider::simpleEffect)
+                .effect(
+                    Effects.durationFromTotal(MANA_COST, Settings.MANA_PER_TICK.key(), 10)
+                        .amortizeCost(MANA_COST)
+                        .applyParallelism())
                 .build());
+    }
+
+    @Override
+    public boolean canCraft(final IRecipeHandler handler, final int recipeIndex) {
+        return getProfileId(handler, recipeIndex) != null;
     }
 
     @Override
@@ -66,7 +76,8 @@ public class BotaniaProvider implements PropertyProvider {
     @Override
     @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+        final Map<RecipeProperty<?>, Object> props = new HashMap<>(PropertyProvider.super.extract(node, handler, recipeIndex));
+
         if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
 
         final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(trh);
@@ -85,19 +96,5 @@ public class BotaniaProvider implements PropertyProvider {
         }
 
         return props;
-    }
-
-    @Nonnull
-    private static MachineProfile.EffectResult simpleEffect(final Map<String, Object> s,
-        final MachineProfile.RecipeContext ctx) {
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        final int rate = MachineProfile.getInt(s, Settings.MANA_PER_TICK.key(), 10);
-        final Integer totalEnergy = ctx.get(BotaniaProvider.MANA_COST);
-        int duration = ctx.recipeDuration();
-        if (duration <= 0 && rate > 0 && totalEnergy != null && totalEnergy > 0) {
-            duration = Math.max(1, totalEnergy / rate);
-        }
-        final long consumptionEUt = duration > 0 && totalEnergy != null ? totalEnergy / duration : 0;
-        return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
     }
 }

@@ -6,8 +6,10 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.effect.EffectComputer;
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
@@ -16,23 +18,6 @@ import codechicken.nei.NEIClientConfig;
 
 public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings,
     EffectComputer effectComputer) {
-
-    @FunctionalInterface
-    public interface EffectComputer {
-
-        EffectResult compute(Map<String, Object> settings, RecipeContext ctx);
-    }
-
-    public record EffectResult(int durationTicks, long energyPerT, int throughputFactor) {}
-
-    public record RecipeContext(Map<RecipeProperty<?>, Object> properties, int recipeDuration) {
-
-        @SuppressWarnings("unchecked")
-        @Nullable
-        public <T> T get(final RecipeProperty<T> prop) {
-            return (T) properties.get(prop);
-        }
-    }
 
     @Nonnull
     public static Builder builder(final String id, final String displayName) {
@@ -44,7 +29,11 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
         private final String id;
         private final String displayName;
         private final List<SettingDef<?>> settings = new ArrayList<>();
-        private EffectComputer effectComputer = (s, ctx) -> new EffectResult(ctx.recipeDuration(), 0, 1);
+        private EffectComputer effectComputer = (s, ctx) -> {
+            Object dur = ctx.properties()
+                .get(RecipePropertyAPI.DURATION_TICKS);
+            return new EffectResult(dur instanceof Number n ? n.intValue() : 0, 0, 1);
+        };
 
         private Builder(final String id, final String displayName) {
             this.id = id;
@@ -93,5 +82,12 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
     public static String getString(final Map<String, Object> s, final String key, final String def) {
         final Object v = s.get(key);
         return v instanceof final String str ? str : def;
+    }
+
+    @Nonnull
+    public List<SettingDef<?>> visibleSettings(final RecipeContext ctx, final Map<String, Object> machineSettings) {
+        return settings.stream()
+            .filter(def -> def.isVisible(ctx, machineSettings))
+            .toList();
     }
 }

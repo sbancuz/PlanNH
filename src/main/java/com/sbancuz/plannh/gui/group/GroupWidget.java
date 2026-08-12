@@ -2,7 +2,7 @@ package com.sbancuz.plannh.gui.group;
 
 import static com.sbancuz.plannh.data.flowchart.Group.GROUP_MIN_W;
 
-import java.util.Map;
+import java.util.SortedMap;
 import java.util.UUID;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
@@ -114,7 +114,7 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
     }
 
     @Override
-    protected Map<UUID, Group> getDefaultContainer() {
+    protected SortedMap<UUID, Group> getDefaultContainer() {
         return canvas.getGraph()
             .getGroups();
     }

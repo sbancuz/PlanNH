@@ -1,7 +1,5 @@
 package com.sbancuz.plannh.gui;
 
-import javax.annotation.Nonnull;
-
 import com.cleanroommc.modularui.utils.Color;
 import com.gtnewhorizon.gtnhlib.color.ColorResource;
 
@@ -16,6 +14,7 @@ public final class PlannhColors {
         SUMMARY_BG        = C.argb("summary_bg",         "0x2D1E1E23"),
         SUMMARY_TITLE_BG  = C.argb("summary_title_bg",   "0x3C323237"),
         NODE_BG           = C.argb("node_bg",            "0x323232E6"),
+        CHIP_BG           = C.argb("chip_bg",            "0xE6141414"),
         NOTE_BG           = C.argb("note_bg",            "0xC8FFF0A0"),
         NOTE_BG_EDITING   = C.argb("note_bg_editing",    "0xE6FFFAE0"),
         SETTINGS_PANEL_BG = C.argb("settings_panel_bg",  "0xAA202020");
@@ -29,7 +28,8 @@ public final class PlannhColors {
         NOTE_BORDER        = C.argb("note_border",         "0xA0B4A050"),
         NOTE_BORDER_EDIT   = C.argb("note_border_edit",    "0xC8B4A03C"),
         SEPARATOR_LIGHT    = C.argb("separator_light",     "0x3CC8C8C8"),
-        SEPARATOR_DIM      = C.argb("separator_dim",       "0x32C8C8C8");
+        SEPARATOR_DIM      = C.argb("separator_dim",       "0x32C8C8C8"),
+        BACKGROUND         = C.argb("background",          "0x22000000");
 
     // ── Section Headers (summary highlight bars) ──
     public static final ColorResource
@@ -37,11 +37,14 @@ public final class PlannhColors {
         SECTION_INPUT     = C.argb("section_input",      "0x3250A050"),
         SECTION_FLUID_OUT = C.argb("section_fluid_out",  "0x323C8CB4"),
         SECTION_FLUID_IN  = C.argb("section_fluid_in",   "0x323C64B4"),
-        SECTION_OPS       = C.argb("section_ops",        "0x326478C8");
+        SECTION_OPS       = C.argb("section_ops",        "0x326478C8"),
+        SECTION_CHOICE    = C.argb("section_choice",     "0x3250A0A0"),
+        SECTION_WARN      = C.argb("section_warn",       "0x32C86450");
 
     // ── Text Colors (opaque) ──
     public static final ColorResource
         TEXT_WHITE   = C.rgb("text_white",   "0xFFFFFF"),
+        TEXT_BLACK   = C.rgb("text_black",   "0x141414"),
         TEXT_LIGHT   = C.rgb("text_light",   "0xCCCCCC"),
         TEXT_MUTED   = C.rgb("text_muted",   "0xAAAAAA"),
         TEXT_DIM     = C.rgb("text_dim",     "0x888888"),
@@ -94,6 +97,11 @@ public final class PlannhColors {
         GRID_LINE      = C.argb("grid_line",       "0x18FFFFFF"),
         GRID_MAJOR     = C.argb("grid_major",      "0x30FFFFFF");
 
+    // ── Ingredient Edge/Pin Contrast Outlines ──
+    public static final ColorResource
+        EDGE_OUTLINE_DARK  = C.argb("edge_outline_dark",   "0xF00A0A0A"),
+        EDGE_OUTLINE_LIGHT = C.argb("edge_outline_light",  "0xF0F2F2F2");
+
     // ── Context Menu ──
     public static final ColorResource
         CONTEXT_BG     = C.argb("context_bg",      "0xE6323237"),
@@ -111,8 +119,7 @@ public final class PlannhColors {
      * Generates a deterministic title bar color from a recipe name hash.
      * Uses golden-ratio hue distribution for visual variety.
      */
-    @Nonnull
-    public static int titleColor(@Nonnull final String name) {
+    public static int titleColor(final String name) {
         final int hash = name.hashCode() % 1000;
         final float hue = hash * 0.618033988749895f;
         final int rgb = java.awt.Color.HSBtoRGB(hue, 0.45f, 0.55f);
@@ -120,5 +127,14 @@ public final class PlannhColors {
         final int g = rgb >> 8 & 0xFF;
         final int b = rgb & 0xFF;
         return Color.argb(r, g, b, 100);
+    }
+
+    /**
+     * Text color that contrasts with the given background: dark text on light-to-mid
+     * backgrounds, white on dark ones. Keyed to perceived luminance so it stays correct however
+     * the header color is generated (e.g. dynamically from the recipe handler name).
+     */
+    public static int textOn(final int background) {
+        return Color.getLuminance(background) >= 0.35f ? TEXT_BLACK.getColor() : TEXT_WHITE.getColor();
     }
 }

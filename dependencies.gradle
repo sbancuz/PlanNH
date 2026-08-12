@@ -34,21 +34,40 @@
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
 dependencies {
-    api("com.github.GTNewHorizons:NotEnoughItems:2.8.114-GTNH:dev")
-    api("com.github.GTNewHorizons:GTNHLib:0.11.30:dev")
-    api("com.github.GTNewHorizons:ModularUI2:2.3.81-1.7.10:dev")
-    api("com.github.GTNewHorizons:waila:1.19.30:dev")
+    api("com.github.GTNewHorizons:NotEnoughItems:2.8.124-GTNH:dev")
+    api("com.github.GTNewHorizons:GTNHLib:0.11.37:dev")
+    api("com.github.GTNewHorizons:ModularUI2:2.3.85-1.7.10:dev")
+    api("com.github.GTNewHorizons:waila:1.19.31:dev")
 
-    implementation("com.github.GTNewHorizons:EnderIO:2.10.33:dev")
-    implementation("com.github.GTNewHorizons:Botania:1.13.26-GTNH:dev")
+    // implementation for testing and dev purposes, revert to compileOnly when complete
+    implementation("com.github.GTNewHorizons:EnderIO:2.10.39:dev")
+    implementation("com.github.GTNewHorizons:Botania:1.13.33-GTNH:dev")
     implementation(rfg.deobf("thaumcraft:Thaumcraft:1.7.10-4.2.3.5:dev"))
     implementation("com.github.GTNewHorizons:AspectRecipeIndex:1.1.3:dev")
+    implementation("com.github.GTNewHorizons:LogisticsPipes:1.5.35-GTNH:dev")
+    implementation("com.github.GTNewHorizons:Random-Things:2.7.9:dev")
+    implementation("com.github.GTNewHorizons:ThaumicTinkerer:2.12.29:dev")
+    implementation("com.github.GTNewHorizons:WitchingGadgets:1.8.49-GTNH:dev")
+    implementation("com.github.GTNewHorizons:Thaumic_Exploration:1.5.27-GTNH:dev")
+    implementation("com.github.GTNewHorizons:Avaritia:1.99:dev")
+    implementation("com.github.GTNewHorizons:Binnie:2.6.43:dev")
+    implementation("com.github.GTNewHorizons:BloodMagic:1.9.12:dev")
+    implementation("com.github.GTNewHorizons:Galacticraft:3.4.33-GTNH:dev")
+    compileOnly("com.github.GTNewHorizons:gendustry:1.9.11-GTNH:dev")
     implementation("net.glease:tc4recipelib:1.5.37:dev")
-    implementation("com.github.GTNewHorizons:ForestryMC:4.11.31:dev")
+    implementation("com.github.GTNewHorizons:ForestryMC:4.11.36:dev")
     implementation("ganymedes01.etfuturum:Et-Futurum-Requiem:2.6.45-GTNH:dev")
-    implementation("com.github.GTNewHorizons:GT5-Unofficial:5.09.54.38:dev")
-//    implementation("com.github.GTNewHorizons:NewHorizonsCoreMod:2.9.16:dev")
-    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.53:dev') { transitive = false }
+    implementation("com.github.GTNewHorizons:NEI-Integration:1.5.3:dev")
+    implementation("com.github.GTNewHorizons:Draconic-Evolution:1.5.32-GTNH:dev")
+    implementation("com.github.GTNewHorizons:harvestcraft:1.3.13-GTNH:dev")
+    implementation("com.github.GTNewHorizons:Gadomancy:1.5.14:dev")
+    compileOnly("com.github.GTNewHorizons:ProjectBlue:1.2.10-GTNH:dev")
+    implementation("com.github.GTNewHorizons:TinkersConstruct:1.14.97-GTNH:dev")
+    implementation("com.github.GTNewHorizons:GT5-Unofficial:5.09.54.90:dev")
+    implementation("com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-999-GTNH:dev")
+    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.2.4:dev') { transitive = false }
+
+    // runtimeOnlyNonPublishable('net.neoforged:render-nurse:0.0.14')
 
     // Speeds up mod identification and loading in dev
     runtimeOnlyNonPublishable(rfg.deobf("com.github.GTNewHorizons:CoreTweaks:0.3.4.7-GTNH"))
@@ -56,4 +75,24 @@ dependencies {
     // @Data annotation for the data class, see: [https://projectlombok.org/api/lombok/Data]
     compileOnly('org.projectlombok:lombok:1.18.46')
     annotationProcessor('org.projectlombok:lombok:1.18.46')
+
+    // ILP solver
+    shadowImplementation('org.ojalgo:ojalgo:57.1.0')
+
+    // Opt-in GTNH pack recipes for the dev client: `./gradlew runClient -PgtnhRecipes`.
+    // Loads the GTNH coremod (dreamcraft) so NEI shows the pack's recipe tweaks in dev.
+    if (project.hasProperty('gtnhRecipes')) {
+        runtimeOnlyNonPublishable('com.github.GTNewHorizons:NewHorizonsCoreMod:2.9.39:dev')
+    }
+
+    // Auto-layout engine. 0.8.x is the last Java 8 compatible ELK release line.
+    shadowImplementation('org.eclipse.elk:org.eclipse.elk.alg.layered:0.8.1') {
+        // XMI is EMF's file serialization; PlanNH only builds ELK graphs programmatically.
+        exclude group: 'org.eclipse.emf', module: 'org.eclipse.emf.ecore.xmi'
+    }
+
+    // Headless test harness (corpus charts are gtnh-flow style YAML)
+    testImplementation('org.junit.jupiter:junit-jupiter:5.10.2')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.10.2')
+    testImplementation('org.yaml:snakeyaml:2.2')
 }

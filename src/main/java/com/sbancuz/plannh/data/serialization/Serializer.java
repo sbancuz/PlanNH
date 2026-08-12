@@ -7,6 +7,7 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -19,8 +20,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.google.gson.reflect.TypeToken;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.flowchart.Balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
@@ -29,6 +30,10 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.flowchart.Summary.SummarySection;
+import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
+import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
+import com.sbancuz.plannh.data.flowchart.balancer.PortRef;
 
 import codechicken.nei.recipe.Recipe;
 
@@ -90,7 +95,8 @@ public final class Serializer {
     // ── Plan serialization ──
 
     /**
-     * Encodes a Plan (with all its graphs) to a JSON string.
+     * Encodes a Plan (with all its graphs) to a JSON string. Graph bodies are stored compressed,
+     * each with its slot name and summary section folds.
      */
     @Nonnull
     public static String encodePlan(final Plan plan) {
@@ -130,6 +136,40 @@ public final class Serializer {
             .getAsJsonArray("graphs")) graphs.add(decodeGraph(elem.getAsString()));
 
         return plan;
+    }
+
+    /**
+     * Every section, not just the folded ones: a section this save has never heard of has to be
+     * distinguishable from one the user deliberately left open, or adding a section would silently
+     * unfold it for everyone who had already saved.
+     */
+    private static JsonObject foldsToJson(final Set<SummarySection> folded) {
+        final JsonObject folds = new JsonObject();
+        for (final SummarySection section : SummarySection.values()) {
+            folds.addProperty(section.name(), folded.contains(section));
+        }
+        return folds;
+    }
+
+    /**
+     * Reads section by section over whatever {@code folded} already holds rather than replacing it:
+     * an unmentioned section is one the save predates, and it keeps the fold a fresh chart gives it.
+     */
+    private static void foldsFromJson(final JsonObject folds, final Set<SummarySection> folded) {
+        for (final var fold : folds.entrySet()) {
+            final SummarySection section;
+            try {
+                section = SummarySection.valueOf(fold.getKey());
+            } catch (final IllegalArgumentException ignored) {
+                continue; // a section this build has dropped
+            }
+            if (fold.getValue()
+                .getAsBoolean()) {
+                folded.add(section);
+            } else {
+                folded.remove(section);
+            }
+        }
     }
 
     /**
@@ -183,12 +223,26 @@ public final class Serializer {
 
     @Nonnull
     private static JsonObject graphToJson(final Graph graph) {
+        // todo add null tolerancy
         final JsonObject root = new JsonObject();
 
         root.addProperty(
             "balanceMode",
             graph.getBalanceMode()
                 .name());
+
+        root.addProperty("opsMode", graph.isOpsMode());
+
+        // The chosen answer travels as the ports it opens, never as gate indices: those are rebuilt
+        // from scratch on every solve and mean nothing across a save.
+        root.add(
+            "excessChoices",
+            GSON.toJsonTree(
+                graph.getExcessChoice()
+                    .gateAnchors()));
+
+        root.add("sectionFolds", foldsToJson(graph.collapsedSummarySections));
+
         root.addProperty("zoom", graph.getZoom());
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
@@ -207,6 +261,7 @@ public final class Serializer {
         }
         root.add("edges", edgesArray);
 
+        // todo make this simpler by serializing values as a whole
         final JsonArray notesArray = new JsonArray();
         for (Note note : graph.getNotes()
             .values()) notesArray.add(GSON.toJsonTree(note));
@@ -227,18 +282,26 @@ public final class Serializer {
 
     @Nonnull
     private static Graph jsonToGraph(final JsonObject root) {
+        // todo add null tolerancy
         final Graph graph = new Graph(
             root.get("name")
                 .getAsString());
 
-        if (root.has("balanceMode")) {
-            try {
-                graph.setBalanceMode(
-                    BalanceMode.valueOf(
-                        root.get("balanceMode")
-                            .getAsString()));
-            } catch (final IllegalArgumentException ignored) {}
-        }
+        graph.setBalanceMode(
+            BalanceMode.valueOf(
+                root.get("balanceMode")
+                    .getAsString()));
+
+        graph.setOpsMode(
+            root.get("opsMode")
+                .getAsBoolean());
+
+        // Read independently of everything else, like the per-node targets: an old save has no such
+        // key, and a corrupt one costs the user a preference rather than the chart.
+        graph.setExcessChoice(ChoiceKey.of(GSON.fromJson(root, new TypeToken<List<PortRef>>() {}.getType())));
+
+        foldsFromJson(root.getAsJsonObject("sectionFolds"), graph.collapsedSummarySections);
+
         graph.setZoom(
             root.get("zoom")
                 .getAsFloat());

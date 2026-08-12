@@ -7,9 +7,11 @@ import javax.annotation.Nonnull;
 
 import com.sbancuz.plannh.data.MachineConfig;
 
+// TODO: Rework these making them customizable
 public enum Settings {
 
     // ── int settings ──
+    DURATION_TICKS("duration_ticks", 0, 0, 1000000, (v, _) -> v > 0 ? v + "t" : null),
     AMP("amp", 1, 1, 64, (v, _) -> "A" + v),
     SPEED("speed", 100, 10, 10000, (v, _) -> "⏱" + v + "%"),
     TICK_MODIFIER("tick_modifier", 100, 10, 10000, (v, _) -> "⏩" + v + "%"),
@@ -34,6 +36,11 @@ public enum Settings {
     VIS_PER_TICK("vis_per_tick", 1, 1, 100),
     RF_PER_TICK("rf_per_tick", 80, 1, 10000),
     FORESTRY_RF_PER_TICK("forestry_rf_per_tick", 10, 1, 10000),
+    INPUTS_PER_TICK("inputs_per_tick", 1, 1, 10000),
+    LP_PER_TICK("lp_per_tick", 20, 1, 100000),
+
+    STEAM_EUT_DISCOUNT("steam_eut_discount", 100, 1, 10000, (v, _) -> "☢" + v + "%"),
+    STEAM_DURATION_MODIFIER("steam_duration_modifier", 100, 1, 10000, (v, _) -> "⏱" + v + "%"),
 
     // ── bool settings ──
     PERFECT_OC("perfect_oc", false, (v, _) -> v ? "P" : null),
@@ -42,6 +49,9 @@ public enum Settings {
     LASER_OC("laser_oc", false, (v, _) -> v ? "L" : null),
     UNLIMITED_SKIPS("unlimited_skips", false, (v, _) -> v ? "∞T" : null),
     NO_OVERCLOCK("no_overclock", false, (v, _) -> v ? "NO" : null),
+    GT_MULTIBLOCK("gt_multiblock", false, (v, _) -> v ? "M" : null),
+    CATALYST_ASTRAL_ARRAYS("catalyst_astral_arrays", 0, 0, 8637, (v, _) -> v > 0 ? "☆" + v : null),
+    CATALYST_ACCEL_CARD("catalyst_accel_card", 0, 0, 5, (v, _) -> v > 0 ? "☆" + v : null),
 
     // ── enum-type settings ──
     VOLTAGE("voltage", "OFF", List

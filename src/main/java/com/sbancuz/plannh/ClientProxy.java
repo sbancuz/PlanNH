@@ -10,9 +10,11 @@ import org.lwjgl.input.Keyboard;
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.cleanroommc.modularui.screen.ModularContainer;
 import com.sbancuz.plannh.client.ChatHandler;
+import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.client.WorldHandler;
 import com.sbancuz.plannh.gui.FlowchartScreen;
+import com.sbancuz.plannh.layout.AutoLayout;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -54,6 +56,11 @@ public class ClientProxy extends CommonProxy {
         FMLCommonHandler.instance()
             .bus()
             .register(this);
+
+        Minecraft.getMinecraft()
+            .func_152344_a(AutoLayout::warmup);
+        Minecraft.getMinecraft()
+            .func_152344_a(GPUProgram.BLUR::compile);
     }
 
     @SubscribeEvent

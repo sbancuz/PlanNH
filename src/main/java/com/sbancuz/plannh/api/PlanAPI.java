@@ -20,6 +20,7 @@ import net.minecraft.util.StatCollector;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
+import com.sbancuz.plannh.data.flowchart.UndoHistory;
 import com.sbancuz.plannh.data.serialization.Serializer;
 
 import codechicken.nei.NEIClientConfig;
@@ -31,6 +32,18 @@ public final class PlanAPI {
     public static final String PLANNH_DATA_KEY = "plannh_data";
 
     private static final boolean DEBUG_MODE = true;
+
+    public static UndoHistory undoHistory() {
+        return Plan.getActiveGraph().undoHistory;
+    }
+
+    /** Runs {@code edit} as one undo step; no-op edits leave no trace. */
+    public static void recordEdit(final Graph graph, final Runnable edit) {
+        final UndoHistory history = graph.undoHistory;
+        final String before = history.beginEdit(graph);
+        edit.run();
+        history.commitEdit(before, graph);
+    }
 
     /**
      * Encodes the given graph and sends it as an NEI item-link chat message.

@@ -19,10 +19,12 @@ import com.gtnewhorizons.aspectrecipeindex.nei.arcaneworkbench.WandRecipeHandler
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.PropertyProvider;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.RecipeProperty;
+import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.properties.PropertyProvider;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.recipe.IRecipeHandler;
@@ -38,45 +40,57 @@ import thaumcraft.api.crafting.ShapelessArcaneRecipe;
 
 public class ThaumcraftProvider implements PropertyProvider {
 
-    public static final RecipeProperty<int[]> VIS_COST = RecipeProperty.<int[]>builder("vis_cost", new int[6])
+    public static final RecipeProperty<int[]> VIS_COST = SummaryProperty.builder("thaumcraft.vis_cost", new int[6])
         .build();
 
-    public static final RecipeProperty<Integer> INSTABILITY = RecipeProperty.<Integer>builder("instability", 0)
+    public static final RecipeProperty<Integer> INSTABILITY = RecipeProperty
+        .<Integer>builder("thaumcraft.instability", 0)
         .build();
 
-    public static final RecipeProperty<Integer> TOTAL_VIS = RecipeProperty.<Integer>builder("total_vis", 0)
+    public static final RecipeProperty<Integer> TOTAL_VIS = RecipeProperty.<Integer>builder("thaumcraft.total_vis", 0)
         .build();
 
-    public static final RecipeProperty<String> RESEARCH_KEY = RecipeProperty.<String>builder("research_key", "")
+    public static final RecipeProperty<String> RESEARCH_KEY = RecipeProperty
+        .<String>builder("thaumcraft.research_key", "")
         .build();
 
-    public static final RecipeProperty<Integer> NUM_COMPONENTS = RecipeProperty.<Integer>builder("num_components", 0)
+    public static final RecipeProperty<Integer> NUM_COMPONENTS = RecipeProperty
+        .<Integer>builder("thaumcraft.num_components", 0)
         .build();
 
     private static final String[] PRIMAL_TAGS = { "aer", "terra", "ignis", "aqua", "ordo", "perditio" };
 
     @Override
     public void register() {
-        RecipePropertyAPI.registerExtractor(ItemsContainingAspectHandler.OVERLAY, this);
-        RecipePropertyAPI.registerExtractor(AspectCombinationHandler.OVERLAY, this);
-        RecipePropertyAPI.registerExtractor(ShapedArcaneRecipeHandler.OVERLAY, this);
-        RecipePropertyAPI.registerExtractor(WandRecipeHandler.OVERLAY, this);
-        RecipePropertyAPI.registerExtractor(ShapelessArcaneRecipeHandler.OVERLAY, this);
-        RecipePropertyAPI.registerExtractor(AlchemyRecipeHandler.OVERLAY, this);
-        RecipePropertyAPI.registerExtractor(InfusionRecipeHandler.OVERLAY, this);
+        RecipePropertyAPI.registerExtractor(ItemsContainingAspectHandler.class, this);
+        RecipePropertyAPI.registerExtractor(AspectCombinationHandler.class, this);
+        RecipePropertyAPI.registerExtractor(ShapedArcaneRecipeHandler.class, this);
+        RecipePropertyAPI.registerExtractor(WandRecipeHandler.class, this);
+        RecipePropertyAPI.registerExtractor(ShapelessArcaneRecipeHandler.class, this);
+        RecipePropertyAPI.registerExtractor(AlchemyRecipeHandler.class, this);
+        RecipePropertyAPI.registerExtractor(InfusionRecipeHandler.class, this);
 
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:arcane", "Arcane Workbench")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.VIS_PER_TICK.def())
                 .setting(Settings.TICK_MODIFIER.def())
-                .effect(ThaumcraftProvider::arcaneEffect)
+                .effect(
+                    Effects.durationFromTotal(TOTAL_VIS, Settings.VIS_PER_TICK.key(), 1)
+                        .amortizeCost(TOTAL_VIS)
+                        .applyParallelism())
                 .build());
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:infusion", "Infusion Altar")
                 .setting(Settings.MACHINES.def())
                 .setting(Settings.TICK_MODIFIER.def())
-                .effect(ThaumcraftProvider::infusionEffect)
+                .effect(Effects.durationFromFormula((ctx, s) -> {
+                    final int tv = ctx.getOrDefault(TOTAL_VIS, 0);
+                    final int nc = ctx.getOrDefault(NUM_COMPONENTS, 0);
+                    return tv * 10 + nc * 60;
+                })
+                    .amortizeCost(TOTAL_VIS)
+                    .applyParallelism())
                 .build());
     }
 
@@ -107,7 +121,7 @@ public class ThaumcraftProvider implements PropertyProvider {
     @Override
     @Nonnull
     public Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler, final int recipeIndex) {
-        final Map<RecipeProperty<?>, Object> props = new HashMap<>();
+        final Map<RecipeProperty<?>, Object> props = new HashMap<>(PropertyProvider.super.extract(node, handler, recipeIndex));
         if (!(handler instanceof final TemplateRecipeHandler trh)) return props;
 
         final var recipes = RecipeHandlerAccess.getArecipes(trh);
@@ -245,33 +259,4 @@ public class ThaumcraftProvider implements PropertyProvider {
         return result;
     }
 
-    @Nonnull
-    private static MachineProfile.EffectResult arcaneEffect(final Map<String, Object> s,
-        final MachineProfile.RecipeContext ctx) {
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        final int rate = MachineProfile.getInt(s, Settings.VIS_PER_TICK.key(), 1);
-        final Integer totalVis = ctx.get(ThaumcraftProvider.TOTAL_VIS);
-        int duration = ctx.recipeDuration();
-        if (duration <= 0 && rate > 0 && totalVis != null && totalVis > 0) {
-            duration = Math.max(1, totalVis / rate);
-        }
-        final long consumptionEUt = duration > 0 && totalVis != null ? totalVis / duration : 0;
-        return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
-    }
-
-    @Nonnull
-    private static MachineProfile.EffectResult infusionEffect(final Map<String, Object> s,
-        final MachineProfile.RecipeContext ctx) {
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-        final Integer totalVis = ctx.get(ThaumcraftProvider.TOTAL_VIS);
-        final Integer numComponents = ctx.get(ThaumcraftProvider.NUM_COMPONENTS);
-        final int nc = numComponents != null ? numComponents : 0;
-        int duration = ctx.recipeDuration();
-        if (duration <= 0) {
-            final int tv = totalVis != null ? totalVis : 0;
-            duration = Math.max(1, tv * 10 + nc * 60);
-        }
-        final long consumptionEUt = totalVis != null ? totalVis / duration : 0;
-        return new MachineProfile.EffectResult(duration, consumptionEUt, machines);
-    }
 }

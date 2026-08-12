@@ -97,6 +97,7 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
      * @Override
      * public void onDragResizeEnd() {
      * // add new widgets in area?
+     * // todo add this to commit history
      * }
      */
 
