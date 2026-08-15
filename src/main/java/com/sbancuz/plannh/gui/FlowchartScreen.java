@@ -145,6 +145,16 @@ public class FlowchartScreen extends ModularScreen {
             .child(machineList);
         canvas.setMachinePicker(machinePicker, machineList);
 
+        final TextFieldWidget slotNameField = new TextFieldWidget()
+            .value(
+                new StringValue.Dynamic(
+                    () -> Plan.getActiveGraph()
+                        .getName(),
+                    val -> Plan.getActiveGraph()
+                        .setName(val)))
+            .background()
+            .hoverBackground();
+
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
             .background()
@@ -187,28 +197,23 @@ public class FlowchartScreen extends ModularScreen {
                         .coverChildren()
                         .childPadding(2)
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
-                            cycleGraphs(canvas, -1);
+                            cycleGraphs(canvas, -1, slotNameField);
                             return true;
                         })
                             .overlay(IKey.str("<"))
                             .addTooltipLine("Previous Graph"))
+                        .child(slotNameField)
                         .child(
-                            new TextFieldWidget().value(
-                                new StringValue.Dynamic(
-                                    () -> Plan.getActiveGraph()
-                                        .getName(),
-                                    val -> Plan.getActiveGraph()
-                                        .setName(val)))
-                                .background()
-                                .hoverBackground())
+                            IKey.dynamicKey(() -> IKey.str(slotPosition()))
+                                .asWidget())
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
-                            cycleGraphs(canvas, 1);
+                            cycleGraphs(canvas, 1, slotNameField);
                             return true;
                         })
                             .overlay(IKey.str(">"))
                             .addTooltipLine("Next Graph"))
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
-                            addGraph(canvas);
+                            addGraph(canvas, slotNameField);
                             return true;
                         })
                             .overlay(
@@ -216,7 +221,7 @@ public class FlowchartScreen extends ModularScreen {
                                     .color(Color.GREEN.main))
                             .addTooltipLine("Add Graph"))
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
-                            deleteGraph(canvas);
+                            deleteGraph(canvas, slotNameField);
                             return true;
                         })
                             .overlay(
@@ -406,26 +411,47 @@ public class FlowchartScreen extends ModularScreen {
         canvas.setGraph(Plan.getActiveGraph());
     }
 
-    private static void cycleGraphs(CanvasWidget canvas, final int dir) {
+    /**
+     * The name box holds its own text once it has been drawn, so switching charts under it leaves
+     * the previous name on screen. Push the new one in whenever the active chart changes.
+     */
+    private static void refreshGraph(final CanvasWidget canvas, final TextFieldWidget nameField) {
+        refreshGraph(canvas);
+        nameField.setText(
+            Plan.getActiveGraph()
+                .getName());
+    }
+
+    /** "(4/8)": which chart is on screen, and how many there are to page through. */
+    private static String slotPosition() {
+        final Plan plan = Plan.getInstance();
+        final int count = Math.max(
+            1,
+            plan.getGraphs()
+                .size());
+        return "(" + Math.min(count, plan.getActiveIndex() + 1) + "/" + count + ")";
+    }
+
+    private static void cycleGraphs(CanvasWidget canvas, final int dir, final TextFieldWidget nameField) {
         final Plan plan = Plan.getInstance();
         final int size = plan.getGraphs()
             .size();
         if (size <= 1) return;
         plan.setActiveIndex((plan.getActiveIndex() + dir + size) % size);
-        refreshGraph(canvas);
+        refreshGraph(canvas, nameField);
     }
 
-    private static void addGraph(CanvasWidget canvas) {
+    private static void addGraph(CanvasWidget canvas, final TextFieldWidget nameField) {
         final Plan plan = Plan.getInstance();
         final int size = plan.getGraphs()
             .size();
         plan.getGraphs()
             .add(new Graph("Slot " + (size + 1)));
         plan.setActiveIndex(size);
-        refreshGraph(canvas);
+        refreshGraph(canvas, nameField);
     }
 
-    private static void deleteGraph(CanvasWidget canvas) {
+    private static void deleteGraph(CanvasWidget canvas, final TextFieldWidget nameField) {
         final Plan plan = Plan.getInstance();
         final int size = plan.getGraphs()
             .size();
@@ -434,7 +460,7 @@ public class FlowchartScreen extends ModularScreen {
         plan.getGraphs()
             .remove(active);
         if (active >= size - 1) plan.setActiveIndex(size - 2);
-        refreshGraph(canvas);
+        refreshGraph(canvas, nameField);
     }
 
     private static class SummaryWidget extends Widget<SummaryWidget> implements Interactable {
