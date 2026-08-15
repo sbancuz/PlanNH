@@ -27,6 +27,7 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.SettingDef;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -157,10 +158,24 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     private int heldZoneMx, heldZoneMy;
     private long zoneHoldStart, zoneLastRepeat;
 
-    private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action, boolean repeat) {
+    /**
+     * @param resetKey the setting this zone edits, or null when the zone is not a setting row.
+     *                 Right-clicking a zone that has one returns that setting to the machine.
+     */
+    private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action, boolean repeat,
+        @Nullable String resetKey) {
 
         ClickZone(final int ux1, final int uy1, final int ux2, final int uy2, final Runnable action) {
-            this(ux1, uy1, ux2, uy2, action, false);
+            this(ux1, uy1, ux2, uy2, action, false, null);
+        }
+
+        ClickZone(final int ux1, final int uy1, final int ux2, final int uy2, final Runnable action,
+            final boolean repeat) {
+            this(ux1, uy1, ux2, uy2, action, repeat, null);
+        }
+
+        ClickZone withReset(final String key) {
+            return new ClickZone(ux1, uy1, ux2, uy2, action, repeat, key);
         }
 
         boolean contains(final int ux, final int uy) {
@@ -304,12 +319,25 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             final int cw = neiWidget.w + NEI_PAD_W;
             final int ch = neiWidget.h + NEI_PAD_H;
 
-            BG_TEXTURE.draw(-TEXTURE_OFF, -TEXTURE_OFF, cw + TEXTURE_EXTRA, ch + TEXTURE_EXTRA, BORDER_9P, BORDER_9P, BORDER_9P, BORDER_9P);
+            BG_TEXTURE.draw(
+                -TEXTURE_OFF,
+                -TEXTURE_OFF,
+                cw + TEXTURE_EXTRA,
+                ch + TEXTURE_EXTRA,
+                BORDER_9P,
+                BORDER_9P,
+                BORDER_9P,
+                BORDER_9P);
 
             glEnable(GL_TEXTURE_2D);
             final int titleCol = PlannhColors.titleColor(recipeName);
             GuiDraw.drawRect(CONTENT_INSET, CONTENT_INSET, cw - TITLE_BAR_RMARGIN, TITLE_BAR_H, titleCol);
-            GuiDraw.drawRect(CONTENT_INSET, CONTENT_TOP, cw - TITLE_BAR_RMARGIN, TITLE_UL_H, PlannhColors.NODE_TITLE_LINE.getColor());
+            GuiDraw.drawRect(
+                CONTENT_INSET,
+                CONTENT_TOP,
+                cw - TITLE_BAR_RMARGIN,
+                TITLE_UL_H,
+                PlannhColors.NODE_TITLE_LINE.getColor());
             // The title names the machine the node is modelled as, since that is what its numbers
             // come from, and clicking it picks a different one. Colour still keys on the recipe so a
             // node does not change hue when its machine does.
@@ -387,9 +415,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                     .append(String.format("%.1f", (float) simpleDurPerOp / GuiHelper.TICKS_PER_SECOND))
                     .append("s)");
             }
-            final Object rawVoltage = node.machineConfig.settings.get("voltage");
-            if (rawVoltage instanceof final String v && !"OFF".equals(v)) {
-                simpleTiming.append("  ").append(v);
+            final String tier = collapsedVoltageTier();
+            if (!tier.isEmpty()) {
+                simpleTiming.append("  ")
+                    .append(tier);
             }
             GuiDraw.drawText(
                 simpleTiming.toString(),
@@ -407,7 +436,13 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
             final Group grp2 = canvas.getGroupForNode(node.id);
             if (grp2 != null) {
-                GuiDraw.drawText("\u229f " + grp2.getHeader(), SIMPLE_TEXT_INSET_X, SIMPLE_GROUP_LABEL_Y, 1.0f, groupColor(grp2), false);
+                GuiDraw.drawText(
+                    "\u229f " + grp2.getHeader(),
+                    SIMPLE_TEXT_INSET_X,
+                    SIMPLE_GROUP_LABEL_Y,
+                    1.0f,
+                    groupColor(grp2),
+                    false);
             }
 
             drawCloseButtonPixel(w, h);
@@ -561,6 +596,19 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
     @Override
     public @Nonnull Result onMousePressed(final int mouseButton) {
+        // Right-click on a settings row hands that setting back to the machine. Nothing else in the
+        // panel can reach that state, so a row nudged and put back would otherwise stay overridden.
+        if (mouseButton == 1 && configOpen) {
+            final int mx = getContext().getMouseX();
+            final int my = getContext().getMouseY();
+            for (final ClickZone zone : configZones) {
+                if (zone.resetKey() != null && zone.contains(mx, my)) {
+                    PlanAPI.recordEdit(canvas.getGraph(), () -> node.machineConfig.clear(zone.resetKey()));
+                    onConfigChanged();
+                    return Result.SUCCESS;
+                }
+            }
+        }
         if (mouseButton == 0) {
             final int mx = getContext().getMouseX();
             final int my = getContext().getMouseY();
@@ -679,6 +727,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             .setting(GTSettings.MACHINE);
         return def != null && def.options(recipeContext())
             .size() > 1;
+    }
+
+    /**
+     * The tier the collapsed node runs at. Reading the stored key directly showed nothing for every
+     * node that never picked one, which under a sparse map is most of them.
+     */
+    private String collapsedVoltageTier() {
+        final SettingDef<?> def = node.machineConfig.getProfile()
+            .setting(Settings.VOLTAGE.key());
+        if (def == null) return "";
+        final List<String> options = def.options(recipeContext());
+        if (options.isEmpty()) return "";
+        final String stored = node.machineConfig.getString(def.key);
+        return options.contains(stored) ? stored : options.getFirst();
     }
 
     private RecipeContext recipeContext() {
@@ -806,7 +868,24 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         }
     }
 
+    /**
+     * Draws a row and tags every zone it produced with the setting it edits, so a right-click
+     * anywhere on the row resets it. Tagging here rather than at each {@code configZones.add} keeps
+     * the three row shapes - stepper, checkbox, list - from each having to know about resetting.
+     */
     private int drawSetting(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
+        final int firstZone = configZones.size();
+        final int next = drawSettingRow(x, y, def, c);
+        for (int i = firstZone; i < configZones.size(); i++) {
+            configZones.set(
+                i,
+                configZones.get(i)
+                    .withReset(def.key));
+        }
+        return next;
+    }
+
+    private int drawSettingRow(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
         if (def.type == Integer.class) {
             // An auto setting shows what the machine actually does rather than the 0 that means
             // "ask the machine", and cannot be stepped past what that machine allows.
@@ -872,8 +951,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     private void cycleOption(final SettingDef<?> def, final MachineConfig c, final int step) {
         final List<String> options = def.options(recipeContext());
         if (options.isEmpty()) return;
-        final int cur = options.indexOf(c.getString(def.key));
-        c.setString(def.key, options.get(cur < 0 ? 0 : Math.min(options.size() - 1, Math.max(0, cur + step))));
+        // An unset row displays the first option, so stepping starts from there. Treating unset as
+        // "no index" instead made the first click rewrite the value already on screen.
+        final int shown = Math.max(0, options.indexOf(c.getString(def.key)));
+        c.setString(def.key, options.get(Math.min(options.size() - 1, Math.max(0, shown + step))));
         onConfigChanged();
     }
 

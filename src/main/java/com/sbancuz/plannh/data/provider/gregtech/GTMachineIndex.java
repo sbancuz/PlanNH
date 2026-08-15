@@ -71,6 +71,8 @@ public final class GTMachineIndex {
     @Nullable
     private static Map<String, List<MachineEntry>> byRecipeMap;
     private static Map<String, MachineEntry> byId = Map.of();
+    /** Reordered candidate lists, keyed by recipemap and NEI title. Derived, so it is safe to keep. */
+    private static final Map<String, List<MachineEntry>> byNeiTitle = new HashMap<>();
 
     private GTMachineIndex() {}
 
@@ -89,16 +91,18 @@ public final class GTMachineIndex {
     public static List<MachineEntry> candidates(final RecipeContext ctx) {
         final RecipeMap<?> recipeMap = ctx.getOrDefault(GTProvider.RECIPE_MAP, null);
         if (recipeMap == null) return List.of();
-        return preferNeiTitle(
-            ensureBuilt().getOrDefault(recipeMap.unlocalizedName, List.of()),
-            ctx.getOrDefault(GTProvider.NEI_TITLE, null));
+        final List<MachineEntry> ordered = ensureBuilt().getOrDefault(recipeMap.unlocalizedName, List.of());
+        final String title = ctx.getOrDefault(GTProvider.NEI_TITLE, null);
+        if (title == null || title.isEmpty() || ordered.size() < 2) return ordered;
+        return byNeiTitle
+            .computeIfAbsent(recipeMap.unlocalizedName + '\u0000' + title, key -> preferNeiTitle(ordered, title));
     }
 
     /**
      * NEI's own tab title names the machine the recipe list is for, so when a candidate matches it
      * exactly that is the answer, ahead of any heuristic about which machine is simplest. Returns the
-     * cached list untouched unless a match exists and is not already leading - this runs per frame
-     * from the visibility predicates, so the common case must not allocate.
+     * cached list untouched unless a match exists and is not already leading. The result is memoized
+     * per recipemap and title because this runs every frame from the visibility predicates.
      */
     @Nonnull
     private static List<MachineEntry> preferNeiTitle(final List<MachineEntry> entries, @Nullable final String title) {

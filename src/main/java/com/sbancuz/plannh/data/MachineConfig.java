@@ -117,7 +117,10 @@ public class MachineConfig {
         parentRef.refresh();
     }
 
-    /** Returns a key to being machine-derived, which is the state the UI otherwise cannot reach. */
+    /**
+     * Hands a setting back to the machine. Absence is a real state that the steppers cannot reach on
+     * their own, so without this a row nudged and returned to its old number stays pinned there.
+     */
     public void clear(final String key) {
         settings.remove(key);
         parentRef.refresh();
