@@ -33,6 +33,10 @@
  *
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
+// The version GTMachinePresets was read against. Main and test have to move together, or the tests
+// would validate the preset table against a GregTech the mod does not compile against.
+def gt5uVersion = "5.09.52.613"
+
 dependencies {
     api("com.github.GTNewHorizons:NotEnoughItems:2.8.104-GTNH:dev")
     api("com.github.GTNewHorizons:GTNHLib:0.11.16:dev")
@@ -62,7 +66,7 @@ dependencies {
     compileOnly("com.github.GTNewHorizons:Gadomancy:1.5.12:dev")
     compileOnly("com.github.GTNewHorizons:ProjectBlue:1.2.10-GTNH:dev")
     compileOnly("com.github.GTNewHorizons:TinkersConstruct:1.14.93-GTNH:dev")
-    compileOnly("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.613:dev")
+    compileOnly("com.github.GTNewHorizons:GT5-Unofficial:$gt5uVersion:dev")
     compileOnly("com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-1017-GTNH:dev")
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.1.38:dev') { transitive = false }
 
@@ -92,7 +96,7 @@ dependencies {
 
     // The overclock and machine-preset tests use GT's own classes as their oracle, so GT has to be
     // on the test classpath. Scoped to the test source set: the published mod keeps GT compileOnly.
-    testImplementation("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.613:dev")
+    testImplementation("com.github.GTNewHorizons:GT5-Unofficial:$gt5uVersion:dev")
 
     // Headless test harness (corpus charts are gtnh-flow style YAML)
     testImplementation('org.junit.jupiter:junit-jupiter:5.10.2')

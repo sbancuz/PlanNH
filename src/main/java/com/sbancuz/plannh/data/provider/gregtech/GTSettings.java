@@ -53,7 +53,7 @@ public final class GTSettings {
     @Nonnull
     private static List<String> coilNames() {
         final List<String> names = new ArrayList<>();
-        for (int tier = 0; tier <= StructureState.MAX_COIL_TIER; tier++) {
+        for (int tier = 0; tier <= GTStructureTiers.MAX_COIL_TIER; tier++) {
             names.add(
                 HeatingCoilLevel.getFromTier((byte) tier)
                     .name());
@@ -285,20 +285,20 @@ public final class GTSettings {
         .enumDef(COIL, COIL_NAMES.getLast(), COIL_NAMES, (v, c) -> null);
     public static final SettingDef<Integer> SOLENOID_DEF = SettingDef.intDef(
         SOLENOID,
-        StructureState.MAX_SOLENOID_TIER,
-        StructureState.MIN_SOLENOID_TIER,
-        StructureState.MAX_SOLENOID_TIER);
+        GTStructureTiers.MAX_SOLENOID_TIER,
+        GTStructureTiers.MIN_SOLENOID_TIER,
+        GTStructureTiers.MAX_SOLENOID_TIER);
     public static final SettingDef<Integer> ITEM_PIPE_DEF = SettingDef
-        .intDef(ITEM_PIPE, StructureState.MAX_ITEM_PIPE_TIER, 1, StructureState.MAX_ITEM_PIPE_TIER);
+        .intDef(ITEM_PIPE, GTStructureTiers.MAX_ITEM_PIPE_TIER, 1, GTStructureTiers.MAX_ITEM_PIPE_TIER);
     public static final SettingDef<Integer> PIPE_CASING_DEF = SettingDef
-        .intDef(PIPE_CASING, StructureState.MAX_PIPE_CASING_TIER, 1, StructureState.MAX_PIPE_CASING_TIER);
+        .intDef(PIPE_CASING, GTStructureTiers.MAX_PIPE_CASING_TIER, 1, GTStructureTiers.MAX_PIPE_CASING_TIER);
     public static final SettingDef<Integer> SAWBLADE_DEF = SettingDef
-        .intDef(SAWBLADE, StructureState.MAX_SAWBLADE_TIER, 0, StructureState.MAX_SAWBLADE_TIER);
+        .intDef(SAWBLADE, GTStructureTiers.MAX_SAWBLADE_TIER, 0, GTStructureTiers.MAX_SAWBLADE_TIER);
     public static final SettingDef<Integer> ELECTRODE_DEF = SettingDef
-        .intDef(ELECTRODE, 0, 0, StructureState.MAX_ELECTRODE_TIER);
+        .intDef(ELECTRODE, 0, 0, GTStructureTiers.MAX_ELECTRODE_TIER);
     public static final SettingDef<Integer> STRUCTURE_TIER_DEF = SettingDef.intDef(STRUCTURE_TIER, 2, 0, 2);
     public static final SettingDef<Integer> WIDTH_DEF = SettingDef
-        .intDef(WIDTH, StructureState.MAX_WIDTH, 0, StructureState.MAX_WIDTH);
+        .intDef(WIDTH, GTStructureTiers.MAX_WIDTH, 0, GTStructureTiers.MAX_WIDTH);
     public static final SettingDef<Integer> MODE_DEF = SettingDef.intDef(MODE, 0, 0, 1);
 
     /**
@@ -311,13 +311,13 @@ public final class GTSettings {
         return new StructureState(
             voltageTier,
             COIL_NAMES.indexOf(MachineProfile.getString(settings, COIL, COIL_NAMES.getLast())),
-            MachineProfile.getInt(settings, SOLENOID, StructureState.MAX_SOLENOID_TIER),
-            MachineProfile.getInt(settings, ITEM_PIPE, StructureState.MAX_ITEM_PIPE_TIER),
-            MachineProfile.getInt(settings, PIPE_CASING, StructureState.MAX_PIPE_CASING_TIER),
-            MachineProfile.getInt(settings, SAWBLADE, StructureState.MAX_SAWBLADE_TIER),
+            MachineProfile.getInt(settings, SOLENOID, GTStructureTiers.MAX_SOLENOID_TIER),
+            MachineProfile.getInt(settings, ITEM_PIPE, GTStructureTiers.MAX_ITEM_PIPE_TIER),
+            MachineProfile.getInt(settings, PIPE_CASING, GTStructureTiers.MAX_PIPE_CASING_TIER),
+            MachineProfile.getInt(settings, SAWBLADE, GTStructureTiers.MAX_SAWBLADE_TIER),
             MachineProfile.getInt(settings, ELECTRODE, 0),
             MachineProfile.getInt(settings, STRUCTURE_TIER, 2),
-            MachineProfile.getInt(settings, WIDTH, StructureState.MAX_WIDTH),
+            MachineProfile.getInt(settings, WIDTH, GTStructureTiers.MAX_WIDTH),
             MachineProfile.getInt(settings, MODE, 0));
     }
 

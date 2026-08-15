@@ -9,6 +9,7 @@ import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.SAW
 import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.SOLENOID;
 import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.STRUCTURE_TIER;
 import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.WIDTH;
+import static com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers.at;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import bartworks.common.configs.Configuration;
 import gregtech.api.enums.HeatingCoilLevel;
 
 /**
@@ -26,7 +28,8 @@ import gregtech.api.enums.HeatingCoilLevel;
  * dependencies.gradle. They drift between GT releases - the Industrial Centrifuge grew a momentum
  * mechanic after this tag, and gtnh-flow's three-year-old copy of this table is wrong for most rows -
  * so each entry cites the class it was read from and {@code GTMachineIndex} warns about multiblocks
- * with no entry.
+ * with no entry. Where GregTech keeps its numbers somewhere a class can read them, this table does
+ * not copy them: see {@link GTStructureTiers}.
  *
  * <p>
  * Keys are class-name strings rather than class literals on purpose: an entry for a mod that is not
@@ -40,23 +43,6 @@ public final class GTMachinePresets {
     private static final String GT_MULTI = "gregtech.common.tileentities.machines.multi.";
     private static final String GTPP = "gtPlusPlus.xmod.gregtech.common.tileentities.machines.multi.";
 
-    /**
-     * bartworks' {@code Configuration.Multiblocks.megaMachinesMax}, which every Mega multiblock uses
-     * as its parallel count. Packs can retune it, so a chart may read high here and lower in game.
-     */
-    private static final int MEGA_PARALLELS = 256;
-
-    /** Sawblade in the Industrial Cutting Machine's controller slot, weakest first. */
-    private static final double[] SAWBLADE_SPEED = { 1 / 2.5, 1 / 3.0, 1 / 3.5, 1 / 4.5 };
-    private static final double[] SAWBLADE_EU = { 0.9, 0.8, 0.7, 0.6 };
-    private static final int[] SAWBLADE_PARALLEL_PER_TIER = { 2, 3, 4, 6 };
-
-    /** kubatech ArcFurnaceElectrode, in id order. Infinity's parallel is dynamic; see below. */
-    private static final double[] ELECTRODE_SPEED = { 1, 1.2, 0.9, 1, 0.8, 2.5, 1.2, 2.2, 3, 4.2, 6.5, 5, 7.5, 10 };
-    private static final int[] ELECTRODE_PARALLEL = { 4, 2, 16, 128, 160, 4, 8, 32, 48, 1, 256, 64, 512, 1024 };
-    private static final double[] ELECTRODE_OC_SPEED = { 2, 4, 3, 1, 1, 2, 6, 1.5, 2, 1, 1, 2, 4, 8 };
-    private static final double[] ELECTRODE_EU = { 1, 1.2, 0.8, 1.1, 1.2, 1, 0.8, 1.3, 1.7, 1, 1.5, 2, 2, 2 };
-
     private static final Map<String, GTMachinePreset> BY_CLASS = new HashMap<>();
 
     private static void put(final String className, final GTMachinePreset.Builder preset) {
@@ -69,11 +55,15 @@ public final class GTMachinePresets {
     }
 
     private static int clampCoil(final int coilTier) {
-        return Math.max(0, Math.min(StructureState.MAX_COIL_TIER, coilTier));
+        return Math.max(0, Math.min(GTStructureTiers.MAX_COIL_TIER, coilTier));
     }
 
-    private static int index(final int value, final int length) {
-        return Math.max(0, Math.min(length - 1, value));
+    /**
+     * Every Mega multiblock uses bartworks' shared parallel count. Read per call rather than captured,
+     * because it is a config field: nothing stops a GT version from making it tunable again.
+     */
+    private static int megaParallels() {
+        return Configuration.Multiblocks.megaMachinesMax;
     }
 
     static {
@@ -172,15 +162,16 @@ public final class GTMachinePresets {
                 .speed(1 / 3.5));
 
         // MTEIndustrialCuttingMachine: every number comes from the sawblade in the controller slot.
-        put(
-            GT_MULTI + "MTEIndustrialCuttingMachine",
-            GTMachinePreset.builder()
-                .parallel(
-                    s -> SAWBLADE_PARALLEL_PER_TIER[index(s.sawbladeTier(), SAWBLADE_PARALLEL_PER_TIER.length)]
-                        * s.voltageTier())
-                .speed(s -> SAWBLADE_SPEED[index(s.sawbladeTier(), SAWBLADE_SPEED.length)])
-                .eu(s -> SAWBLADE_EU[index(s.sawbladeTier(), SAWBLADE_EU.length)])
-                .knobs(SAWBLADE));
+        final GTStructureTiers.Sawblades sawblades = GTStructureTiers.SAWBLADES;
+        if (sawblades != null) {
+            put(
+                GT_MULTI + "MTEIndustrialCuttingMachine",
+                GTMachinePreset.builder()
+                    .parallel(s -> at(sawblades.parallelPerVoltageTier(), s.sawbladeTier()) * s.voltageTier())
+                    .speed(s -> at(sawblades.durationModifier(), s.sawbladeTier()))
+                    .eu(s -> at(sawblades.euModifier(), s.sawbladeTier()))
+                    .knobs(SAWBLADE));
+        }
 
         put(
             GT_MULTI + "MTEIndustrialRockBreaker",
@@ -249,14 +240,14 @@ public final class GTMachinePresets {
             GTMachinePreset.builder()
                 .perfectOC()
                 .unlimitedTierSkips()
-                .parallel(MEGA_PARALLELS));
+                .parallel(s -> megaParallels()));
 
         // Both Mega tower modes are slower per operation than the machine they replace; the parallel
         // count is what pays for it. Distillery mode also scales with structure height.
         put(
             GT_MULTI + "MTEMegaDistillationTower",
             GTMachinePreset.builder()
-                .parallel(s -> s.mode() == 1 ? MEGA_PARALLELS * (1 + s.width() / 2) : MEGA_PARALLELS)
+                .parallel(s -> s.mode() == 1 ? megaParallels() * (1 + s.width() / 2) : megaParallels())
                 .speed(s -> s.mode() == 1 ? 1.5 : 1.2)
                 .eu(s -> s.mode() == 1 ? 0.5 : 0.9)
                 .unlimitedTierSkips()
@@ -265,7 +256,7 @@ public final class GTMachinePresets {
         put(
             GT_MULTI + "MTEMegaOilCracker",
             GTMachinePreset.builder()
-                .parallel(MEGA_PARALLELS)
+                .parallel(s -> megaParallels())
                 .eu(s -> Math.pow(0.9, clampCoil(s.coilTier()) + 1))
                 .unlimitedTierSkips()
                 .knobs(COIL));
@@ -359,17 +350,21 @@ public final class GTMachinePresets {
                 .knobs(MODE));
 
         // MTEIndustrialArcFurnace: the electrode supplies speed, parallel, EU and both OC factors,
-        // and the machine explicitly forbids tier skipping. Infinity's parallel doubles per completed
-        // run, so its table entry is the starting value of 1 rather than its listed 0.
-        put(
-            "kubatech.tileentity.gregtech.multiblock.MTEIndustrialArcFurnace",
-            GTMachinePreset.builder()
-                .parallel(s -> ELECTRODE_PARALLEL[index(s.electrodeTier(), ELECTRODE_PARALLEL.length)])
-                .speed(s -> 1.0 / ELECTRODE_SPEED[index(s.electrodeTier(), ELECTRODE_SPEED.length)])
-                .eu(s -> ELECTRODE_EU[index(s.electrodeTier(), ELECTRODE_EU.length)])
-                .overclock(s -> ELECTRODE_OC_SPEED[index(s.electrodeTier(), ELECTRODE_OC_SPEED.length)], s -> 4.0)
-                .maxTierSkips(0)
-                .knobs(ELECTRODE, MODE));
+        // and the machine explicitly forbids tier skipping.
+        final GTStructureTiers.Electrodes electrodes = GTStructureTiers.ELECTRODES;
+        if (electrodes != null) {
+            put(
+                "kubatech.tileentity.gregtech.multiblock.MTEIndustrialArcFurnace",
+                GTMachinePreset.builder()
+                    .parallel(s -> at(electrodes.parallel(), s.electrodeTier()))
+                    .speed(s -> at(electrodes.durationModifier(), s.electrodeTier()))
+                    .eu(s -> at(electrodes.euModifier(), s.electrodeTier()))
+                    .overclock(
+                        s -> at(electrodes.durationDecreasePerOC(), s.electrodeTier()),
+                        s -> at(electrodes.eutIncreasePerOC(), s.electrodeTier()))
+                    .maxTierSkips(0)
+                    .knobs(ELECTRODE, MODE));
+        }
     }
 
     /**

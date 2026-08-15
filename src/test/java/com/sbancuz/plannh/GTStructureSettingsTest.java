@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
+import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.enums.HeatingCoilLevel;
@@ -26,14 +27,14 @@ class GTStructureSettingsTest {
 
     @Test
     void coilNamesAreListedInTierOrderStartingAtCupronickel() {
-        assertEquals(StructureState.MAX_COIL_TIER + 1, GTSettings.COIL_NAMES.size());
+        assertEquals(GTStructureTiers.MAX_COIL_TIER + 1, GTSettings.COIL_NAMES.size());
         assertEquals(HeatingCoilLevel.LV.name(), GTSettings.COIL_NAMES.getFirst(), "tier 0 is Cupronickel (LV)");
         assertEquals(HeatingCoilLevel.MAX.name(), GTSettings.COIL_NAMES.getLast(), "tier 13 is Eternal (MAX)");
     }
 
     @Test
     void everyCoilNameRoundTripsToItsOwnTier() {
-        for (int tier = 0; tier <= StructureState.MAX_COIL_TIER; tier++) {
+        for (int tier = 0; tier <= GTStructureTiers.MAX_COIL_TIER; tier++) {
             final HeatingCoilLevel level = HeatingCoilLevel.getFromTier((byte) tier);
             assertEquals(tier, GTSettings.COIL_NAMES.indexOf(level.name()), level.name());
             assertEquals(tier, level.getTier());
@@ -57,11 +58,11 @@ class GTStructureSettingsTest {
     void unsetKnobsDefaultToTheBestStructure() {
         final StructureState state = GTSettings.resolve(EMPTY, Map.of(), 5);
 
-        assertEquals(StructureState.MAX_COIL_TIER, state.coilTier());
-        assertEquals(StructureState.MAX_SOLENOID_TIER, state.solenoidTier());
-        assertEquals(StructureState.MAX_ITEM_PIPE_TIER, state.itemPipeTier());
-        assertEquals(StructureState.MAX_PIPE_CASING_TIER, state.pipeCasingTier());
-        assertEquals(StructureState.MAX_WIDTH, state.width());
+        assertEquals(GTStructureTiers.MAX_COIL_TIER, state.coilTier());
+        assertEquals(GTStructureTiers.MAX_SOLENOID_TIER, state.solenoidTier());
+        assertEquals(GTStructureTiers.MAX_ITEM_PIPE_TIER, state.itemPipeTier());
+        assertEquals(GTStructureTiers.MAX_PIPE_CASING_TIER, state.pipeCasingTier());
+        assertEquals(GTStructureTiers.MAX_WIDTH, state.width());
         assertEquals(5, state.voltageTier());
     }
 
