@@ -1,12 +1,17 @@
 package com.sbancuz.plannh.data.provider.gregtech.probe;
 
 import java.lang.reflect.Method;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
+import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.logic.ProcessingLogic;
@@ -30,14 +35,30 @@ import gregtech.api.util.OverclockCalculator;
  */
 final class ProbeSubject {
 
+    /**
+     * Readings are memoized because the settings panel asks for them from visibility predicates that
+     * run while the screen draws. The cap is a backstop against a chart walking a wide grid of states;
+     * dropping the lot is fine, every entry is reproducible.
+     */
+    private static final int MAX_CACHED_READINGS = 512;
+
     private final MTEMultiBlockBase machine;
     private final ProcessingLogic logic;
     private final Method createCalculator;
+    private final FieldInjector injector;
+    private final Map<StructureState, ProbeReading> readings = new HashMap<>();
 
     private ProbeSubject(final MTEMultiBlockBase machine, final ProcessingLogic logic, final Method createCalculator) {
         this.machine = machine;
         this.logic = logic;
         this.createCalculator = createCalculator;
+        this.injector = FieldInjector.forClass(machine.getClass());
+    }
+
+    /** The knobs this machine stores at all - not yet whether any of them changes a number. */
+    @Nonnull
+    EnumSet<Knob> reachableKnobs() {
+        return injector.reachableKnobs();
     }
 
     /** Null for anything without processing logic to read: singleblocks, and the machines that hand-roll checkProcessing. */
@@ -57,11 +78,30 @@ final class ProbeSubject {
         }
     }
 
+    /**
+     * What the machine would do with this recipe, built into this structure. Null when it declined to
+     * answer, which the caller reads as "this machine keeps its hand-written row".
+     */
     @Nullable
-    ProbeReading read(@Nonnull final GTRecipe recipe) {
+    ProbeReading read(@Nonnull final StructureState state, @Nonnull final GTRecipe recipe) {
+        final ProbeReading cached = readings.get(state);
+        if (cached != null) return cached;
+        if (readings.size() >= MAX_CACHED_READINGS) readings.clear();
+
+        final ProbeReading reading = measure(state, recipe);
+        if (reading != null) readings.put(state, reading);
+        return reading;
+    }
+
+    @Nullable
+    private ProbeReading measure(final StructureState state, final GTRecipe recipe) {
         final ProbeFields fields = ProbeFields.RESOLVED;
         if (fields == null) return null;
         try {
+            injector.apply(machine, state);
+            // Voltage is not a field the machine holds; it counts it off its energy hatches, so a
+            // machine that scales per tier answers for tier zero until it has one.
+            if (!FakeEnergyHatch.attach(machine, state.voltageTier())) return null;
             fields.setupProcessingLogic.invoke(machine, logic);
             resolveSuppliers(fields);
             final OverclockCalculator calculator = (OverclockCalculator) createCalculator.invoke(logic, recipe);

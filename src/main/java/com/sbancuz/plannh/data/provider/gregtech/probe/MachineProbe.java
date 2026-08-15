@@ -1,7 +1,9 @@
 package com.sbancuz.plannh.data.provider.gregtech.probe;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -9,6 +11,8 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
+import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
@@ -109,8 +113,8 @@ public final class MachineProbe {
             return;
         }
 
-        // The unbuilt state is all the probe can see today, so that is where the two are compared.
-        final StructureState state = new StructureState(1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        // Compared at the structure an untouched node shows, which is what a reader would see.
+        final StructureState state = reference();
         final boolean same = table.maxParallel()
             .applyAsInt(state)
             == probed.maxParallel()
@@ -151,33 +155,82 @@ public final class MachineProbe {
             + "eu";
     }
 
+    /**
+     * The structure the probe reads a machine's flags at: every knob at the best available, matching
+     * what {@code GTSettings.resolve} hands an untouched node. Whether a machine overclocks on heat or
+     * rewrites its recipe cost is structural rather than tiered, so the voltage here is only the
+     * lowest real one.
+     */
+    @Nonnull
+    private static StructureState reference() {
+        return new StructureState(
+            1,
+            GTStructureTiers.MAX_COIL_TIER,
+            GTStructureTiers.MAX_SOLENOID_TIER,
+            GTStructureTiers.MAX_ITEM_PIPE_TIER,
+            GTStructureTiers.MAX_PIPE_CASING_TIER,
+            GTStructureTiers.MAX_SAWBLADE_TIER,
+            0,
+            2,
+            GTStructureTiers.MAX_WIDTH,
+            0);
+    }
+
     @Nullable
     private static GTMachinePreset build(final IMetaTileEntity prototype) {
         final ProbeSubject subject = ProbeSubject.of(prototype);
         if (subject == null) return null;
         final GTRecipe recipe = sentinel();
         if (recipe == null) return null;
-        final ProbeReading reading = subject.read(recipe);
-        if (reading == null) return null;
-        if (!reading.isRunnable()) {
-            PlanNH.LOG.debug("PlanNH probe: {} reads as unrunnable unbuilt, {}", prototype.getClass(), reading);
+        final ProbeReading reference = subject.read(reference(), recipe);
+        if (reference == null) return null;
+        if (!reference.isRunnable()) {
+            PlanNH.LOG.debug("PlanNH probe: {} reads as unrunnable, {}", prototype.getClass(), reference);
             return null;
         }
-        return toPreset(reading);
+        // A state the machine declines falls back to the reference rather than to nonsense.
+        return toPreset(reference, state -> {
+            final ProbeReading at = subject.read(state, recipe);
+            return at != null && at.isRunnable() ? at : reference;
+        }, subject.reachableKnobs());
     }
 
+    /**
+     * Builds the preset. The numbers are functions because they are re-probed per structure; the flags
+     * are read once at the reference state, because a machine does not start or stop overclocking on
+     * heat depending on which coil is in it.
+     */
     @Nonnull
-    public static GTMachinePreset toPreset(@Nonnull final ProbeReading reading) {
+    public static GTMachinePreset toPreset(@Nonnull final ProbeReading reference,
+        @Nonnull final Function<StructureState, ProbeReading> readings, @Nonnull final EnumSet<Knob> knobs) {
         final GTMachinePreset.Builder preset = GTMachinePreset.builder()
-            .parallel(Math.max(1, reading.maxParallel()))
-            .speed(reading.durationModifier())
-            .eu(reading.euModifier())
-            .overclock(reading.durationDecreasePerOC(), reading.eutIncreasePerOC());
+            .parallel(
+                s -> Math.max(
+                    1,
+                    readings.apply(s)
+                        .maxParallel()))
+            .speed(
+                s -> readings.apply(s)
+                    .durationModifier())
+            .eu(
+                s -> readings.apply(s)
+                    .euModifier())
+            .overclock(
+                s -> readings.apply(s)
+                    .durationDecreasePerOC(),
+                s -> readings.apply(s)
+                    .eutIncreasePerOC())
+            .knobs(knobs.toArray(new Knob[0]));
 
-        if (reading.heatOC()) preset.heatOC(s -> reading.machineHeat());
+        final ProbeReading reading = reference;
+        if (reading.heatOC()) preset.heatOC(
+            s -> readings.apply(s)
+                .machineHeat());
         if (reading.heatDiscount()) {
             preset.heatDiscount();
-            preset.machineHeat(s -> reading.machineHeat());
+            preset.machineHeat(
+                s -> readings.apply(s)
+                    .machineHeat());
         }
         // Only a machine that overclocks on heat has a heat floor to pin. The rest leave the field at
         // GT's zero, which would otherwise read as "this machine fires from absolute zero".
