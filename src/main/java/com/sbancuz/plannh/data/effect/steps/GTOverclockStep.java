@@ -22,7 +22,10 @@ import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.effect.EffectStep;
+import com.sbancuz.plannh.data.provider.gregtech.GTPresetApplier;
+import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 
+import gregtech.api.enums.GTValues;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.util.OverclockCalculator;
 
@@ -38,6 +41,7 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
 
     private boolean forceHeat;
     private boolean forcePerfectOC;
+    private boolean machineDriven;
     private final List<Condition> conditions = new ArrayList<>();
     private final Map<String, Consumer<GTOverclockStep>> routeModifiers = new HashMap<>();
     private final Map<String, Map<String, Object>> routeDefaults = new HashMap<>();
@@ -58,6 +62,16 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
     public GTOverclockStep withDefault(final String recipeMapId, final String key, final Object value) {
         routeDefaults.computeIfAbsent(recipeMapId, k -> new HashMap<>())
             .put(key, value);
+        return this;
+    }
+
+    /**
+     * Marks the profile that offers the machine picker. Whether a node derives its numbers from a
+     * machine is a property of its profile, not of its settings: reading it off the settings map
+     * would make it depend on whether the user had happened to pick one yet.
+     */
+    public GTOverclockStep machineDriven() {
+        this.machineDriven = true;
         return this;
     }
 
@@ -119,22 +133,54 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
             }
         }
 
+        // PARALLELS_DEF's default is 0, meaning "ask the machine", so reading it raw yields a
+        // throughput factor of 0 on every path that does not go through the preset - which zeroes
+        // every port on the node and makes it silently produce and consume nothing.
+        final int settingParallels = Math.max(1, GTSettings.PARALLELS_DEF.effectiveInt(ctx, s));
         final int parallels;
         if (catalystSetting != null) {
             final int cat = MachineProfile.getInt(s, catalystSetting.key, 0);
-            parallels = cat > 0 ? catalystComputer.applyAsInt(cat)
-                : MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
+            parallels = cat > 0 ? catalystComputer.applyAsInt(cat) : settingParallels;
         } else {
-            parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
+            parallels = settingParallels;
         }
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
 
         final long eut = recipeEUt(ctx, current);
         final int recipeDuration = current.durationTicks();
 
-        if (eut <= 0 || recipeDuration <= 0
-            || MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF")
-                .equals("OFF")) {
+        if (eut <= 0 || recipeDuration <= 0) {
+            current.durationTicks(recipeDuration);
+            current.energyPerT(eut);
+            current.throughputFactor(parallels * machines);
+            return current;
+        }
+
+        // The machine supplies every number, and anything the user stored is laid over it inside
+        // configure - so Advanced is an override rather than a separate set of maths. When no
+        // machine resolves (an unindexed recipemap, or one the pack no longer has) fall through to
+        // the manual path rather than silently dropping to unoverclocked values.
+        //
+        // A catalyst route is excluded: its parallel count comes from a recipe-driven item count
+        // that no machine preset can report, and configure would replace it with the structure's.
+        if (machineDriven && catalystSetting == null) {
+            final GTPresetApplier.Configured configured = GTPresetApplier.configure(s, ctx, eut, recipeDuration);
+            if (configured != null) {
+                configured.calculator()
+                    .calculate();
+                current.durationTicks(
+                    configured.calculator()
+                        .getDuration());
+                current.energyPerT(
+                    configured.calculator()
+                        .getConsumption());
+                current.throughputFactor(configured.parallels() * machines);
+                return current;
+            }
+        }
+
+        if (MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF")
+            .equals("OFF")) {
             current.durationTicks(recipeDuration);
             current.energyPerT(eut);
             current.throughputFactor(parallels * machines);
@@ -165,12 +211,15 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         return current;
     }
 
+    /**
+     * Settings.VOLTAGE's option list is GTValues.VN, so the tier table is GT's to define. The
+     * closed form 8*4^tier that this used to compute is wrong at the top end: V[14] is
+     * Integer.MAX_VALUE - 7, not 2147483648.
+     */
     public static long tierNameToVoltage(@Nullable final String name) {
         if (name == null || name.equals("OFF")) return 0;
-        final String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV",
-            "UXV", "MAX" };
-        for (int i = 0; i < names.length; i++) {
-            if (names[i].equals(name)) return 8L * (long) Math.pow(4, i);
+        for (int tier = 0; tier < GTValues.VN.length; tier++) {
+            if (GTValues.VN[tier].equals(name)) return GTValues.V[tier];
         }
         return 0;
     }
@@ -215,11 +264,24 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         return calc;
     }
 
-    static long recipeEUt(RecipeContext ctx, EffectResult current) {
+    static long recipeEUt(final RecipeContext ctx, final EffectResult current) {
+        final long fromRecipe = recipeEUt(ctx, current.durationTicks());
+        return fromRecipe > 0 ? fromRecipe : current.energyPerT();
+    }
+
+    /**
+     * The recipe's own EU/t, for callers that have no {@link EffectResult} to fall back on - the
+     * settings rows, which need it to know which voltage tiers can run the recipe at all.
+     */
+    public static long recipeEUt(final RecipeContext ctx) {
+        return recipeEUt(ctx, ctx.getOrDefault(RecipePropertyAPI.DURATION_TICKS, 0));
+    }
+
+    private static long recipeEUt(final RecipeContext ctx, final int duration) {
         final Long euPerTick = ctx.getOrDefault(EU_PER_TICK, null);
         if (euPerTick != null && euPerTick > 0) return euPerTick;
         final Long totalEu = ctx.getOrDefault(TOTAL_EU, null);
-        if (totalEu != null && totalEu > 0 && current.durationTicks() > 0) return totalEu / current.durationTicks();
-        return current.energyPerT();
+        if (totalEu != null && totalEu > 0 && duration > 0) return totalEu / duration;
+        return 0;
     }
 }

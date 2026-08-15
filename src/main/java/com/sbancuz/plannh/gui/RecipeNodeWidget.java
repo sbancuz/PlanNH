@@ -25,7 +25,6 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Group;
@@ -33,6 +32,7 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
@@ -110,6 +110,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     private static final int BOOL_CLICK_W = 120;
     private static final int CLICK_H = 10;
     private static final int SETTING_DEC_X = 80;
+    /** Breathing room between a setting's text and the [-]/[+] steppers that follow it. */
+    private static final int SETTING_LABEL_GAP = 4;
     private static final int SETTING_BTN_W = 22;
     private static final int SETTING_INC_X = SETTING_DEC_X + SETTING_BTN_W;
     private static final int EXTRACTOR_BTN_W = 100;
@@ -308,17 +310,24 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             final int titleCol = PlannhColors.titleColor(recipeName);
             GuiDraw.drawRect(CONTENT_INSET, CONTENT_INSET, cw - TITLE_BAR_RMARGIN, TITLE_BAR_H, titleCol);
             GuiDraw.drawRect(CONTENT_INSET, CONTENT_TOP, cw - TITLE_BAR_RMARGIN, TITLE_UL_H, PlannhColors.NODE_TITLE_LINE.getColor());
-            final int titleW = Minecraft.getMinecraft().fontRenderer.getStringWidth(recipeName);
+            // The title names the machine the node is modelled as, since that is what its numbers
+            // come from, and clicking it picks a different one. Colour still keys on the recipe so a
+            // node does not change hue when its machine does.
+            final String title = titleText();
+            final int titleW = Minecraft.getMinecraft().fontRenderer.getStringWidth(title);
             GuiDraw.drawText(
-                recipeName,
+                title,
                 (float) neiWidget.w / 2 - (float) titleW / 2,
                 TITLE_TEXT_Y,
                 1.0f,
                 PlannhColors.textOn(titleCol),
                 false);
 
-            if (node.machineConfig.hasAnyBoost()) {
-                GuiDraw.drawText(buildConfigBadge(), LEFT_CONTENT_X, TITLE_TEXT_Y, 1.0f, PlannhColors.TEXT_BADGE.getColor(), false);
+            // Ask the badge itself rather than "is anything stored": a node whose only stored key
+            // is its machine has plenty stored and nothing to badge.
+            final String badge = buildConfigBadge();
+            if (!badge.isEmpty()) {
+                GuiDraw.drawText(badge, LEFT_CONTENT_X, TITLE_TEXT_Y, 1.0f, PlannhColors.TEXT_BADGE.getColor(), false);
             }
 
             final Group grp = canvas.getGroupForNode(node.id);
@@ -562,6 +571,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
             if (neiWidget != null) {
                 final int cw = neiWidget.w + NEI_PAD_W;
+                // Left of the gear along the title bar: pick which machine runs this recipe.
+                if (mx >= CONTENT_INSET && mx < cw - GEAR_HIT_LEFT_OFF
+                    && my >= CONTENT_INSET
+                    && my < CONTENT_INSET + TITLE_BAR_H
+                    && hasMachineChoice()) {
+                    canvas.openMachinePicker(node);
+                    return Result.SUCCESS;
+                }
                 if (mx >= cw - GEAR_HIT_LEFT_OFF && mx <= cw - GEAR_HIT_RIGHT_OFF
                     && my >= GEAR_HIT_TOP
                     && my <= GEAR_HIT_BOTTOM) {
@@ -646,15 +663,44 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         }
     }
 
+    /** The machine name when the node has one to offer, otherwise the recipe's own name. */
+    private String titleText() {
+        final SettingDef<?> def = node.machineConfig.getProfile()
+            .setting(GTSettings.MACHINE);
+        if (def == null) return recipeName;
+        final List<String> options = def.options(recipeContext());
+        if (options.isEmpty()) return recipeName;
+        final String stored = node.machineConfig.getString(def.key);
+        return def.display(options.contains(stored) ? stored : options.getFirst());
+    }
+
+    private boolean hasMachineChoice() {
+        final SettingDef<?> def = node.machineConfig.getProfile()
+            .setting(GTSettings.MACHINE);
+        return def != null && def.options(recipeContext())
+            .size() > 1;
+    }
+
+    private RecipeContext recipeContext() {
+        return new RecipeContext(node.properties);
+    }
+
+    /** The rows this node renders; a setting the profile hides must not badge or size the panel. */
+    private List<SettingDef<?>> visibleSettings() {
+        final MachineConfig c = node.machineConfig;
+        return c.getProfile()
+            .visibleSettings(recipeContext(), c.settings);
+    }
+
     private String buildConfigBadge() {
         final MachineConfig c = node.machineConfig;
-        final MachineProfile profile = c.getProfile();
         final StringBuilder sb = new StringBuilder();
 
-        for (final SettingDef<?> def : profile.visibleSettings(new RecipeContext(node.properties), c.settings)) {
+        for (final SettingDef<?> def : visibleSettings()) {
+            // Presence is the choice now, so a value deliberately set back to the declared default
+            // still counts - it is the machine's value being overridden, not an untouched row.
             final Object val = c.settings.get(def.key);
             if (val == null) continue;
-            if (val.equals(def.defaultValue)) continue;
             final String badge = def.badge(val, c);
             if (badge == null) continue;
             sb.append(badge)
@@ -672,7 +718,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
         final int x = LEFT_CONTENT_X;
         final int y0 = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP + calcInfoHeight();
-        final MachineProfile profile = node.machineConfig.getProfile();
         final int panelH = configRowsHeight() + 4;
         GuiDraw.drawRect(
             x - CONFIG_PANEL_INSET,
@@ -700,7 +745,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         }));
         y += LINE_H;
 
-        for (final SettingDef<?> def : profile.visibleSettings(new RecipeContext(node.properties), c.settings)) {
+        for (final SettingDef<?> def : visibleSettings()) {
             y = drawSetting(x, y, def, c);
         }
 
@@ -763,12 +808,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
     private int drawSetting(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
         if (def.type == Integer.class) {
-            return drawConfigIntField(x, y, def.label, c.getInt(def.key), def.minInt, def.maxInt, v -> {
+            // An auto setting shows what the machine actually does rather than the 0 that means
+            // "ask the machine", and cannot be stepped past what that machine allows.
+            final int shown = def.isAuto() ? def.effectiveInt(recipeContext(), c.settings) : c.getInt(def.key);
+            final int max = def.isAuto() ? def.effectiveMax(recipeContext(), c.settings) : def.maxInt;
+            return drawConfigIntField(x, y, def.label, shown, def.minInt, max, v -> {
                 c.setInt(def.key, v);
                 onConfigChanged();
             });
         } else if (def.type == Boolean.class) {
-            final boolean val = c.getBoolean(def.key);
+            final boolean val = def.isAuto() ? def.effectiveBool(recipeContext(), c.settings) : c.getBoolean(def.key);
             final String label = (val ? "[\u2713] " : "[  ] ") + def.label;
             GuiDraw.drawText(
                 label,
@@ -783,29 +832,49 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             }));
             return y + LINE_H;
         } else if (def.type == String.class && def.hasOptions()) {
-            final String val = c.getString(def.key);
-            GuiDraw.drawText(def.label + " " + val, x, y, 1.0f, PlannhColors.SETTING_ON.getColor(), false);
+            final List<String> options = def.options(recipeContext());
+            if (options.isEmpty()) return y;
+
+            final String stored = c.getString(def.key);
+            final int cur = options.indexOf(stored);
+            // Nothing stored resolves to the first option, so a node that accepts the obvious
+            // choice serializes nothing. A stored value the list no longer offers is a machine the
+            // pack removed: show it flagged rather than silently rewriting the user's chart.
+            final boolean missing = cur < 0 && !stored.isEmpty();
+            final String shown = cur >= 0 || missing ? stored : options.getFirst();
+            final int color = missing ? PlannhColors.ACCENT_RED_X.getColor()
+                : cur < 0 ? PlannhColors.TEXT_MUTED.getColor() : PlannhColors.SETTING_ON.getColor();
+            // Machine names run far longer than a tier abbreviation, and the steppers sit at a fixed
+            // offset, so an untrimmed row draws straight through them.
+            final String row = def.label + " " + def.display(shown) + (missing ? " ?" : "");
+            GuiDraw.drawText(
+                Minecraft.getMinecraft().fontRenderer.trimStringToWidth(row, SETTING_DEC_X - SETTING_LABEL_GAP),
+                x,
+                y,
+                1.0f,
+                color,
+                false);
 
             final int decX = x + SETTING_DEC_X;
             final int incX = decX + SETTING_BTN_W;
             GuiDraw.drawText("[-]", decX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
             GuiDraw.drawText("[+]", incX, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
 
-            assert def.options != null;
-
-            configZones.add(new ClickZone(decX, y, incX, y + CLICK_H, () -> {
-                final int cur = def.options.indexOf(c.getString(def.key));
-                c.setString(def.key, def.options.get(Math.max(0, (Math.max(cur, 0)) - 1)));
-                onConfigChanged();
-            }, true));
-            configZones.add(new ClickZone(incX, y, incX + SETTING_BTN_W, y + CLICK_H, () -> {
-                final int cur = def.options.indexOf(c.getString(def.key));
-                c.setString(def.key, def.options.get(Math.min(def.options.size() - 1, (Math.max(cur, 0)) + 1)));
-                onConfigChanged();
-            }, true));
+            configZones.add(new ClickZone(decX, y, incX, y + CLICK_H, () -> cycleOption(def, c, -1), true));
+            configZones
+                .add(new ClickZone(incX, y, incX + SETTING_BTN_W, y + CLICK_H, () -> cycleOption(def, c, +1), true));
             return y + LINE_H;
         }
         return y + LINE_H;
+    }
+
+    /** Steps an enum row. An unset or unknown value lands on the first option, never off the end. */
+    private void cycleOption(final SettingDef<?> def, final MachineConfig c, final int step) {
+        final List<String> options = def.options(recipeContext());
+        if (options.isEmpty()) return;
+        final int cur = options.indexOf(c.getString(def.key));
+        c.setString(def.key, options.get(cur < 0 ? 0 : Math.min(options.size() - 1, Math.max(0, cur + step))));
+        onConfigChanged();
     }
 
     private int computeConfigPanelHeight() {
@@ -813,9 +882,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     private int configRowsHeight() {
-        int h = (node.machineConfig.getProfile()
-            .visibleSettings(new RecipeContext(node.properties), node.machineConfig.settings)
-            .size() + 2 + targetableOutputs().size()) * LINE_H;
+        int h = (visibleSettings().size() + 2 + targetableOutputs().size()) * LINE_H;
         if (node.getAvailableExtractors()
             .size() > 1) h += LINE_H;
         return h;
@@ -858,11 +925,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     private void onConfigChanged() {
-        canvas.getGraph()
-            .markDirty();
-        resizeForZoom(
-            canvas.getGraph()
-                .getZoom());
+        canvas.onNodeConfigChanged(node);
     }
 
     @Nullable

@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiPredicate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -26,6 +25,8 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
+import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -79,6 +80,22 @@ public class GTProvider implements PropertyProvider {
         .<RecipeMap<?>>builder("gt.recipe_map", null)
         .build();
 
+    /**
+     * The recipe this node was extracted from, kept so GT's own OverclockDescriber can be asked what
+     * a machine would do with it - several describers discard the template and rebuild from the
+     * recipe. Node.properties is rebuilt by refresh() and never serialized, and the balancer only
+     * aggregates Number values, so holding it costs nothing.
+     */
+    public static final RecipeProperty<GTRecipe> GT_RECIPE = RecipeProperty.<GTRecipe>builder("gt.recipe", null)
+        .build();
+
+    /**
+     * The NEI handler's own tab title, which names the machine the recipe list belongs to. The
+     * machine picker uses it to default to the machine the player was actually looking at.
+     */
+    public static final RecipeProperty<String> NEI_TITLE = RecipeProperty.<String>builder("gt.nei_title", "")
+        .build();
+
     @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(FurnaceRecipeHandler.class, this);
@@ -90,10 +107,6 @@ public class GTProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(PROFILE);
         new GTSteamProvider().register();
-    }
-
-    static BiPredicate<RecipeContext, Map<String, Object>> multiblockOnly() {
-        return (ctx, s) -> MachineProfile.getBool(s, Settings.GT_MULTIBLOCK.key(), false);
     }
 
     private static boolean hasHeat(final RecipeContext ctx) {
@@ -108,66 +121,73 @@ public class GTProvider implements PropertyProvider {
         return map != null && "gt.recipe.eyeofharmony".equals(map.unlocalizedName);
     }
 
-    private static final MachineProfile PROFILE = MachineProfile.builder("gregtech:unified", "GT Unified")
-        .setting(Settings.VOLTAGE.def())
-        .setting(Settings.AMP.def())
-        .setting(Settings.SPEED.def())
-        .setting(
-            Settings.PARALLELS.def()
-                .withVisibility((ctx, s) -> !isEoH(ctx)))
-        .setting(Settings.MACHINES.def())
-        .setting(Settings.PERFECT_OC.def())
-        .setting(Settings.GT_MULTIBLOCK.def())
-        .setting(
-            Settings.LASER_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.EUT_DISCOUNT.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.EUT_INCREASE_PER_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.DURATION_DECREASE_PER_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.MAX_OVERCLOCKS.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.MAX_REGULAR_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.MAX_TIER_SKIPS.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.UNLIMITED_SKIPS.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.NO_OVERCLOCK.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.HEAT_OC.def()
-                .withVisibility((ctx, s) -> hasHeat(ctx)))
-        .setting(
-            Settings.MACHINE_HEAT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.RECIPE_HEAT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.HEAT_DISCOUNT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.HEAT_DISCOUNT_MULT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
+    /**
+     * The machine picker plus the structure knobs the chosen machine actually reads. Speed, EU
+     * discount, overclock factors and heat are all derived from the machine, and reappear as rows
+     * only once the user ticks Advanced.
+     */
+    private static void machineDriven(final MachineProfile.Builder b) {
+        b.setting(GTSettings.MACHINE_DEF.withVisibility(GTSettings.neverAsARow()));
+        b.setting(GTSettings.VOLTAGE_DEF.withVisibility(GTSettings.voltageEditable()));
+        b.setting(Settings.MACHINES.def());
+        b.setting(
+            GTSettings.PARALLELS_DEF.withVisibility(
+                GTSettings.parallelsEditable()
+                    .and((ctx, s) -> !isEoH(ctx))));
+        b.setting(GTSettings.COIL_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.COIL)));
+        b.setting(GTSettings.SOLENOID_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.SOLENOID)));
+        b.setting(GTSettings.ITEM_PIPE_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.ITEM_PIPE)));
+        b.setting(GTSettings.PIPE_CASING_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.PIPE_CASING)));
+        b.setting(GTSettings.SAWBLADE_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.SAWBLADE)));
+        b.setting(GTSettings.ELECTRODE_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.ELECTRODE)));
+        b.setting(
+            GTSettings.STRUCTURE_TIER_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.STRUCTURE_TIER)));
+        b.setting(GTSettings.WIDTH_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.WIDTH)));
+        b.setting(GTSettings.MODE_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.MODE)));
+        b.setting(
             Settings.CATALYST_ASTRAL_ARRAYS.def()
-                .withVisibility((ctx, s) -> isEoH(ctx)))
+                .withVisibility((ctx, s) -> isEoH(ctx)));
+        b.setting(GTSettings.ADVANCED_DEF);
+    }
 
+    /** The pre-picker rows, kept so a hand-tuned chart can still be edited exactly as before. */
+    private static void manual(final MachineProfile.Builder b) {
+        // Each row reads the machine's own value until the user stores one over it. The two
+        // overclock caps have no machine counterpart - GT rarely sets them - so they stay plain
+        // optional limits where nothing stored means no cap.
+        for (final SettingDef<?> def : List.of(
+            GTSettings.AMP_DEF,
+            GTSettings.SPEED_DEF,
+            GTSettings.PERFECT_OC_DEF,
+            Settings.LASER_OC.def(),
+            Settings.NO_OVERCLOCK.def(),
+            GTSettings.UNLIMITED_SKIPS_DEF,
+            GTSettings.EUT_DISCOUNT_DEF,
+            GTSettings.EUT_PER_OC_DEF,
+            GTSettings.DURATION_PER_OC_DEF,
+            Settings.MAX_OVERCLOCKS.def(),
+            Settings.MAX_REGULAR_OC.def(),
+            GTSettings.MAX_TIER_SKIPS_DEF,
+            GTSettings.MACHINE_HEAT_DEF,
+            GTSettings.RECIPE_HEAT_DEF,
+            GTSettings.HEAT_OC_DEF,
+            GTSettings.HEAT_DISCOUNT_DEF,
+            GTSettings.HEAT_DISCOUNT_MULT_DEF)) {
+            b.setting(def.withVisibility(GTSettings.advancedOnly()));
+        }
+    }
+
+    private static final MachineProfile PROFILE = MachineProfile.builder("gregtech:unified", "GT Unified")
+        .settings(GTProvider::machineDriven)
+        .settings(GTProvider::manual)
+        // Per-recipemap overclock defaults are not listed here: GTMachinePresets derives them from
+        // the machine class, so a second table keyed on the recipemap would be a rival authority.
+        // What stays is the genuinely recipe-driven cases, which no machine can report.
         .effect(
             Effects.durationFromHandler()
                 .andThen(
                     GTOverclockStep.create()
+                        .machineDriven()
                         .applyIf(GTProvider::hasHeat, GTOverclockStep::withHeat)
                         .applyIf(
                             ctx -> ctx.properties()
@@ -178,26 +198,8 @@ public class GTProvider implements PropertyProvider {
                             step -> step.withCatalyst(
                                 (SettingDef<Integer>) Settings.CATALYST_ASTRAL_ARRAYS.def(),
                                 v -> (int) Math
-                                    .pow(2, (int) Math.floor(Math.log(8.0 * Math.min(v, 8637)) / Math.log(1.7)))))
-                        // Perfect OC defaults
-                        .withDefault("gt.recipe.largechemicalreactor", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtpp.recipe.flotationcell", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtpp.recipe.matterfab2", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtpp.recipe.oremill", Settings.PERFECT_OC.key(), true)
-                        .withDefault("bw.recipe.cal", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtnhlanth.recipe.digester", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gt.recipe.nanoforge", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.PERFECT_OC.key(), true)
-                        // Unlimited tier skip defaults
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gt.recipe.nanoforge", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gtpp.recipe.alloyblastsmelter", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.UNLIMITED_SKIPS.key(), true)
-                        // No-overclock defaults
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.NO_OVERCLOCK.key(), true)
-                        .withDefault("gtpp.recipe.algae_pond", Settings.NO_OVERCLOCK.key(), true)))
+                                    .pow(2, (int) Math.floor(Math.log(8.0 * Math.min(v, 8637)) / Math.log(1.7)))))))
+        .onLoad(GTSettings::migrateLegacyNode)
         .build();
 
     @Override
@@ -267,6 +269,9 @@ public class GTProvider implements PropertyProvider {
             if (r == null) {
                 return props;
             }
+            // Kept out of gthMap: that variable also gates the fuel-backend and heating-coil
+            // branches below, which the furnace maps must not take.
+            props.put(RECIPE_MAP, recipeMap);
 
         } else if (handler instanceof final GTNEIDefaultHandler gth) {
             final List<TemplateRecipeHandler.CachedRecipe> recipes = RecipeHandlerAccess.getArecipes(gth);
@@ -282,6 +287,11 @@ public class GTProvider implements PropertyProvider {
             return props;
         }
 
+        props.put(GT_RECIPE, r);
+        props.put(
+            NEI_TITLE,
+            handler.getRecipeName()
+                .trim());
         props.put(RecipePropertyAPI.DURATION_TICKS, r.mDuration);
         props.put(EU_PER_TICK, (long) r.mEUt);
         props.put(TOTAL_EU, (long) r.mEUt * r.mDuration);

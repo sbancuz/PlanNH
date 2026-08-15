@@ -5,9 +5,21 @@
 plannh.settings.duration_ticks=Duration
 plannh.settings.tick_modifier=Accel
 plannh.settings.machines=Mach
-plannh.settings.energy_per_tick=Energy/t
 plannh.settings.inputs_per_tick=Inputs/t
 plannh.settings.burnable_override=Burnable
+
+## Settings - GT machine and structure
+plannh.settings.gt_machine=Machine
+plannh.settings.gt_advanced=Advanced
+plannh.settings.gt_coil=Coil
+plannh.settings.gt_solenoid=Solenoid
+plannh.settings.gt_item_pipe=Item Pipe
+plannh.settings.gt_pipe_casing=Pipe Casing
+plannh.settings.gt_sawblade=Sawblade
+plannh.settings.gt_electrode=Electrode
+plannh.settings.gt_structure_tier=Struct. Tier
+plannh.settings.gt_width=Width
+plannh.settings.gt_mode=Mode
 
 ## Settings - GT
 plannh.settings.voltage=Tier
@@ -24,7 +36,6 @@ plannh.settings.duration_decrease_per_oc=Spd%/OC
 plannh.settings.max_overclocks=Max OC
 plannh.settings.max_regular_oc=Max Reg OC
 plannh.settings.max_tier_skips=Max Skips
-plannh.settings.fuel_efficiency=Fuel Eff.%
 plannh.settings.perfect_oc=Perfect OC
 plannh.settings.heat_oc=Heat OC
 plannh.settings.heat_discount=Heat Disc.
@@ -39,9 +50,6 @@ plannh.settings.mana_per_tick=Mana/t
 
 ## Settings - Thaumcraft (and friends)
 plannh.settings.vis_per_tick=Vis/t
-
-## Settings - Forestry
-plannh.settings.forestry_rf_per_tick=For. RF/t
 
 ## Settings - BloodMagic
 plannh.settings.lp_per_tick=BM LP/t

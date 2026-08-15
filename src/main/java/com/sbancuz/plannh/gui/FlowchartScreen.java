@@ -19,6 +19,7 @@ import net.minecraft.util.StatCollector;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
 import com.cleanroommc.modularui.drawable.Rectangle;
@@ -131,6 +132,18 @@ public class FlowchartScreen extends ModularScreen {
             .relativeToScreen()
             .child(targetField);
         canvas.setTargetEditorMenu(targetEditor);
+
+        // Machine picker: the choices depend on which recipe the node holds, so the canvas refills
+        // this list each time it opens rather than the children being fixed here.
+        final Menu<?> machinePicker = new Menu<>();
+        final ListWidget<IWidget, ?> machineList = new ListWidget<>().coverChildrenHeight()
+            .width(140);
+        machinePicker.setEnabledIf(_ -> canvas.isMachinePickerOpen())
+            .coverChildren()
+            .background()
+            .relativeToScreen()
+            .child(machineList);
+        canvas.setMachinePicker(machinePicker, machineList);
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
@@ -338,6 +351,7 @@ public class FlowchartScreen extends ModularScreen {
         panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
         panel.child(targetEditor);
+        panel.child(machinePicker);
 
         return new FlowchartScreen(panel);
     }

@@ -23,9 +23,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.SettingDef;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Summary.SummarySection;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
@@ -308,7 +307,7 @@ public final class Serializer {
             obj.add("inputs", portListToJson(node.inputs));
             obj.add("outputs", portListToJson(node.outputs));
 
-            if (node.machineConfig.hasAnyBoost()) {
+            if (node.machineConfig.hasStoredSettings()) {
                 obj.add("machineConfig", machineConfigToJson(node.machineConfig));
             }
 
@@ -521,21 +520,24 @@ public final class Serializer {
     @Nonnull
     private static JsonObject machineConfigToJson(final MachineConfig cfg) {
         final JsonObject obj = new JsonObject();
-        final MachineProfile profile = cfg.getProfile();
 
         if (!MachineProfileRegistry.defaultId()
             .equals(cfg.profileId)) {
             obj.addProperty("profile", cfg.profileId);
         }
 
+        // Walk what the node actually stores, not what its profile declares: the map is sparse, so
+        // a key being there is already the statement "the user chose this". Iterating the defs
+        // instead used to silently drop any stored key the current profile no longer lists.
         final JsonObject settingsObj = new JsonObject();
-        for (final SettingDef<?> def : profile.settings()) {
-            final Object val = cfg.settings.get(def.key);
-            if (val == null) continue;
-            if (val.equals(def.defaultValue)) continue;
-            if (val instanceof final Boolean b) settingsObj.addProperty(def.key, b);
-            else if (val instanceof final Integer i) settingsObj.addProperty(def.key, i);
-            else if (val instanceof final String s) settingsObj.addProperty(def.key, s);
+        for (final Map.Entry<String, Object> entry : cfg.settings.entrySet()) {
+            // The machine count has its own slot and is rewritten by the solver every frame.
+            if (Settings.MACHINES.key()
+                .equals(entry.getKey())) continue;
+            final Object val = entry.getValue();
+            if (val instanceof final Boolean b) settingsObj.addProperty(entry.getKey(), b);
+            else if (val instanceof final Integer i) settingsObj.addProperty(entry.getKey(), i);
+            else if (val instanceof final String s) settingsObj.addProperty(entry.getKey(), s);
         }
         if (!settingsObj.entrySet()
             .isEmpty()) obj.add("settings", settingsObj);
@@ -575,6 +577,10 @@ public final class Serializer {
         if (obj.has("outMul")) {
             jsonToMultiplierArray(obj.getAsJsonArray("outMul"), cfg.outputProductivity);
         }
+
+        cfg.getProfile()
+            .onLoad()
+            .accept(cfg.settings);
     }
 
     // ── Multiplier helpers ──

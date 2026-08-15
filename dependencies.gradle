@@ -90,8 +90,20 @@ dependencies {
         exclude group: 'org.eclipse.emf', module: 'org.eclipse.emf.ecore.xmi'
     }
 
+    // The overclock and machine-preset tests use GT's own classes as their oracle, so GT has to be
+    // on the test classpath. Scoped to the test source set: the published mod keeps GT compileOnly.
+    testImplementation("com.github.GTNewHorizons:GT5-Unofficial:5.09.52.613:dev")
+
     // Headless test harness (corpus charts are gtnh-flow style YAML)
     testImplementation('org.junit.jupiter:junit-jupiter:5.10.2')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.10.2')
     testImplementation('org.yaml:snakeyaml:2.2')
+
+    // The overclock tests call GT's own OverclockCalculator; classloading it pulls in GTUtility,
+    // whose static init reaches joml and fastutil. Both are already on the compile classpath (via
+    // lwjgl3ify and Forge respectively) but neither reaches test runtime, so without these the
+    // tests compile and then die on NoClassDefFoundError. Versions match what compileClasspath
+    // already resolves.
+    testRuntimeOnly('org.joml:joml:1.10.8')
+    testRuntimeOnly('it.unimi.dsi:fastutil:8.5.18')
 }

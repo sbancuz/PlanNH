@@ -15,9 +15,11 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.UpOrDown;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.layout.IViewport;
 import com.cleanroommc.modularui.api.layout.IViewportStack;
 import com.cleanroommc.modularui.api.widget.IDraggable;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.BufferBuilder;
 import com.cleanroommc.modularui.drawable.DynamicDrawable;
@@ -31,12 +33,17 @@ import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
+import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.ListWidget;
 import com.cleanroommc.modularui.widgets.menu.Menu;
 import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.client.ScreenEffect;
 import com.sbancuz.plannh.client.UIBlurEffect;
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
@@ -47,6 +54,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.UndoHistory;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
+import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 import com.sbancuz.plannh.nei.NodeLookupContext;
@@ -1143,6 +1151,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         // Close context menu on any click
         menuOpen = false;
+        // The picker's own buttons are panel children and consume their click before this runs, so
+        // dismissing here only catches clicks that landed outside it.
+        closeMachinePicker();
 
         if (mouseButton == 0) {
             final int cmx = absMx - getArea().x;
@@ -1357,6 +1368,81 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             remove(contextMenu);
             contextMenu = null;
         }
+    }
+
+    /**
+     * Everything a node displays comes from the cached balance, which only re-solves when the graph
+     * is marked dirty, and a config change can also add or remove rows and so change the node's
+     * height. Both effects live here so a new way to edit a node cannot silently skip one - the
+     * machine picker did exactly that, leaving nodes showing the previous machine's numbers.
+     */
+    public void onNodeConfigChanged(final Node node) {
+        graph.markDirty();
+        final RecipeNodeWidget widget = nodeWidgets.get(node.id);
+        if (widget != null) {
+            widget.syncTransform(graph.getZoom(), graph.getPanX(), graph.getPanY());
+        }
+    }
+
+    // ── Machine picker ──
+    // A node's machine is chosen from its title bar. The list has to live on the panel rather than
+    // on this widget: the canvas is an IViewport, so anything parented to it is drawn through the
+    // pan/zoom transform and a popup would follow the chart around.
+
+    @Nullable
+    private Menu<?> machinePickerMenu;
+    @Nullable
+    private ListWidget<IWidget, ?> machinePickerList;
+    @Nullable
+    private Node machinePickerNode;
+
+    public void setMachinePicker(final Menu<?> menu, final ListWidget<IWidget, ?> list) {
+        this.machinePickerMenu = menu;
+        this.machinePickerList = list;
+    }
+
+    public boolean isMachinePickerOpen() {
+        return machinePickerNode != null;
+    }
+
+    public void closeMachinePicker() {
+        machinePickerNode = null;
+    }
+
+    /** Rebuilds the list for this node, since the choices depend on which recipe it holds. */
+    public void openMachinePicker(final Node node) {
+        if (machinePickerMenu == null || machinePickerList == null) return;
+        final MachineConfig config = node.machineConfig;
+        final SettingDef<?> def = config.getProfile()
+            .setting(GTSettings.MACHINE);
+        if (def == null) return;
+
+        final List<String> options = def.options(new RecipeContext(node.properties));
+        if (options.isEmpty()) return;
+
+        machinePickerList.removeAll();
+        for (final String option : options) {
+            machinePickerList.addChild(new ButtonWidget<>().onMousePressed(_ -> {
+                PlanAPI.recordEdit(graph, () -> {
+                    config.resetForNewMachine();
+                    config.setString(def.key, option);
+                });
+                onNodeConfigChanged(node);
+                closeMachinePicker();
+                return true;
+            })
+                .fullWidth()
+                .background(
+                    new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                    new Rectangle().hollow()
+                        .color(PlannhColors.CONTEXT_BORDER.getColor()))
+                .overlay(
+                    IKey.str(def.display(option))
+                        .color(Color.WHITE.main)),
+                -1);
+        }
+        machinePickerNode = node;
+        machinePickerMenu.pos(getContext().getAbsMouseX(), getContext().getAbsMouseY());
     }
 
     private void showGroupContextMenu(final GroupWidget gw, final int cmx, final int cmy) {

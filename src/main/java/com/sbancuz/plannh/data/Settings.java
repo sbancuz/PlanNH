@@ -27,13 +27,9 @@ public enum Settings {
     MAX_REGULAR_OC("max_regular_oc", 0, 0, 64, (v, c) -> "Rg" + v),
     MAX_TIER_SKIPS("max_tier_skips", 0, 0, 10, (v, c) -> "Sk" + v),
 
-    FUEL_EFFICIENCY("fuel_efficiency", 100, 1, 1000),
-
-    ENERGY_PER_TICK("energy_per_tick", 10, 1, 10000),
     MANA_PER_TICK("mana_per_tick", 10, 1, 10000),
     VIS_PER_TICK("vis_per_tick", 1, 1, 100),
     RF_PER_TICK("rf_per_tick", 80, 1, 10000),
-    FORESTRY_RF_PER_TICK("forestry_rf_per_tick", 10, 1, 10000),
     INPUTS_PER_TICK("inputs_per_tick", 1, 1, 10000),
     LP_PER_TICK("lp_per_tick", 20, 1, 100000),
 
