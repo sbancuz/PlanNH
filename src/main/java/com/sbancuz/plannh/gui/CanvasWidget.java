@@ -1289,7 +1289,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         // menuOpen = false;
 
         float delta = direction == UpOrDown.UP ? ZOOM_STEP : -ZOOM_STEP;
-        delta *= Math.max(1, Math.abs(amount));
+        // Stock LWJGL 2, which the dev client and vanilla installs run, reports the wheel as the
+        // platform delta of +-120 per notch. lwjgl3ify, which every modern GTNH pack runs, reports
+        // notch counts directly. The same scroll therefore arrives 120 times larger on one of them.
+        final int magnitude = Math.abs(amount);
+        delta *= Math.max(1, magnitude >= 120 ? magnitude / 120 : magnitude);
         final float oldZoom = graph.getZoom();
         graph.setZoom(Math.clamp(graph.getZoom() + delta, ZOOM_MIN, ZOOM_MAX));
         final float ratio = graph.getZoom() / oldZoom;
