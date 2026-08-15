@@ -19,6 +19,7 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.provider.GTProvider;
+import com.sbancuz.plannh.data.provider.gregtech.probe.MachineProbe;
 
 import gregtech.api.GregTechAPI;
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
@@ -247,7 +248,12 @@ public final class GTMachineIndex {
         final OverclockDescriber describer = mte instanceof final IOverclockDescriptionProvider provider
             ? provider.getOverclockDescriber()
             : null;
-        final GTMachinePreset preset = GTMachinePresets.lookup(mte.getClass());
+        // The table is what a chart reads until the probe has been proven against it machine by
+        // machine, so the probe only takes over once it is switched on.
+        final GTMachinePreset fromTable = GTMachinePresets.lookup(mte.getClass());
+        final GTMachinePreset probed = MachineProbe.probe(mte);
+        MachineProbe.reportDisagreement(mte.getClass(), fromTable, probed);
+        final GTMachinePreset preset = MachineProbe.drivesNumbers() && probed != null ? probed : fromTable;
         if (preset == null && describer == null && kind == Kind.MULTIBLOCK) {
             uncovered.add(mte.getClass().getName());
         }

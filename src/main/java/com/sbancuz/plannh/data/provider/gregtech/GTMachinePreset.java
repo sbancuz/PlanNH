@@ -131,14 +131,19 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
             return this;
         }
 
-        /** Heat-driven perfect overclocks, one per 1800K of headroom over the recipe. */
-        public Builder heatOC(final ToIntFunction<StructureState> machineHeatFn) {
+        /** How hot the machine runs. Only read when it also overclocks or discounts on heat. */
+        public Builder machineHeat(final ToIntFunction<StructureState> machineHeatFn) {
             this.machineHeat = machineHeatFn;
-            this.heatOC = true;
             return this;
         }
 
-        /** The EBF's 5% EU/t discount per 900K of headroom. Always paired with heatOC in GT. */
+        /** Heat-driven perfect overclocks, one per 1800K of headroom over the recipe. */
+        public Builder heatOC(final ToIntFunction<StructureState> machineHeatFn) {
+            this.heatOC = true;
+            return machineHeat(machineHeatFn);
+        }
+
+        /** The EBF's 5% EU/t discount per 900K of headroom. Nearly always paired with heatOC. */
         public Builder heatDiscount() {
             this.heatDiscount = true;
             return this;
