@@ -43,7 +43,6 @@ public enum Settings {
     LASER_OC("laser_oc", false, (v, c) -> v ? "L" : null),
     UNLIMITED_SKIPS("unlimited_skips", false, (v, c) -> v ? "\u221ET" : null),
     NO_OVERCLOCK("no_overclock", false, (v, c) -> v ? "NO" : null),
-    GT_MULTIBLOCK("gt_multiblock", false, (v, c) -> v ? "M" : null),
     CATALYST_ASTRAL_ARRAYS("catalyst_astral_arrays", 0, 0, 8637, (v, c) -> v > 0 ? "\u2606" + v : null),
     CATALYST_ACCEL_CARD("catalyst_accel_card", 0, 0, 5, (v, c) -> v > 0 ? "\u2606" + v : null),
 

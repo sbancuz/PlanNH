@@ -443,7 +443,6 @@ public final class Serializer {
             if (obj.has("machineConfig")) {
                 jsonToMachineConfig(obj.getAsJsonObject("machineConfig"), node.machineConfig);
             }
-            node.machineConfig.seedRouteDefaults();
 
             graph.addNode(node);
         }

@@ -44,7 +44,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
     private boolean machineDriven;
     private final List<Condition> conditions = new ArrayList<>();
     private final Map<String, Consumer<GTOverclockStep>> routeModifiers = new HashMap<>();
-    private final Map<String, Map<String, Object>> routeDefaults = new HashMap<>();
     private SettingDef<Integer> catalystSetting;
     private IntUnaryOperator catalystComputer;
 
@@ -56,12 +55,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
 
     public GTOverclockStep route(final String recipeMapId, final Consumer<GTOverclockStep> modifier) {
         routeModifiers.put(recipeMapId, modifier);
-        return this;
-    }
-
-    public GTOverclockStep withDefault(final String recipeMapId, final String key, final Object value) {
-        routeDefaults.computeIfAbsent(recipeMapId, k -> new HashMap<>())
-            .put(key, value);
         return this;
     }
 
@@ -99,13 +92,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
     }
 
     @Override
-    public Map<String, Object> routeDefaults(final RecipeContext ctx) {
-        final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
-        if (map == null || routeDefaults.isEmpty()) return Map.of();
-        return routeDefaults.getOrDefault(map.unlocalizedName, Map.of());
-    }
-
-    @Override
     public EffectResult apply(EffectResult current, Map<String, Object> s, RecipeContext ctx) {
         forceHeat = false;
         forcePerfectOC = false;
@@ -120,16 +106,12 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
             }
         }
 
-        if (!routeModifiers.isEmpty() || !routeDefaults.isEmpty()) {
+        if (!routeModifiers.isEmpty()) {
             final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
             if (map != null) {
                 final String uid = map.unlocalizedName;
                 final Consumer<GTOverclockStep> mod = routeModifiers.get(uid);
                 if (mod != null) mod.accept(this);
-                final Map<String, Object> defs = routeDefaults.get(uid);
-                if (defs != null) {
-                    defs.forEach((key, value) -> { if (!s.containsKey(key)) s.put(key, value); });
-                }
             }
         }
 

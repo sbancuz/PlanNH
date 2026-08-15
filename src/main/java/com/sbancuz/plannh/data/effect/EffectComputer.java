@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data.effect;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import com.sbancuz.plannh.data.MachineProfile;
@@ -16,29 +15,12 @@ public interface EffectComputer {
     default EffectComputer andThen(final EffectStep step) {
         final EffectComputer first = this;
         return new EffectComputer() {
+
             @Override
             public EffectResult compute(final Map<String, Object> settings, final RecipeContext ctx) {
                 return step.apply(first.compute(settings, ctx), settings, ctx);
             }
-
-            @Override
-            public Map<String, Object> routeDefaults(final RecipeContext ctx) {
-                final Map<String, Object> merged = new HashMap<>(first.routeDefaults(ctx));
-                if (step instanceof final EffectComputer ec) {
-                    merged.putAll(ec.routeDefaults(ctx));
-                }
-                return merged;
-            }
         };
-    }
-
-    /**
-     * Per-recipe-map default overrides contributed by this effect computer, keyed by setting key.
-     * Empty by default; only effect steps that define route defaults (e.g. per-recipe-machine
-     * Perfect OC) override this. Used to seed node settings so route defaults show immediately.
-     */
-    default Map<String, Object> routeDefaults(final RecipeContext ctx) {
-        return Map.of();
     }
 
     default EffectComputer withTotalCost(final RecipeProperty<? extends Number> costProperty,

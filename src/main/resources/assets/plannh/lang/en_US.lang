@@ -26,7 +26,6 @@ plannh.settings.voltage=Tier
 plannh.settings.amp=Amp
 plannh.settings.speed=Speed
 plannh.settings.parallels=Par
-plannh.settings.gt_multiblock=Multiblock
 plannh.settings.machine_heat=M. Heat
 plannh.settings.recipe_heat=R. Heat
 plannh.settings.heat_discount_mult=HD Mult.%
