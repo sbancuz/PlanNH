@@ -93,14 +93,34 @@ class GTProbeFieldsTest {
     }
 
     /**
+     * The one assertion that asks the probe itself rather than re-deriving its list. Everything above
+     * checks names the test also holds; this checks that the resolver those names exist for actually
+     * succeeded, which catches a failure for any reason the name list does not cover.
+     */
+    @Test
+    void theProbeResolvedItsGregTechInternals() throws ReflectiveOperationException {
+        final Field resolved = probeFields().getDeclaredField("RESOLVED");
+        resolved.setAccessible(true);
+
+        assertNotNull(
+            resolved.get(null),
+            "ProbeFields gave up on GregTech, so the probe is off and every machine falls back");
+    }
+
+    private static Class<?> probeFields() throws ClassNotFoundException {
+        return Class.forName(
+            "com.sbancuz.plannh.data.provider.gregtech.probe.ProbeFields",
+            true,
+            GTProbeFieldsTest.class.getClassLoader());
+    }
+
+    /**
      * The two lists above and ProbeFields' own members are separate authorities, so a field added to
      * the probe without a row here would be resolved at runtime and never asserted. This counts them.
      */
     @Test
     void everyFieldTheProbeResolvesIsCoveredAbove() throws ClassNotFoundException {
-        final Class<?> probeFields = Class
-            .forName("com.sbancuz.plannh.data.provider.gregtech.probe.ProbeFields", false, getClass().getClassLoader());
-        final long resolved = Arrays.stream(probeFields.getDeclaredFields())
+        final long resolved = Arrays.stream(probeFields().getDeclaredFields())
             .filter(f -> f.getType() == Field.class)
             .count();
 
