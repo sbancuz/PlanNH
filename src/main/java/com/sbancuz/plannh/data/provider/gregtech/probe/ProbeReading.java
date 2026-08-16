@@ -15,14 +15,9 @@ public record ProbeReading(int maxParallel, double durationModifier, double euMo
     int recipeHeat, long recipeEUt, int duration, boolean noOverclock, boolean laserOC) {
 
     /**
-     * Whether the numbers describe a machine that could run.
-     *
-     * <p>
-     * A machine is probed with none of its structure around it, and several compute their modifiers
-     * from a casing tier that reads as zero there. The Industrial Wire Mill divides by its item pipe
-     * tier and comes back with a negative duration; the Thermal Centrifuge comes back drawing no EU
-     * at all. Those are not slow machines, they are answers to a question the machine cannot be asked
-     * yet, and a chart must not show them.
+     * Whether the numbers describe a machine that could run. A machine that divides by a casing tier
+     * reads that tier as zero before its structure is injected, and comes back with a negative duration
+     * or no EU draw - not a slow machine, an unanswerable question.
      */
     public boolean isRunnable() {
         if (durationModifier <= 0 || euModifier <= 0) return false;
@@ -37,13 +32,9 @@ public record ProbeReading(int maxParallel, double durationModifier, double euMo
     }
 
     /**
-     * The same reading with everything a chart cannot show removed.
-     *
-     * <p>
-     * GregTech sets a machine heat on machines that never overclock on it - the Plasma Forge spends
-     * its heat on deciding which recipes will run, which PlanNH does not model because the user has
-     * already chosen the recipe. Comparing raw readings would then let a coil "matter" while moving
-     * no number anybody sees, and earn a settings row that does nothing.
+     * The same reading with everything a chart cannot show removed. GregTech sets a machine heat even
+     * where it never overclocks on one, so comparing raw readings would let a coil "matter" while
+     * moving no number anybody sees, and earn a settings row that does nothing.
      */
     @Nonnull
     public ProbeReading asShown() {

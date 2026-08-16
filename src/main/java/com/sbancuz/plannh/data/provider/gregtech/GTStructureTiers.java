@@ -60,8 +60,14 @@ public final class GTStructureTiers {
     @Nullable
     public static final Sawblades SAWBLADES = readSawblades();
 
-    public static final int MAX_ELECTRODE_TIER = ELECTRODES == null ? 13 : ELECTRODES.parallel().length - 1;
-    public static final int MAX_SAWBLADE_TIER = SAWBLADES == null ? 3 : SAWBLADES.durationModifier().length - 1;
+    /** Ceilings for a pack whose tables would not read; the row then bounds a knob no machine offers. */
+    private static final int ELECTRODE_TIERS_AT_5_09_52 = 13;
+    private static final int SAWBLADE_TIERS_AT_5_09_52 = 3;
+
+    public static final int MAX_ELECTRODE_TIER = ELECTRODES == null ? ELECTRODE_TIERS_AT_5_09_52
+        : ELECTRODES.parallel().length - 1;
+    public static final int MAX_SAWBLADE_TIER = SAWBLADES == null ? SAWBLADE_TIERS_AT_5_09_52
+        : SAWBLADES.durationModifier().length - 1;
 
     /** How hot a coil of this tier runs, in Kelvin. Tiers outside the range clamp to it. */
     public static int coilHeat(final int coilTier) {

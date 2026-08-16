@@ -37,7 +37,8 @@ import bartworks.common.configs.Configuration;
  * <p>
  * Keys are class-name strings rather than class literals on purpose: an entry for a mod that is not
  * installed then costs nothing instead of throwing NoClassDefFoundError, and the table can be
- * evaluated in headless tests without loading a single MetaTileEntity.
+ * evaluated in headless tests without loading a single MetaTileEntity. The one typed import,
+ * bartworks, ships inside the GT5-Unofficial jar and so is present whenever GregTech is.
  */
 public final class GTMachinePresets {
 

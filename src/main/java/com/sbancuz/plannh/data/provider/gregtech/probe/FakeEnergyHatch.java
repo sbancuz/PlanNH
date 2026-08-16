@@ -31,14 +31,9 @@ final class FakeEnergyHatch {
     private static final Map<Integer, MTEHatchEnergy> BY_TIER = new HashMap<>();
 
     /**
-     * Gives the machine one energy hatch of this tier. Returns false when the fake did not take, in
-     * which case the caller must not trust anything the machine says about voltage.
-     *
-     * <p>
-     * The check is not paranoia. GregTech iterates its hatch lists through {@code ValidMTEList}, whose
-     * iterator <em>removes</em> entries it considers invalid, so a hatch that fails to look real
-     * disappears and the machine quietly reports zero volts again - which reads as "voltage does not
-     * matter here" rather than as a failure.
+     * Gives the machine one energy hatch of this tier, false when it did not take. {@code ValidMTEList}
+     * silently removes a hatch it considers invalid, so an unchecked failure reads as zero volts - that
+     * is, as "voltage does not matter here" rather than as a failure.
      */
     static boolean attach(final MTEMultiBlockBase machine, final int voltageTier) {
         final MTEHatchEnergy hatch = forTier(voltageTier);

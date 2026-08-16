@@ -29,13 +29,9 @@ public final class SensitivityScan {
     private SensitivityScan() {}
 
     /**
-     * The knobs among {@code candidates} that change what the machine reports.
-     *
-     * <p>
-     * Only the two ends of each range are read. A knob whose effect appears in the middle of its
-     * range and cancels out at both ends would be missed, which no GregTech machine does today - they
-     * scale with a casing tier rather than peak in the middle. The alternative costs a probe per tier
-     * per knob per machine, which the settings panel would pay for while it draws.
+     * The knobs among {@code candidates} that change what the machine reports. Only the two ends of
+     * each range are read, so a knob whose effect peaks mid-range and cancels at both ends is missed -
+     * no GregTech machine does that, they scale with a casing tier.
      */
     @Nonnull
     public static EnumSet<Knob> scan(@Nonnull final StructureState reference, @Nonnull final EnumSet<Knob> candidates,
