@@ -43,9 +43,6 @@ final class ProbeSubject {
      */
     private static final int MAX_CACHED_READINGS = 512;
 
-    /** A machine whose mode cycle does not come back around is broken, not interesting. */
-    private static final int MAX_MODES = 16;
-
     private final MTEMultiBlockBase machine;
     private final ProcessingLogic logic;
     private final Method createCalculator;
@@ -126,7 +123,10 @@ final class ProbeSubject {
             injector.apply(machine, state);
             // Voltage is not a field the machine holds; it counts it off its energy hatches, so a
             // machine that scales per tier answers for tier zero until it has one.
-            if (!FakeEnergyHatch.attach(machine, state.voltageTier())) return null;
+            if (!FakeEnergyHatch.attach(machine, state.voltageTier())) {
+                PlanNH.LOG.debug("PlanNH: {} would not take a probe energy hatch", machine.getClass());
+                return null;
+            }
             fields.setupProcessingLogic.invoke(machine, logic);
             resolveSuppliers(fields);
             final OverclockCalculator calculator = (OverclockCalculator) createCalculator.invoke(logic, recipe);

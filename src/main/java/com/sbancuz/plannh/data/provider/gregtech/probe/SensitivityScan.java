@@ -45,10 +45,21 @@ public final class SensitivityScan {
         // A mode picks which machine a multiblock is, so the other knobs have to be judged in each of
         // them. The Mega Distillation Tower scales with its height in distillery mode and ignores it in
         // tower mode, and judging it in tower mode alone would hide the height row. The count comes
-        // from the machine rather than from the row, because GT ships three-mode machines.
+        // from the machine rather than from a row, because GT ships three-mode machines.
+        final EnumSet<Knob> others = EnumSet.copyOf(candidates);
+        others.remove(Knob.MODE);
+
         final EnumSet<Knob> used = EnumSet.noneOf(Knob.class);
+        ProbeReading inFirstMode = null;
         for (int mode = 0; mode < modeCount; mode++) {
-            used.addAll(scanAt(reference.with(Knob.MODE, mode), candidates, readings));
+            final StructureState inMode = reference.with(Knob.MODE, mode);
+            used.addAll(scanAt(inMode, others, readings));
+
+            // Mode itself is judged across the same sweep rather than by a pair of ends, or a machine
+            // whose first two modes happen to agree would lose its mode row on the strength of them.
+            final ProbeReading here = readings.apply(inMode);
+            if (inFirstMode == null) inFirstMode = here;
+            else if (differ(inFirstMode, here)) used.add(Knob.MODE);
         }
         return used;
     }

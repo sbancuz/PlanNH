@@ -14,6 +14,7 @@ import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.client.MachineTableCommand;
 import com.sbancuz.plannh.client.WorldHandler;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 import com.sbancuz.plannh.layout.AutoLayout;
 
@@ -58,6 +59,11 @@ public class ClientProxy extends CommonProxy {
         FMLCommonHandler.instance()
             .bus()
             .register(this);
+
+        // Building the GT machine index clones and probes every multiblock. Scheduled here rather than
+        // paid for by the first frame a GT node's settings panel draws.
+        if (Compat.GREGTECH.isLoaded) Minecraft.getMinecraft()
+            .func_152344_a(GTMachineIndex::warmup);
 
         Minecraft.getMinecraft()
             .func_152344_a(AutoLayout::warmup);

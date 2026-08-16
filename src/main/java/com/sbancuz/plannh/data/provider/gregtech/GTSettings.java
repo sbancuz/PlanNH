@@ -335,8 +335,8 @@ public final class GTSettings {
             case ELECTRODE -> rangeOf(ELECTRODE_DEF);
             case STRUCTURE_TIER -> rangeOf(STRUCTURE_TIER_DEF);
             case WIDTH -> rangeOf(WIDTH_DEF);
-            // MODE_DEF's own range is per machine, so it says nothing useful here. A sweep over modes
-            // takes its count from the machine instead - see GTMachineModes.
+            // Unused: a sweep over modes takes its count from the machine, not from a range. Present
+            // only because the switch is total over Knob.
             case MODE -> new TierRange(0, 1);
         };
     }
@@ -387,12 +387,6 @@ public final class GTSettings {
         return implied >= 0 ? implied : MachineProfile.getInt(settings, MODE, 0);
     }
 
-    /** Whether this node's recipe settles the mode, leaving nothing to ask. */
-    private static boolean modeIsImplied(final RecipeContext ctx, final Map<String, Object> settings) {
-        final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
-        return entry != null && entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null)) >= 0;
-    }
-
     public static boolean isAdvanced(final Map<String, Object> settings) {
         return MachineProfile.getBool(settings, ADVANCED, false);
     }
@@ -402,13 +396,14 @@ public final class GTSettings {
     public static BiPredicate<RecipeContext, Map<String, Object>> usesKnob(final GTMachinePreset.Knob knob) {
         return (ctx, settings) -> {
             if (isAdvanced(settings)) return false;
-            // No row for a question the recipe has already answered.
-            if (knob == GTMachinePreset.Knob.MODE && modeIsImplied(ctx, settings)) return false;
             final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
-            return entry != null && entry.preset() != null
-                && entry.preset()
-                    .knobs()
-                    .contains(knob);
+            if (entry == null || entry.preset() == null) return false;
+            // No row for a question the recipe has already answered.
+            if (knob == GTMachinePreset.Knob.MODE && entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null)) >= 0)
+                return false;
+            return entry.preset()
+                .knobs()
+                .contains(knob);
         };
     }
 

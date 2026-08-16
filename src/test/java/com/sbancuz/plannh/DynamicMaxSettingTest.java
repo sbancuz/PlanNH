@@ -1,6 +1,7 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.Map;
 
@@ -40,6 +41,19 @@ class DynamicMaxSettingTest {
         final SettingDef<Integer> def = SettingDef.intDef("gt_mode", 0, 0, (ctx, s) -> -5);
 
         assertEquals(0, def.effectiveMax(EMPTY, Map.of()));
+    }
+
+    /**
+     * The trap this exists to prevent: a machine-set ceiling is NOT an auto row, so a caller that asks
+     * {@code isAuto()} before consulting the ceiling gets the declared maximum - which for such a row is
+     * its own minimum, leaving the row unsteppable. Every caller must ask effectiveMax unconditionally.
+     */
+    @Test
+    void aCeilingRowIsNotAnAutoRowButStillHasACeiling() {
+        final SettingDef<Integer> def = SettingDef.intDef("gt_mode", 0, 0, (ctx, s) -> 2);
+
+        assertFalse(def.isAuto(), "gating on isAuto is what made the mode row unsteppable");
+        assertEquals(2, def.effectiveMax(EMPTY, Map.of()));
     }
 
     /** Every other row is unaffected: a plain int def still reports the maximum it declared. */

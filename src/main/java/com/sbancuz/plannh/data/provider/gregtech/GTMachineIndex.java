@@ -83,6 +83,25 @@ public final class GTMachineIndex {
     /** Reordered candidate lists, keyed by recipemap and NEI title. Derived, so it is safe to keep. */
     private static final Map<String, List<MachineEntry>> byNeiTitle = new HashMap<>();
 
+    /**
+     * The last answer {@link #candidates} and {@link #selected} gave.
+     *
+     * <p>
+     * Both are reached from settings-row visibility predicates, so a single open node asks the same
+     * question a dozen times per frame with the same arguments. One slot is enough because the asking
+     * is consecutive: the panel resolves one node's rows before it moves to the next.
+     */
+    @Nullable
+    private static RecipeMap<?> lastMap;
+    private static String lastTitle = "";
+    /** Null after a candidate-list change, so the next selected() recomputes rather than trusting it. */
+    @Nullable
+    private static String lastStored;
+    @Nullable
+    private static List<MachineEntry> lastCandidates;
+    @Nullable
+    private static MachineEntry lastSelected;
+
     private GTMachineIndex() {}
 
     /**
@@ -100,11 +119,21 @@ public final class GTMachineIndex {
     public static List<MachineEntry> candidates(final RecipeContext ctx) {
         final RecipeMap<?> recipeMap = ctx.getOrDefault(GTProvider.RECIPE_MAP, null);
         if (recipeMap == null) return List.of();
+        final String title = ctx.getOrDefault(GTProvider.NEI_TITLE, "");
+
+        // Checked before anything is built or concatenated, because the miss path allocates a key.
+        if (recipeMap == lastMap && title.equals(lastTitle) && lastCandidates != null) return lastCandidates;
+
         final List<MachineEntry> ordered = ensureBuilt().getOrDefault(recipeMap.unlocalizedName, List.of());
-        final String title = ctx.getOrDefault(GTProvider.NEI_TITLE, null);
-        if (title == null || title.isEmpty() || ordered.size() < 2) return ordered;
-        return byNeiTitle
-            .computeIfAbsent(recipeMap.unlocalizedName + '\u0000' + title, key -> preferNeiTitle(ordered, title));
+        final List<MachineEntry> answer = title.isEmpty() || ordered.size() < 2 ? ordered
+            : byNeiTitle
+                .computeIfAbsent(recipeMap.unlocalizedName + '\u0000' + title, key -> preferNeiTitle(ordered, title));
+
+        lastMap = recipeMap;
+        lastTitle = title;
+        lastCandidates = answer;
+        lastStored = null;
+        return answer;
     }
 
     /**
@@ -140,12 +169,30 @@ public final class GTMachineIndex {
         if (candidates.isEmpty()) return null;
 
         final String stored = MachineProfile.getString(settings, GTSettings.MACHINE, "");
+        // candidates() has just refreshed the cache slot, so only the stored id is left to compare.
+        if (stored.equals(lastStored)) return lastSelected;
+
+        lastStored = stored;
+        lastSelected = resolveSelected(candidates, stored);
+        return lastSelected;
+    }
+
+    @Nullable
+    private static MachineEntry resolveSelected(final List<MachineEntry> candidates, final String stored) {
         if (stored.isEmpty()) return candidates.getFirst();
         for (final MachineEntry entry : candidates) {
             if (entry.id()
                 .equals(stored)) return entry;
         }
         return null;
+    }
+
+    /**
+     * Builds the index off the first frame that would otherwise pay for it. The build clones every GT
+     * multiblock and probes it, which is a visible stall when it lands inside a draw.
+     */
+    public static void warmup() {
+        ensureBuilt();
     }
 
     /**

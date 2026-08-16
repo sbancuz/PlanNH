@@ -93,7 +93,9 @@ public final class MachineProbe {
         final GTMachinePreset probed = build(prototype);
         if (probed == null) {
             UNPROBEABLE.put(machineClass, Boolean.TRUE);
-        } else {
+        } else if (drivesNumbers()) {
+            // Only worth keeping when a chart reads it. In shadow mode the answer feeds one log line,
+            // and holding it would pin a cloned MetaTileEntity per machine for the client's lifetime.
             PROBED.put(machineClass, probed);
         }
         return probed;
@@ -264,32 +266,31 @@ public final class MachineProbe {
 
         // GregTech sets a machine heat even where it never overclocks on one, so record it either way
         // and let the flags decide whether the applier hands it to the calculator.
-        final ProbeReading reading = reference;
         preset.machineHeat(
             s -> readings.apply(s)
                 .machineHeat());
-        if (reading.heatOC()) preset.heatOC(
+        if (reference.heatOC()) preset.heatOC(
             s -> readings.apply(s)
                 .machineHeat());
-        if (reading.heatDiscount()) preset.heatDiscount();
+        if (reference.heatDiscount()) preset.heatDiscount();
         // Only a machine that overclocks on heat has a heat floor to pin. The rest leave the field at
         // GT's zero, which would otherwise read as "this machine fires from absolute zero".
         // Among those that do: passing the recipe's own value through leaves the sentinel intact,
         // which is what RECIPE_HEAT_FROM_RECIPE already means.
-        if (reading.usesHeat() && reading.recipeHeat() != SENTINEL_HEAT) {
-            preset.recipeHeat(reading.recipeHeat());
+        if (reference.usesHeat() && reference.recipeHeat() != SENTINEL_HEAT) {
+            preset.recipeHeat(reference.recipeHeat());
         }
 
-        if (reading.maxTierSkip() == Integer.MAX_VALUE) {
+        if (reference.maxTierSkip() == Integer.MAX_VALUE) {
             preset.unlimitedTierSkips();
-        } else if (reading.maxTierSkip() != DEFAULT_TIER_SKIPS) {
+        } else if (reference.maxTierSkip() != DEFAULT_TIER_SKIPS) {
             // One is what a calculator starts at, so a machine reporting it said nothing. Leaving the
             // preset unset means the applier does not call the setter either, which is the same thing.
-            preset.maxTierSkips(reading.maxTierSkip());
+            preset.maxTierSkips(reference.maxTierSkip());
         }
 
-        if (reading.recipeEUt() != SENTINEL_EUT || reading.duration() != SENTINEL_DURATION) {
-            preset.recipeOverride((int) reading.recipeEUt(), reading.duration());
+        if (reference.recipeEUt() != SENTINEL_EUT || reference.duration() != SENTINEL_DURATION) {
+            preset.recipeOverride((int) reference.recipeEUt(), reference.duration());
         }
         return preset.build();
     }

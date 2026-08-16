@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
@@ -224,9 +225,7 @@ public final class FieldInjector {
             case COIL_TIER_FROM_ONE -> state.coilTier() + 1;
             // What the coil alone supplies. A machine that adds a voltage term to this in checkMachine
             // then reads low, which the shadow log reports as a heat difference against the table.
-            case COIL_HEAT -> (int) HeatingCoilLevel
-                .getFromTier((byte) clamp(state.coilTier(), GTStructureTiers.MAX_COIL_TIER))
-                .getHeat();
+            case COIL_HEAT -> GTStructureTiers.coilHeat(state.coilTier());
             case ITEM_PIPE_TIER -> state.itemPipeTier();
             case SOLENOID_TIER -> state.solenoidTier();
             case PIPE_CASING_TIER -> state.pipeCasingTier();
@@ -263,7 +262,7 @@ public final class FieldInjector {
         return Math.max(0, Math.min(max, value));
     }
 
-    @javax.annotation.Nullable
+    @Nullable
     private static Coding codingOf(final Field field) {
         final Class<?> type = field.getType();
         if (type == HeatingCoilLevel.class) return Coding.COIL_LEVEL;

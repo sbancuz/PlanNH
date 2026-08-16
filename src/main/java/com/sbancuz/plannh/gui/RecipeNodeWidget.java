@@ -890,7 +890,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             // An auto setting shows what the machine actually does rather than the 0 that means
             // "ask the machine", and cannot be stepped past what that machine allows.
             final int shown = def.isAuto() ? def.effectiveInt(recipeContext(), c.settings) : c.getInt(def.key);
-            final int max = def.isAuto() ? def.effectiveMax(recipeContext(), c.settings) : def.maxInt;
+            // Always asked for: a row can have a machine-set ceiling without being an auto row, and
+            // effectiveMax falls back to the declared maximum when it has neither.
+            final int max = def.effectiveMax(recipeContext(), c.settings);
             return drawConfigIntField(x, y, def.label, shown, def.minInt, max, v -> {
                 c.setInt(def.key, v);
                 onConfigChanged();

@@ -114,6 +114,24 @@ class GTSensitivityScanTest {
             "a three-mode machine must have its third mode scanned");
     }
 
+    /**
+     * A three-mode machine whose first two modes agree still needs its mode row: judging MODE on a pair
+     * of ends would take those two as the whole answer and hide the third.
+     */
+    @Test
+    void aThirdModeThatDiffersEarnsTheModeRow() {
+        final Function<StructureState, ProbeReading> readings = state -> state.mode() == 2 ? withParallel(9) : flat();
+
+        assertTrue(
+            SensitivityScan.scan(REFERENCE, EnumSet.of(Knob.MODE), 3, readings)
+                .contains(Knob.MODE),
+            "mode 2 differs, so the mode row belongs on the node");
+        assertFalse(
+            SensitivityScan.scan(REFERENCE, EnumSet.of(Knob.MODE), 2, readings)
+                .contains(Knob.MODE),
+            "with only two modes nothing differs, so no row");
+    }
+
     /** The scan must cover what the row offers, or a knob could move outside the range it was tested on. */
     @Test
     void everyKnobRangeIsRealAndNonEmpty() {

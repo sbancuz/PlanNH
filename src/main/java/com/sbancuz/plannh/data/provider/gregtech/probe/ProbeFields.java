@@ -24,7 +24,7 @@ import gregtech.api.util.OverclockCalculator;
  * back to the hand-written preset table.
  *
  * <p>
- * {@code ProbeFieldsTest} asserts every name here against the GregTech on the test classpath, so a
+ * {@code GTProbeFieldsTest} asserts every name here against the GregTech on the test classpath, so a
  * rename fails the build rather than a player's chart.
  */
 final class ProbeFields {
