@@ -6,9 +6,12 @@ import java.lang.reflect.Field;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import net.minecraft.item.ItemStack;
+
 import com.sbancuz.plannh.PlanNH;
 
 import gregtech.api.enums.HeatingCoilLevel;
+import gregtech.api.enums.ItemList;
 
 /**
  * How far each structure knob goes, and the per-tier numbers GregTech attaches to the two knobs that
@@ -40,8 +43,20 @@ public final class GTStructureTiers {
     public static final int MAX_SOLENOID_TIER = 12;
     /** GT computes meta + 1 inside the private {@code GTStructureUtility.getItemPipeCasingTier}. */
     public static final int MAX_ITEM_PIPE_TIER = 8;
-    /** Comes from GT++'s private {@code MTEChemicalPlant.mTieredBlockRegistry}, filled at mod init. */
-    public static final int MAX_PIPE_CASING_TIER = 4;
+
+    /**
+     * The pipe casings, weakest first, so tier 1 is Bronze. Both machines that read the knob agree on
+     * this order: GT++'s Chemical Plant takes block meta 12 to 15 as tier 1 to 4, and GregTech's steam
+     * multiblocks take the same two lowest metas as their tier 1 and 2.
+     */
+    private static final ItemList[] PIPE_CASINGS = { ItemList.Casing_Pipe_Bronze, ItemList.Casing_Pipe_Steel,
+        ItemList.Casing_Pipe_Titanium, ItemList.Casing_Pipe_TungstenSteel };
+
+    public static final int MAX_PIPE_CASING_TIER = PIPE_CASINGS.length;
+
+    /** Filled on first use, because item display names need a registry that is empty at class load. */
+    private static final String[] PIPE_CASING_NAMES = new String[PIPE_CASINGS.length];
+
     /** Extra Coke Oven slices; also the Dangote tower's height term. Structure shape, not a tier. */
     public static final int MAX_WIDTH = 15;
 
@@ -77,6 +92,42 @@ public final class GTStructureTiers {
 
     public static int clampCoil(final int coilTier) {
         return Math.max(0, Math.min(MAX_COIL_TIER, coilTier));
+    }
+
+    /**
+     * GregTech's own name for the casing at a pipe casing tier, so the row names the block a player
+     * places rather than a number only the code uses. Falls back to the tier when the item registry
+     * has nothing, which is what a headless run sees.
+     */
+    @Nonnull
+    public static String pipeCasingName(final int tier) {
+        final int index = Math.max(1, Math.min(MAX_PIPE_CASING_TIER, tier)) - 1;
+        if (PIPE_CASING_NAMES[index] == null) {
+            PIPE_CASING_NAMES[index] = readItemName(PIPE_CASINGS[index], String.valueOf(index + 1));
+        }
+        return PIPE_CASING_NAMES[index];
+    }
+
+    /** The casing kind, which every row that shows one of these has already said in its own label. */
+    private static final String PIPE_CASING_SUFFIX = " Pipe Casing";
+
+    /**
+     * The material rather than the whole item name, so a row reads "Pipe Casing Tungstensteel" the way
+     * a coil row reads "Coil HSS-S" - GregTech names a coil by its material already, and names a
+     * casing by material and kind together. A locale that words it differently keeps the full name,
+     * which is long but never wrong.
+     */
+    @Nonnull
+    private static String readItemName(final ItemList item, final String fallback) {
+        try {
+            final ItemStack stack = item.get(1);
+            if (stack == null) return fallback;
+            final String name = stack.getDisplayName();
+            return name.endsWith(PIPE_CASING_SUFFIX) ? name.substring(0, name.length() - PIPE_CASING_SUFFIX.length())
+                : name;
+        } catch (final RuntimeException | LinkageError e) {
+            return fallback;
+        }
     }
 
     /** Clamps to the table, so a stored tier from a pack with more electrodes still resolves. */

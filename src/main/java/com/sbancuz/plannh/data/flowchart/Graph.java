@@ -54,6 +54,28 @@ public class Graph {
     private boolean opsMode;
 
     /**
+     * {@link #minCoilTier} and friends: nothing is set, so a node opens on the best the game offers.
+     */
+    public static final int NO_MINIMUM = -1;
+
+    /**
+     * The structure this chart assumes it can build. A chart describes a factory at one point in a
+     * world's progression, so the coil a node opens on belongs to the chart rather than to each node;
+     * setting it once is what keeps a node's own settings down to what makes that node different.
+     *
+     * <p>
+     * A starting value, not a ceiling. A recipe that needs more raises its own node, and a row the
+     * user edits keeps what it was given. The tiers are plain integers because this package must stay
+     * loadable without GregTech, which is what gives them their meaning.
+     */
+    @Getter
+    private int minCoilTier = NO_MINIMUM;
+    @Getter
+    private int minPipeCasingTier = NO_MINIMUM;
+    @Getter
+    private int minVoltageTier = NO_MINIMUM;
+
+    /**
      * Per-graph undo/redo stack, transient because snapshots are content-encoded and never stored.
      */
     public final transient UndoHistory undoHistory = new UndoHistory();
@@ -110,6 +132,23 @@ public class Graph {
 
     public void setOpsMode(final boolean opsMode) {
         this.opsMode = opsMode;
+        markDirty();
+    }
+
+    // Every minimum changes what an untouched node runs at, which changes its parallel count and so
+    // the whole solve. Hence markDirty on all three rather than a plain setter.
+    public void setMinCoilTier(final int tier) {
+        minCoilTier = tier;
+        markDirty();
+    }
+
+    public void setMinPipeCasingTier(final int tier) {
+        minPipeCasingTier = tier;
+        markDirty();
+    }
+
+    public void setMinVoltageTier(final int tier) {
+        minVoltageTier = tier;
         markDirty();
     }
 

@@ -24,9 +24,10 @@ public class SettingDef<T> {
     public final int minInt;
     public final int maxInt;
     @Nullable
-    public final List<String> options;
-    @Nullable
     private final Function<RecipeContext, List<String>> optionsFn;
+    /** What an unset enum row resolves to; the first option when the setting does not say. */
+    @Nullable
+    private final Function<RecipeContext, String> defaultFn;
     @Nullable
     private final UnaryOperator<String> displayFn;
     @Nullable
@@ -46,8 +47,9 @@ public class SettingDef<T> {
     private final Integer neutral;
 
     private SettingDef(final String key, final Class<T> type, final T defaultValue, final int minInt, final int maxInt,
-        @Nullable final List<String> options, @Nullable final Function<RecipeContext, List<String>> optionsFn,
-        @Nullable final UnaryOperator<String> displayFn, @Nullable final BiFunction<T, MachineConfig, String> badgeFn,
+        @Nullable final Function<RecipeContext, List<String>> optionsFn,
+        @Nullable final Function<RecipeContext, String> defaultFn, @Nullable final UnaryOperator<String> displayFn,
+        @Nullable final BiFunction<T, MachineConfig, String> badgeFn,
         final BiPredicate<RecipeContext, Map<String, Object>> visibility,
         @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
         @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn, @Nullable final Integer neutral) {
@@ -58,8 +60,8 @@ public class SettingDef<T> {
         this.defaultValue = defaultValue;
         this.minInt = minInt;
         this.maxInt = maxInt;
-        this.options = options;
         this.optionsFn = optionsFn;
+        this.defaultFn = defaultFn;
         this.displayFn = displayFn;
         this.badgeFn = badgeFn;
         this.visibility = visibility;
@@ -100,10 +102,27 @@ public class SettingDef<T> {
         return new SettingDef<>(key, Boolean.class, def, 0, 0, null, null, null, badgeFn, ALWAYS, null, null, null);
     }
 
+    /**
+     * A fixed list of choices. An empty list is a setting with nothing to offer, and stays without an
+     * options function at all, so {@link #hasOptions} can answer without a recipe to evaluate against.
+     */
     @Nonnull
     public static SettingDef<String> enumDef(final String key, final String def, final List<String> options,
         final BiFunction<String, MachineConfig, String> badgeFn) {
-        return new SettingDef<>(key, String.class, def, 0, 0, options, null, null, badgeFn, ALWAYS, null, null, null);
+        return new SettingDef<>(
+            key,
+            String.class,
+            def,
+            0,
+            0,
+            options.isEmpty() ? null : ctx -> options,
+            null,
+            null,
+            badgeFn,
+            ALWAYS,
+            null,
+            null,
+            null);
     }
 
     /**
@@ -128,8 +147,8 @@ public class SettingDef<T> {
             def,
             0,
             0,
-            null,
             optionsFn,
+            null,
             displayFn,
             badgeFn,
             ALWAYS,
@@ -251,14 +270,29 @@ public class SettingDef<T> {
     }
 
     public boolean hasOptions() {
-        return optionsFn != null || (options != null && !options.isEmpty());
+        return optionsFn != null;
     }
 
     /** The choices valid for this recipe. Empty means the row has nothing to offer and is skipped. */
     @Nonnull
     public List<String> options(final RecipeContext ctx) {
-        if (optionsFn != null) return optionsFn.apply(ctx);
-        return options != null ? options : List.of();
+        return optionsFn == null ? List.of() : optionsFn.apply(ctx);
+    }
+
+    /**
+     * What an unset enum row means. Nothing stored is the normal state - the sparse settings map keeps
+     * only what the user chose - so this is the value the row draws and the maths reads, and it must be
+     * one answer rather than one per call site. Falls back to the first option, which is why an options
+     * list comes back best-choice-first.
+     */
+    @Nonnull
+    public String defaultOption(final RecipeContext ctx) {
+        final List<String> choices = options(ctx);
+        if (defaultFn != null) {
+            final String preferred = defaultFn.apply(ctx);
+            if (choices.contains(preferred)) return preferred;
+        }
+        return choices.isEmpty() ? "" : choices.getFirst();
     }
 
     /** What the row renders for a stored value; identity unless the setting maps ids to names. */
@@ -279,6 +313,52 @@ public class SettingDef<T> {
     }
 
     /**
+     * Renders the row's value as something other than the number it stores - a pipe casing tier as the
+     * casing a player places. The stored value stays a plain integer, which is what the tier is to
+     * every machine that reads it; only the row reads as the build step.
+     */
+    @Nonnull
+    public SettingDef<T> withDisplay(final UnaryOperator<String> display) {
+        return new SettingDef<>(
+            key,
+            type,
+            defaultValue,
+            minInt,
+            maxInt,
+            optionsFn,
+            defaultFn,
+            display,
+            badgeFn,
+            visibility,
+            autoValueFn,
+            maxFn,
+            neutral);
+    }
+
+    /**
+     * Chooses what an unset row resolves to, for a setting whose sensible starting value depends on
+     * the chart rather than on the setting - the coil a chart plans with. Nothing is stored until the
+     * user edits the row, so this moves with the chart instead of freezing into every node.
+     */
+    @Nonnull
+    public SettingDef<T> withDefault(final Function<RecipeContext, String> defaultOption) {
+        return new SettingDef<>(
+            key,
+            type,
+            defaultValue,
+            minInt,
+            maxInt,
+            optionsFn,
+            defaultOption,
+            displayFn,
+            badgeFn,
+            visibility,
+            autoValueFn,
+            maxFn,
+            neutral);
+    }
+
+    /**
      * Returns a copy, so the shared singleton handed out by {@link Settings#def} stays unconditioned
      * and one profile's gating cannot leak into another's.
      */
@@ -290,8 +370,8 @@ public class SettingDef<T> {
             defaultValue,
             minInt,
             maxInt,
-            options,
             optionsFn,
+            defaultFn,
             displayFn,
             badgeFn,
             condition,

@@ -75,6 +75,27 @@ class GTStructureSettingsTest {
         assertNotEquals(stored, GTSettings.COIL_DEF.display(stored), "but the row must not show LV");
     }
 
+    /**
+     * Both machines that read the knob take tier 1 as the Bronze Pipe Casing and count up from there,
+     * so the row's own numbers are the tiers and the display is a lookup beside them. A tier outside
+     * the range is a stored value from a pack with more casings, and must clamp rather than throw.
+     */
+    @Test
+    void thePipeCasingRowNamesTheCasingAtEachTier() {
+        assertEquals(4, GTStructureTiers.MAX_PIPE_CASING_TIER, "Bronze, Steel, Titanium, Tungstensteel");
+
+        for (int tier = 1; tier <= GTStructureTiers.MAX_PIPE_CASING_TIER; tier++) {
+            assertEquals(
+                GTStructureTiers.pipeCasingName(tier),
+                GTSettings.PIPE_CASING_DEF.display(String.valueOf(tier)),
+                "the row and the tier table must name the same casing");
+        }
+        assertEquals(GTStructureTiers.pipeCasingName(1), GTStructureTiers.pipeCasingName(0));
+        assertEquals(
+            GTStructureTiers.pipeCasingName(GTStructureTiers.MAX_PIPE_CASING_TIER),
+            GTStructureTiers.pipeCasingName(99));
+    }
+
     /** A junk coil name must not silently read as Cupronickel; indexOf returning -1 is visible. */
     @Test
     void anUnknownCoilNameDoesNotMasqueradeAsTierZero() {

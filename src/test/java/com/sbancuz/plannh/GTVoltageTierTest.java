@@ -2,12 +2,16 @@ package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.HashMap;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 import gregtech.api.enums.GTValues;
 
@@ -19,7 +23,8 @@ class GTVoltageTierTest {
 
     @Test
     void everyVoltageOptionResolvesToItsGTValue() {
-        for (final String option : Settings.VOLTAGE.def().options) {
+        for (final String option : Settings.VOLTAGE.def()
+            .options(new RecipeContext(new HashMap<RecipeProperty<?>, Object>()))) {
             if ("OFF".equals(option)) continue;
             final int tier = indexOf(option);
             assertEquals(GTValues.V[tier], GTOverclockStep.tierNameToVoltage(option), option);

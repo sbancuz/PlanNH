@@ -726,7 +726,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final List<String> options = def.options(recipeContext());
         if (options.isEmpty()) return recipeName;
         final String stored = node.machineConfig.getString(def.key);
-        return def.display(options.contains(stored) ? stored : options.getFirst());
+        return def.display(options.contains(stored) ? stored : def.defaultOption(recipeContext()));
     }
 
     private boolean hasMachineChoice() {
@@ -747,7 +747,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final List<String> options = def.options(recipeContext());
         if (options.isEmpty()) return "";
         final String stored = node.machineConfig.getString(def.key);
-        return options.contains(stored) ? stored : options.getFirst();
+        return options.contains(stored) ? stored : def.defaultOption(recipeContext());
     }
 
     private RecipeContext recipeContext() {
@@ -936,7 +936,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             || Settings.DURATION_DECREASE_PER_OC.key()
                 .equals(def.key)))
             return null;
-        return def.badge(value, c) == null ? null : String.valueOf(value);
+        return def.badge(value, c) == null ? null : intRowValue(def, value);
     }
 
     private int derivedRowCount() {
@@ -967,18 +967,26 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
      * is no separate toggle to get out of step with. The solve is read here rather than through the
      * setting's own auto value because only the widget can reach it: a SettingDef sees the recipe and
      * the settings map, never the node or its graph.
+     *
+     * <p>
+     * The count comes back fractional, and stays fractional: the row prints the same number the
+     * throughput line above it does, so a node running 1.37 operations does not read as two machines.
+     * Rounding is what the steppers do, and they round in the direction they were clicked.
      */
-    private int solvedMachineCount(final MachineConfig c) {
+    private double solvedMachineCount(final MachineConfig c) {
         if (c.isMachineCountPinned()) return c.getMachineCount();
         final Balancer.NodeBalance nb = getNodeBalance();
-        return nb == null ? 1 : Math.max(1, (int) Math.ceil(nb.operations()));
+        // Not floored at one. A node running 0.8 of an operation is a node the chart wants less than
+        // a full machine of, and saying "1" hides that it is the one holding the rest of the chart
+        // back. Stepping up from it still lands on a whole machine.
+        return nb == null ? 1 : nb.operations();
     }
 
     private int drawSettingRow(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
         if (def.type == Integer.class) {
             // An auto setting shows what the machine actually does rather than the 0 that means
             // "ask the machine", and cannot be stepped past what that machine allows.
-            final int shown = machineCountRow(def) ? solvedMachineCount(c)
+            final double shown = machineCountRow(def) ? solvedMachineCount(c)
                 : def.isAuto() ? def.effectiveInt(recipeContext(), c.settings) : c.getInt(def.key);
             // Always asked for: a row can have a machine-set ceiling without being an auto row, and
             // effectiveMax falls back to the declared maximum when it has neither.
@@ -986,10 +994,18 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             // Presence is provenance everywhere else in the settings map, so it colours the row too:
             // green means the user typed this, muted means it follows the machine or the solve.
             final boolean chosen = c.settings.containsKey(def.key);
-            return drawConfigIntField(x, y, def.label, shown, def.minInt, max, chosen, v -> {
-                c.setInt(def.key, v);
-                onConfigChanged();
-            });
+            return drawConfigIntField(
+                x,
+                y,
+                def.label + " " + intRowValue(def, shown),
+                shown,
+                def.minInt,
+                max,
+                chosen,
+                v -> {
+                    c.setInt(def.key, v);
+                    onConfigChanged();
+                });
         } else if (def.type == Boolean.class) {
             final boolean val = def.isAuto() ? def.effectiveBool(recipeContext(), c.settings) : c.getBoolean(def.key);
             final String label = (val ? "[\u2713] " : "[  ] ") + def.label;
@@ -1009,15 +1025,18 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             final List<String> options = def.options(recipeContext());
             if (options.isEmpty()) return y;
 
-            final String stored = c.getString(def.key);
+            // Presence is provenance here as everywhere else, so the map is read directly: a setting
+            // that declares a fallback would otherwise make an untouched row read as a chosen one.
+            // Nothing stored resolves to what the setting says an unset row means, so a node that
+            // accepts the obvious choice serializes nothing. A stored value the list no longer offers
+            // is a machine the pack removed: show it flagged rather than rewriting the user's chart.
+            final boolean chosen = c.settings.containsKey(def.key);
+            final String stored = chosen ? c.getString(def.key) : "";
             final int cur = options.indexOf(stored);
-            // Nothing stored resolves to the first option, so a node that accepts the obvious
-            // choice serializes nothing. A stored value the list no longer offers is a machine the
-            // pack removed: show it flagged rather than silently rewriting the user's chart.
-            final boolean missing = cur < 0 && !stored.isEmpty();
-            final String shown = cur >= 0 || missing ? stored : options.getFirst();
+            final boolean missing = chosen && cur < 0;
+            final String shown = chosen ? stored : def.defaultOption(recipeContext());
             final int color = missing ? PlannhColors.ACCENT_RED_X.getColor()
-                : cur < 0 ? PlannhColors.TEXT_MUTED.getColor() : PlannhColors.SETTING_ON.getColor();
+                : chosen ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_MUTED.getColor();
             // Machine names run far longer than a tier abbreviation, and the steppers sit at a fixed
             // offset, so an untrimmed row draws straight through them.
             final String row = def.label + " " + def.display(shown) + (missing ? " ?" : "");
@@ -1046,9 +1065,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     private void cycleOption(final SettingDef<?> def, final MachineConfig c, final int step) {
         final List<String> options = def.options(recipeContext());
         if (options.isEmpty()) return;
-        // An unset row displays the first option, so stepping starts from there. Treating unset as
-        // "no index" instead made the first click rewrite the value already on screen.
-        final int shown = Math.max(0, options.indexOf(c.getString(def.key)));
+        // Stepping starts from whatever the row displays. Treating unset as "no index" instead made
+        // the first click rewrite the value already on screen.
+        final String current = c.settings.containsKey(def.key) ? c.getString(def.key)
+            : def.defaultOption(recipeContext());
+        final int shown = Math.max(0, options.indexOf(current));
         c.setString(def.key, options.get(Math.min(options.size() - 1, Math.max(0, shown + step))));
         onConfigChanged();
     }
@@ -1075,20 +1096,38 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         return result;
     }
 
-    private int drawConfigIntField(final int x, final int y, final String label, final int value, final int min,
+    /**
+     * What an integer row prints for its value: the setting's own rendering of the number, so a tier
+     * can read as the block it stands for. A fractional value is the solve showing through, and no
+     * setting renders one, so it is formatted the way the throughput line formats it.
+     */
+    @Nonnull
+    private static String intRowValue(final SettingDef<?> def, final double value) {
+        if (value != Math.rint(value)) return GuiHelper.formatCount(value);
+        return def.display(String.valueOf((int) value));
+    }
+
+    /**
+     * A stepper row. The value is a double because the machine count follows a fractional solve; the
+     * steppers land on the whole numbers on either side of it, which is a plain -1 and +1 for every
+     * row that already held one.
+     */
+    private int drawConfigIntField(final int x, final int y, final String text, final double value, final int min,
         final int max, final boolean chosen, final IntConsumer setter) {
         final int color = chosen ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_LIGHT.getColor();
-        GuiDraw.drawText(label + " " + value, x, y, 1.0f, color, false);
+        GuiDraw.drawText(text, x, y, 1.0f, color, false);
         GuiDraw.drawText("[-]", x + SETTING_DEC_X, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
         GuiDraw.drawText("[+]", x + SETTING_INC_X, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
 
+        final int down = (int) Math.ceil(value) - 1;
+        final int up = (int) Math.floor(value) + 1;
         configZones.add(
             new ClickZone(
                 x + SETTING_DEC_X,
                 y,
                 x + SETTING_INC_X,
                 y + CLICK_H,
-                () -> { if (value > min) setter.accept(value - 1); },
+                () -> { if (down >= min) setter.accept(down); },
                 true));
         configZones.add(
             new ClickZone(
@@ -1096,7 +1135,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 y,
                 x + SETTING_INC_X + SETTING_BTN_W,
                 y + CLICK_H,
-                () -> { if (value < max) setter.accept(value + 1); },
+                () -> { if (up <= max) setter.accept(up); },
                 true));
         return y + LINE_H;
     }

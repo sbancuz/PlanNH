@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
+import java.util.function.Supplier;
 import java.util.function.ToIntBiFunction;
+import java.util.function.ToIntFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -14,6 +16,8 @@ import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
+import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.provider.GTProvider;
 
 import gregtech.api.enums.GTValues;
@@ -81,11 +85,12 @@ public final class GTSettings {
     /**
      * Voltage offered from the lowest tier that can actually run this recipe upward. A machine below
      * the recipe's own EU/t cannot run it at all, so those tiers are not choices, and there is no
-     * "off": a GT node always draws power. Unset resolves to the first option, which is the minimum,
-     * so a fresh node already reads as the un-overclocked recipe rather than as nothing.
+     * "off": a GT node always draws power. Unset resolves to the chart's own tier, raised to that
+     * minimum, so a fresh node already reads as something buildable rather than as nothing.
      */
     public static final SettingDef<String> VOLTAGE_DEF = SettingDef
-        .dynamicEnumDef(Settings.VOLTAGE.key(), "", GTSettings::voltageOptions, name -> name, (v, c) -> v);
+        .dynamicEnumDef(Settings.VOLTAGE.key(), "", GTSettings::voltageOptions, name -> name, (v, c) -> v)
+        .withDefault(ctx -> GTValues.VN[defaultVoltageTier(GTOverclockStep.recipeEUt(ctx))]);
 
     @Nonnull
     private static List<String> voltageOptions(final RecipeContext ctx) {
@@ -113,7 +118,42 @@ public final class GTSettings {
         for (int tier = 0; tier < GTValues.VN.length; tier++) {
             if (GTValues.VN[tier].equals(stored)) return Math.max(tier, minimum);
         }
-        return minimum;
+        return defaultVoltageTier(recipeEUt);
+    }
+
+    /**
+     * The tier a node opens at: the chart's own minimum, raised to the lowest tier that can run this
+     * recipe at all. A node the user has not set is planning at whatever this chart plans at, and a
+     * recipe too expensive for that still gets a hatch that works.
+     */
+    public static int defaultVoltageTier(final long recipeEUt) {
+        return Math.max(minimumVoltageTier(recipeEUt), chartMinimum(Graph::getMinVoltageTier, 0));
+    }
+
+    /**
+     * What a chart says it can build, or the best the game offers when it has not said. Read from the
+     * chart on screen rather than handed in: a {@link SettingDef} is given the recipe and the node's
+     * own settings, never the node or the graph holding it, and only the active chart draws rows.
+     */
+    private static int chartMinimum(final ToIntFunction<Graph> minimum, final int best) {
+        final Integer floor = insideAGame(() -> minimum.applyAsInt(Plan.getActiveGraph()), null);
+        return floor == null || floor == Graph.NO_MINIMUM ? best : floor;
+    }
+
+    /**
+     * Something that only answers inside a running game, and its answer when there is none. Resolving
+     * a structure reaches the open plan and the recipe's own properties, and both of those reach
+     * Minecraft: the plan through the save directory, the properties through the provider that
+     * declares them. A test and the probe's warmup sweep resolve structures with neither loaded, and
+     * that is not a failure - it means nothing has been chosen yet.
+     */
+    @Nullable
+    private static <T> T insideAGame(final Supplier<T> value, @Nullable final T otherwise) {
+        try {
+            return value.get();
+        } catch (final RuntimeException | LinkageError outsideAGame) {
+            return otherwise;
+        }
     }
 
     /** The tiers offered for a recipe of this cost, lowest usable first. */
@@ -236,10 +276,18 @@ public final class GTSettings {
                 .applyAsInt(st)),
         (v, c) -> "M" + v);
 
+    /**
+     * The heat a recipe demands, which GregTech keeps in the recipe's special value. That field holds
+     * whatever each machine wants it to - the Chemical Plant keeps its required casing tier there - so
+     * it is only heat for a machine that overclocks on heat. Every other machine reports zero, because
+     * a row that shows a number nothing reads is worse than no row.
+     */
     public static final SettingDef<Integer> RECIPE_HEAT_DEF = SettingDef
         .autoIntDef(Settings.RECIPE_HEAT.key(), 0, 100000, 0, (ctx, s) -> {
             final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, s);
-            return GTPresetApplier.recipeHeat(ctx, entry == null ? null : entry.preset());
+            final GTMachinePreset preset = entry == null ? null : entry.preset();
+            if (preset == null || !preset.usesHeat()) return 0;
+            return GTPresetApplier.recipeHeat(ctx, preset);
         }, (v, c) -> "R" + v);
 
     /** GT's own heat discount base, 0.95 per 900K of headroom. */
@@ -303,12 +351,47 @@ public final class GTSettings {
      * save can keep - it is locale-independent and stable - while "Cupronickel" is what a player built.
      *
      * <p>
-     * TODO: opens at the best coil like every other structure knob, which overstates a fresh chart -
-     * a coil sets the heat every overclock is counted from. To be replaced by a chart-wide coil
-     * default, the way voltage already works, rather than by making this one row disagree.
+     * An untouched row opens on the chart's own coil rather than on the best one, because a coil sets
+     * the heat every overclock is counted from and a chart planned at Cupronickel that quotes Eternal
+     * numbers is wrong everywhere at once. The whole list stays offered, so one node can still model a
+     * hotter build than the rest of the chart.
      */
     public static final SettingDef<String> COIL_DEF = SettingDef
-        .dynamicEnumDef(COIL, COIL_NAMES.getLast(), ctx -> COIL_NAMES, GTSettings::coilDisplayName, (v, c) -> null);
+        .dynamicEnumDef(COIL, "", ctx -> COIL_NAMES, GTSettings::coilDisplayName, (v, c) -> null)
+        .withDefault(ctx -> COIL_NAMES.get(defaultCoilTier(ctx)));
+
+    /**
+     * The coil a node opens on: the chart's own minimum, raised to whatever the recipe needs to reach
+     * its heat. GregTech keeps that heat in the recipe's special value, which a machine that ignores
+     * heat uses for something else - but a casing tier or a mode number sits far below the weakest
+     * coil's 1801K, so reading it here raises nothing.
+     */
+    public static int defaultCoilTier(final RecipeContext ctx) {
+        return Math.max(chartMinimum(Graph::getMinCoilTier, GTStructureTiers.MAX_COIL_TIER), coilTierForRecipe(ctx));
+    }
+
+    private static int coilTierForRecipe(final RecipeContext ctx) {
+        final Integer heat = insideAGame(() -> ctx.getOrDefault(GTProvider.SPECIAL_VALUE, null), null);
+        return heat == null ? 0 : coilTierForHeat(heat);
+    }
+
+    /**
+     * The weakest coil that reaches a heat, or the hottest coil when none does. Public because it is
+     * the rule the recipe-driven part of a coil default is, and it is worth pinning on its own: one
+     * tier too low and a node opens on a structure that cannot run its recipe.
+     */
+    public static int coilTierForHeat(final int heat) {
+        if (heat <= 0) return 0;
+        for (int tier = 0; tier < GTStructureTiers.MAX_COIL_TIER; tier++) {
+            if (GTStructureTiers.coilHeat(tier) >= heat) return tier;
+        }
+        return GTStructureTiers.MAX_COIL_TIER;
+    }
+
+    /** The pipe casing a node opens on. GregTech attaches no casing requirement to a recipe. */
+    public static int defaultPipeCasingTier() {
+        return chartMinimum(Graph::getMinPipeCasingTier, GTStructureTiers.MAX_PIPE_CASING_TIER);
+    }
 
     /** GregTech's own translated name for a coil tier, so the row reads as the block a player places. */
     @Nonnull
@@ -327,8 +410,20 @@ public final class GTSettings {
         GTStructureTiers.MAX_SOLENOID_TIER);
     public static final SettingDef<Integer> ITEM_PIPE_DEF = SettingDef
         .intDef(ITEM_PIPE, GTStructureTiers.MAX_ITEM_PIPE_TIER, 1, GTStructureTiers.MAX_ITEM_PIPE_TIER);
+    /**
+     * Stores GregTech's tier number, which is what the machines read, and shows the casing it means.
+     * An untouched row follows the chart, so it is an automatic row rather than one with a fixed
+     * default.
+     */
     public static final SettingDef<Integer> PIPE_CASING_DEF = SettingDef
-        .intDef(PIPE_CASING, GTStructureTiers.MAX_PIPE_CASING_TIER, 1, GTStructureTiers.MAX_PIPE_CASING_TIER);
+        .autoIntDef(
+            PIPE_CASING,
+            1,
+            GTStructureTiers.MAX_PIPE_CASING_TIER,
+            null,
+            (ctx, s) -> defaultPipeCasingTier(),
+            null)
+        .withDisplay(tier -> GTStructureTiers.pipeCasingName(Integer.parseInt(tier)));
     public static final SettingDef<Integer> SAWBLADE_DEF = SettingDef
         .intDef(SAWBLADE, GTStructureTiers.MAX_SAWBLADE_TIER, 0, GTStructureTiers.MAX_SAWBLADE_TIER);
     public static final SettingDef<Integer> ELECTRODE_DEF = SettingDef
@@ -381,8 +476,8 @@ public final class GTSettings {
     }
 
     /**
-     * Structure knobs default to the best available: a planning tool should open on the endgame
-     * number, and the row is right there to lower it.
+     * Structure knobs open on what the chart says it can build, and on the best the game offers where
+     * the chart has said nothing. The row is right there to move one node off that.
      */
     @Nonnull
     public static StructureState resolve(final RecipeContext ctx, final Map<String, Object> settings,
@@ -399,10 +494,10 @@ public final class GTSettings {
         final int voltageTier, final int mode) {
         return new StructureState(
             voltageTier,
-            COIL_NAMES.indexOf(MachineProfile.getString(settings, COIL, COIL_NAMES.getLast())),
+            COIL_NAMES.indexOf(MachineProfile.getString(settings, COIL, COIL_NAMES.get(defaultCoilTier(ctx)))),
             MachineProfile.getInt(settings, SOLENOID, GTStructureTiers.MAX_SOLENOID_TIER),
             MachineProfile.getInt(settings, ITEM_PIPE, GTStructureTiers.MAX_ITEM_PIPE_TIER),
-            MachineProfile.getInt(settings, PIPE_CASING, GTStructureTiers.MAX_PIPE_CASING_TIER),
+            MachineProfile.getInt(settings, PIPE_CASING, defaultPipeCasingTier()),
             MachineProfile.getInt(settings, SAWBLADE, GTStructureTiers.MAX_SAWBLADE_TIER),
             MachineProfile.getInt(settings, ELECTRODE, 0),
             MachineProfile.getInt(settings, STRUCTURE_TIER, 2),

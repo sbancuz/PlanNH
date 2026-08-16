@@ -277,6 +277,11 @@ public final class Serializer {
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
         root.addProperty("name", graph.getName());
+        // Written even when unset, because the unset marker is a state the chart can be returned to
+        // and there is no schema version to tell an absent key from a deliberately cleared one.
+        root.addProperty("minCoilTier", graph.getMinCoilTier());
+        root.addProperty("minPipeCasingTier", graph.getMinPipeCasingTier());
+        root.addProperty("minVoltageTier", graph.getMinVoltageTier());
 
         final JsonArray nodesArray = new JsonArray();
         for (final Node node : graph.getNodes()) {
@@ -389,6 +394,23 @@ public final class Serializer {
         graph.setPanY(
             root.get("panY")
                 .getAsFloat());
+        // Read one at a time, like the choice above: a chart saved before minimums existed has none
+        // of these, and each one it does have is worth keeping on its own.
+        if (root.has("minCoilTier")) {
+            graph.setMinCoilTier(
+                root.get("minCoilTier")
+                    .getAsInt());
+        }
+        if (root.has("minPipeCasingTier")) {
+            graph.setMinPipeCasingTier(
+                root.get("minPipeCasingTier")
+                    .getAsInt());
+        }
+        if (root.has("minVoltageTier")) {
+            graph.setMinVoltageTier(
+                root.get("minVoltageTier")
+                    .getAsInt());
+        }
 
         final JsonArray nodesArray = root.getAsJsonArray("nodes");
         for (final JsonElement elem : nodesArray) {

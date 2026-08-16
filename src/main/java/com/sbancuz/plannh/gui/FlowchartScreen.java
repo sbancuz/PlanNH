@@ -57,6 +57,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.Balancer.NodeBalance;
 import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
 import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.data.flowchart.balancer.Severity;
+import com.sbancuz.plannh.gui.components.MinimumsMenu;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
 import codechicken.nei.LayoutManager;
@@ -68,6 +69,8 @@ public class FlowchartScreen extends ModularScreen {
     private static final int LEFT_MARGIN = 5;
     private static final int RIGHT_MARGIN = 15;
     private static final int TOP_MARGIN = 30;
+    /** Where the button row ends, and so the highest a panel it opens may sit. */
+    private static final int TOOLBAR_BOTTOM = TOP_MARGIN + 20;
     private static final int BOTTOM_MARGIN = 30;
 
     public static CanvasWidget canvas;
@@ -97,6 +100,9 @@ public class FlowchartScreen extends ModularScreen {
         Menu<?> contextMenu = new Menu<>();
 
         canvas = new CanvasWidget(contextMenu, panel);
+
+        // The structure every node in this chart opens on. One panel rather than three rows per node.
+        final MinimumsMenu minimums = new MinimumsMenu();
 
         // Target-rate editor: one numeric field in a floating menu. numbersDouble gives the MUI2
         // math parser, so "2k" and "1/3" work; committing (enter or clicking away) closes it.
@@ -257,6 +263,18 @@ public class FlowchartScreen extends ModularScreen {
                                     return true;
                                 }))
                         .child(
+                            new ButtonWidget<>().overlay(IKey.str("Min"))
+                                .tooltipStatic(
+                                    t -> t.addLine(IKey.str("Structure this chart plans with"))
+                                        .addLine(IKey.str("A node needing more raises itself")))
+                                .onMousePressed(_ -> {
+                                    minimums.toggle(
+                                        canvas.getContext()
+                                            .getAbsMouseX(),
+                                        TOOLBAR_BOTTOM);
+                                    return true;
+                                }))
+                        .child(
                             new ButtonWidget<>().overlay(IKey.str("S2G"))
                                 .onMousePressed(_ -> {
                                     final Graph g = canvas.getGraph();
@@ -357,6 +375,7 @@ public class FlowchartScreen extends ModularScreen {
         panel.child(contextMenu);
         panel.child(targetEditor);
         panel.child(machinePicker);
+        panel.child(minimums.widget());
 
         return new FlowchartScreen(panel);
     }
