@@ -25,7 +25,8 @@ import gregtech.api.util.OverclockCalculator;
  *
  * <p>
  * {@code GTProbeFieldsTest} asserts every name here against the GregTech on the test classpath, so a
- * rename fails the build rather than a player's chart.
+ * rename fails the build rather than a player's chart. It counts these members too, so a field added
+ * here without a row there fails as well.
  */
 final class ProbeFields {
 

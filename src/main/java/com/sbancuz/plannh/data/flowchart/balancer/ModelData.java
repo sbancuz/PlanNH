@@ -59,7 +59,7 @@ public final class ModelData {
                 outQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.outputMultiplier(i) * tf;
             }
             this.targetExtent = targetExtent(node, outQty);
-            this.fixedExtent = node.isMachineCountFixed()
+            this.fixedExtent = node.machineConfig.isMachineCountPinned()
                 ? node.machineConfig.getMachineCount() * (double) Numerics.TICKS_PER_SECOND / durTicks
                 : null;
         }

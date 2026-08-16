@@ -292,9 +292,12 @@ public final class Serializer {
             }
             obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
             obj.addProperty("extractorIndex", node.getExtractorIndex());
-            obj.addProperty("machineCount", node.machineConfig.getMachineCount());
-            if (node.isMachineCountFixed()) {
-                obj.addProperty("machineCountFixed", true);
+            // Only a pinned node has a count worth keeping; the rest follow the solver on reload. The
+            // marker is written too, because there is no schema version and a bare machineCount cannot
+            // otherwise be told from the one older charts wrote on every node whether pinned or not.
+            if (node.machineConfig.isMachineCountPinned()) {
+                obj.addProperty("machineCount", node.machineConfig.getMachineCount());
+                obj.addProperty("machineCountPinned", true);
             }
             if (!node.targetOutputRates.isEmpty()) {
                 final JsonObject targets = new JsonObject();
@@ -410,14 +413,18 @@ public final class Serializer {
             node.initExtractor();
             node.refresh();
 
-            if (obj.has("machineCount")) {
+            // Older charts stored a count on every node and marked the deliberate ones with
+            // machineCountFixed; only those stay pinned, and the rest are dropped so the node follows
+            // the solver, which is what an unmarked count always meant.
+            final boolean pinned = obj.has("machineCountPinned") ? obj.get("machineCountPinned")
+                .getAsBoolean()
+                : obj.has("machineCountFixed") && obj.get("machineCountFixed")
+                    .getAsBoolean();
+            if (pinned && obj.has("machineCount")) {
                 node.machineConfig.setMachineCount(
                     obj.get("machineCount")
                         .getAsInt());
             }
-            node.setMachineCountFixed(
-                obj.has("machineCountFixed") && obj.get("machineCountFixed")
-                    .getAsBoolean());
             // Read independently of every other key.
             if (obj.has("targets")) {
                 for (final Map.Entry<String, JsonElement> t : obj.getAsJsonObject("targets")

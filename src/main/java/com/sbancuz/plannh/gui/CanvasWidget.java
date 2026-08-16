@@ -153,6 +153,13 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private int targetEditOutput = -1;
     private boolean targetFocusPending;
 
+    @Nullable
+    private Menu<?> machinePickerMenu;
+    @Nullable
+    private ListWidget<IWidget, ?> machinePickerList;
+    @Nullable
+    private Node machinePickerNode;
+
     private final ModularPanel panel;
 
     private final ScreenEffect effect = new UIBlurEffect();
@@ -1392,13 +1399,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     // A node's machine is chosen from its title bar. The list has to live on the panel rather than
     // on this widget: the canvas is an IViewport, so anything parented to it is drawn through the
     // pan/zoom transform and a popup would follow the chart around.
-
-    @Nullable
-    private Menu<?> machinePickerMenu;
-    @Nullable
-    private ListWidget<IWidget, ?> machinePickerList;
-    @Nullable
-    private Node machinePickerNode;
 
     public void setMachinePicker(final Menu<?> menu, final ListWidget<IWidget, ?> list) {
         this.machinePickerMenu = menu;

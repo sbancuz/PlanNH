@@ -19,11 +19,6 @@ import com.sbancuz.plannh.data.properties.RecipeProperty;
  * {@code containsKey} answers "did the user choose this?" without sentinel values. Seeding every
  * default here is what forced the old sentinels (0 meaning auto, or a value equal to the default
  * meaning untouched), each of which eventually said the wrong thing.
- *
- * <p>
- * The machine count is the one exception: the balancer writes its solved count back here every
- * frame, so its presence cannot mean a user choice. It has its own provenance in
- * {@link Node#isMachineCountFixed()} and its own slot in the save.
  */
 public class MachineConfig {
 
@@ -53,7 +48,6 @@ public class MachineConfig {
         final MachineProfile profile = requested != null ? requested
             : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
         this.profileId = profile.id();
-        settings.put(Settings.MACHINES.key(), Settings.MACHINES.def().defaultValue);
     }
 
     @Nonnull
@@ -137,8 +131,6 @@ public class MachineConfig {
             .removeIf(
                 key -> !Settings.VOLTAGE.key()
                     .equals(key));
-        settings.put(Settings.MACHINES.key(), Settings.MACHINES.def().defaultValue);
-        parentRef.setMachineCountFixed(false);
     }
 
     @Nonnull
@@ -156,11 +148,26 @@ public class MachineConfig {
         return result;
     }
 
+    /**
+     * How many machines this node stands for, one when it has not been pinned. Pinning is the presence
+     * of the key: a node that never had a count typed into it follows whatever the solver works out,
+     * so it must not contribute a multiplier of its own.
+     */
     public int getMachineCount() {
         // Hard default rather than the profile's: a profile need not declare the setting, and a
         // count of zero would silently void the node.
         final Object v = settings.get(Settings.MACHINES.key());
         return v instanceof final Number n ? Math.max(1, n.intValue()) : 1;
+    }
+
+    /** Whether a count was typed in. The solver treats a pinned node as a constraint, not a variable. */
+    public boolean isMachineCountPinned() {
+        return settings.containsKey(Settings.MACHINES.key());
+    }
+
+    public void clearMachineCount() {
+        settings.remove(Settings.MACHINES.key());
+        parentRef.refresh();
     }
 
     public void setMachineCount(final int count) {
@@ -175,18 +182,10 @@ public class MachineConfig {
         return outputProductivity.getOrDefault(outputIndex, 1.0f);
     }
 
-    /**
-     * Whether this node has anything worth writing to the save. The machine count is excluded: the
-     * balancer rewrites it on every solve, so counting it would put a config block on every node in
-     * the chart and make merely viewing one look like an edit.
-     */
+    /** Whether this node has anything worth writing to the save. */
     public boolean hasStoredSettings() {
         if (!MachineProfileRegistry.defaultId()
             .equals(profileId)) return true;
-        for (final String key : settings.keySet()) {
-            if (!Settings.MACHINES.key()
-                .equals(key)) return true;
-        }
-        return !inputConsumption.isEmpty() || !outputProductivity.isEmpty();
+        return !settings.isEmpty() || !inputConsumption.isEmpty() || !outputProductivity.isEmpty();
     }
 }

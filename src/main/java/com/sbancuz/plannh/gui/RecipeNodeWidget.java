@@ -108,6 +108,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     // Settings panel
     private static final int CONFIG_PANEL_INSET = 2;
     private static final int CONFIG_PANEL_W = 170;
+    /** The clickable span of a settings row: the panel less the inset it is drawn at. */
+    private static final int CONFIG_ROW_W = CONFIG_PANEL_W - CONFIG_PANEL_INSET * 2;
     private static final int BOOL_CLICK_W = 120;
     private static final int CLICK_H = 10;
     private static final int SETTING_DEC_X = 80;
@@ -162,7 +164,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
      * @param resetKey the setting this zone edits, or null when the zone is not a setting row.
      *                 Right-clicking a zone that has one returns that setting to the machine.
      */
-    private record ClickZone(int ux1, int uy1, int ux2, int uy2, Runnable action, boolean repeat,
+    private record ClickZone(int ux1, int uy1, int ux2, int uy2, @Nullable Runnable action, boolean repeat,
         @Nullable String resetKey) {
 
         ClickZone(final int ux1, final int uy1, final int ux2, final int uy2, final Runnable action) {
@@ -172,6 +174,11 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         ClickZone(final int ux1, final int uy1, final int ux2, final int uy2, final Runnable action,
             final boolean repeat) {
             this(ux1, uy1, ux2, uy2, action, repeat, null);
+        }
+
+        /** A zone with no left-click behaviour, present so the row it covers can be right-clicked. */
+        static ClickZone resetOnly(final int ux1, final int uy1, final int ux2, final int uy2) {
+            return new ClickZone(ux1, uy1, ux2, uy2, null, false, null);
         }
 
         ClickZone withReset(final String key) {
@@ -638,7 +645,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 }
                 if (configOpen) {
                     for (final ClickZone zone : configZones) {
-                        if (zone.contains(mx, my)) {
+                        if (zone.action() != null && zone.contains(mx, my)) {
                             // Held repeats mutate outside this bracket and fold into this entry.
                             PlanAPI.recordEdit(canvas.getGraph(), zone.action);
                             if (zone.repeat()) {
@@ -791,23 +798,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final MachineConfig c = node.machineConfig;
         int y = y0;
 
-        // Fixed toggle
-        final boolean fixed = node.isMachineCountFixed();
-        final String fixedLabel = (fixed ? "[\u2713] " : "[  ] ") + "Fixed";
-        GuiDraw.drawText(
-            fixedLabel,
-            x,
-            y,
-            1.0f,
-            fixed ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(),
-            false);
-        configZones.add(new ClickZone(x, y, x + BOOL_CLICK_W, y + CLICK_H, () -> {
-            node.setMachineCountFixed(!fixed);
-            onConfigChanged();
-        }));
-        y += LINE_H;
-
+        // Advanced is drawn last, below the targets: it is a mode switch for the whole panel rather
+        // than another machine setting, and reading it among them invites it being read as one.
+        SettingDef<?> advanced = null;
         for (final SettingDef<?> def : visibleSettings()) {
+            if (GTSettings.ADVANCED.equals(def.key)) {
+                advanced = def;
+                continue;
+            }
             y = drawSetting(x, y, def, c);
         }
 
@@ -839,6 +837,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             y += LINE_H;
         }
 
+        if (advanced != null) y = drawSetting(x, y, advanced, c);
+
         if (node.getAvailableExtractors()
             .size() > 1) {
             final String label = "[\u00AB] " + node.getExtractor()
@@ -860,7 +860,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final long now = System.currentTimeMillis();
         if (now - zoneHoldStart < HOLD_REPEAT_DELAY_MS || now - zoneLastRepeat < HOLD_REPEAT_INTERVAL_MS) return;
         for (final ClickZone zone : configZones) {
-            if (zone.repeat() && zone.contains(heldZoneMx, heldZoneMy)) {
+            if (zone.repeat() && zone.action() != null && zone.contains(heldZoneMx, heldZoneMy)) {
                 zone.action.run();
                 zoneLastRepeat = now;
                 return;
@@ -876,6 +876,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     private int drawSetting(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
         final int firstZone = configZones.size();
         final int next = drawSettingRow(x, y, def, c);
+        // Spans the whole row, so the reset reaches the label and not only whichever controls the row
+        // happened to draw. Added after them, because the click search takes the first zone it hits.
+        configZones.add(ClickZone.resetOnly(x, y, x + CONFIG_ROW_W, y + CLICK_H));
         for (int i = firstZone; i < configZones.size(); i++) {
             configZones.set(
                 i,
@@ -885,15 +888,37 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         return next;
     }
 
+    private static boolean machineCountRow(final SettingDef<?> def) {
+        return Settings.MACHINES.key()
+            .equals(def.key);
+    }
+
+    /**
+     * What the machine-count row shows. An unpinned node follows the solve, so it displays the count
+     * the solver settled on rather than a stored one - typing into the row is what pins it, and there
+     * is no separate toggle to get out of step with. The solve is read here rather than through the
+     * setting's own auto value because only the widget can reach it: a SettingDef sees the recipe and
+     * the settings map, never the node or its graph.
+     */
+    private int solvedMachineCount(final MachineConfig c) {
+        if (c.isMachineCountPinned()) return c.getMachineCount();
+        final Balancer.NodeBalance nb = getNodeBalance();
+        return nb == null ? 1 : Math.max(1, (int) Math.ceil(nb.operations()));
+    }
+
     private int drawSettingRow(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
         if (def.type == Integer.class) {
             // An auto setting shows what the machine actually does rather than the 0 that means
             // "ask the machine", and cannot be stepped past what that machine allows.
-            final int shown = def.isAuto() ? def.effectiveInt(recipeContext(), c.settings) : c.getInt(def.key);
+            final int shown = machineCountRow(def) ? solvedMachineCount(c)
+                : def.isAuto() ? def.effectiveInt(recipeContext(), c.settings) : c.getInt(def.key);
             // Always asked for: a row can have a machine-set ceiling without being an auto row, and
             // effectiveMax falls back to the declared maximum when it has neither.
             final int max = def.effectiveMax(recipeContext(), c.settings);
-            return drawConfigIntField(x, y, def.label, shown, def.minInt, max, v -> {
+            // Presence is provenance everywhere else in the settings map, so it colours the row too:
+            // green means the user typed this, muted means it follows the machine or the solve.
+            final boolean chosen = c.settings.containsKey(def.key);
+            return drawConfigIntField(x, y, def.label, shown, def.minInt, max, chosen, v -> {
                 c.setInt(def.key, v);
                 onConfigChanged();
             });
@@ -983,8 +1008,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     private int drawConfigIntField(final int x, final int y, final String label, final int value, final int min,
-        final int max, final IntConsumer setter) {
-        GuiDraw.drawText(label + " " + value, x, y, 1.0f, PlannhColors.TEXT_LIGHT.getColor(), false);
+        final int max, final boolean chosen, final IntConsumer setter) {
+        final int color = chosen ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_LIGHT.getColor();
+        GuiDraw.drawText(label + " " + value, x, y, 1.0f, color, false);
         GuiDraw.drawText("[-]", x + SETTING_DEC_X, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
         GuiDraw.drawText("[+]", x + SETTING_INC_X, y, 1.0f, PlannhColors.TEXT_MUTED.getColor(), false);
 

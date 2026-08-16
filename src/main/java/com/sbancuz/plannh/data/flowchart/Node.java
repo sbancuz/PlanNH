@@ -37,10 +37,6 @@ public class Node {
     public final MachineConfig machineConfig;
     public final Map<RecipeProperty<?>, Object> properties = new HashMap<>();
 
-    @Getter
-    @Setter
-    private boolean machineCountFixed;
-
     /**
      * Target production rates by output port index, in ingredient units per second. A target is
      * a pin: AUTO holds the machine's extent so the targeted output hits the rate exactly, and
@@ -67,7 +63,7 @@ public class Node {
         this.recipeId = Recipe.RecipeId.of(handler, recipeIndex);
         this.handlerRecipeIndex = recipeIndex;
 
-        this.availableExtractors = RecipePropertyAPI.getExtractors(handler.getClass());
+        this.availableExtractors = extractorsFor(handler, recipeIndex);
         this.extractorIndex = 0;
         if (availableExtractors.isEmpty()) {
             this.extractor = DefaultProvider.INSTANCE;
@@ -141,6 +137,25 @@ public class Node {
         refresh();
     }
 
+    /**
+     * The providers offered for this recipe. Extractors register against a NEI handler class, so every
+     * GregTech recipe is offered every GregTech provider - including the steam one, which would let a
+     * player switch a Large Chemical Reactor onto steam. {@code canCraft} is the provider's own answer
+     * about this recipe, so it decides what is offered rather than only which is picked first.
+     *
+     * <p>
+     * A recipe no provider claims keeps the unfiltered list: something has to extract it, and a wrong
+     * provider reads better than a node with no properties at all.
+     */
+    private static List<PropertyProvider> extractorsFor(final IRecipeHandler handler, final int recipeIndex) {
+        final List<PropertyProvider> all = RecipePropertyAPI.getExtractors(handler.getClass());
+        final List<PropertyProvider> claimed = new ArrayList<>();
+        for (final PropertyProvider p : all) {
+            if (p.canCraft(handler, recipeIndex)) claimed.add(p);
+        }
+        return claimed.isEmpty() ? all : List.copyOf(claimed);
+    }
+
     private PropertyProvider pickBestExtractor(final IRecipeHandler handler, final int recipeIndex) {
         for (final PropertyProvider p : availableExtractors) {
             if (p.canCraft(handler, recipeIndex)) return p;
@@ -159,7 +174,7 @@ public class Node {
             this.availableExtractors = List.of();
             return;
         }
-        this.availableExtractors = RecipePropertyAPI.getExtractors(ref.handler.getClass());
+        this.availableExtractors = extractorsFor(ref.handler, ref.recipeIndex);
         if (this.extractorIndex >= this.availableExtractors.size()) {
             this.extractorIndex = 0;
         }

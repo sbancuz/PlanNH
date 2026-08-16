@@ -22,9 +22,9 @@ class AutoIntSettingTest {
 
     private static final RecipeContext EMPTY = new RecipeContext(new HashMap<RecipeProperty<?>, Object>());
 
-    /** Stands in for a machine whose structure allows 256. */
+    /** Stands in for a machine whose structure allows 256, which is both what it does and its most. */
     private static SettingDef<Integer> parallels() {
-        return SettingDef.autoIntDef("parallels", 1, 4096, (ctx, s) -> 256, null);
+        return SettingDef.autoIntDefCapped("parallels", 1, 4096, (ctx, s) -> 256, null);
     }
 
     @Test
@@ -51,6 +51,19 @@ class AutoIntSettingTest {
     void theCeilingIsTheMachineNotTheField() {
         assertEquals(256, parallels().effectiveMax(EMPTY, Map.of()));
         assertEquals(4096, parallels().maxInt, "the nominal bound stays wide for other machines");
+    }
+
+    /**
+     * The ordinary auto row keeps its declared ceiling. Its automatic value is what the machine does,
+     * not the most it can do, so capping the row there would leave an override row unable to override
+     * anything upward - which is what happened to amperage, tier skips and every heat row.
+     */
+    @Test
+    void anOrdinaryAutoRowKeepsItsDeclaredCeiling() {
+        final SettingDef<Integer> amps = SettingDef.autoIntDef("amp", 1, 64, (ctx, s) -> 1, null);
+
+        assertEquals(1, amps.effectiveInt(EMPTY, Map.of()), "it still shows what the machine reports");
+        assertEquals(64, amps.effectiveMax(EMPTY, Map.of()), "but it can be stepped past it");
     }
 
     @Test

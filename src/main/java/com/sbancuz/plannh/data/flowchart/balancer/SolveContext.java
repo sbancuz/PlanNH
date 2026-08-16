@@ -93,6 +93,12 @@ public final class SolveContext {
         boolean any = false;
         for (int m = 0; m < n; m++) {
             final ModelData.Machine md = model.machines.get(m);
+            // Two answers to one question. Reported wherever both are set, not only where the mode
+            // honours both, because the contradiction is in the chart rather than in the solve.
+            if (md.targetExtent > 0 && md.fixedExtent != null) {
+                notes.add(new Note(SolverMessage.COUNT_AND_TARGET, md.node.machineName));
+            }
+
             final Double extra = extraExtentPins.get(md.node.id);
             if (pins.contains(Pin.EXTENT) && extra != null) {
                 pinnedExtent[m] = extra;

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,9 @@ import gregtech.api.util.OverclockCalculator;
  * here - only its reflection surface is checkable. Its output is verified in the client harness.
  */
 class GTProbeFieldsTest {
+
+    /** 6 ProcessingLogic + 13 OverclockCalculator named in the CsvSources, plus processingLogic itself. */
+    private static final long COVERED_FIELDS = 20;
 
     @ParameterizedTest
     @CsvSource({ "maxParallel,int", "maxParallelSupplier,java.util.function.Supplier", "euModifier,double",
@@ -86,6 +90,24 @@ class GTProbeFieldsTest {
                 .getName()
                 .equals(type),
             owner.getSimpleName() + "." + name + " is now a " + found.getType());
+    }
+
+    /**
+     * The two lists above and ProbeFields' own members are separate authorities, so a field added to
+     * the probe without a row here would be resolved at runtime and never asserted. This counts them.
+     */
+    @Test
+    void everyFieldTheProbeResolvesIsCoveredAbove() throws ClassNotFoundException {
+        final Class<?> probeFields = Class
+            .forName("com.sbancuz.plannh.data.provider.gregtech.probe.ProbeFields", false, getClass().getClassLoader());
+        final long resolved = Arrays.stream(probeFields.getDeclaredFields())
+            .filter(f -> f.getType() == Field.class)
+            .count();
+
+        assertEquals(
+            COVERED_FIELDS,
+            resolved,
+            "ProbeFields resolves a field this test does not name - add the row, then bump the count");
     }
 
     private static Field declared(final Class<?> owner, final String name) {

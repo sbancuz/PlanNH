@@ -25,21 +25,22 @@ class SparseSettingsTest {
         final GtnhFlowLoader.LoadedChart chart = GtnhFlowLoader.load("mk1");
 
         for (final Node node : chart.machines()) {
-            if (node.isMachineCountFixed()) continue; // a chart pin, deliberately stored
+            if (node.machineConfig.isMachineCountPinned()) continue; // a chart pin, deliberately stored
             assertFalse(node.machineConfig.hasStoredSettings(), node.machineName + " stores config it was never given");
         }
     }
 
-    /** The machine count is seeded so the solver has somewhere to write, but is not a user choice. */
+    /** An untouched node stores no count at all: presence of the key is what pins it to the solver. */
     @Test
-    void theSeededMachineCountIsNotMistakenForAChoice() {
+    void anUntouchedNodeHasNoMachineCount() {
         final GtnhFlowLoader.LoadedChart chart = GtnhFlowLoader.load("mk1");
         final Node node = chart.machine(0);
 
-        assertTrue(
+        assertFalse(
             node.machineConfig.settings.containsKey(Settings.MACHINES.key()),
-            "the count must be present for the solver to write");
-        assertEquals(1, node.machineConfig.getMachineCount());
+            "a seeded count would read as a pin and freeze the node at one machine");
+        assertFalse(node.machineConfig.isMachineCountPinned());
+        assertEquals(1, node.machineConfig.getMachineCount(), "unpinned still contributes a multiplier of one");
     }
 
     /**

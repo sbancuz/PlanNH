@@ -46,6 +46,9 @@ public final class GTSettings {
     public static final String WIDTH = "gt_width";
     public static final String MODE = "gt_mode";
 
+    /** Sixteen 4A hatches is past anything GregTech builds, and the row is a plan rather than a limit. */
+    private static final int MAX_AMPERAGE = 64;
+
     /**
      * Coil names in GT's tier order, so index 0 is Cupronickel. {@code HeatingCoilLevel} counts None
      * and ULV below that, which is why its {@code getTier()} subtracts two.
@@ -136,7 +139,7 @@ public final class GTSettings {
      * machine and its coils instead of freezing at whatever was current when the node was made.
      */
     public static final SettingDef<Integer> PARALLELS_DEF = SettingDef
-        .autoIntDef(Settings.PARALLELS.key(), 1, 4096, GTSettings::machineMaxParallel, (v, c) -> "∥" + v);
+        .autoIntDefCapped(Settings.PARALLELS.key(), 1, 4096, GTSettings::machineMaxParallel, (v, c) -> "∥" + v);
 
     /** The selected machine's own parallel count for the structure the node describes. */
     public static int machineMaxParallel(final RecipeContext ctx, final Map<String, Object> settings) {
@@ -278,11 +281,16 @@ public final class GTSettings {
         (ctx, s) -> fromPreset(ctx, s, 0, (p, st) -> p.unlimitedTierSkips() ? 1 : 0),
         (v, c) -> v ? "∞T" : null);
 
-    /** Amperage comes from the machine block itself rather than from a preset formula. */
-    public static final SettingDef<Integer> AMP_DEF = SettingDef.autoIntDef(Settings.AMP.key(), 1, 64, (ctx, s) -> {
-        final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, s);
-        return entry == null ? 1 : Math.max(1, entry.amperage());
-    }, (v, c) -> "A" + v);
+    /**
+     * Amperage comes from the machine block itself rather than from a preset formula, and is a floor
+     * rather than a ceiling: a multiblock draws whatever its energy hatches supply, so the row must
+     * step past what the machine reports on its own.
+     */
+    public static final SettingDef<Integer> AMP_DEF = SettingDef
+        .autoIntDef(Settings.AMP.key(), 1, MAX_AMPERAGE, (ctx, s) -> {
+            final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, s);
+            return entry == null ? 1 : Math.max(1, entry.amperage());
+        }, (v, c) -> "A" + v);
 
     public static final SettingDef<String> COIL_DEF = SettingDef
         .enumDef(COIL, COIL_NAMES.getLast(), COIL_NAMES, (v, c) -> null);
@@ -433,12 +441,24 @@ public final class GTSettings {
     }
 
     /**
+     * Amperage is the energy hatches a multiblock was built with, so it is a choice wherever the
+     * machine is one. A singleblock draws the amperage its block draws and has nothing to say.
+     */
+    @Nonnull
+    public static BiPredicate<RecipeContext, Map<String, Object>> ampEditable() {
+        return (ctx, settings) -> multiblockOrUnknown(ctx, settings);
+    }
+
+    /**
      * The preset already gives the machine's maximum, but planning for fewer than the structure
-     * allows is normal, so the cap stays editable wherever it can exceed one.
+     * allows is normal, so the cap stays editable wherever it can exceed one. A multiblock that runs
+     * one recipe at a time - the Large Chemical Reactor, the IsaMill - reports a maximum of one, and
+     * a row that can only be moved below what the machine does is not a plan anybody draws.
      */
     @Nonnull
     public static BiPredicate<RecipeContext, Map<String, Object>> parallelsEditable() {
-        return (ctx, settings) -> multiblockOrUnknown(ctx, settings);
+        return (ctx, settings) -> multiblockOrUnknown(ctx, settings)
+            && (isAdvanced(settings) || machineMaxParallel(ctx, settings) > 1);
     }
 
     private static boolean multiblockOrUnknown(final RecipeContext ctx, final Map<String, Object> settings) {

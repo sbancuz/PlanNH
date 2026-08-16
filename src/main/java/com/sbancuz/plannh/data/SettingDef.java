@@ -44,7 +44,6 @@ public class SettingDef<T> {
         final BiPredicate<RecipeContext, Map<String, Object>> visibility,
         @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
         @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn) {
-        this.maxFn = maxFn;
         this.key = key;
         this.label = StatCollector.translateToLocal("plannh.settings." + key);
         this.type = type;
@@ -57,6 +56,7 @@ public class SettingDef<T> {
         this.badgeFn = badgeFn;
         this.visibility = visibility;
         this.autoValueFn = autoValueFn;
+        this.maxFn = maxFn;
     }
 
     @Nonnull
@@ -126,6 +126,30 @@ public class SettingDef<T> {
     }
 
     /**
+     * An auto row the machine also caps, for the one case where what it does and the most it can do
+     * are the same number. Everywhere else the automatic value is a starting point and capping the row
+     * at it would leave the row unable to move up from what it already shows.
+     */
+    @Nonnull
+    public static SettingDef<Integer> autoIntDefCapped(final String key, final int min, final int max,
+        final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
+        @Nullable final BiFunction<Integer, MachineConfig, String> badgeFn) {
+        return new SettingDef<>(
+            key,
+            Integer.class,
+            0,
+            min,
+            max,
+            null,
+            null,
+            null,
+            badgeFn,
+            ALWAYS,
+            autoValueFn,
+            autoValueFn);
+    }
+
+    /**
      * The boolean form. Shares {@code autoValueFn} rather than adding a parallel field: a flag is
      * just an int the caller reads as zero or not.
      */
@@ -155,10 +179,14 @@ public class SettingDef<T> {
         return autoValueFn.applyAsInt(ctx, settings) != 0;
     }
 
-    /** Stepping up stops at what the machine can actually do, not at an arbitrary ceiling. */
+    /**
+     * Stepping up stops at what the machine can actually do, where the machine has a say. Only a row
+     * given a {@code maxFn} has one: an automatic value is what the machine <em>does</em>, which is a
+     * ceiling for a parallel count and a starting point for everything else, so it is not assumed to
+     * be one.
+     */
     public int effectiveMax(final RecipeContext ctx, final Map<String, Object> settings) {
-        if (maxFn != null) return Math.max(minInt, maxFn.applyAsInt(ctx, settings));
-        return autoValueFn == null ? maxInt : Math.max(1, autoValueFn.applyAsInt(ctx, settings));
+        return maxFn == null ? maxInt : Math.max(minInt, maxFn.applyAsInt(ctx, settings));
     }
 
     public boolean hasOptions() {

@@ -130,6 +130,9 @@ public class GTProvider implements PropertyProvider {
         b.setting(GTSettings.MACHINE_DEF.withVisibility(GTSettings.neverAsARow()));
         b.setting(GTSettings.VOLTAGE_DEF.withVisibility(GTSettings.voltageEditable()));
         b.setting(Settings.MACHINES.def());
+        // Nearly every multiblock takes more than one energy hatch, so how many amps reach it is a
+        // build decision rather than an advanced override.
+        b.setting(GTSettings.AMP_DEF.withVisibility(GTSettings.ampEditable()));
         b.setting(
             GTSettings.PARALLELS_DEF.withVisibility(
                 GTSettings.parallelsEditable()
@@ -156,7 +159,6 @@ public class GTProvider implements PropertyProvider {
         // overclock caps have no machine counterpart - GT rarely sets them - so they stay plain
         // optional limits where nothing stored means no cap.
         for (final SettingDef<?> def : List.of(
-            GTSettings.AMP_DEF,
             GTSettings.SPEED_DEF,
             GTSettings.PERFECT_OC_DEF,
             Settings.LASER_OC.def(),
