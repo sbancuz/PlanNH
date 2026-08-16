@@ -809,6 +809,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             y = drawSetting(x, y, def, c);
         }
 
+        y = drawDerivedRows(x, y, c);
+
         // One row per output: pin the rate the chart should produce. The row opens a text
         // editor; rates are typed, not stepped.
         final FontRenderer font = Minecraft.getMinecraft().fontRenderer;
@@ -886,6 +888,72 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                     .withReset(def.key));
         }
         return next;
+    }
+
+    /**
+     * The values the machine settled without being asked, shown read-only above the targets.
+     *
+     * <p>
+     * These are the advanced rows, which a minimised node hides. Hiding them entirely leaves the user
+     * no way to tell a machine that needed no configuring from one PlanNH failed to configure, so the
+     * ones the machine actually decided are shown greyed - they are not editable here, because editing
+     * them is what the Advanced toggle is for.
+     */
+    private int drawDerivedRows(final int x, int y, final MachineConfig c) {
+        if (GTSettings.isAdvanced(c.settings)) return y;
+        for (final SettingDef<?> def : c.getProfile()
+            .settings()) {
+            final String value = derivedValue(def, c);
+            if (value == null) continue;
+            GuiDraw.drawText(def.label + " " + value, x, y, 1.0f, PlannhColors.TEXT_DIM.getColor(), false);
+            y += LINE_H;
+        }
+        return y;
+    }
+
+    /**
+     * What an untouched advanced row would read, or null when it says nothing. A row says nothing when
+     * the user is already editing it, when the machine left it at the value the setting was declared
+     * with, or when the setting's own badge declines to describe it - which is how a flag that is off
+     * stays quiet without this needing to know which flags exist.
+     */
+    @Nullable
+    private String derivedValue(final SettingDef<?> def, final MachineConfig c) {
+        if (!def.isAuto() || c.settings.containsKey(def.key)) return null;
+        if (def.isVisible(recipeContext(), c.settings)) return null;
+
+        if (def.type == Boolean.class) {
+            final boolean on = def.effectiveBool(recipeContext(), c.settings);
+            return def.badge(on, c) == null ? null : on ? "\u2713" : null;
+        }
+        if (def.type != Integer.class) return null;
+
+        final int value = def.effectiveInt(recipeContext(), c.settings);
+        if (def.isNeutral(value)) return null;
+        // Perfect overclocking is 4/4 by definition, so its two factors restate the flag above them.
+        if (perfectOC(c) && (Settings.EUT_INCREASE_PER_OC.key()
+            .equals(def.key)
+            || Settings.DURATION_DECREASE_PER_OC.key()
+                .equals(def.key)))
+            return null;
+        return def.badge(value, c) == null ? null : String.valueOf(value);
+    }
+
+    private int derivedRowCount() {
+        final MachineConfig c = node.machineConfig;
+        if (GTSettings.isAdvanced(c.settings)) return 0;
+        int rows = 0;
+        for (final SettingDef<?> def : c.getProfile()
+            .settings()) {
+            if (derivedValue(def, c) != null) rows++;
+        }
+        return rows;
+    }
+
+    private boolean perfectOC(final MachineConfig c) {
+        final SettingDef<?> def = c.getProfile()
+            .setting(Settings.PERFECT_OC.key());
+        return def != null && def.effectiveBool(recipeContext(), c.settings);
     }
 
     private static boolean machineCountRow(final SettingDef<?> def) {
@@ -990,7 +1058,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     private int configRowsHeight() {
-        int h = (visibleSettings().size() + 2 + targetableOutputs().size()) * LINE_H;
+        int h = (visibleSettings().size() + 2 + targetableOutputs().size() + derivedRowCount()) * LINE_H;
         if (node.getAvailableExtractors()
             .size() > 1) h += LINE_H;
         return h;

@@ -87,4 +87,5 @@ public enum Settings {
     public String key() {
         return def.key;
     }
+
 }

@@ -66,6 +66,15 @@ class GTStructureSettingsTest {
         assertEquals(5, state.voltageTier());
     }
 
+    /** The row shows the block a player places, not GregTech's tier name for it. */
+    @Test
+    void theCoilRowReadsAsItsMaterial() {
+        final String stored = GTSettings.COIL_NAMES.getFirst();
+
+        assertEquals("LV", stored, "the stored value stays the locale-independent tier name");
+        assertNotEquals(stored, GTSettings.COIL_DEF.display(stored), "but the row must not show LV");
+    }
+
     /** A junk coil name must not silently read as Cupronickel; indexOf returning -1 is visible. */
     @Test
     void anUnknownCoilNameDoesNotMasqueradeAsTierZero() {

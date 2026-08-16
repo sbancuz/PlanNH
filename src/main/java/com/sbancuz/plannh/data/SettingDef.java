@@ -37,13 +37,21 @@ public class SettingDef<T> {
     /** A ceiling the machine sets, for rows whose maximum is not also their automatic value. */
     @Nullable
     private final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn;
+    /**
+     * The value that means the machine did nothing here, in this row's own units. Declared rather than
+     * inferred from {@link #defaultValue}, which for an auto row is the unset marker, or from the
+     * {@code Settings} constant a provider borrowed the key from, whose scale can differ.
+     */
+    @Nullable
+    private final Integer neutral;
 
     private SettingDef(final String key, final Class<T> type, final T defaultValue, final int minInt, final int maxInt,
         @Nullable final List<String> options, @Nullable final Function<RecipeContext, List<String>> optionsFn,
         @Nullable final UnaryOperator<String> displayFn, @Nullable final BiFunction<T, MachineConfig, String> badgeFn,
         final BiPredicate<RecipeContext, Map<String, Object>> visibility,
         @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
-        @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn) {
+        @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn, @Nullable final Integer neutral) {
+        this.neutral = neutral;
         this.key = key;
         this.label = StatCollector.translateToLocal("plannh.settings." + key);
         this.type = type;
@@ -59,6 +67,11 @@ public class SettingDef<T> {
         this.maxFn = maxFn;
     }
 
+    /** Whether this row is reporting that the machine did nothing, in its own units. */
+    public boolean isNeutral(final int value) {
+        return neutral != null && neutral == value;
+    }
+
     @Nonnull
     public static SettingDef<Integer> intDef(final String key, final int def, final int min, final int max) {
         return intDef(key, def, min, max, null);
@@ -72,25 +85,25 @@ public class SettingDef<T> {
     @Nonnull
     public static SettingDef<Integer> intDef(final String key, final int def, final int min,
         final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn) {
-        return new SettingDef<>(key, Integer.class, def, min, min, null, null, null, null, ALWAYS, null, maxFn);
+        return new SettingDef<>(key, Integer.class, def, min, min, null, null, null, null, ALWAYS, null, maxFn, null);
     }
 
     @Nonnull
     public static SettingDef<Integer> intDef(final String key, final int def, final int min, final int max,
         @Nullable final BiFunction<Integer, MachineConfig, String> badgeFn) {
-        return new SettingDef<>(key, Integer.class, def, min, max, null, null, null, badgeFn, ALWAYS, null, null);
+        return new SettingDef<>(key, Integer.class, def, min, max, null, null, null, badgeFn, ALWAYS, null, null, null);
     }
 
     @Nonnull
     public static SettingDef<Boolean> boolDef(final String key, final boolean def,
         final BiFunction<Boolean, MachineConfig, String> badgeFn) {
-        return new SettingDef<>(key, Boolean.class, def, 0, 0, null, null, null, badgeFn, ALWAYS, null, null);
+        return new SettingDef<>(key, Boolean.class, def, 0, 0, null, null, null, badgeFn, ALWAYS, null, null, null);
     }
 
     @Nonnull
     public static SettingDef<String> enumDef(final String key, final String def, final List<String> options,
         final BiFunction<String, MachineConfig, String> badgeFn) {
-        return new SettingDef<>(key, String.class, def, 0, 0, options, null, null, badgeFn, ALWAYS, null, null);
+        return new SettingDef<>(key, String.class, def, 0, 0, options, null, null, badgeFn, ALWAYS, null, null, null);
     }
 
     /**
@@ -109,7 +122,20 @@ public class SettingDef<T> {
     public static SettingDef<String> dynamicEnumDef(final String key, final String def,
         final Function<RecipeContext, List<String>> optionsFn, final UnaryOperator<String> displayFn,
         @Nullable final BiFunction<String, MachineConfig, String> badgeFn) {
-        return new SettingDef<>(key, String.class, def, 0, 0, null, optionsFn, displayFn, badgeFn, ALWAYS, null, null);
+        return new SettingDef<>(
+            key,
+            String.class,
+            def,
+            0,
+            0,
+            null,
+            optionsFn,
+            displayFn,
+            badgeFn,
+            ALWAYS,
+            null,
+            null,
+            null);
     }
 
     /**
@@ -122,17 +148,13 @@ public class SettingDef<T> {
     public static SettingDef<Integer> autoIntDef(final String key, final int min, final int max,
         final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
         @Nullable final BiFunction<Integer, MachineConfig, String> badgeFn) {
-        return new SettingDef<>(key, Integer.class, 0, min, max, null, null, null, badgeFn, ALWAYS, autoValueFn, null);
+        return autoIntDef(key, min, max, null, autoValueFn, badgeFn);
     }
 
-    /**
-     * An auto row the machine also caps, for the one case where what it does and the most it can do
-     * are the same number. Everywhere else the automatic value is a starting point and capping the row
-     * at it would leave the row unable to move up from what it already shows.
-     */
+    /** As above, declaring the value that means this machine did nothing. */
     @Nonnull
-    public static SettingDef<Integer> autoIntDefCapped(final String key, final int min, final int max,
-        final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
+    public static SettingDef<Integer> autoIntDef(final String key, final int min, final int max,
+        @Nullable final Integer neutral, final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
         @Nullable final BiFunction<Integer, MachineConfig, String> badgeFn) {
         return new SettingDef<>(
             key,
@@ -146,7 +168,33 @@ public class SettingDef<T> {
             badgeFn,
             ALWAYS,
             autoValueFn,
-            autoValueFn);
+            null,
+            neutral);
+    }
+
+    /**
+     * An auto row the machine also caps, for the one case where what it does and the most it can do
+     * are the same number. Everywhere else the automatic value is a starting point and capping the row
+     * at it would leave the row unable to move up from what it already shows.
+     */
+    @Nonnull
+    public static SettingDef<Integer> autoIntDefCapped(final String key, final int min, final int max,
+        @Nullable final Integer neutral, final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
+        @Nullable final BiFunction<Integer, MachineConfig, String> badgeFn) {
+        return new SettingDef<>(
+            key,
+            Integer.class,
+            0,
+            min,
+            max,
+            null,
+            null,
+            null,
+            badgeFn,
+            ALWAYS,
+            autoValueFn,
+            autoValueFn,
+            neutral);
     }
 
     /**
@@ -157,7 +205,20 @@ public class SettingDef<T> {
     public static SettingDef<Boolean> autoBoolDef(final String key,
         final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
         @Nullable final BiFunction<Boolean, MachineConfig, String> badgeFn) {
-        return new SettingDef<>(key, Boolean.class, false, 0, 0, null, null, null, badgeFn, ALWAYS, autoValueFn, null);
+        return new SettingDef<>(
+            key,
+            Boolean.class,
+            false,
+            0,
+            0,
+            null,
+            null,
+            null,
+            badgeFn,
+            ALWAYS,
+            autoValueFn,
+            null,
+            null);
     }
 
     public boolean isAuto() {
@@ -235,6 +296,7 @@ public class SettingDef<T> {
             badgeFn,
             condition,
             autoValueFn,
-            maxFn);
+            maxFn,
+            neutral);
     }
 }

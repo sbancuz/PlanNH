@@ -24,7 +24,7 @@ class AutoIntSettingTest {
 
     /** Stands in for a machine whose structure allows 256, which is both what it does and its most. */
     private static SettingDef<Integer> parallels() {
-        return SettingDef.autoIntDefCapped("parallels", 1, 4096, (ctx, s) -> 256, null);
+        return SettingDef.autoIntDefCapped("parallels", 1, 4096, 1, (ctx, s) -> 256, null);
     }
 
     @Test

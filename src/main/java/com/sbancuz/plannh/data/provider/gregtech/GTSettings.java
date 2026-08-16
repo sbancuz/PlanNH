@@ -139,7 +139,7 @@ public final class GTSettings {
      * machine and its coils instead of freezing at whatever was current when the node was made.
      */
     public static final SettingDef<Integer> PARALLELS_DEF = SettingDef
-        .autoIntDefCapped(Settings.PARALLELS.key(), 1, 4096, GTSettings::machineMaxParallel, (v, c) -> "∥" + v);
+        .autoIntDefCapped(Settings.PARALLELS.key(), 1, 4096, 1, GTSettings::machineMaxParallel, (v, c) -> "∥" + v);
 
     /** The selected machine's own parallel count for the structure the node describes. */
     public static int machineMaxParallel(final RecipeContext ctx, final Map<String, Object> settings) {
@@ -171,6 +171,7 @@ public final class GTSettings {
         Settings.SPEED.key(),
         10,
         10000,
+        100,
         (ctx, s) -> fromPreset(
             ctx,
             s,
@@ -183,6 +184,7 @@ public final class GTSettings {
     public static final SettingDef<Integer> EUT_DISCOUNT_DEF = SettingDef.autoIntDef(
         Settings.EUT_DISCOUNT.key(),
         0,
+        100,
         100,
         (ctx, s) -> fromPreset(
             ctx,
@@ -197,6 +199,7 @@ public final class GTSettings {
         Settings.EUT_INCREASE_PER_OC.key(),
         100,
         1000,
+        400,
         (ctx, s) -> fromPreset(
             ctx,
             s,
@@ -210,6 +213,7 @@ public final class GTSettings {
         Settings.DURATION_DECREASE_PER_OC.key(),
         100,
         1000,
+        200,
         (ctx, s) -> fromPreset(
             ctx,
             s,
@@ -223,6 +227,7 @@ public final class GTSettings {
         Settings.MACHINE_HEAT.key(),
         0,
         100000,
+        0,
         (ctx, s) -> fromPreset(
             ctx,
             s,
@@ -232,14 +237,14 @@ public final class GTSettings {
         (v, c) -> "M" + v);
 
     public static final SettingDef<Integer> RECIPE_HEAT_DEF = SettingDef
-        .autoIntDef(Settings.RECIPE_HEAT.key(), 0, 100000, (ctx, s) -> {
+        .autoIntDef(Settings.RECIPE_HEAT.key(), 0, 100000, 0, (ctx, s) -> {
             final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, s);
             return GTPresetApplier.recipeHeat(ctx, entry == null ? null : entry.preset());
         }, (v, c) -> "R" + v);
 
     /** GT's own heat discount base, 0.95 per 900K of headroom. */
     public static final SettingDef<Integer> HEAT_DISCOUNT_MULT_DEF = SettingDef
-        .autoIntDef(Settings.HEAT_DISCOUNT_MULT.key(), 0, 200, (ctx, s) -> 95, null);
+        .autoIntDef(Settings.HEAT_DISCOUNT_MULT.key(), 0, 200, 95, (ctx, s) -> 95, null);
 
     /**
      * A machine that skips no tiers reports 0, which is a real answer. -1 on the preset means the
@@ -249,6 +254,7 @@ public final class GTSettings {
         Settings.MAX_TIER_SKIPS.key(),
         0,
         10,
+        1,
         (ctx, s) -> fromPreset(
             ctx,
             s,
@@ -287,13 +293,33 @@ public final class GTSettings {
      * step past what the machine reports on its own.
      */
     public static final SettingDef<Integer> AMP_DEF = SettingDef
-        .autoIntDef(Settings.AMP.key(), 1, MAX_AMPERAGE, (ctx, s) -> {
+        .autoIntDef(Settings.AMP.key(), 1, MAX_AMPERAGE, 1, (ctx, s) -> {
             final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, s);
             return entry == null ? 1 : Math.max(1, entry.amperage());
         }, (v, c) -> "A" + v);
 
+    /**
+     * Stores GregTech's tier name and shows GregTech's material name, because the tier name is what a
+     * save can keep - it is locale-independent and stable - while "Cupronickel" is what a player built.
+     *
+     * <p>
+     * TODO: opens at the best coil like every other structure knob, which overstates a fresh chart -
+     * a coil sets the heat every overclock is counted from. To be replaced by a chart-wide coil
+     * default, the way voltage already works, rather than by making this one row disagree.
+     */
     public static final SettingDef<String> COIL_DEF = SettingDef
-        .enumDef(COIL, COIL_NAMES.getLast(), COIL_NAMES, (v, c) -> null);
+        .dynamicEnumDef(COIL, COIL_NAMES.getLast(), ctx -> COIL_NAMES, GTSettings::coilDisplayName, (v, c) -> null);
+
+    /** GregTech's own translated name for a coil tier, so the row reads as the block a player places. */
+    @Nonnull
+    private static String coilDisplayName(final String tierName) {
+        for (final HeatingCoilLevel level : HeatingCoilLevel.values()) {
+            if (level.name()
+                .equals(tierName)) return level.getName();
+        }
+        return tierName;
+    }
+
     public static final SettingDef<Integer> SOLENOID_DEF = SettingDef.intDef(
         SOLENOID,
         GTStructureTiers.MAX_SOLENOID_TIER,
