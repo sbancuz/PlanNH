@@ -1,5 +1,6 @@
 package com.sbancuz.plannh;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -49,15 +50,22 @@ class GTFieldInjectorTest {
     }
 
     /**
-     * Every multiblock inherits {@code machineMode}, so reachability alone would put a mode row on all
-     * of them. Pinned because it is the clearest case for narrowing by experiment rather than by what
-     * a machine happens to declare.
+     * Every multiblock inherits {@code machineMode}, so the field alone would put a mode row on all of
+     * them. A machine that really has modes answers {@code supportsMachineModeSwitch} for itself, and
+     * that is what the probe goes on.
      */
     @Test
-    void modeIsReachableEverywhereWhichIsWhyReachabilityIsNotTheAnswer() {
-        final EnumSet<Knob> reachable = FieldInjector.forClass(uninitialised(GT_MULTI + "MTEIndustrialSifter"))
-            .reachableKnobs();
-        assertTrue(reachable.contains(Knob.MODE), "MTEMultiBlockBase.machineMode is gone or renamed");
+    void onlyMachinesThatDeclareModesExposeTheModeKnob() {
+        assertTrue(
+            FieldInjector.forClass(uninitialised(GT_MULTI + "MTEOreWashingPlant"))
+                .reachableKnobs()
+                .contains(Knob.MODE),
+            "MTEOreWashingPlant no longer declares supportsMachineModeSwitch");
+        assertFalse(
+            FieldInjector.forClass(uninitialised(GT_MULTI + "MTEIndustrialSifter"))
+                .reachableKnobs()
+                .contains(Knob.MODE),
+            "the Industrial Sifter has no modes, so it must not offer the row");
     }
 
     private static Class<?> uninitialised(final String className) {

@@ -10,15 +10,18 @@ import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.SOL
 import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.STRUCTURE_TIER;
 import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.WIDTH;
 import static com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers.at;
+import static com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers.clampCoil;
+import static com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers.coilHeat;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import bartworks.common.configs.Configuration;
-import gregtech.api.enums.HeatingCoilLevel;
 
 /**
  * Per-machine overclock parameters, keyed by MetaTileEntity class name.
@@ -47,15 +50,6 @@ public final class GTMachinePresets {
 
     private static void put(final String className, final GTMachinePreset.Builder preset) {
         BY_CLASS.put(className, preset.build());
-    }
-
-    private static int coilHeat(final int coilTier) {
-        return (int) HeatingCoilLevel.getFromTier((byte) clampCoil(coilTier))
-            .getHeat();
-    }
-
-    private static int clampCoil(final int coilTier) {
-        return Math.max(0, Math.min(GTStructureTiers.MAX_COIL_TIER, coilTier));
     }
 
     /**
@@ -192,15 +186,6 @@ public final class GTMachinePresets {
                 .eu(s -> Math.pow(0.98, clampCoil(s.coilTier()) + 1))
                 .knobs(COIL, WIDTH, STRUCTURE_TIER));
 
-        // MTEMultiFurnace hand-rolls checkProcessing with a fixed 4 EU/t over 128t and a coil-derived
-        // parallel of 4 << (ordinal - 1); getTier() is ordinal - 2, hence the +1.
-        put(
-            GT_MULTI + "MTEMultiFurnace",
-            GTMachinePreset.builder()
-                .parallel(s -> 4 << (clampCoil(s.coilTier()) + 1))
-                .recipeOverride(4, 128)
-                .knobs(COIL));
-
         // MTEPyrolyseOven: coil is a speed bonus, not heat. No parallel.
         put(
             GT_MULTI + "MTEPyrolyseOven",
@@ -218,14 +203,6 @@ public final class GTMachinePresets {
             GT_MULTI + "MTEFrothFlotationCell",
             GTMachinePreset.builder()
                 .perfectOC());
-
-        // MTEElectricBlastFurnace: machine heat is the coil PLUS 100K per voltage tier over MV.
-        put(
-            GT_MULTI + "MTEElectricBlastFurnace",
-            GTMachinePreset.builder()
-                .heatOC(s -> coilHeat(s.coilTier()) + 100 * (s.voltageTier() - 2))
-                .heatDiscount()
-                .knobs(COIL));
 
         put(
             GT_MULTI + "MTELargeChemicalReactor",
@@ -261,15 +238,16 @@ public final class GTMachinePresets {
                 .unlimitedTierSkips()
                 .knobs(COIL));
 
-        // MTEPlasmaForge: coil heat alone, no voltage term - the one place it differs from the EBF.
-        // Its perfect OC is state-dependent (convergence + full catalyst discount), so it is not
-        // modelled; the catalyst discount ramps over 576000 ticks of uptime.
+        // MTEPlasmaForge: the coil sets a heat, but GT never calls setHeatOC here, unlike the EBF, so
+        // the heat only decides which recipes will run. PlanNH plans a recipe the user already chose,
+        // so nothing it computes moves with the coil - hence no coil row. The heat is still recorded
+        // for the advanced panel. Its perfect OC is state-dependent (convergence + full catalyst
+        // discount, which ramps over 576000 ticks of uptime), so that is not modelled either.
         put(
             GT_MULTI + "MTEPlasmaForge",
             GTMachinePreset.builder()
-                .heatOC(s -> coilHeat(s.coilTier()))
-                .unlimitedTierSkips()
-                .knobs(COIL));
+                .machineHeat(s -> coilHeat(s.coilTier()))
+                .unlimitedTierSkips());
 
         // ── GT++ ───────────────────────────────────────────────────────────────────────────────
         // MTEAdvEBF (Volcanus): fixed 8 parallel, and heat from the coil alone.
@@ -342,13 +320,7 @@ public final class GTMachinePresets {
                 .parallel(s -> 2 * Math.max(1, s.voltageTier()))
                 .speed(1 / 3.0));
 
-        // ── Other addons ───────────────────────────────────────────────────────────────────────
-        put(
-            "bartworks.common.tileentities.multis.MTECircuitAssemblyLine",
-            GTMachinePreset.builder()
-                .perfectOC()
-                .knobs(MODE));
-
+        // ── Other addons ──────────────────────────────────────
         // MTEIndustrialArcFurnace: the electrode supplies speed, parallel, EU and both OC factors,
         // and the machine explicitly forbids tier skipping.
         final GTStructureTiers.Electrodes electrodes = GTStructureTiers.ELECTRODES;
@@ -375,6 +347,11 @@ public final class GTMachinePresets {
     @Nullable
     public static GTMachinePreset lookup(@Nonnull final Class<?> mteClass) {
         for (Class<?> c = mteClass; c != null; c = c.getSuperclass()) {
+            // Overrides win, and are checked at every level of the walk so that a subclass cannot
+            // inherit a general row past a machine that has one for a stated reason.
+            final GTMachinePreset overridden = GTMachineOverrides.lookup(c.getName());
+            if (overridden != null) return overridden;
+
             final GTMachinePreset preset = BY_CLASS.get(c.getName());
             if (preset != null) return preset;
         }
@@ -384,6 +361,11 @@ public final class GTMachinePresets {
     /** Every keyed class name, for the test that asserts they all still resolve. */
     @Nonnull
     public static Iterable<String> keys() {
-        return BY_CLASS.keySet();
+        // A set, because an override silently wins over a general row of the same name: yielding the
+        // name twice would run the property tests on the override and never on the row they shadow.
+        final Set<String> all = new LinkedHashSet<>(BY_CLASS.keySet());
+        GTMachineOverrides.keys()
+            .forEach(all::add);
+        return all;
     }
 }

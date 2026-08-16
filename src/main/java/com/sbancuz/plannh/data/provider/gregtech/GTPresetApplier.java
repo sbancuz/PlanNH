@@ -48,7 +48,8 @@ public final class GTPresetApplier {
             : GTSettings.voltageTier(ctx, settings);
 
         final GTMachinePreset preset = entry.preset();
-        final StructureState state = GTSettings.resolve(ctx, settings, voltageTier);
+        final StructureState state = GTSettings
+            .resolve(ctx, settings, voltageTier, GTSettings.mode(ctx, entry, settings));
 
         long eut = recipeEUt;
         int recipeDuration = duration;

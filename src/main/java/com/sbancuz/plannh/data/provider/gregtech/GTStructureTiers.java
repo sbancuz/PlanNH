@@ -63,6 +63,16 @@ public final class GTStructureTiers {
     public static final int MAX_ELECTRODE_TIER = ELECTRODES == null ? 13 : ELECTRODES.parallel().length - 1;
     public static final int MAX_SAWBLADE_TIER = SAWBLADES == null ? 3 : SAWBLADES.durationModifier().length - 1;
 
+    /** How hot a coil of this tier runs, in Kelvin. Tiers outside the range clamp to it. */
+    public static int coilHeat(final int coilTier) {
+        return (int) HeatingCoilLevel.getFromTier((byte) clampCoil(coilTier))
+            .getHeat();
+    }
+
+    public static int clampCoil(final int coilTier) {
+        return Math.max(0, Math.min(MAX_COIL_TIER, coilTier));
+    }
+
     /** Clamps to the table, so a stored tier from a pack with more electrodes still resolves. */
     public static double at(@Nonnull final double[] table, final int tier) {
         return table[Math.max(0, Math.min(table.length - 1, tier))];

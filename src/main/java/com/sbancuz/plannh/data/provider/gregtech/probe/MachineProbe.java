@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
 import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
@@ -113,46 +114,82 @@ public final class MachineProbe {
             return;
         }
 
-        // Compared at the structure an untouched node shows, which is what a reader would see.
+        if (agrees(table, probed)) return;
+
+        // A machine with a stated reason for not being read from GregTech is expected to disagree.
+        // Saying so is the point: a name that appears here without a reason is the news.
+        final String overridden = GTMachineOverrides.reason(machineClass);
+        if (overridden != null) {
+            PlanNH.LOG.debug("PlanNH probe: {} disagrees as expected, {}", machineClass.getName(), overridden);
+            return;
+        }
         final StructureState state = reference();
-        final boolean same = table.maxParallel()
-            .applyAsInt(state)
-            == probed.maxParallel()
-                .applyAsInt(state)
-            && sameNumber(
-                table.durationModifier()
-                    .applyAsDouble(state),
-                probed.durationModifier()
-                    .applyAsDouble(state))
-            && sameNumber(
-                table.euModifier()
-                    .applyAsDouble(state),
-                probed.euModifier()
-                    .applyAsDouble(state));
-        if (!same) {
-            PlanNH.LOG.info(
-                "PlanNH probe: {} table {} vs probe {}",
-                machineClass.getName(),
-                headline(table, state),
-                headline(probed, state));
+        PlanNH.LOG.info(
+            "PlanNH probe: {} table {} vs probe {}",
+            machineClass.getName(),
+            headline(table, state),
+            headline(probed, state));
+    }
+
+    /**
+     * Whether the two describe the same machine, compared at the structure an untouched node shows.
+     * Public because the machine table reports it too, and one comparison must serve both or the log
+     * and the table can disagree about whether they disagree.
+     */
+    public static boolean agrees(@Nonnull final GTMachinePreset table, @Nonnull final GTMachinePreset probed) {
+        final StructureState state = reference();
+        return headline(table, state).matches(headline(probed, state));
+    }
+
+    /** Everything a wrong row shows up in. Heat belongs here: it drives overclocks as much as speed does. */
+    private record Headline(int parallel, double duration, double eu, double ocDuration, double ocEut, int machineHeat,
+        boolean heatOC, boolean heatDiscount, int recipeHeat, int tierSkips) {
+
+        boolean matches(final Headline other) {
+            return parallel == other.parallel && sameNumber(duration, other.duration)
+                && sameNumber(eu, other.eu)
+                && sameNumber(ocDuration, other.ocDuration)
+                && sameNumber(ocEut, other.ocEut)
+                && machineHeat == other.machineHeat
+                && heatOC == other.heatOC
+                && heatDiscount == other.heatDiscount
+                && recipeHeat == other.recipeHeat
+                && tierSkips == other.tierSkips;
+        }
+
+        private static boolean sameNumber(final double table, final double probed) {
+            return Math.abs(table - probed) <= SAME_NUMBER * Math.max(1, Math.abs(table));
         }
     }
 
-    private static boolean sameNumber(final double table, final double probed) {
-        return Math.abs(table - probed) <= SAME_NUMBER * Math.max(1, Math.abs(table));
+    @Nonnull
+    private static Headline headline(final GTMachinePreset preset, final StructureState state) {
+        return new Headline(
+            preset.maxParallel()
+                .applyAsInt(state),
+            preset.durationModifier()
+                .applyAsDouble(state),
+            preset.euModifier()
+                .applyAsDouble(state),
+            preset.durationDecreasePerOC()
+                .applyAsDouble(state),
+            preset.eutIncreasePerOC()
+                .applyAsDouble(state),
+            preset.usesHeat() ? preset.machineHeat()
+                .applyAsInt(state) : 0,
+            preset.heatOC(),
+            preset.heatDiscount(),
+            preset.recipeHeatOverride(),
+            effectiveTierSkips(preset));
     }
 
-    /** Parallel, duration multiplier and EU discount - the three a wrong row shows up in first. */
-    @Nonnull
-    private static String headline(final GTMachinePreset preset, final StructureState state) {
-        return preset.maxParallel()
-            .applyAsInt(state) + "x "
-            + preset.durationModifier()
-                .applyAsDouble(state)
-            + "d "
-            + preset.euModifier()
-                .applyAsDouble(state)
-            + "eu";
+    /**
+     * What the calculator ends up with. An unset preset never calls the setter, so it lands on
+     * GregTech's default of one - which is not the same as a machine that pinned zero.
+     */
+    private static int effectiveTierSkips(final GTMachinePreset preset) {
+        if (preset.unlimitedTierSkips()) return Integer.MAX_VALUE;
+        return preset.maxTierSkips() == GTMachinePreset.TIER_SKIPS_UNSET ? DEFAULT_TIER_SKIPS : preset.maxTierSkips();
     }
 
     /**
@@ -189,10 +226,13 @@ public final class MachineProbe {
             return null;
         }
         // A state the machine declines falls back to the reference rather than to nonsense.
-        return toPreset(reference, state -> {
+        final Function<StructureState, ProbeReading> readings = state -> {
             final ProbeReading at = subject.read(state, recipe);
             return at != null && at.isRunnable() ? at : reference;
-        }, subject.reachableKnobs());
+        };
+        final EnumSet<Knob> knobs = SensitivityScan
+            .scan(reference(), subject.reachableKnobs(), subject.modeCount(), readings);
+        return toPreset(reference, readings, knobs);
     }
 
     /**
@@ -222,16 +262,16 @@ public final class MachineProbe {
                     .eutIncreasePerOC())
             .knobs(knobs.toArray(new Knob[0]));
 
+        // GregTech sets a machine heat even where it never overclocks on one, so record it either way
+        // and let the flags decide whether the applier hands it to the calculator.
         final ProbeReading reading = reference;
+        preset.machineHeat(
+            s -> readings.apply(s)
+                .machineHeat());
         if (reading.heatOC()) preset.heatOC(
             s -> readings.apply(s)
                 .machineHeat());
-        if (reading.heatDiscount()) {
-            preset.heatDiscount();
-            preset.machineHeat(
-                s -> readings.apply(s)
-                    .machineHeat());
-        }
+        if (reading.heatDiscount()) preset.heatDiscount();
         // Only a machine that overclocks on heat has a heat floor to pin. The rest leave the field at
         // GT's zero, which would otherwise read as "this machine fires from absolute zero".
         // Among those that do: passing the recipe's own value through leaves the sentinel intact,

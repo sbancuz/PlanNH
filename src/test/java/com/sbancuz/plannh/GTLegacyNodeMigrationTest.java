@@ -90,4 +90,27 @@ class GTLegacyNodeMigrationTest {
 
         assertFalse(GTSettings.isAdvanced(s), "the user turning advanced off must stick");
     }
+
+    /**
+     * The mode comes from the node's recipe now, so a stored one is dropped rather than honoured: a
+     * chart saved with tower mode on a distillery recipe describes a machine that cannot run it.
+     */
+    @Test
+    void aStoredModeIsDroppedBecauseTheRecipeSettlesItNow() {
+        final Map<String, Object> s = loaded(GTSettings.MODE, 1, GTSettings.COIL, "HV");
+        GTSettings.migrateLegacyNode(s);
+
+        assertFalse(s.containsKey(GTSettings.MODE), "a stored mode can contradict the recipe");
+        assertEquals("HV", s.get(GTSettings.COIL), "the other structure knobs are untouched");
+    }
+
+    /** A mode is a structure knob, so dropping it must not read as a hand-tuned overclock. */
+    @Test
+    void droppingTheModeDoesNotTriggerTheAdvancedMigration() {
+        final Map<String, Object> s = loaded(GTSettings.MODE, 1);
+        GTSettings.migrateLegacyNode(s);
+
+        assertFalse(GTSettings.isAdvanced(s));
+        assertTrue(s.isEmpty(), "nothing else was stored, so nothing else may appear");
+    }
 }

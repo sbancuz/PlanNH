@@ -65,9 +65,17 @@ public final class GTMachineIndex {
      * @param describer GT's own overclock behaviour for this machine, present on singleblocks and
      *                  a handful of multis. When set it is authoritative and no preset is needed.
      * @param preset    structure-derived parameters for multiblocks; null when uncovered.
+     * @param modes     how many modes the machine has, and which recipemap selects which.
      */
     public record MachineEntry(String id, String displayName, Kind kind, int voltageTier, int amperage,
-        int catalystPriority, @Nullable OverclockDescriber describer, @Nullable GTMachinePreset preset) {}
+        int catalystPriority, @Nullable OverclockDescriber describer, @Nullable GTMachinePreset preset,
+        GTMachineModes.Modes modes) {
+
+        /** The mode this recipe implies, or -1 when the user still has to say. */
+        public int modeFor(@Nullable final RecipeMap<?> recipeMap) {
+            return modes.modeFor(recipeMap);
+        }
+    }
 
     @Nullable
     private static Map<String, List<MachineEntry>> byRecipeMap;
@@ -266,7 +274,8 @@ public final class GTMachineIndex {
             mte instanceof final MTEBasicMachine basic ? basic.mAmperage : 1,
             workable.getRecipeCatalystPriority(),
             describer,
-            preset);
+            preset,
+            GTMachineModes.of(mte));
 
         // Two machines sharing an id would silently render as one another in the picker, which is
         // exactly what getMetaName() did here.

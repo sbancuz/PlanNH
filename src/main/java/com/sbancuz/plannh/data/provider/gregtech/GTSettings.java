@@ -7,12 +7,14 @@ import java.util.function.BiPredicate;
 import java.util.function.ToIntBiFunction;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
+import com.sbancuz.plannh.data.provider.GTProvider;
 
 import gregtech.api.enums.GTValues;
 import gregtech.api.enums.HeatingCoilLevel;
@@ -157,7 +159,8 @@ public final class GTSettings {
         final ToIntBiFunction<GTMachinePreset, StructureState> reader) {
         final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
         if (entry == null || entry.preset() == null) return fallback;
-        return reader.applyAsInt(entry.preset(), resolve(ctx, settings, voltageTier(ctx, settings)));
+        return reader
+            .applyAsInt(entry.preset(), resolve(ctx, settings, voltageTier(ctx, settings), mode(ctx, entry, settings)));
     }
 
     /** Percentages the rows show; the maths uses the preset's exact doubles, never these. */
@@ -299,7 +302,49 @@ public final class GTSettings {
     public static final SettingDef<Integer> STRUCTURE_TIER_DEF = SettingDef.intDef(STRUCTURE_TIER, 2, 0, 2);
     public static final SettingDef<Integer> WIDTH_DEF = SettingDef
         .intDef(WIDTH, GTStructureTiers.MAX_WIDTH, 0, GTStructureTiers.MAX_WIDTH);
-    public static final SettingDef<Integer> MODE_DEF = SettingDef.intDef(MODE, 0, 0, 1);
+    /**
+     * How many modes a machine has is the machine's business, not a constant: GregTech ships three-mode
+     * multiblocks, and a fixed ceiling of one would leave the third unreachable.
+     */
+    public static final SettingDef<Integer> MODE_DEF = SettingDef.intDef(MODE, 0, 0, GTSettings::modeCeiling);
+
+    private static int modeCeiling(final RecipeContext ctx, final Map<String, Object> settings) {
+        final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
+        return entry == null ? 1
+            : entry.modes()
+                .count() - 1;
+    }
+
+    /** What a structure knob can be set to, both ends included. */
+    public record TierRange(int min, int max) {}
+
+    /**
+     * The range a knob offers, read off the row that offers it. Anything that varies a knob - the
+     * probe's sensitivity scan - then covers exactly what the player can reach, and one edit to a row
+     * moves both.
+     */
+    @Nonnull
+    public static TierRange knobRange(final GTMachinePreset.Knob knob) {
+        return switch (knob) {
+            // The coil row stores a name rather than a number, so its range is the name list.
+            case COIL -> new TierRange(0, COIL_NAMES.size() - 1);
+            case SOLENOID -> rangeOf(SOLENOID_DEF);
+            case ITEM_PIPE -> rangeOf(ITEM_PIPE_DEF);
+            case PIPE_CASING -> rangeOf(PIPE_CASING_DEF);
+            case SAWBLADE -> rangeOf(SAWBLADE_DEF);
+            case ELECTRODE -> rangeOf(ELECTRODE_DEF);
+            case STRUCTURE_TIER -> rangeOf(STRUCTURE_TIER_DEF);
+            case WIDTH -> rangeOf(WIDTH_DEF);
+            // MODE_DEF's own range is per machine, so it says nothing useful here. A sweep over modes
+            // takes its count from the machine instead - see GTMachineModes.
+            case MODE -> new TierRange(0, 1);
+        };
+    }
+
+    @Nonnull
+    private static TierRange rangeOf(final SettingDef<Integer> def) {
+        return new TierRange(def.minInt, def.maxInt);
+    }
 
     /**
      * Structure knobs default to the best available: a planning tool should open on the endgame
@@ -308,6 +353,16 @@ public final class GTSettings {
     @Nonnull
     public static StructureState resolve(final RecipeContext ctx, final Map<String, Object> settings,
         final int voltageTier) {
+        return resolve(ctx, settings, voltageTier, MachineProfile.getInt(settings, MODE, 0));
+    }
+
+    /**
+     * As above, with the mode supplied by a caller that already knows the machine. Kept separate so
+     * that resolving a structure never reaches the machine index, which a chart does per frame.
+     */
+    @Nonnull
+    public static StructureState resolve(final RecipeContext ctx, final Map<String, Object> settings,
+        final int voltageTier, final int mode) {
         return new StructureState(
             voltageTier,
             COIL_NAMES.indexOf(MachineProfile.getString(settings, COIL, COIL_NAMES.getLast())),
@@ -318,7 +373,24 @@ public final class GTSettings {
             MachineProfile.getInt(settings, ELECTRODE, 0),
             MachineProfile.getInt(settings, STRUCTURE_TIER, 2),
             MachineProfile.getInt(settings, WIDTH, GTStructureTiers.MAX_WIDTH),
-            MachineProfile.getInt(settings, MODE, 0));
+            mode);
+    }
+
+    /**
+     * The machine mode this node runs in. A machine that is two machines behind one controller picks
+     * between them by recipemap, and the node's recipe already came from one of them, so the answer is
+     * read rather than asked for. Everything else falls back to the row.
+     */
+    public static int mode(final RecipeContext ctx, @Nullable final GTMachineIndex.MachineEntry entry,
+        final Map<String, Object> settings) {
+        final int implied = entry == null ? -1 : entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null));
+        return implied >= 0 ? implied : MachineProfile.getInt(settings, MODE, 0);
+    }
+
+    /** Whether this node's recipe settles the mode, leaving nothing to ask. */
+    private static boolean modeIsImplied(final RecipeContext ctx, final Map<String, Object> settings) {
+        final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
+        return entry != null && entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null)) >= 0;
     }
 
     public static boolean isAdvanced(final Map<String, Object> settings) {
@@ -330,6 +402,8 @@ public final class GTSettings {
     public static BiPredicate<RecipeContext, Map<String, Object>> usesKnob(final GTMachinePreset.Knob knob) {
         return (ctx, settings) -> {
             if (isAdvanced(settings)) return false;
+            // No row for a question the recipe has already answered.
+            if (knob == GTMachinePreset.Knob.MODE && modeIsImplied(ctx, settings)) return false;
             final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
             return entry != null && entry.preset() != null
                 && entry.preset()
@@ -405,6 +479,11 @@ public final class GTSettings {
         Settings.HEAT_DISCOUNT_MULT.key());
 
     public static void migrateLegacyNode(final Map<String, Object> settings) {
+        // The mode is derived from the recipe now. A stored one can contradict it - a chart saved with
+        // tower mode on a distillery recipe models a machine that cannot run it - so it is dropped
+        // rather than honoured. Machines that still ask for a mode re-store it on the next edit.
+        settings.remove(MODE);
+
         if (settings.containsKey(ADVANCED) || settings.containsKey(MACHINE)) return;
         for (final String key : DERIVED_KEYS) {
             if (settings.containsKey(key)) {

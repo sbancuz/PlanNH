@@ -94,7 +94,7 @@ dependencies {
         exclude group: 'org.eclipse.emf', module: 'org.eclipse.emf.ecore.xmi'
     }
 
-    // The overclock and machine-preset tests use GT's own classes as their oracle, so GT has to be
+    // The overclock and preset tests use GT's own classes as their oracle, so GT has to be
     // on the test classpath. Scoped to the test source set: the published mod keeps GT compileOnly.
     testImplementation("com.github.GTNewHorizons:GT5-Unofficial:$gt5uVersion:dev")
 

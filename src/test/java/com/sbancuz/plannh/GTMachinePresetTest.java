@@ -1,6 +1,7 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -97,15 +98,21 @@ class GTMachinePresetTest {
                 .applyAsInt(state(5, 0)));
     }
 
-    /** The Plasma Forge deliberately omits the EBF's voltage term; conflating them is easy. */
+    /**
+     * The Plasma Forge sets a heat from its coil, but spends it on deciding which recipes will run
+     * rather than on overclocking - GregTech never calls {@code setHeatOC} for it. Conflating it with
+     * the EBF gave it overclocks it does not have, so both halves are pinned here.
+     */
     @Test
-    void plasmaForgeHeatIsCoilAloneUnlikeTheBlastFurnace() throws ClassNotFoundException {
+    void plasmaForgeHeatGatesRecipesAndDoesNotOverclock() throws ClassNotFoundException {
         final GTMachinePreset dtpf = GTMachinePresets.lookup(
             Class.forName(
                 "gregtech.common.tileentities.machines.multi.MTEPlasmaForge",
                 false,
                 getClass().getClassLoader()));
 
+        assertFalse(dtpf.heatOC(), "GregTech does not overclock the Plasma Forge on heat");
+        assertFalse(dtpf.usesHeat(), "so the calculator must not be given a heat at all");
         assertEquals(
             dtpf.machineHeat()
                 .applyAsInt(state(2, 5)),

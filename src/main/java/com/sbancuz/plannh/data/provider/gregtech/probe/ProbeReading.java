@@ -1,12 +1,14 @@
 package com.sbancuz.plannh.data.provider.gregtech.probe;
 
+import javax.annotation.Nonnull;
+
 /**
  * Everything one probe of a machine observed: the parallel count its processing logic settled on,
  * and every overclock field of the {@code OverclockCalculator} GregTech built for the probe recipe.
  *
  * <p>
- * Record equality is the whole comparison the knob sensitivity scan needs - two readings differ if
- * and only if changing a structure knob changed something a chart would show.
+ * Record equality is the whole comparison the knob sensitivity scan needs, once {@link #asShown()}
+ * has dropped the fields a chart cannot show.
  */
 public record ProbeReading(int maxParallel, double durationModifier, double euModifier, double eutIncreasePerOC,
     double durationDecreasePerOC, int maxTierSkip, boolean heatOC, boolean heatDiscount, int machineHeat,
@@ -32,5 +34,34 @@ public record ProbeReading(int maxParallel, double durationModifier, double euMo
     /** Whether the heat fields mean anything. GT leaves them at zero on a machine that ignores heat. */
     public boolean usesHeat() {
         return heatOC || heatDiscount;
+    }
+
+    /**
+     * The same reading with everything a chart cannot show removed.
+     *
+     * <p>
+     * GregTech sets a machine heat on machines that never overclock on it - the Plasma Forge spends
+     * its heat on deciding which recipes will run, which PlanNH does not model because the user has
+     * already chosen the recipe. Comparing raw readings would then let a coil "matter" while moving
+     * no number anybody sees, and earn a settings row that does nothing.
+     */
+    @Nonnull
+    public ProbeReading asShown() {
+        if (usesHeat()) return this;
+        return new ProbeReading(
+            maxParallel,
+            durationModifier,
+            euModifier,
+            eutIncreasePerOC,
+            durationDecreasePerOC,
+            maxTierSkip,
+            false,
+            false,
+            0,
+            0,
+            recipeEUt,
+            duration,
+            noOverclock,
+            laserOC);
     }
 }

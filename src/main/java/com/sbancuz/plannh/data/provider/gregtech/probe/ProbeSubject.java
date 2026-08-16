@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachineModes;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
@@ -42,11 +43,18 @@ final class ProbeSubject {
      */
     private static final int MAX_CACHED_READINGS = 512;
 
+    /** A machine whose mode cycle does not come back around is broken, not interesting. */
+    private static final int MAX_MODES = 16;
+
     private final MTEMultiBlockBase machine;
     private final ProcessingLogic logic;
     private final Method createCalculator;
     private final FieldInjector injector;
     private final Map<StructureState, ProbeReading> readings = new HashMap<>();
+
+    /** The recipe every cached reading answers for. */
+    @Nullable
+    private GTRecipe cachedFor;
 
     private ProbeSubject(final MTEMultiBlockBase machine, final ProcessingLogic logic, final Method createCalculator) {
         this.machine = machine;
@@ -59,6 +67,15 @@ final class ProbeSubject {
     @Nonnull
     EnumSet<Knob> reachableKnobs() {
         return injector.reachableKnobs();
+    }
+
+    /**
+     * How many modes this machine has. The clone is already ours to write to, so the walk happens on
+     * it rather than on a second copy.
+     */
+    int modeCount() {
+        return GTMachineModes.of(machine)
+            .count();
     }
 
     /** Null for anything without processing logic to read: singleblocks, and the machines that hand-roll checkProcessing. */
@@ -84,6 +101,14 @@ final class ProbeSubject {
      */
     @Nullable
     ProbeReading read(@Nonnull final StructureState state, @Nonnull final GTRecipe recipe) {
+        // Readings are keyed by structure alone, so a different recipe invalidates all of them. Today
+        // only the probe's own recipe is ever passed, but a caller that passes the node's real recipe
+        // would otherwise be served the answer to a question it did not ask.
+        if (recipe != cachedFor) {
+            readings.clear();
+            cachedFor = recipe;
+        }
+
         final ProbeReading cached = readings.get(state);
         if (cached != null) return cached;
         if (readings.size() >= MAX_CACHED_READINGS) readings.clear();

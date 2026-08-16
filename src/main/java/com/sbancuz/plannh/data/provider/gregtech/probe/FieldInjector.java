@@ -59,6 +59,11 @@ public final class FieldInjector {
         COIL_TIER(COIL),
         /** GT++ stores {@code coilTier + 1}, so that an absent coil reads as one rather than none. */
         COIL_TIER_FROM_ONE(COIL),
+        /**
+         * Kelvin rather than a tier. The machines that keep one derive it in {@code checkMachine}, so
+         * the probe has to supply it: writing the coil next to it changes nothing on its own.
+         */
+        COIL_HEAT(COIL),
         ELECTRODE_ITEM(ELECTRODE),
         ITEM_PIPE_TIER(ITEM_PIPE),
         SOLENOID_TIER(SOLENOID),
@@ -81,6 +86,8 @@ public final class FieldInjector {
     private static final Map<String, Coding> BY_NAME = Map.ofEntries(
         Map.entry("mCoilTier", Coding.COIL_TIER),
         Map.entry("mLevel", Coding.COIL_TIER_FROM_ONE),
+        // Only the int form lands here. Where the same name holds a HeatingCoilLevel, type wins.
+        Map.entry("mHeatingCapacity", Coding.COIL_HEAT),
         Map.entry("itemPipeTier", Coding.ITEM_PIPE_TIER),
         Map.entry("solenoidLevel", Coding.SOLENOID_TIER),
         Map.entry("mPipeCasingTier", Coding.PIPE_CASING_TIER),
@@ -124,7 +131,23 @@ public final class FieldInjector {
         }
         final boolean sawblade = declaresSawbladeCheck(machineClass);
         if (sawblade) reachable.add(SAWBLADE);
+        // Every multiblock inherits the machineMode field, so the field alone would put a mode row on
+        // all of them. A machine that really has modes overrides GregTech's own answer to the question.
+        if (!declaresModeSwitch(machineClass)) reachable.remove(MODE);
         return new FieldInjector(List.copyOf(found), reachable, sawblade);
+    }
+
+    /** True when a subclass of MTEMultiBlockBase answers {@code supportsMachineModeSwitch} for itself. */
+    private static boolean declaresModeSwitch(final Class<?> machineClass) {
+        for (Class<?> c = machineClass; c != null && c != MTEMultiBlockBase.class; c = c.getSuperclass()) {
+            try {
+                c.getDeclaredMethod("supportsMachineModeSwitch");
+                return true;
+            } catch (final NoSuchMethodException keepWalking) {
+                // Most machines, which is why the base class declaring it is not enough to go on.
+            }
+        }
+        return false;
     }
 
     /**
@@ -199,6 +222,11 @@ public final class FieldInjector {
         return switch (coding) {
             case COIL_TIER -> state.coilTier();
             case COIL_TIER_FROM_ONE -> state.coilTier() + 1;
+            // What the coil alone supplies. A machine that adds a voltage term to this in checkMachine
+            // then reads low, which the shadow log reports as a heat difference against the table.
+            case COIL_HEAT -> (int) HeatingCoilLevel
+                .getFromTier((byte) clamp(state.coilTier(), GTStructureTiers.MAX_COIL_TIER))
+                .getHeat();
             case ITEM_PIPE_TIER -> state.itemPipeTier();
             case SOLENOID_TIER -> state.solenoidTier();
             case PIPE_CASING_TIER -> state.pipeCasingTier();
