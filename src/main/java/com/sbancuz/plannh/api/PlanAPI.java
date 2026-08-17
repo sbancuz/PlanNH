@@ -34,12 +34,13 @@ public final class PlanAPI {
     private static final boolean DEBUG_MODE = true;
 
     public static UndoHistory undoHistory() {
-        return Plan.getActiveGraph().undoHistory;
+        return Plan.getActiveGraph()
+            .getUndoHistory();
     }
 
     /** Runs {@code edit} as one undo step; no-op edits leave no trace. */
     public static void recordEdit(final Graph graph, final Runnable edit) {
-        final UndoHistory history = graph.undoHistory;
+        final UndoHistory history = graph.getUndoHistory();
         final String before = history.beginEdit(graph);
         edit.run();
         history.commitEdit(before, graph);

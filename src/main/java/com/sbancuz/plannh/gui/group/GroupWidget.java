@@ -18,6 +18,7 @@ import com.cleanroommc.modularui.widgets.ColorPickerDialog;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
@@ -51,8 +52,13 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
                 areaWidget.child(widget);
             });
 
-        IPanelHandler colorPicker = IPanelHandler
-            .simple(canvas.getPanel(), (_, _) -> new ColorPickerDialog(data::setColor, data.getColor(), true), true);
+        IPanelHandler colorPicker = IPanelHandler.simple(
+            canvas.getPanel(),
+            (_, _) -> new ColorPickerDialog(
+                color -> PlanAPI.recordEdit(canvas.getGraph(), () -> data.setColor(color)),
+                data.getColor(),
+                true),
+            true);
 
         Flow mainColumn = FlowchartFlow.column(this)
             .coverChildren(GROUP_MIN_W, 0)
@@ -86,13 +92,14 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
                         if (!colorPicker.isPanelOpen()) colorPicker.openPanel();
                         else colorPicker.closePanel();
                         return true;
-                    }))
+                    })
+                    .addTooltipLine("Open Color Picker"))
             .child(
                 new CycleButtonWidget().stateCount(2)
                     .stateOverlay(true, IKey.str("^"))
                     .stateOverlay(false, IKey.str("V"))
                     .value(new BoolValue.Dynamic(data::isCollapsed, val -> {
-                        data.setCollapsed(val);
+                        PlanAPI.recordEdit(canvas.getGraph(), () -> data.setCollapsed(val));
                         scheduleResize();
                     })));
 

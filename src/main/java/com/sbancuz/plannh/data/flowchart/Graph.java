@@ -48,7 +48,8 @@ public class Graph {
     /**
      * Per-graph undo/redo stack, transient because snapshots are content-encoded and never stored.
      */
-    public final transient UndoHistory undoHistory = new UndoHistory();
+    @Setter
+    private transient UndoHistory undoHistory = new UndoHistory();
 
     /**
      * Which summary sections the user has folded away in this graph's panel.
@@ -60,7 +61,6 @@ public class Graph {
      * as a preference, never as a constraint: a key that no longer fits the chart is dropped with a
      * note rather than allowed to degrade it.
      */
-    @Getter
     private ChoiceKey excessChoice = ChoiceKey.none();
 
     private BalanceResult balance = null;
