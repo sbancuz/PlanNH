@@ -106,6 +106,7 @@ public class GTProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(GTNEIDefaultHandler.class, this);
 
         MachineProfileRegistry.register(PROFILE);
+        GTSettings.registerChartMinimums();
         new GTSteamProvider().register();
     }
 

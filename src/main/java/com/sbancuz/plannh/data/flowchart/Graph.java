@@ -7,6 +7,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 import com.sbancuz.plannh.data.flowchart.Summary.SummarySection;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
@@ -53,27 +55,25 @@ public class Graph {
     @Getter
     private boolean opsMode;
 
-    /**
-     * {@link #minCoilTier} and friends: nothing is set, so a node opens on the best the game offers.
-     */
+    /** Nothing is set for this key, so a node opens on the best the game offers. */
     public static final int NO_MINIMUM = -1;
 
     /**
-     * The structure this chart assumes it can build. A chart describes a factory at one point in a
-     * world's progression, so the coil a node opens on belongs to the chart rather than to each node;
-     * setting it once is what keeps a node's own settings down to what makes that node different.
+     * The structure this chart assumes it can build, keyed by setting. A chart describes a factory at
+     * one point in a world's progression, so the coil a node opens on belongs to the chart rather than
+     * to each node; setting it once is what keeps a node's own settings down to what makes that node
+     * different.
      *
      * <p>
      * A starting value, not a ceiling. A recipe that needs more raises its own node, and a row the
-     * user edits keeps what it was given. The tiers are plain integers because this package must stay
-     * loadable without GregTech, which is what gives them their meaning.
+     * user edits keeps what it was given.
+     *
+     * <p>
+     * Keyed rather than one field per knob, because which knobs a chart has a floor for is the
+     * installed mods' business, not this package's - naming them here would put GregTech in a class
+     * that has to stay loadable without it. Sorted so a save writes them in a stable order.
      */
-    @Getter
-    private int minCoilTier = NO_MINIMUM;
-    @Getter
-    private int minPipeCasingTier = NO_MINIMUM;
-    @Getter
-    private int minVoltageTier = NO_MINIMUM;
+    private final SortedMap<String, Integer> minimums = new TreeMap<>();
 
     /**
      * Per-graph undo/redo stack, transient because snapshots are content-encoded and never stored.
@@ -135,21 +135,24 @@ public class Graph {
         markDirty();
     }
 
-    // Every minimum changes what an untouched node runs at, which changes its parallel count and so
-    // the whole solve. Hence markDirty on all three rather than a plain setter.
-    public void setMinCoilTier(final int tier) {
-        minCoilTier = tier;
+    /** What this chart plans at for one knob, or {@link #NO_MINIMUM} when it has not said. */
+    public int getMinimum(final String settingKey) {
+        return minimums.getOrDefault(settingKey, NO_MINIMUM);
+    }
+
+    /**
+     * A minimum changes what an untouched node runs at, which changes its parallel count and so the
+     * whole solve. Hence markDirty rather than a plain setter.
+     */
+    public void setMinimum(final String settingKey, final int tier) {
+        minimums.put(settingKey, tier);
         markDirty();
     }
 
-    public void setMinPipeCasingTier(final int tier) {
-        minPipeCasingTier = tier;
-        markDirty();
-    }
-
-    public void setMinVoltageTier(final int tier) {
-        minVoltageTier = tier;
-        markDirty();
+    /** The stored floors, for the serializer. Sorted, so a save is reproducible. */
+    @Nonnull
+    public SortedMap<String, Integer> getMinimums() {
+        return minimums;
     }
 
     public void removeNode(final UUID id) {

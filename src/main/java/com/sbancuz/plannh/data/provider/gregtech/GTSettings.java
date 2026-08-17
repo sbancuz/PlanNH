@@ -6,11 +6,11 @@ import java.util.Map;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntBiFunction;
-import java.util.function.ToIntFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.data.ChartMinimums;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.SettingDef;
@@ -131,7 +131,7 @@ public final class GTSettings {
      * recipe too expensive for that still gets a hatch that works.
      */
     public static int defaultVoltageTier(final long recipeEUt) {
-        return Math.max(minimumVoltageTier(recipeEUt), chartMinimum(Graph::getMinVoltageTier, 0));
+        return Math.max(minimumVoltageTier(recipeEUt), chartMinimum(Settings.VOLTAGE, 0));
     }
 
     /**
@@ -139,9 +139,46 @@ public final class GTSettings {
      * chart on screen rather than handed in: a {@link SettingDef} is given the recipe and the node's
      * own settings, never the node or the graph holding it, and only the active chart draws rows.
      */
-    private static int chartMinimum(final ToIntFunction<Graph> minimum, final int best) {
-        final Integer floor = insideAGame(() -> minimum.applyAsInt(Plan.getActiveGraph()), null);
+    private static int chartMinimum(final Settings knob, final int best) {
+        final Integer floor = insideAGame(
+            () -> Plan.getActiveGraph()
+                .getMinimum(knob.key()),
+            null);
         return floor == null || floor == Graph.NO_MINIMUM ? best : floor;
+    }
+
+    /**
+     * The knobs a GregTech chart can set a floor for. Registered rather than listed by the panel that
+     * draws them, so that panel names no mod and keeps working on a pack without GregTech.
+     */
+    public static void registerChartMinimums() {
+        ChartMinimums.register(
+            new ChartMinimums.Minimum(
+                Settings.GT_COIL,
+                "Coil",
+                0,
+                GTStructureTiers.MAX_COIL_TIER,
+                GTStructureTiers.MAX_COIL_TIER,
+                tier -> COIL_DEF.display(COIL_NAMES.get(tier))));
+        ChartMinimums.register(
+            new ChartMinimums.Minimum(
+                Settings.GT_PIPE_CASING,
+                "Pipe",
+                1,
+                GTStructureTiers.MAX_PIPE_CASING_TIER,
+                GTStructureTiers.MAX_PIPE_CASING_TIER,
+                GTStructureTiers::pipeCasingName));
+        // One below the top of GregTech's own list, matching the tiers the voltage row offers. The
+        // weakest is the untouched value, because a voltage floor raises what a recipe costs rather
+        // than making it buildable.
+        ChartMinimums.register(
+            new ChartMinimums.Minimum(
+                Settings.VOLTAGE,
+                "Volt",
+                0,
+                GTValues.VN.length - 2,
+                0,
+                tier -> GTValues.VN[tier]));
     }
 
     /**
@@ -371,7 +408,7 @@ public final class GTSettings {
      * coil's 1801K, so reading it here raises nothing.
      */
     public static int defaultCoilTier(final RecipeContext ctx) {
-        return Math.max(chartMinimum(Graph::getMinCoilTier, GTStructureTiers.MAX_COIL_TIER), coilTierForRecipe(ctx));
+        return Math.max(chartMinimum(Settings.GT_COIL, GTStructureTiers.MAX_COIL_TIER), coilTierForRecipe(ctx));
     }
 
     private static int coilTierForRecipe(final RecipeContext ctx) {
@@ -394,7 +431,7 @@ public final class GTSettings {
 
     /** The pipe casing a node opens on. GregTech attaches no casing requirement to a recipe. */
     public static int defaultPipeCasingTier() {
-        return chartMinimum(Graph::getMinPipeCasingTier, GTStructureTiers.MAX_PIPE_CASING_TIER);
+        return chartMinimum(Settings.GT_PIPE_CASING, GTStructureTiers.MAX_PIPE_CASING_TIER);
     }
 
     /** GregTech's own translated name for a coil tier, so the row reads as the block a player places. */

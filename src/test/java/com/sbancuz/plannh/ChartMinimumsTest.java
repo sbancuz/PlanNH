@@ -5,10 +5,22 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
+import javax.annotation.Nonnull;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Serializer;
@@ -25,14 +37,21 @@ import gregtech.api.enums.GTValues;
  */
 class ChartMinimumsTest {
 
+    private static final String COIL = Settings.GT_COIL.key();
+    private static final String PIPE_CASING = Settings.GT_PIPE_CASING.key();
+    private static final String VOLTAGE = Settings.VOLTAGE.key();
+
     /** A chart that has said nothing plans at the best the game offers, which is today's behaviour. */
     @Test
     void aFreshChartHasNoMinimums() {
         final Graph graph = new Graph("Slot 1");
 
-        assertEquals(Graph.NO_MINIMUM, graph.getMinCoilTier());
-        assertEquals(Graph.NO_MINIMUM, graph.getMinPipeCasingTier());
-        assertEquals(Graph.NO_MINIMUM, graph.getMinVoltageTier());
+        assertTrue(
+            graph.getMinimums()
+                .isEmpty());
+        assertEquals(Graph.NO_MINIMUM, graph.getMinimum(COIL));
+        assertEquals(Graph.NO_MINIMUM, graph.getMinimum(PIPE_CASING));
+        assertEquals(Graph.NO_MINIMUM, graph.getMinimum(VOLTAGE));
     }
 
     @Test
@@ -40,34 +59,88 @@ class ChartMinimumsTest {
         final Plan plan = Plan.createEmpty();
         final Graph graph = plan.getGraphs()
             .getFirst();
-        graph.setMinCoilTier(3);
-        graph.setMinPipeCasingTier(2);
-        graph.setMinVoltageTier(5);
+        graph.setMinimum(COIL, 3);
+        graph.setMinimum(PIPE_CASING, 2);
+        graph.setMinimum(VOLTAGE, 5);
 
         final Graph decoded = Serializer.decodePlan(Serializer.encodePlan(plan))
             .getGraphs()
             .getFirst();
 
-        assertEquals(3, decoded.getMinCoilTier());
-        assertEquals(2, decoded.getMinPipeCasingTier());
-        assertEquals(5, decoded.getMinVoltageTier());
+        assertEquals(3, decoded.getMinimum(COIL));
+        assertEquals(2, decoded.getMinimum(PIPE_CASING));
+        assertEquals(5, decoded.getMinimum(VOLTAGE));
     }
 
     /** Charts saved before minimums existed carry none, and must open the way they always did. */
     @Test
     void aSaveWithoutTheKeysKeepsTheDefaults() {
-        final String json = Serializer.encodePlan(Plan.createEmpty())
-            .replace("minCoilTier", "unusedKeyA")
-            .replace("minPipeCasingTier", "unusedKeyB")
-            .replace("minVoltageTier", "unusedKeyC");
-
-        final Graph decoded = Serializer.decodePlan(json)
+        final Graph decoded = Serializer.decodePlan(Serializer.encodePlan(Plan.createEmpty()))
             .getGraphs()
             .getFirst();
 
-        assertEquals(Graph.NO_MINIMUM, decoded.getMinCoilTier());
-        assertEquals(Graph.NO_MINIMUM, decoded.getMinPipeCasingTier());
-        assertEquals(Graph.NO_MINIMUM, decoded.getMinVoltageTier());
+        assertTrue(
+            decoded.getMinimums()
+                .isEmpty(),
+            "a chart that set nothing must not come back holding sentinels");
+        assertEquals(Graph.NO_MINIMUM, decoded.getMinimum(COIL));
+    }
+
+    /**
+     * Minimums first shipped as three fields named after the GregTech things they bounded. Charts
+     * saved that way are in the wild, so their floors have to land on the settings those fields turned
+     * out to be, rather than being silently dropped back to the best the game offers.
+     */
+    @Test
+    void aChartSavedWithTheOldNamedFieldsStillOpensAtItsFloors() {
+        final Graph decoded = Serializer.decode(
+            reEncode(
+                asJson(new Graph("Slot 1")),
+                "\"minCoilTier\": 3, \"minPipeCasingTier\": 2, \"minVoltageTier\": 5,"));
+
+        assertEquals(3, decoded.getMinimum(COIL));
+        assertEquals(2, decoded.getMinimum(PIPE_CASING));
+        assertEquals(5, decoded.getMinimum(VOLTAGE));
+    }
+
+    /** The old format wrote its sentinel on every save, so reading it back as a floor would pin every chart. */
+    @Test
+    void theUnsetSentinelInAnOldSaveDoesNotBecomeAFloor() {
+        final Graph decoded = Serializer.decode(
+            reEncode(
+                asJson(new Graph("Slot 1")),
+                "\"minCoilTier\": -1, \"minPipeCasingTier\": -1, \"minVoltageTier\": -1,"));
+
+        assertTrue(
+            decoded.getMinimums()
+                .isEmpty());
+    }
+
+    /** The graph JSON a save carries, which is gzipped and base64'd inside {@link Serializer#encode}. */
+    @Nonnull
+    private static String asJson(final Graph graph) {
+        try (GZIPInputStream gzip = new GZIPInputStream(
+            new ByteArrayInputStream(
+                Base64.getDecoder()
+                    .decode(Serializer.encode(graph))))) {
+            return new String(gzip.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** The same JSON with {@code injected} spliced in after the opening brace, packed the way a save is. */
+    @Nonnull
+    private static String reEncode(final String json, final String injected) {
+        final String patched = json.replaceFirst("\\{", "{" + injected);
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(out)) {
+            gzip.write(patched.getBytes(StandardCharsets.UTF_8));
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return Base64.getEncoder()
+            .encodeToString(out.toByteArray());
     }
 
     /**
@@ -80,7 +153,7 @@ class ChartMinimumsTest {
         final BalanceResult solved = graph.balance();
         assertSame(solved, graph.balance(), "an untouched chart keeps the solve it already has");
 
-        graph.setMinCoilTier(0);
+        graph.setMinimum(COIL, 0);
 
         assertNotSame(solved, graph.balance());
     }

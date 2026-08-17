@@ -22,6 +22,7 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
@@ -900,7 +901,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
      * them is what the Advanced toggle is for.
      */
     private int drawDerivedRows(final int x, int y, final MachineConfig c) {
-        if (GTSettings.isAdvanced(c.settings)) return y;
+        // Guarded, not because a non-GregTech node could be advanced - it has no such key - but
+        // because reaching GTSettings at all classloads GregTech, which a pack need not have.
+        if (Compat.GREGTECH.isLoaded && GTSettings.isAdvanced(c.settings)) return y;
         for (final SettingDef<?> def : c.getProfile()
             .settings()) {
             final String value = derivedValue(def, c);
@@ -941,7 +944,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
     private int derivedRowCount() {
         final MachineConfig c = node.machineConfig;
-        if (GTSettings.isAdvanced(c.settings)) return 0;
+        if (Compat.GREGTECH.isLoaded && GTSettings.isAdvanced(c.settings)) return 0;
         int rows = 0;
         for (final SettingDef<?> def : c.getProfile()
             .settings()) {

@@ -277,11 +277,18 @@ public final class Serializer {
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
         root.addProperty("name", graph.getName());
-        // Written even when unset, because the unset marker is a state the chart can be returned to
-        // and there is no schema version to tell an absent key from a deliberately cleared one.
-        root.addProperty("minCoilTier", graph.getMinCoilTier());
-        root.addProperty("minPipeCasingTier", graph.getMinPipeCasingTier());
-        root.addProperty("minVoltageTier", graph.getMinVoltageTier());
+        // Keyed by setting, so a chart records floors for whichever knobs the installed mods offer.
+        // Only what was set is written: absence is the unset state, which the three named fields this
+        // replaced could not say without writing all of them on every save.
+        if (!graph.getMinimums()
+            .isEmpty()) {
+            final JsonObject minimums = new JsonObject();
+            for (final Map.Entry<String, Integer> entry : graph.getMinimums()
+                .entrySet()) {
+                minimums.addProperty(entry.getKey(), entry.getValue());
+            }
+            root.add("minimums", minimums);
+        }
 
         final JsonArray nodesArray = new JsonArray();
         for (final Node node : graph.getNodes()) {
@@ -396,21 +403,16 @@ public final class Serializer {
                 .getAsFloat());
         // Read one at a time, like the choice above: a chart saved before minimums existed has none
         // of these, and each one it does have is worth keeping on its own.
-        if (root.has("minCoilTier")) {
-            graph.setMinCoilTier(
-                root.get("minCoilTier")
-                    .getAsInt());
+        if (root.has("minimums")) {
+            for (final Map.Entry<String, JsonElement> entry : root.getAsJsonObject("minimums")
+                .entrySet()) {
+                graph.setMinimum(
+                    entry.getKey(),
+                    entry.getValue()
+                        .getAsInt());
+            }
         }
-        if (root.has("minPipeCasingTier")) {
-            graph.setMinPipeCasingTier(
-                root.get("minPipeCasingTier")
-                    .getAsInt());
-        }
-        if (root.has("minVoltageTier")) {
-            graph.setMinVoltageTier(
-                root.get("minVoltageTier")
-                    .getAsInt());
-        }
+        readLegacyMinimums(root, graph);
 
         final JsonArray nodesArray = root.getAsJsonArray("nodes");
         for (final JsonElement elem : nodesArray) {
@@ -511,6 +513,27 @@ public final class Serializer {
     // ── Port helpers ──
 
     @Nonnull
+    /**
+     * Chart floors as they were first written: one field per knob, named after the GregTech thing it
+     * bounded, and always present even when unset. Charts saved that way are already in the wild, so
+     * the keys are read here and mapped onto the settings they turned out to be. The sentinel is
+     * skipped, or a chart that never set a floor would come back holding three of them.
+     *
+     * <p>
+     * A GregTech key in shared code, deliberately: this is the one place that has to know what an old
+     * file meant, and a per-provider hook for three strings would be more machinery than the shim.
+     */
+    private static void readLegacyMinimums(final JsonObject root, final Graph graph) {
+        final Map<String, String> legacy = Map
+            .of("minCoilTier", "gt_coil", "minPipeCasingTier", "gt_pipe_casing", "minVoltageTier", "voltage");
+        for (final Map.Entry<String, String> entry : legacy.entrySet()) {
+            if (!root.has(entry.getKey())) continue;
+            final int tier = root.get(entry.getKey())
+                .getAsInt();
+            if (tier != Graph.NO_MINIMUM) graph.setMinimum(entry.getValue(), tier);
+        }
+    }
+
     private static JsonArray portListToJson(final List<Port<?>> ports) {
         final JsonArray arr = new JsonArray();
         for (final Port<?> port : ports) {
