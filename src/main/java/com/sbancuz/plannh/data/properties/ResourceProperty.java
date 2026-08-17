@@ -10,6 +10,8 @@ import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
+import com.sbancuz.plannh.data.flowchart.Port;
+
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 
@@ -22,7 +24,7 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
     private final BiConsumer<T, Integer> amountUpdater = (_, _) -> {};
 
     @lombok.Builder.Default
-    private final BiPredicate<T, T> connectionChecker = (_, _) -> true;
+    private final BiPredicate<Port<T>, Port<T>> connectionChecker = (_, _) -> true;
     @lombok.Builder.Default
     private final ToIntFunction<T> hashCodeExtractor = Objects::hashCode;
 
@@ -55,7 +57,7 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
         amountUpdater.accept(value, newAmount);
     }
 
-    public boolean canConnect(final T a, final T b) {
+    public boolean canConnect(final Port<T> a, final Port<T> b) {
         return connectionChecker.test(a, b);
     }
 

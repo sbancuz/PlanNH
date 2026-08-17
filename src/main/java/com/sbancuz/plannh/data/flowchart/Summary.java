@@ -71,8 +71,8 @@ public record Summary(List<Line<?>> outputs, List<Line<?>> inputs, List<Line<?>>
             @SuppressWarnings("unchecked")
             public boolean equals(final Object o) {
                 return o instanceof ResourceKey<?>(SummaryProperty<?> type1, Object resource1)
-                    && type == type1
-                    && type.canConnect(resource, (T) resource1);
+                    && type == type1;
+//                    && type.canConnect(resource, (T) resource1);
             }
 
             @Override

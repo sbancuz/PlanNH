@@ -4,10 +4,8 @@ import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
 import static org.lwjgl.opengl.GL11.glDisable;
 import static org.lwjgl.opengl.GL11.glEnable;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,9 +22,7 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
 import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
-import com.sbancuz.plannh.mixins.NEIRecipeWidgetAccessor;
 
-import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 
@@ -74,17 +70,36 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
             .getYShift();
 
         // inputs
-        List<PositionedStack> inputs = new ArrayList<>(accessor.callGetInputs());
-        inputs.addAll(accessor.callGetCatalysts());
-        inputs.removeIf(ps -> ps.item.stackSize <= 0);
-        if (data.getInputs() != null) for (Port<?> port : data.getInputs()) port.getIndices()
-            .forEach(i -> child(new PortWidget(inputs.get(i), true, port, yShift)));
+        if (data.getInputs() != null) {
+            accessor.plannh$setInputs(
+                data.getInputs()
+                    .stream()
+                    .map(Port::getStack)
+                    .toList());
+
+            data.getInputs()
+                .forEach(
+                    port -> port.getPositions()
+                        .forEach(
+                            pos -> child(
+                                new PortWidget(
+                                    port,
+                                    port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
+                                    yShift,
+                                    pos))));
+        }
 
         // outputs
-        List<PositionedStack> outputs = new ArrayList<>(accessor.callGetOutputs());
-        outputs.removeIf(ps -> ps.item.stackSize <= 0);
-        if (data.getOutputs() != null) for (Port<?> port : data.getOutputs()) port.getIndices()
-            .forEach(i -> child(new PortWidget(outputs.get(i), false, port, yShift)));
+        if (data.getOutputs() != null) data.getOutputs()
+            .forEach(
+                port -> port.getPositions()
+                    .forEach(
+                        pos -> child(
+                            new PortWidget(
+                                port,
+                                port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
+                                yShift,
+                                pos))));
     }
 
     @Override

@@ -354,7 +354,7 @@ public class FlowchartScreen extends ModularScreen {
             .child(canvas);
 
         panel.child(mainColumn);
-        panel.child(new SummaryWidget(canvas));
+        // panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
         panel.child(targetEditor);
 

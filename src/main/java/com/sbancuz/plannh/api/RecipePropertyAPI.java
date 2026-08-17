@@ -1,6 +1,7 @@
 package com.sbancuz.plannh.api;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.Nonnull;
@@ -10,10 +11,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.oredict.OreDictionary;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
@@ -22,6 +23,8 @@ import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.IngredientColors;
 import com.sbancuz.plannh.gui.PlannhColors;
+
+import gregtech.api.util.GTUtility;
 
 public final class RecipePropertyAPI {
 
@@ -35,7 +38,7 @@ public final class RecipePropertyAPI {
         .amountFormatter(GuiHelper::formatRate)
         .amountExtractor(stack -> stack.stackSize)
         .amountUpdater((stack, newAmount) -> stack.stackSize = newAmount)
-        .connectionChecker(RecipePropertyAPI::itemsMatch)
+        .connectionChecker(RecipePropertyAPI::itemPortsMatch)
         .hashCodeExtractor(
             s -> 31 * s.getItem()
                 .hashCode() + s.getItemDamage())
@@ -57,7 +60,7 @@ public final class RecipePropertyAPI {
         })
         .amountExtractor(fs -> fs.amount)
         .amountUpdater((fs, newAmount) -> fs.amount = newAmount)
-        .connectionChecker(FluidStack::isFluidEqual)
+        .connectionChecker(RecipePropertyAPI::fluidPortsMatch)
         .hashCodeExtractor(
             fs -> fs.getFluid()
                 .hashCode())
@@ -80,18 +83,38 @@ public final class RecipePropertyAPI {
         .arrowColor(PlannhColors.ARROW_FLUID.getColor())
         .build();
 
-    private static boolean itemsMatch(final ItemStack a, final ItemStack b) {
-        if (a.getItem() == null || b.getItem() == null) return false;
-        if (a.isItemEqual(b)) return true;
-        final int[] idsA = OreDictionary.getOreIDs(a);
-        final int[] idsB = OreDictionary.getOreIDs(b);
-        if (idsA.length == 0 || idsB.length == 0) return false;
-        for (final int idA : idsA) {
-            for (final int idB : idsB) {
-                if (idA == idB) return true;
+    private static boolean itemPortsMatch(final Port<ItemStack> pa, final Port<ItemStack> pb) {
+        ItemStack[] as = pa.getStack().items;
+        ItemStack[] bs = pb.getStack().items;
+
+        for (ItemStack a : as) {
+            for (ItemStack b : bs) {
+                if (ItemStack.areItemStacksEqual(a, b)) return true;
             }
         }
+
         return false;
+    }
+
+    private static boolean fluidPortsMatch(final Port<FluidStack> pa, final Port<FluidStack> pb) {
+        if (Compat.GREGTECH.isLoaded) {
+            // gregtech has fluid alternatives so we need to check those
+            FluidStack[] as = Arrays.stream(pa.getStack().items)
+                .map(GTUtility::getFluidFromDisplayStack)
+                .toArray(FluidStack[]::new);
+            FluidStack[] bs = Arrays.stream(pb.getStack().items)
+                .map(GTUtility::getFluidFromDisplayStack)
+                .toArray(FluidStack[]::new);
+
+            for (FluidStack a : as) {
+                for (FluidStack b : bs) {
+                    if (a.isFluidEqual(b)) return true;
+                }
+            }
+        }
+
+        return pa.getValue()
+            .isFluidEqual(pb.getValue());
     }
 
     public static void registerExtractor(final Class<?> handlerClass, final PropertyProvider extractor) {

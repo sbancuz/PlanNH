@@ -1,7 +1,12 @@
 package com.sbancuz.plannh.harness;
 
+import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
+
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
+
+import codechicken.nei.PositionedStack;
 
 /**
  * A Minecraft-free ingredient type for headless tests. Corpus charts identify ingredients by
@@ -31,7 +36,7 @@ public final class TestIngredients {
         .builder("test_ingredient", new TestIngredient("", 0))
         .amountExtractor(i -> i.amount)
         .amountUpdater((i, amount) -> i.amount = amount)
-        .connectionChecker((a, b) -> a.name.equals(b.name))
+        .connectionChecker((a, b) -> a.getValue().name.equals(b.getValue().name))
         // Without this every port reports the resource id, so a headless label reads "void 530/s
         // test_ingredient" and any test of what a player would read asserts nothing.
         .displayFormatter(i -> i.name)
@@ -49,7 +54,11 @@ public final class TestIngredients {
     public static Port<TestIngredient> port(final String name, final double perCraft) {
         final int amount = (int) Math.ceil(perCraft);
         final float chance = (float) (perCraft / amount);
-        return new Port<>(TEST, new TestIngredient(name, amount), chance, 0);
+        return new Port<>(
+            TEST,
+            new TestIngredient(name, amount),
+            chance,
+            new PositionedStack(new ItemStack(Blocks.dirt), 0, 0));
     }
 
     public static String nameOf(final Port<?> port) {

@@ -1,6 +1,8 @@
 package com.sbancuz.plannh.data.provider;
 
-import java.util.Arrays;
+import static codechicken.nei.PositionedStack.CHANCE_FULL;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +13,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -50,9 +51,6 @@ public class GTProvider implements PropertyProvider {
 
     // Vanilla furnace: base cook time of 200 ticks (10 seconds)
     private static final int FURNACE_COOK_TICKS = 200;
-
-    /** GT5u stores a chance as 1..10000, where 10000 is 100%. */
-    private static final float GT_CHANCE_SCALE = 10_000f;
 
     public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.<Integer>builder("gt.special_value", 0)
         .build();
@@ -232,10 +230,12 @@ public class GTProvider implements PropertyProvider {
     }
 
     public static Map<RecipeProperty<?>, Object> extractGTRecipe(final Node node, final IRecipeHandler handler,
-        final int recipeIndex) {
+                                                                 final int recipeIndex) {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         GTRecipe r;
         RecipeMap<?> gthMap = null;
+        List<PositionedStack> inputStacks = new ArrayList<>();
+        List<PositionedStack> outputStacks = new ArrayList<>();
 
         if (handler instanceof final FurnaceRecipeHandler fh) {
             final List<TemplateRecipeHandler.CachedRecipe> fRecipes = RecipeHandlerAccess.getArecipes(fh);
@@ -276,6 +276,10 @@ public class GTProvider implements PropertyProvider {
 
             final CachedDefaultRecipe cached = (CachedDefaultRecipe) recipes.get(recipeIndex);
             r = cached.mRecipe;
+
+            inputStacks = cached.mInputs;
+            outputStacks = cached.mOutputs;
+
             if (r == null) return props;
 
             gthMap = gth.getRecipeMap();
@@ -321,50 +325,37 @@ public class GTProvider implements PropertyProvider {
             props.put(SPECIAL_VALUE, r.mSpecialValue);
         }
 
-        if(!node.getInputs().isEmpty() || !node.getOutputs().isEmpty())
-            throw new RuntimeException("inputs or outputs were initialized");
+        if (!node.getInputs().isEmpty() || !node.getOutputs().isEmpty())
+            throw new RuntimeException("inputs or outputs were initialized");  // todo needed?
 
-        // filter for missing (null) or empty (0 size) stacks
-        ItemStack[] filteredInputs = Arrays.stream(r.mInputs).filter(Objects::nonNull).filter(s -> s.stackSize > 0).toArray(ItemStack[]::new);
-        FluidStack[] filteredFluidInputs = Arrays.stream(r.mFluidInputs).filter(Objects::nonNull).toArray(FluidStack[]::new);
-        ItemStack[] filteredOutputs = Arrays.stream(r.mOutputs).filter(Objects::nonNull).filter(s -> s.stackSize > 0).toArray(ItemStack[]::new);
-        FluidStack[] filteredFluidOutputs = Arrays.stream(r.mFluidOutputs).filter(Objects::nonNull).toArray(FluidStack[]::new);
+        List<Port<?>> inputs = node.getInputs();
+        List<Port<?>> outputs = node.getOutputs();
 
-        for (int i = 0; i < filteredInputs.length; i++) {
-            node.getInputs().add(
-                new Port<>(
-                    RecipePropertyAPI.ITEM,
-                    filteredInputs[i].copy(),
-                    r.mInputChances != null ? r.mInputChances[i] / GT_CHANCE_SCALE : 1,
-                    i));
-        }
-        for (int i = 0; i < filteredOutputs.length; i++) {
-            node.getOutputs().add(
-                new Port<>(
-                    RecipePropertyAPI.ITEM,
-                    filteredOutputs[i].copy(),
-                    r.mOutputChances != null ? r.mOutputChances[i] / GT_CHANCE_SCALE : 1,
-                    i));
-        }
-        for (int i = 0; i < filteredFluidInputs.length; i++) {
-            node.getInputs().add(
-                new Port<>(
-                    RecipePropertyAPI.FLUID,
-                    filteredFluidInputs[i].copy(),
-                    r.mFluidInputChances != null ? r.mFluidInputChances[i] / GT_CHANCE_SCALE : 1,
-                    filteredInputs.length + i));
-        }
-        for (int i = 0; i < filteredFluidOutputs.length; i++) {
-            node.getOutputs().add(
-                new Port<>(
-                    RecipePropertyAPI.FLUID,
-                    filteredFluidOutputs[i].copy(),
-                    r.mFluidOutputChances != null ? r.mFluidOutputChances[i] / GT_CHANCE_SCALE : 1,
-                    filteredOutputs.length + i));
+        for (PositionedStack ps : inputStacks) {
+            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
+                inputs.add(
+                    new Port<>(
+                        RecipePropertyAPI.FLUID,
+                        fps.getFluidAlternatives().getFirst().copy(),
+                        (float) fps.getChance() / CHANCE_FULL,
+                        ps));
+            else if(ps.item != null) inputs.add(Port.itemPort(ps));
         }
 
-        node.getInputs().removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
-        node.getOutputs().removeIf(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay);
+        for (PositionedStack ps : outputStacks) {
+            if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
+                outputs.add(
+                    new Port<>(
+                        RecipePropertyAPI.FLUID,
+                        fps.getFluidAlternatives().getFirst().copy(),
+                        (float) fps.getChance() / CHANCE_FULL,
+                        ps));
+            else outputs.add(Port.itemPort(ps));
+        }
+
+        if (node.getInputs().stream().anyMatch(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay)
+         || node.getOutputs().stream().anyMatch(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay))
+            throw new RuntimeException("illegal itemStack found"); // todo needed?
 
         return props;
     }

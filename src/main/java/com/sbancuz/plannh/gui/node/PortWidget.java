@@ -12,14 +12,13 @@ import codechicken.nei.KeyManager;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
+import it.unimi.dsi.fastutil.ints.IntIntPair;
 
 public class PortWidget extends Widget<PortWidget> implements Interactable {
 
     private static final int RECIPE_KEYCODE = KeyManager.getKeyCode("recipe.recipe");
     private static final int USAGE_KEYCODE = KeyManager.getKeyCode("recipe.usage");
 
-    private static final int INPUT_COLOR = Color.GREEN.main;
-    private static final int OUTPUT_COLOR = Color.BLUE.main;
     // needed for proper positioning of ports
     private static final int PORT_OFFSET_X = 1;
     private static final int PORT_OFFSET_Y = -1;
@@ -27,19 +26,19 @@ public class PortWidget extends Widget<PortWidget> implements Interactable {
     // save, so we can toggle permutation
     private final PositionedStack stack;
     // this specifies highlight color and dragging behaviour (start/end of arrow)
-    private final boolean isInput;
+    private final PortType portType;
     private final Port<?> port;
 
-    public PortWidget(PositionedStack stack, boolean isInput, Port<?> port, int yShift) {
-        this.stack = stack;
-        this.isInput = isInput;
-        this.port = port;
+    public PortWidget(Port<?> port, PortType portType, int yShift, IntIntPair pos) {
+        this.stack = port.getStack();
+        this.portType = portType;
+        this.port = port; // todo needed?
 
         background(
-            new Rectangle().color(isInput ? INPUT_COLOR : OUTPUT_COLOR)
+            new Rectangle().color(portType.borderColor)
                 .hollow());
         hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
-        pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
+        pos(pos.leftInt() + PORT_OFFSET_X, pos.rightInt() + PORT_OFFSET_Y + yShift);
 
         tooltipBuilder(
             t -> t.addFromItem(stack.item)
@@ -58,5 +57,18 @@ public class PortWidget extends Widget<PortWidget> implements Interactable {
             return Result.ACCEPT;
         }
         return Interactable.super.onKeyPressed(typedChar, keyCode);
+    }
+
+    public enum PortType {
+
+        INPUT(Color.GREEN.main),
+        OUTPUT(Color.BLUE.main),
+        CATALYST(Color.BLACK.main);
+
+        private final int borderColor;
+
+        PortType(int borderColor) {
+            this.borderColor = borderColor;
+        }
     }
 }

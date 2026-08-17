@@ -23,16 +23,13 @@ public interface PropertyProvider {
 
     default Map<RecipeProperty<?>, Object> extract(final Node node, final IRecipeHandler handler,
         final int recipeIndex) {
-        int inputIndex = 0;
         final List<PositionedStack> ins = handler.getIngredientStacks(recipeIndex);
-        for (final PositionedStack ps : ins)
-            if (ps != null && ps.item != null && ps.item.stackSize > 0) node.getInputs()
-                .add(Port.itemPort(ps, inputIndex++));
+        for (final PositionedStack ps : ins) if (ps != null && ps.item != null) node.getInputs()
+            .add(Port.itemPort(ps));
 
-        int outputIndex = 0;
         final PositionedStack result = handler.getResultStack(recipeIndex);
         if (result != null && result.item != null) node.getOutputs()
-            .add(Port.itemPort(result, outputIndex++));
+            .add(Port.itemPort(result));
 
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (final PositionedStack ps : others) {
@@ -43,16 +40,16 @@ public interface PropertyProvider {
                         .getString(Settings.BURNABLE_OVERRIDE.key())
                         .equals("IN")) {
                         node.getInputs()
-                            .add(Port.itemPort(ps, inputIndex++));
+                            .add(Port.itemPort(ps));
                     } else if (node.getMachineConfig()
                         .getString(Settings.BURNABLE_OVERRIDE.key())
                         .equals("OUT")) {
                             node.getOutputs()
-                                .add(Port.itemPort(ps, outputIndex++));
+                                .add(Port.itemPort(ps));
                         }
                 } else if (TileEntityFurnace.getItemBurnTime(ps.item) <= 0) {
                     node.getOutputs()
-                        .add(Port.itemPort(ps, outputIndex++));
+                        .add(Port.itemPort(ps));
                 }
             }
         }
