@@ -10,7 +10,6 @@
     "GuiOverlayButtonMixin",
     "GTNEIDefaultHandlerMixin",
     "GTNEIDefaultHandlerAccessor",
-    "NEIRecipeWidgetAccessor",
     "NEIRecipeWidgetMixin"
   ]
 }
