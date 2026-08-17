@@ -722,7 +722,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     /** The machine name when the node has one to offer, otherwise the recipe's own name. */
     private String titleText() {
         final SettingDef<?> def = node.machineConfig.getProfile()
-            .setting(GTSettings.MACHINE);
+            .setting(Settings.MACHINE.key());
         if (def == null) return recipeName;
         final List<String> options = def.options(recipeContext());
         if (options.isEmpty()) return recipeName;
@@ -732,7 +732,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
     private boolean hasMachineChoice() {
         final SettingDef<?> def = node.machineConfig.getProfile()
-            .setting(GTSettings.MACHINE);
+            .setting(Settings.MACHINE.key());
         return def != null && def.options(recipeContext())
             .size() > 1;
     }

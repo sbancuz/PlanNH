@@ -86,6 +86,10 @@ dependencies {
     // Loads the GTNH coremod (dreamcraft) so NEI shows the pack's recipe tweaks in dev.
     if (project.hasProperty('gtnhRecipes')) {
         runtimeOnlyNonPublishable('com.github.GTNewHorizons:NewHorizonsCoreMod:2.9.13:dev')
+        // The coremod pulls most of the pack in behind it, but not EnderIO, so the dev client had no
+        // EnderIO recipes to build a node from and the capacitor row could not be looked at. Named
+        // here rather than left to a reviewer to work out. EnderCore and cofh-lib arrive with it.
+        runtimeOnlyNonPublishable('com.github.GTNewHorizons:EnderIO:2.10.31:dev')
     }
 
     // Auto-layout engine. 0.8.x is the last Java 8 compatible ELK release line.
@@ -97,6 +101,12 @@ dependencies {
     // The overclock and preset tests use GT's own classes as their oracle, so GT has to be
     // on the test classpath. Scoped to the test source set: the published mod keeps GT compileOnly.
     testImplementation("com.github.GTNewHorizons:GT5-Unofficial:$gt5uVersion:dev")
+
+    // Same reason: the capacitor tiers PlanNH plans EnderIO recipes at are read out of EnderIO's own
+    // enum, and the tier list is the thing worth asserting - EnderIO ships ten capacitor items for
+    // seven tiers, so a reader that fails to fold the duplicates is wrong in a way only the real jar
+    // shows. Test scope only; the published mod keeps EnderIO compileOnly.
+    testImplementation("com.github.GTNewHorizons:EnderIO:2.10.31:dev")
 
     // Headless test harness (corpus charts are gtnh-flow style YAML)
     testImplementation('org.junit.jupiter:junit-jupiter:5.10.2')

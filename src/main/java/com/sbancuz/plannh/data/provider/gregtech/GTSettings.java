@@ -16,8 +16,7 @@ import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
-import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Plan;
+import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.provider.GTProvider;
 
 import gregtech.api.enums.GTValues;
@@ -38,8 +37,12 @@ public final class GTSettings {
 
     private GTSettings() {}
 
-    public static final String MACHINE = "gt_machine";
+    /** Shared: any mod's machines are picked through the same row, so a node has one machine key. */
+    public static final String MACHINE = Settings.MACHINE.key();
+    /** Still GregTech's own: it reveals the raw overclock rows, which no other provider has. */
     public static final String ADVANCED = "gt_advanced";
+    /** What {@link #MACHINE} was called while the picker was GregTech's alone. */
+    private static final String LEGACY_MACHINE = "gt_machine";
 
     // Read off the shared vocabulary rather than repeated as literals, so the key a preset names and
     // the key a node stores cannot drift apart. Sourcing them from a method call also keeps them out
@@ -75,16 +78,10 @@ public final class GTSettings {
     }
 
     /**
-     * The machine picker. Options are the GT machines that can run this node's recipe, best-first,
-     * so an unset value renders and behaves as the obvious choice without being serialized.
+     * The machine picker, which is no longer GregTech's own: {@link MachineVariants} builds it from
+     * whichever providers offer machines for the node's recipe.
      */
-    public static final SettingDef<String> MACHINE_DEF = SettingDef.dynamicEnumDef(MACHINE, "", ctx -> {
-        final List<String> ids = new ArrayList<>();
-        for (final GTMachineIndex.MachineEntry entry : GTMachineIndex.candidates(ctx)) {
-            ids.add(entry.id());
-        }
-        return ids;
-    }, GTSettings::machineDisplayName, null);
+    public static final SettingDef<String> MACHINE_DEF = MachineVariants.pickerDef();
 
     /**
      * Voltage offered from the lowest tier that can actually run this recipe upward. A machine below
@@ -140,11 +137,7 @@ public final class GTSettings {
      * own settings, never the node or the graph holding it, and only the active chart draws rows.
      */
     private static int chartMinimum(final Settings knob, final int best) {
-        final Integer floor = insideAGame(
-            () -> Plan.getActiveGraph()
-                .getMinimum(knob.key()),
-            null);
-        return floor == null || floor == Graph.NO_MINIMUM ? best : floor;
+        return ChartMinimums.floor(knob, best);
     }
 
     /**
@@ -573,16 +566,17 @@ public final class GTSettings {
     /** Shows a knob only when the machine the node selected actually reads it. */
     @Nonnull
     public static BiPredicate<RecipeContext, Map<String, Object>> usesKnob(final Settings knob) {
+        final BiPredicate<RecipeContext, Map<String, Object>> machineReadsIt = MachineVariants.usesKnob(knob);
         return (ctx, settings) -> {
+            // Two conditions the shared predicate cannot know about: advanced mode replaces these rows
+            // with the raw overclock ones, and a recipe that already implies its machine's mode has
+            // answered the question the mode row would ask.
             if (isAdvanced(settings)) return false;
-            final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
-            if (entry == null || entry.preset() == null) return false;
-            // No row for a question the recipe has already answered.
-            if (knob == Settings.GT_MODE && entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null)) >= 0)
-                return false;
-            return entry.preset()
-                .knobs()
-                .contains(knob);
+            if (knob == Settings.GT_MODE) {
+                final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
+                if (entry != null && entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null)) >= 0) return false;
+            }
+            return machineReadsIt.test(ctx, settings);
         };
     }
 
@@ -682,6 +676,12 @@ public final class GTSettings {
         // rather than honoured. Machines that still ask for a mode re-store it on the next edit.
         settings.remove(MODE);
 
+        // The picker became everyone's, so the machine a node chose is stored under a key that names
+        // no mod. Renamed before the check below, or a chart that had picked a machine would be read
+        // as one that predates the picker and would open in advanced mode.
+        final Object legacyMachine = settings.remove(LEGACY_MACHINE);
+        if (legacyMachine != null) settings.putIfAbsent(MACHINE, legacyMachine);
+
         if (settings.containsKey(ADVANCED) || settings.containsKey(MACHINE)) return;
         for (final String key : DERIVED_KEYS) {
             if (settings.containsKey(key)) {
@@ -691,16 +691,4 @@ public final class GTSettings {
         }
     }
 
-    /**
-     * GT's own names do not always say which form factor a machine is - "Chemical Reactor" against
-     * "Large Chemical Reactor" reads as a size, not as singleblock against multiblock - and the two
-     * overclock completely differently. Saying so avoids reading the wrong numbers as a bug.
-     */
-    @Nonnull
-    private static String machineDisplayName(final String id) {
-        final GTMachineIndex.MachineEntry entry = GTMachineIndex.byId(id);
-        if (entry == null) return id;
-        return entry.kind() == GTMachineIndex.Kind.SINGLEBLOCK ? entry.displayName() + " (single)"
-            : entry.displayName();
-    }
 }

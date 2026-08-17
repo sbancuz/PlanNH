@@ -6,6 +6,7 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.ChartMinimums;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
+import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.provider.AE2Provider;
 import com.sbancuz.plannh.data.provider.AvaritiaProvider;
@@ -114,6 +115,7 @@ public enum Compat {
         MachineProfileRegistry.reset();
         RecipePropertyAPI.reset();
         ChartMinimums.reset();
+        MachineVariants.reset();
         DefaultProvider.INSTANCE.register();
         new VanillaProvider().register();
         for (final Compat mod : values()) {

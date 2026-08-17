@@ -7,6 +7,7 @@ import java.util.function.IntFunction;
 import javax.annotation.Nonnull;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Plan;
 
 /**
  * The knobs a chart can set a floor for, contributed by whichever mods are installed.
@@ -68,5 +69,26 @@ public final class ChartMinimums {
 
     public static void reset() {
         registered.clear();
+    }
+
+    /**
+     * What the open chart plans at for one knob, or {@code best} when it has said nothing.
+     *
+     * <p>
+     * Read from the chart on screen rather than handed in: a {@link SettingDef} is given the recipe
+     * and the node's own settings, never the node or the graph holding it, and only the active chart
+     * draws rows. Reaching the open plan reaches Minecraft, through the save directory, so outside a
+     * running game there is no chart to read and the answer is the untouched one - which is the state
+     * a headless test and the machine probe both want.
+     */
+    public static int floor(@Nonnull final Settings knob, final int best) {
+        final int held;
+        try {
+            held = Plan.getActiveGraph()
+                .getMinimum(knob.key());
+        } catch (final RuntimeException | LinkageError outsideAGame) {
+            return best;
+        }
+        return held == Graph.NO_MINIMUM ? best : held;
     }
 }

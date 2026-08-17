@@ -44,6 +44,7 @@ import com.sbancuz.plannh.client.UIBlurEffect;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.SettingDef;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
@@ -54,7 +55,6 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.UndoHistory;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
-import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 import com.sbancuz.plannh.nei.NodeLookupContext;
@@ -1418,7 +1418,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (machinePickerMenu == null || machinePickerList == null) return;
         final MachineConfig config = node.machineConfig;
         final SettingDef<?> def = config.getProfile()
-            .setting(GTSettings.MACHINE);
+            .setting(Settings.MACHINE.key());
         if (def == null) return;
 
         final List<String> options = def.options(new RecipeContext(node.properties));

@@ -56,6 +56,7 @@ public enum Settings {
     // prefix follows GT_MULTIBLOCK above, and is honest: a coil is a GregTech idea, and the next mod's
     // tier knob will not be a coil. Structure knobs are declared in the order a machine table lists
     // them, because an EnumSet of them iterates in declaration order.
+    MACHINE("machine"),
     VOLTAGE("voltage"),
     GT_COIL("gt_coil"),
     GT_SOLENOID("gt_solenoid"),
@@ -66,6 +67,7 @@ public enum Settings {
     GT_STRUCTURE_TIER("gt_structure_tier"),
     GT_WIDTH("gt_width"),
     GT_MODE("gt_mode"),
+    EIO_CAPACITOR("eio_capacitor"),
 
     // ── enum-type settings ──
     BURNABLE_OVERRIDE("burnable_override", "OFF", List.of("OFF", "IN", "OUT"), (_, _) -> null),

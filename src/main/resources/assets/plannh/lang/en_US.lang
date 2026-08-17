@@ -9,8 +9,9 @@ plannh.settings.energy_per_tick=Energy/t
 plannh.settings.inputs_per_tick=Inputs/t
 plannh.settings.burnable_override=Burnable
 
+plannh.settings.machine=Machine
+
 ## Settings - GT machine and structure
-plannh.settings.gt_machine=Machine
 plannh.settings.gt_advanced=Advanced
 plannh.settings.gt_coil=Coil
 plannh.settings.gt_solenoid=Solenoid
@@ -58,6 +59,7 @@ plannh.settings.lp_per_tick=BM LP/t
 
 ## Settings - Cofh core
 plannh.settings.rf_per_tick=RF/t
+plannh.settings.eio_capacitor=Capacitor
 
 ## Settings - Steam
 plannh.settings.steam_eut_discount=Steam EU%

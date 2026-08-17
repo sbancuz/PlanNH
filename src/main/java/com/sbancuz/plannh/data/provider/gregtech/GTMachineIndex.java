@@ -16,8 +16,10 @@ import net.minecraft.util.StatCollector;
 
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
-import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.machine.MachineVariant;
+import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.provider.GTProvider;
 import com.sbancuz.plannh.data.provider.gregtech.probe.MachineProbe;
 
@@ -69,13 +71,55 @@ public final class GTMachineIndex {
      */
     public record MachineEntry(String id, String displayName, Kind kind, int voltageTier, int amperage,
         int catalystPriority, @Nullable OverclockDescriber describer, @Nullable GTMachinePreset preset,
-        GTMachineModes.Modes modes) {
+        GTMachineModes.Modes modes) implements MachineVariant {
 
         /** The mode this recipe implies, or -1 when the user still has to say. */
         public int modeFor(@Nullable final RecipeMap<?> recipeMap) {
             return modes.modeFor(recipeMap);
         }
+
+        /**
+         * A machine with no preset reads no structure, so it offers no rows. That is the same answer
+         * as "we have no numbers for it", which is correct: guessing rows for a machine PlanNH cannot
+         * model would put controls on a node that change nothing.
+         */
+        @Override
+        @Nonnull
+        public Set<Settings> knobs() {
+            return preset == null ? Set.of() : preset.knobs();
+        }
+
+        /**
+         * GT's own names do not always say which form factor a machine is - "Chemical Reactor" against
+         * "Large Chemical Reactor" reads as a size, not as singleblock against multiblock - and the two
+         * overclock completely differently. Saying so avoids reading the wrong numbers as a bug. Only
+         * the label says it: the name itself is matched against NEI's tab title.
+         */
+        @Override
+        @Nonnull
+        public String label() {
+            return kind == Kind.SINGLEBLOCK ? displayName + " (single)" : displayName;
+        }
     }
+
+    /**
+     * GregTech's answer for the shared picker. The index is built on first use rather than handed
+     * over at registration, because building it clones and probes every multiblock GT ships.
+     */
+    public static final MachineVariants.Source SOURCE = new MachineVariants.Source() {
+
+        @Override
+        @Nonnull
+        public List<? extends MachineVariant> candidates(final RecipeContext ctx) {
+            return GTMachineIndex.candidates(ctx);
+        }
+
+        @Override
+        @Nullable
+        public MachineVariant byId(final String id) {
+            return GTMachineIndex.byId(id);
+        }
+    };
 
     @Nullable
     private static Map<String, List<MachineEntry>> byRecipeMap;
@@ -84,23 +128,19 @@ public final class GTMachineIndex {
     private static final Map<String, List<MachineEntry>> byNeiTitle = new HashMap<>();
 
     /**
-     * The last answer {@link #candidates} and {@link #selected} gave.
+     * The last answer {@link #candidates} gave.
      *
      * <p>
-     * Both are reached from settings-row visibility predicates, so a single open node asks the same
-     * question a dozen times per frame with the same arguments. One slot is enough because the asking
-     * is consecutive: the panel resolves one node's rows before it moves to the next.
+     * Reached from settings-row visibility predicates, so a single open node asks the same question a
+     * dozen times per frame with the same arguments. One slot is enough because the asking is
+     * consecutive: the panel resolves one node's rows before it moves to the next. Which machine the
+     * node then selected out of this list is memoized once, in MachineVariants.
      */
     @Nullable
     private static RecipeMap<?> lastMap;
     private static String lastTitle = "";
-    /** Null after a candidate-list change, so the next selected() recomputes rather than trusting it. */
-    @Nullable
-    private static String lastStored;
     @Nullable
     private static List<MachineEntry> lastCandidates;
-    @Nullable
-    private static MachineEntry lastSelected;
 
     private GTMachineIndex() {}
 
@@ -132,7 +172,6 @@ public final class GTMachineIndex {
         lastMap = recipeMap;
         lastTitle = title;
         lastCandidates = answer;
-        lastStored = null;
         return answer;
     }
 
@@ -159,32 +198,13 @@ public final class GTMachineIndex {
     }
 
     /**
-     * The machine a node is using. An unset setting resolves to the best candidate, so a node that
-     * accepts the obvious answer stores nothing; a stored id the pack no longer has resolves to
-     * null rather than quietly becoming a different machine.
+     * The machine a node is using, when that machine is a GregTech one. Resolution and its per-frame
+     * memo live in {@link MachineVariants} so there is one of each; what comes back is whatever this
+     * source handed over, and anything else means the recipe belongs to another mod.
      */
     @Nullable
     public static MachineEntry selected(final RecipeContext ctx, final Map<String, Object> settings) {
-        final List<MachineEntry> candidates = candidates(ctx);
-        if (candidates.isEmpty()) return null;
-
-        final String stored = MachineProfile.getString(settings, GTSettings.MACHINE, "");
-        // candidates() has just refreshed the cache slot, so only the stored id is left to compare.
-        if (stored.equals(lastStored)) return lastSelected;
-
-        lastStored = stored;
-        lastSelected = resolveSelected(candidates, stored);
-        return lastSelected;
-    }
-
-    @Nullable
-    private static MachineEntry resolveSelected(final List<MachineEntry> candidates, final String stored) {
-        if (stored.isEmpty()) return candidates.getFirst();
-        for (final MachineEntry entry : candidates) {
-            if (entry.id()
-                .equals(stored)) return entry;
-        }
-        return null;
+        return MachineVariants.selected(ctx, settings) instanceof final MachineEntry entry ? entry : null;
     }
 
     /**
