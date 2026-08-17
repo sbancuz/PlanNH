@@ -1,7 +1,7 @@
 package com.sbancuz.plannh.data.provider.gregtech;
 
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.COIL;
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.MODE;
+import static com.sbancuz.plannh.data.Settings.GT_COIL;
+import static com.sbancuz.plannh.data.Settings.GT_MODE;
 import static com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers.clampCoil;
 import static com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers.coilHeat;
 
@@ -62,7 +62,7 @@ public final class GTMachineOverrides {
             GTMachinePreset.builder()
                 .parallel(s -> 4 << (clampCoil(s.coilTier()) + 1))
                 .recipeOverride(4, 128)
-                .knobs(COIL));
+                .knobs(GT_COIL));
 
         // Its setupProcessingLogic dereferences the circuit imprint, which only exists once a player
         // has imprinted a placed machine.
@@ -71,7 +71,7 @@ public final class GTMachineOverrides {
             "reaches for world state while setting up, so a probe clone cannot be asked",
             GTMachinePreset.builder()
                 .perfectOC()
-                .knobs(MODE));
+                .knobs(GT_MODE));
 
         // checkMachine sets mHeatingCapacity to the coil's heat PLUS 100K per voltage tier over MV.
         // The probe writes the coil's heat into that field and cannot add the second term, because the
@@ -83,7 +83,7 @@ public final class GTMachineOverrides {
             GTMachinePreset.builder()
                 .heatOC(s -> coilHeat(s.coilTier()) + 100 * (s.voltageTier() - 2))
                 .heatDiscount()
-                .knobs(COIL));
+                .knobs(GT_COIL));
     }
 
     @Nullable

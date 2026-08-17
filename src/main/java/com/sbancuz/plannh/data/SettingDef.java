@@ -126,6 +126,22 @@ public class SettingDef<T> {
     }
 
     /**
+     * A setting whose choices belong to the mod that owns the machine. PlanNH names the key; the
+     * provider attaches the real def when it builds its profile, the way {@code GTProvider} does for
+     * the voltage and coil rows.
+     *
+     * <p>
+     * Nothing is declared about the domain, deliberately. A placeholder range or option list would be
+     * a second authority on what the mod allows, and it would be wrong the day the mod added a tier -
+     * which is the whole failure this indirection exists to prevent. Until a provider supplies a def,
+     * {@link #hasOptions} answers false and the row offers nothing.
+     */
+    @Nonnull
+    public static SettingDef<String> providedDef(final String key) {
+        return new SettingDef<>(key, String.class, "", 0, 0, null, null, null, null, ALWAYS, null, null, null);
+    }
+
+    /**
      * An enum whose choices depend on the recipe - the machine picker, whose options are the GT
      * machines that can run this node's recipemap. {@code optionsFn} is stored, never called, at
      * construction: the profile is a static singleton built before any node exists.

@@ -10,8 +10,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineModes;
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
@@ -62,7 +62,7 @@ final class ProbeSubject {
 
     /** The knobs this machine stores at all - not yet whether any of them changes a number. */
     @Nonnull
-    EnumSet<Knob> reachableKnobs() {
+    EnumSet<Settings> reachableKnobs() {
         return injector.reachableKnobs();
     }
 

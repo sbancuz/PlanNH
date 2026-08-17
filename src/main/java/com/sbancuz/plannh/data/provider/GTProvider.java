@@ -25,8 +25,8 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
+import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -137,16 +137,13 @@ public class GTProvider implements PropertyProvider {
             GTSettings.PARALLELS_DEF.withVisibility(
                 GTSettings.parallelsEditable()
                     .and((ctx, s) -> !isEoH(ctx))));
-        b.setting(GTSettings.COIL_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.COIL)));
-        b.setting(GTSettings.SOLENOID_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.SOLENOID)));
-        b.setting(GTSettings.ITEM_PIPE_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.ITEM_PIPE)));
-        b.setting(GTSettings.PIPE_CASING_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.PIPE_CASING)));
-        b.setting(GTSettings.SAWBLADE_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.SAWBLADE)));
-        b.setting(GTSettings.ELECTRODE_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.ELECTRODE)));
-        b.setting(
-            GTSettings.STRUCTURE_TIER_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.STRUCTURE_TIER)));
-        b.setting(GTSettings.WIDTH_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.WIDTH)));
-        b.setting(GTSettings.MODE_DEF.withVisibility(GTSettings.usesKnob(GTMachinePreset.Knob.MODE)));
+        // Every structure knob is the same row with a different def: offered when the selected machine
+        // reads it, absent otherwise. Listing them one by one only invited the two lists to diverge.
+        for (final Settings knob : StructureState.KNOBS) {
+            b.setting(
+                GTSettings.knobDef(knob)
+                    .withVisibility(GTSettings.usesKnob(knob)));
+        }
         b.setting(
             Settings.CATALYST_ASTRAL_ARRAYS.def()
                 .withVisibility((ctx, s) -> isEoH(ctx)));
@@ -174,7 +171,8 @@ public class GTProvider implements PropertyProvider {
             GTSettings.RECIPE_HEAT_DEF,
             GTSettings.HEAT_OC_DEF,
             GTSettings.HEAT_DISCOUNT_DEF,
-            GTSettings.HEAT_DISCOUNT_MULT_DEF)) {
+            GTSettings.HEAT_DISCOUNT_MULT_DEF,
+            GTSettings.MULTIBLOCK_DEF)) {
             b.setting(def.withVisibility(GTSettings.advancedOnly()));
         }
     }

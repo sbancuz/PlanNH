@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePresets;
 import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
@@ -129,7 +130,7 @@ class GTMachinePresetTest {
             .lookup(Class.forName(className, false, getClass().getClassLoader()));
         assertNotNull(preset);
         if (!preset.knobs()
-            .contains(GTMachinePreset.Knob.COIL)) return;
+            .contains(Settings.GT_COIL)) return;
 
         for (int coil = 0; coil < GTStructureTiers.MAX_COIL_TIER; coil++) {
             final StructureState low = state(5, coil);

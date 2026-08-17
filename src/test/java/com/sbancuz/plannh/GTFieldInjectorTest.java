@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.probe.FieldInjector;
 
 /**
@@ -34,17 +34,18 @@ class GTFieldInjectorTest {
      * number moves with it, which is what the sensitivity scan settles.
      */
     @ParameterizedTest
-    @CsvSource({ GT_MULTI + "MTEIndustrialThermalCentrifuge,COIL|SOLENOID",
-        GT_MULTI + "MTEIndustrialCokeOven,COIL|WIDTH|STRUCTURE_TIER", GT_MULTI + "MTEIndustrialMixer,ITEM_PIPE",
-        GT_MULTI + "MTEIndustrialWireMill,ITEM_PIPE", GT_MULTI + "MTEIndustrialMacerator,STRUCTURE_TIER",
-        GT_MULTI + "MTEMegaOilCracker,COIL", GT_MULTI + "MTEPyrolyseOven,COIL",
-        GT_MULTI + "MTEElectricBlastFurnace,COIL", GTPP + "production.chemplant.MTEChemicalPlant,COIL|PIPE_CASING",
-        GTPP + "processing.MTEIndustrialAlloySmelter,COIL", GTPP + "processing.advanced.MTEAdvEBF,COIL" })
+    @CsvSource({ GT_MULTI + "MTEIndustrialThermalCentrifuge,GT_COIL|GT_SOLENOID",
+        GT_MULTI + "MTEIndustrialCokeOven,GT_COIL|GT_WIDTH|GT_STRUCTURE_TIER",
+        GT_MULTI + "MTEIndustrialMixer,GT_ITEM_PIPE", GT_MULTI + "MTEIndustrialWireMill,GT_ITEM_PIPE",
+        GT_MULTI + "MTEIndustrialMacerator,GT_STRUCTURE_TIER", GT_MULTI + "MTEMegaOilCracker,GT_COIL",
+        GT_MULTI + "MTEPyrolyseOven,GT_COIL", GT_MULTI + "MTEElectricBlastFurnace,GT_COIL",
+        GTPP + "production.chemplant.MTEChemicalPlant,GT_COIL|GT_PIPE_CASING",
+        GTPP + "processing.MTEIndustrialAlloySmelter,GT_COIL", GTPP + "processing.advanced.MTEAdvEBF,GT_COIL" })
     void theStructureFieldsAreStillReachable(final String className, final String expected) {
-        final EnumSet<Knob> reachable = FieldInjector.forClass(uninitialised(className))
+        final EnumSet<Settings> reachable = FieldInjector.forClass(uninitialised(className))
             .reachableKnobs();
         for (final String name : expected.split("\\|")) {
-            final Knob knob = Knob.valueOf(name);
+            final Settings knob = Settings.valueOf(name);
             assertTrue(reachable.contains(knob), className + " no longer exposes " + knob + ", found " + reachable);
         }
     }
@@ -59,12 +60,12 @@ class GTFieldInjectorTest {
         assertTrue(
             FieldInjector.forClass(uninitialised(GT_MULTI + "MTEOreWashingPlant"))
                 .reachableKnobs()
-                .contains(Knob.MODE),
+                .contains(Settings.GT_MODE),
             "MTEOreWashingPlant no longer declares supportsMachineModeSwitch");
         assertFalse(
             FieldInjector.forClass(uninitialised(GT_MULTI + "MTEIndustrialSifter"))
                 .reachableKnobs()
-                .contains(Knob.MODE),
+                .contains(Settings.GT_MODE),
             "the Industrial Sifter has no modes, so it must not offer the row");
     }
 

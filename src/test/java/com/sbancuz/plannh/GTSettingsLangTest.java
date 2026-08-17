@@ -15,6 +15,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 
 /**
@@ -57,6 +58,23 @@ class GTSettingsLangTest {
 
         for (final String key : declaredSettingKeys()) {
             if (!lang.contains("plannh.settings." + key)) missing.add(key);
+        }
+
+        assertTrue(missing.isEmpty(), "settings with no lang entry, they will render as raw keys: " + missing);
+    }
+
+    /**
+     * The same check over the shared vocabulary. GTSettings only names the keys GregTech reaches for
+     * directly, so a Settings constant added or restored without a lang line went unnoticed - which is
+     * how fuel_efficiency, energy_per_tick and gt_multiblock lost theirs.
+     */
+    @Test
+    void everySharedSettingHasALabel() throws Exception {
+        final Set<String> lang = langKeys();
+        final List<String> missing = new ArrayList<>();
+
+        for (final Settings setting : Settings.values()) {
+            if (!lang.contains("plannh.settings." + setting.key())) missing.add(setting.key());
         }
 
         assertTrue(missing.isEmpty(), "settings with no lang entry, they will render as raw keys: " + missing);

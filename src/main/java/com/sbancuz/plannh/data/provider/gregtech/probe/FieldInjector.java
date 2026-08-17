@@ -1,14 +1,14 @@
 package com.sbancuz.plannh.data.provider.gregtech.probe;
 
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.COIL;
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.ELECTRODE;
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.ITEM_PIPE;
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.MODE;
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.PIPE_CASING;
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.SAWBLADE;
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.SOLENOID;
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.STRUCTURE_TIER;
-import static com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob.WIDTH;
+import static com.sbancuz.plannh.data.Settings.GT_COIL;
+import static com.sbancuz.plannh.data.Settings.GT_ELECTRODE;
+import static com.sbancuz.plannh.data.Settings.GT_ITEM_PIPE;
+import static com.sbancuz.plannh.data.Settings.GT_MODE;
+import static com.sbancuz.plannh.data.Settings.GT_PIPE_CASING;
+import static com.sbancuz.plannh.data.Settings.GT_SAWBLADE;
+import static com.sbancuz.plannh.data.Settings.GT_SOLENOID;
+import static com.sbancuz.plannh.data.Settings.GT_STRUCTURE_TIER;
+import static com.sbancuz.plannh.data.Settings.GT_WIDTH;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
@@ -22,7 +22,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
@@ -56,26 +56,26 @@ public final class FieldInjector {
      */
     private enum Coding {
 
-        COIL_LEVEL(COIL),
-        COIL_TIER(COIL),
+        COIL_LEVEL(GT_COIL),
+        COIL_TIER(GT_COIL),
         /** GT++ stores {@code coilTier + 1}, so that an absent coil reads as one rather than none. */
-        COIL_TIER_FROM_ONE(COIL),
+        COIL_TIER_FROM_ONE(GT_COIL),
         /**
          * Kelvin rather than a tier. The machines that keep one derive it in {@code checkMachine}, so
          * the probe has to supply it: writing the coil next to it changes nothing on its own.
          */
-        COIL_HEAT(COIL),
-        ELECTRODE_ITEM(ELECTRODE),
-        ITEM_PIPE_TIER(ITEM_PIPE),
-        SOLENOID_TIER(SOLENOID),
-        PIPE_CASING_TIER(PIPE_CASING),
-        CASING_TIER(STRUCTURE_TIER),
-        SLICES(WIDTH),
-        MACHINE_MODE(MODE);
+        COIL_HEAT(GT_COIL),
+        ELECTRODE_ITEM(GT_ELECTRODE),
+        ITEM_PIPE_TIER(GT_ITEM_PIPE),
+        SOLENOID_TIER(GT_SOLENOID),
+        PIPE_CASING_TIER(GT_PIPE_CASING),
+        CASING_TIER(GT_STRUCTURE_TIER),
+        SLICES(GT_WIDTH),
+        MACHINE_MODE(GT_MODE);
 
-        private final Knob knob;
+        private final Settings knob;
 
-        Coding(final Knob knob) {
+        Coding(final Settings knob) {
             this.knob = knob;
         }
     }
@@ -106,12 +106,12 @@ public final class FieldInjector {
         Map.entry("machineMode", Coding.MACHINE_MODE));
 
     private final List<Write> writes;
-    private final EnumSet<Knob> knobs;
+    private final EnumSet<Settings> knobs;
     private final boolean takesSawblade;
 
     private record Write(Field field, Coding coding) {}
 
-    private FieldInjector(final List<Write> writes, final EnumSet<Knob> knobs, final boolean takesSawblade) {
+    private FieldInjector(final List<Write> writes, final EnumSet<Settings> knobs, final boolean takesSawblade) {
         this.writes = writes;
         this.knobs = knobs;
         this.takesSawblade = takesSawblade;
@@ -120,7 +120,7 @@ public final class FieldInjector {
     @Nonnull
     public static FieldInjector forClass(final Class<?> machineClass) {
         final List<Write> found = new ArrayList<>();
-        final EnumSet<Knob> reachable = EnumSet.noneOf(Knob.class);
+        final EnumSet<Settings> reachable = EnumSet.noneOf(Settings.class);
         for (Class<?> c = machineClass; c != null; c = c.getSuperclass()) {
             for (final Field field : c.getDeclaredFields()) {
                 final Coding coding = codingOf(field);
@@ -131,10 +131,10 @@ public final class FieldInjector {
             }
         }
         final boolean sawblade = declaresSawbladeCheck(machineClass);
-        if (sawblade) reachable.add(SAWBLADE);
+        if (sawblade) reachable.add(GT_SAWBLADE);
         // Every multiblock inherits the machineMode field, so the field alone would put a mode row on
         // all of them. A machine that really has modes overrides GregTech's own answer to the question.
-        if (!declaresModeSwitch(machineClass)) reachable.remove(MODE);
+        if (!declaresModeSwitch(machineClass)) reachable.remove(GT_MODE);
         return new FieldInjector(List.copyOf(found), reachable, sawblade);
     }
 
@@ -170,7 +170,7 @@ public final class FieldInjector {
 
     /** The knobs this machine could possibly read. The sensitivity scan narrows it to those it does. */
     @Nonnull
-    public EnumSet<Knob> reachableKnobs() {
+    public EnumSet<Settings> reachableKnobs() {
         return EnumSet.copyOf(knobs);
     }
 

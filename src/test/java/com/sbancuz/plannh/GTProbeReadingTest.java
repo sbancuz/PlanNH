@@ -10,6 +10,7 @@ import java.util.EnumSet;
 
 import org.junit.jupiter.api.Test;
 
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 import com.sbancuz.plannh.data.provider.gregtech.probe.MachineProbe;
@@ -24,7 +25,7 @@ class GTProbeReadingTest {
 
     private static final StructureState ANY = new StructureState(1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-    private static final EnumSet<GTMachinePreset.Knob> NO_KNOBS = EnumSet.noneOf(GTMachinePreset.Knob.class);
+    private static final EnumSet<Settings> NO_KNOBS = EnumSet.noneOf(Settings.class);
 
     /** A machine that touched nothing: every number is the calculator's own default. */
     private static ProbeReading passthrough() {

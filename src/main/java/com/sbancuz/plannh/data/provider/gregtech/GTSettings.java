@@ -40,15 +40,19 @@ public final class GTSettings {
 
     public static final String MACHINE = "gt_machine";
     public static final String ADVANCED = "gt_advanced";
-    public static final String COIL = "gt_coil";
-    public static final String SOLENOID = "gt_solenoid";
-    public static final String ITEM_PIPE = "gt_item_pipe";
-    public static final String PIPE_CASING = "gt_pipe_casing";
-    public static final String SAWBLADE = "gt_sawblade";
-    public static final String ELECTRODE = "gt_electrode";
-    public static final String STRUCTURE_TIER = "gt_structure_tier";
-    public static final String WIDTH = "gt_width";
-    public static final String MODE = "gt_mode";
+
+    // Read off the shared vocabulary rather than repeated as literals, so the key a preset names and
+    // the key a node stores cannot drift apart. Sourcing them from a method call also keeps them out
+    // of the constant pool, which is what makes a single edit here reach every call site.
+    public static final String COIL = Settings.GT_COIL.key();
+    public static final String SOLENOID = Settings.GT_SOLENOID.key();
+    public static final String ITEM_PIPE = Settings.GT_ITEM_PIPE.key();
+    public static final String PIPE_CASING = Settings.GT_PIPE_CASING.key();
+    public static final String SAWBLADE = Settings.GT_SAWBLADE.key();
+    public static final String ELECTRODE = Settings.GT_ELECTRODE.key();
+    public static final String STRUCTURE_TIER = Settings.GT_STRUCTURE_TIER.key();
+    public static final String WIDTH = Settings.GT_WIDTH.key();
+    public static final String MODE = Settings.GT_MODE.key();
 
     /** Sixteen 4A hatches is past anything GregTech builds, and the row is a plan rather than a limit. */
     private static final int MAX_AMPERAGE = 64;
@@ -448,30 +452,39 @@ public final class GTSettings {
     public record TierRange(int min, int max) {}
 
     /**
+     * The row a structure knob is edited through. The single place that says which def belongs to
+     * which setting, so a profile listing the rows and a scan sweeping their ranges cannot disagree
+     * about what a knob is.
+     */
+    @Nonnull
+    public static SettingDef<?> knobDef(final Settings knob) {
+        return switch (knob) {
+            case GT_COIL -> COIL_DEF;
+            case GT_SOLENOID -> SOLENOID_DEF;
+            case GT_ITEM_PIPE -> ITEM_PIPE_DEF;
+            case GT_PIPE_CASING -> PIPE_CASING_DEF;
+            case GT_SAWBLADE -> SAWBLADE_DEF;
+            case GT_ELECTRODE -> ELECTRODE_DEF;
+            case GT_STRUCTURE_TIER -> STRUCTURE_TIER_DEF;
+            case GT_WIDTH -> WIDTH_DEF;
+            case GT_MODE -> MODE_DEF;
+            default -> throw new IllegalArgumentException(knob + " is not a structure knob");
+        };
+    }
+
+    /**
      * The range a knob offers, read off the row that offers it. Anything that varies a knob - the
      * probe's sensitivity scan - then covers exactly what the player can reach, and one edit to a row
      * moves both.
      */
     @Nonnull
-    public static TierRange knobRange(final GTMachinePreset.Knob knob) {
-        return switch (knob) {
-            // The coil row stores a name rather than a number, so its range is the name list.
-            case COIL -> new TierRange(0, COIL_NAMES.size() - 1);
-            case SOLENOID -> rangeOf(SOLENOID_DEF);
-            case ITEM_PIPE -> rangeOf(ITEM_PIPE_DEF);
-            case PIPE_CASING -> rangeOf(PIPE_CASING_DEF);
-            case SAWBLADE -> rangeOf(SAWBLADE_DEF);
-            case ELECTRODE -> rangeOf(ELECTRODE_DEF);
-            case STRUCTURE_TIER -> rangeOf(STRUCTURE_TIER_DEF);
-            case WIDTH -> rangeOf(WIDTH_DEF);
-            // Unused: a sweep over modes takes its count from the machine, not from a range. Present
-            // only because the switch is total over Knob.
-            case MODE -> new TierRange(0, 1);
-        };
-    }
-
-    @Nonnull
-    private static TierRange rangeOf(final SettingDef<Integer> def) {
+    public static TierRange knobRange(final Settings knob) {
+        // The coil row stores a name rather than a number, so its range is the name list.
+        if (knob == Settings.GT_COIL) return new TierRange(0, COIL_NAMES.size() - 1);
+        // A sweep over modes takes its count from the machine, not from a range; the mode row's own
+        // ceiling is a function of the selected machine and so cannot answer without one.
+        if (knob == Settings.GT_MODE) return new TierRange(0, 1);
+        final SettingDef<?> def = knobDef(knob);
         return new TierRange(def.minInt, def.maxInt);
     }
 
@@ -522,13 +535,13 @@ public final class GTSettings {
 
     /** Shows a knob only when the machine the node selected actually reads it. */
     @Nonnull
-    public static BiPredicate<RecipeContext, Map<String, Object>> usesKnob(final GTMachinePreset.Knob knob) {
+    public static BiPredicate<RecipeContext, Map<String, Object>> usesKnob(final Settings knob) {
         return (ctx, settings) -> {
             if (isAdvanced(settings)) return false;
             final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
             if (entry == null || entry.preset() == null) return false;
             // No row for a question the recipe has already answered.
-            if (knob == GTMachinePreset.Knob.MODE && entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null)) >= 0)
+            if (knob == Settings.GT_MODE && entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null)) >= 0)
                 return false;
             return entry.preset()
                 .knobs()
@@ -582,10 +595,22 @@ public final class GTSettings {
             && (isAdvanced(settings) || machineMaxParallel(ctx, settings) > 1);
     }
 
+    /**
+     * Whether the node stands for a multiblock. The machine picker already answers this, so the row is
+     * never a question - but it stays a setting, because a node whose machine PlanNH cannot identify
+     * still needs a way to say which form factor it is, and because a preset may want to state it.
+     * Unknown counts as a multiblock: the rows it gates are the ones a multiblock has, and offering
+     * them on a machine that turns out to be a singleblock is recoverable where withholding them is
+     * not.
+     */
+    public static final SettingDef<Boolean> MULTIBLOCK_DEF = SettingDef
+        .autoBoolDef(Settings.GT_MULTIBLOCK.key(), (ctx, s) -> {
+            final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, s);
+            return entry == null || entry.kind() == GTMachineIndex.Kind.MULTIBLOCK ? 1 : 0;
+        }, (v, c) -> v ? "M" : null);
+
     private static boolean multiblockOrUnknown(final RecipeContext ctx, final Map<String, Object> settings) {
-        if (isAdvanced(settings)) return true;
-        final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
-        return entry == null || entry.kind() == GTMachineIndex.Kind.MULTIBLOCK;
+        return isAdvanced(settings) || MULTIBLOCK_DEF.effectiveBool(ctx, settings);
     }
 
     /**

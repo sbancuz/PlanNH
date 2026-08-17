@@ -9,7 +9,7 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 import com.sbancuz.plannh.data.provider.gregtech.probe.ProbeReading;
@@ -42,44 +42,53 @@ class GTSensitivityScanTest {
 
     @Test
     void aKnobThatChangesNothingIsNotUsed() {
-        final EnumSet<Knob> used = SensitivityScan
-            .scan(REFERENCE, EnumSet.of(Knob.COIL, Knob.MODE, Knob.WIDTH), MODES, state -> flat());
+        final EnumSet<Settings> used = SensitivityScan
+            .scan(REFERENCE, EnumSet.of(Settings.GT_COIL, Settings.GT_MODE, Settings.GT_WIDTH), MODES, state -> flat());
 
         assertTrue(used.isEmpty(), "no number moved, so no row belongs on the node");
     }
 
     @Test
     void aKnobThatChangesTheParallelCountIsUsed() {
-        final EnumSet<Knob> used = SensitivityScan
-            .scan(REFERENCE, EnumSet.of(Knob.COIL, Knob.MODE), MODES, state -> withParallel(1 + state.coilTier()));
+        final EnumSet<Settings> used = SensitivityScan.scan(
+            REFERENCE,
+            EnumSet.of(Settings.GT_COIL, Settings.GT_MODE),
+            MODES,
+            state -> withParallel(1 + state.coilTier()));
 
-        assertEquals(EnumSet.of(Knob.COIL), used);
+        assertEquals(EnumSet.of(Settings.GT_COIL), used);
     }
 
     /** Heat is as much a chart number as speed is, so a coil that only changes heat still counts. */
     @Test
     void aKnobThatOnlyChangesHeatIsUsed() {
-        final EnumSet<Knob> used = SensitivityScan
-            .scan(REFERENCE, EnumSet.of(Knob.COIL), MODES, state -> withMachineHeat(1800 + 900 * state.coilTier()));
+        final EnumSet<Settings> used = SensitivityScan.scan(
+            REFERENCE,
+            EnumSet.of(Settings.GT_COIL),
+            MODES,
+            state -> withMachineHeat(1800 + 900 * state.coilTier()));
 
-        assertEquals(EnumSet.of(Knob.COIL), used);
+        assertEquals(EnumSet.of(Settings.GT_COIL), used);
     }
 
     /** Two knobs, one machine: only the one that is read comes back. */
     @Test
     void knobsAreJudgedOneAtATime() {
         final Function<StructureState, ProbeReading> readings = state -> withParallel(2 * state.pipeCasingTier());
-        final EnumSet<Knob> used = SensitivityScan
-            .scan(REFERENCE, EnumSet.of(Knob.COIL, Knob.PIPE_CASING, Knob.SOLENOID), MODES, readings);
+        final EnumSet<Settings> used = SensitivityScan.scan(
+            REFERENCE,
+            EnumSet.of(Settings.GT_COIL, Settings.GT_PIPE_CASING, Settings.GT_SOLENOID),
+            MODES,
+            readings);
 
-        assertEquals(EnumSet.of(Knob.PIPE_CASING), used);
+        assertEquals(EnumSet.of(Settings.GT_PIPE_CASING), used);
     }
 
     /** A knob outside the candidate set is never asked about, however much the machine reads it. */
     @Test
     void onlyCandidatesAreScanned() {
-        final EnumSet<Knob> used = SensitivityScan
-            .scan(REFERENCE, EnumSet.of(Knob.WIDTH), MODES, state -> withParallel(1 + state.coilTier()));
+        final EnumSet<Settings> used = SensitivityScan
+            .scan(REFERENCE, EnumSet.of(Settings.GT_WIDTH), MODES, state -> withParallel(1 + state.coilTier()));
 
         assertTrue(used.isEmpty());
     }
@@ -87,13 +96,13 @@ class GTSensitivityScanTest {
     /** A machine that declines an end says nothing, so the row stays off rather than guessing. */
     @Test
     void aDeclinedReadingLeavesTheKnobOff() {
-        final EnumSet<Knob> used = SensitivityScan.scan(
+        final EnumSet<Settings> used = SensitivityScan.scan(
             REFERENCE,
-            EnumSet.of(Knob.COIL),
+            EnumSet.of(Settings.GT_COIL),
             MODES,
             state -> state.coilTier() == 0 ? null : withParallel(1 + state.coilTier()));
 
-        assertFalse(used.contains(Knob.COIL));
+        assertFalse(used.contains(Settings.GT_COIL));
     }
 
     /** A machine with a third mode must have that mode examined, not just the first two. */
@@ -105,12 +114,12 @@ class GTSensitivityScanTest {
             : flat();
 
         assertFalse(
-            SensitivityScan.scan(REFERENCE, EnumSet.of(Knob.COIL, Knob.MODE), 2, readings)
-                .contains(Knob.COIL),
+            SensitivityScan.scan(REFERENCE, EnumSet.of(Settings.GT_COIL, Settings.GT_MODE), 2, readings)
+                .contains(Settings.GT_COIL),
             "a two-mode sweep cannot see it");
         assertTrue(
-            SensitivityScan.scan(REFERENCE, EnumSet.of(Knob.COIL, Knob.MODE), 3, readings)
-                .contains(Knob.COIL),
+            SensitivityScan.scan(REFERENCE, EnumSet.of(Settings.GT_COIL, Settings.GT_MODE), 3, readings)
+                .contains(Settings.GT_COIL),
             "a three-mode machine must have its third mode scanned");
     }
 
@@ -123,19 +132,19 @@ class GTSensitivityScanTest {
         final Function<StructureState, ProbeReading> readings = state -> state.mode() == 2 ? withParallel(9) : flat();
 
         assertTrue(
-            SensitivityScan.scan(REFERENCE, EnumSet.of(Knob.MODE), 3, readings)
-                .contains(Knob.MODE),
+            SensitivityScan.scan(REFERENCE, EnumSet.of(Settings.GT_MODE), 3, readings)
+                .contains(Settings.GT_MODE),
             "mode 2 differs, so the mode row belongs on the node");
         assertFalse(
-            SensitivityScan.scan(REFERENCE, EnumSet.of(Knob.MODE), 2, readings)
-                .contains(Knob.MODE),
+            SensitivityScan.scan(REFERENCE, EnumSet.of(Settings.GT_MODE), 2, readings)
+                .contains(Settings.GT_MODE),
             "with only two modes nothing differs, so no row");
     }
 
     /** The scan must cover what the row offers, or a knob could move outside the range it was tested on. */
     @Test
     void everyKnobRangeIsRealAndNonEmpty() {
-        for (final Knob knob : Knob.values()) {
+        for (final Settings knob : StructureState.KNOBS) {
             final GTSettings.TierRange range = GTSettings.knobRange(knob);
             assertTrue(range.min() < range.max(), knob + " offers nothing to scan: " + range);
         }

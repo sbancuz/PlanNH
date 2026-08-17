@@ -7,6 +7,8 @@ import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.data.Settings;
+
 /**
  * What one GregTech machine does to a recipe, in the terms
  * {@link gregtech.api.util.OverclockCalculator} takes. This mirrors GT's own
@@ -24,20 +26,7 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
     ToDoubleFunction<StructureState> euModifier, ToIntFunction<StructureState> maxParallel,
     ToDoubleFunction<StructureState> eutIncreasePerOC, ToDoubleFunction<StructureState> durationDecreasePerOC,
     ToIntFunction<StructureState> machineHeat, boolean heatOC, boolean heatDiscount, int recipeHeatOverride,
-    int maxTierSkips, boolean unlimitedTierSkips, @Nullable RecipeOverride recipeOverride, EnumSet<Knob> knobs) {
-
-    /** Structure inputs a preset reads; the UI shows exactly the rows named here. */
-    public enum Knob {
-        COIL,
-        SOLENOID,
-        ITEM_PIPE,
-        PIPE_CASING,
-        SAWBLADE,
-        ELECTRODE,
-        STRUCTURE_TIER,
-        WIDTH,
-        MODE
-    }
+    int maxTierSkips, boolean unlimitedTierSkips, @Nullable RecipeOverride recipeOverride, EnumSet<Settings> knobs) {
 
     /** A machine that ignores the recipe's own cost, like the Multi Smelter's fixed 4 EU/t over 128t. */
     public record RecipeOverride(int eut, int duration) {}
@@ -71,7 +60,7 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
         private boolean unlimitedTierSkips;
         @Nullable
         private RecipeOverride recipeOverride;
-        private final EnumSet<Knob> knobs = EnumSet.noneOf(Knob.class);
+        private final EnumSet<Settings> knobs = EnumSet.noneOf(Settings.class);
 
         private Builder() {}
 
@@ -170,8 +159,8 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
             return this;
         }
 
-        public Builder knobs(final Knob... used) {
-            for (final Knob knob : used) {
+        public Builder knobs(final Settings... used) {
+            for (final Settings knob : used) {
                 knobs.add(knob);
             }
             return this;

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.SettingDef;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 /**
@@ -27,6 +29,24 @@ class SettingOptionsTest {
         final Map<RecipeProperty<?>, Object> props = new HashMap<>();
         props.put(MAP, recipeMap);
         return new RecipeContext(props);
+    }
+
+    /**
+     * The shared vocabulary must not carry another mod's tier names. Settings.VOLTAGE once held a
+     * transcribed copy of GTValues.VN, which nothing rendered and which would have gone quietly wrong
+     * the day GregTech added a tier; the coil, solenoid and casing rows are the same shape. Whether a
+     * provider has attached a def is a different question - this only asserts that none is baked in.
+     */
+    @Test
+    void theSharedVocabularyBakesInNoModsChoices() {
+        final List<String> baked = new ArrayList<>();
+        for (final Settings setting : Settings.values()) {
+            if (setting == Settings.BURNABLE_OVERRIDE) continue; // PlanNH's own, not a mod's
+            if (setting.def()
+                .hasOptions()) baked.add(setting.key());
+        }
+
+        assertEquals(List.of(), baked, "these settings name another mod's choices in shared code");
     }
 
     @Test

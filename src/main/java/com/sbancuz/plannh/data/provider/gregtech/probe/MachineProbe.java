@@ -10,9 +10,9 @@ import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
 import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
@@ -232,7 +232,7 @@ public final class MachineProbe {
             final ProbeReading at = subject.read(state, recipe);
             return at != null && at.isRunnable() ? at : reference;
         };
-        final EnumSet<Knob> knobs = SensitivityScan
+        final EnumSet<Settings> knobs = SensitivityScan
             .scan(reference(), subject.reachableKnobs(), subject.modeCount(), readings);
         return toPreset(reference, readings, knobs);
     }
@@ -244,7 +244,7 @@ public final class MachineProbe {
      */
     @Nonnull
     public static GTMachinePreset toPreset(@Nonnull final ProbeReading reference,
-        @Nonnull final Function<StructureState, ProbeReading> readings, @Nonnull final EnumSet<Knob> knobs) {
+        @Nonnull final Function<StructureState, ProbeReading> readings, @Nonnull final EnumSet<Settings> knobs) {
         final GTMachinePreset.Builder preset = GTMachinePreset.builder()
             .parallel(
                 s -> Math.max(
@@ -262,7 +262,7 @@ public final class MachineProbe {
                     .durationDecreasePerOC(),
                 s -> readings.apply(s)
                     .eutIncreasePerOC())
-            .knobs(knobs.toArray(new Knob[0]));
+            .knobs(knobs.toArray(new Settings[0]));
 
         // GregTech sets a machine heat even where it never overclocks on one, so record it either way
         // and let the flags decide whether the applier hands it to the calculator.

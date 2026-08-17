@@ -6,7 +6,7 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset.Knob;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
@@ -34,37 +34,38 @@ public final class SensitivityScan {
      * no GregTech machine does that, they scale with a casing tier.
      */
     @Nonnull
-    public static EnumSet<Knob> scan(@Nonnull final StructureState reference, @Nonnull final EnumSet<Knob> candidates,
-        final int modeCount, @Nonnull final Function<StructureState, ProbeReading> readings) {
-        if (!candidates.contains(Knob.MODE) || modeCount < 2) return scanAt(reference, candidates, readings);
+    public static EnumSet<Settings> scan(@Nonnull final StructureState reference,
+        @Nonnull final EnumSet<Settings> candidates, final int modeCount,
+        @Nonnull final Function<StructureState, ProbeReading> readings) {
+        if (!candidates.contains(Settings.GT_MODE) || modeCount < 2) return scanAt(reference, candidates, readings);
 
         // A mode picks which machine a multiblock is, so the other knobs have to be judged in each of
         // them. The Mega Distillation Tower scales with its height in distillery mode and ignores it in
         // tower mode, and judging it in tower mode alone would hide the height row. The count comes
         // from the machine rather than from a row, because GT ships three-mode machines.
-        final EnumSet<Knob> others = EnumSet.copyOf(candidates);
-        others.remove(Knob.MODE);
+        final EnumSet<Settings> others = EnumSet.copyOf(candidates);
+        others.remove(Settings.GT_MODE);
 
-        final EnumSet<Knob> used = EnumSet.noneOf(Knob.class);
+        final EnumSet<Settings> used = EnumSet.noneOf(Settings.class);
         ProbeReading inFirstMode = null;
         for (int mode = 0; mode < modeCount; mode++) {
-            final StructureState inMode = reference.with(Knob.MODE, mode);
+            final StructureState inMode = reference.with(Settings.GT_MODE, mode);
             used.addAll(scanAt(inMode, others, readings));
 
             // Mode itself is judged across the same sweep rather than by a pair of ends, or a machine
             // whose first two modes happen to agree would lose its mode row on the strength of them.
             final ProbeReading here = readings.apply(inMode);
             if (inFirstMode == null) inFirstMode = here;
-            else if (differ(inFirstMode, here)) used.add(Knob.MODE);
+            else if (differ(inFirstMode, here)) used.add(Settings.GT_MODE);
         }
         return used;
     }
 
     @Nonnull
-    private static EnumSet<Knob> scanAt(final StructureState reference, final EnumSet<Knob> candidates,
+    private static EnumSet<Settings> scanAt(final StructureState reference, final EnumSet<Settings> candidates,
         final Function<StructureState, ProbeReading> readings) {
-        final EnumSet<Knob> used = EnumSet.noneOf(Knob.class);
-        for (final Knob knob : candidates) {
+        final EnumSet<Settings> used = EnumSet.noneOf(Settings.class);
+        for (final Settings knob : candidates) {
             final GTSettings.TierRange range = GTSettings.knobRange(knob);
             if (range.min() >= range.max()) continue;
 

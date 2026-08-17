@@ -5,6 +5,7 @@
 plannh.settings.duration_ticks=Duration
 plannh.settings.tick_modifier=Accel
 plannh.settings.machines=Mach
+plannh.settings.energy_per_tick=Energy/t
 plannh.settings.inputs_per_tick=Inputs/t
 plannh.settings.burnable_override=Burnable
 
@@ -26,6 +27,7 @@ plannh.settings.voltage=Tier
 plannh.settings.amp=Amp
 plannh.settings.speed=Speed
 plannh.settings.parallels=Par
+plannh.settings.gt_multiblock=Multiblock
 plannh.settings.machine_heat=M. Heat
 plannh.settings.recipe_heat=R. Heat
 plannh.settings.heat_discount_mult=HD Mult.%
@@ -35,6 +37,7 @@ plannh.settings.duration_decrease_per_oc=Spd%/OC
 plannh.settings.max_overclocks=Max OC
 plannh.settings.max_regular_oc=Max Reg OC
 plannh.settings.max_tier_skips=Max Skips
+plannh.settings.fuel_efficiency=Fuel Eff.%
 plannh.settings.perfect_oc=Perfect OC
 plannh.settings.heat_oc=Heat OC
 plannh.settings.heat_discount=Heat Disc.
