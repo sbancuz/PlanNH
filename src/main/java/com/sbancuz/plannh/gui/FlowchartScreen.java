@@ -217,23 +217,25 @@ public class FlowchartScreen extends ModularScreen {
                         .childPadding(2)
                         .child(
                             new ButtonWidget<>().overlay(
-                                IKey.str("\u21ba")
+                                IKey.str("↺")
                                     .scale(2f))
+                                .addTooltipLine("Undo")
                                 .onMousePressed(_ -> {
                                     canvas.undoGraph();
                                     return true;
                                 }))
                         .child(
                             new ButtonWidget<>().overlay(
-                                IKey.str("\u21bb")
+                                IKey.str("↻")
                                     .scale(2f))
+                                .addTooltipLine("Redo")
                                 .onMousePressed(_ -> {
                                     canvas.redoGraph();
                                     return true;
                                 }))
                         .child(
                             new ButtonWidget<>().overlay(IKey.str("AL"))
-                                .tooltipStatic(t -> t.addLine(IKey.str("Auto layout")))
+                                .addTooltipLine("Auto layout")
                                 .onMousePressed(_ -> {
                                     canvas.autoLayoutNodes();
                                     return true;
@@ -247,29 +249,17 @@ public class FlowchartScreen extends ModularScreen {
                                         .setSnapToGrid(val)))
                                 .overlay(IKey.str("S2G"))
                                 .addTooltipLine("Snap to Grid"))
-                        /*
-                         * .child(
-                         * new CycleButtonWidget()
-                         * .value(
-                         * new EnumValue.Dynamic<>(
-                         * BalanceMode.class,
-                         * () -> Plan.getActiveGraph()
-                         * .getBalanceMode(),
-                         * val -> Plan.getActiveGraph()
-                         * .setBalanceMode(val)))
-                         * .stateOverlay(BalanceMode.NONE, IKey.str("M:-"))
-                         * .stateOverlay(BalanceMode.FORWARD, IKey.str("M:F"))
-                         * .stateOverlay(BalanceMode.BACKWARD, IKey.str("M:B"))
-                         * .addTooltipLine("Cycle Balance Modes"))
-                         */
                         .child(
-                            new CycleButton<>(BalanceMode.class).overlay(v -> IKey.str(CycleButton.shortName(v)))
+                            new CycleButton<>(BalanceMode.class).overlay(
+                                v -> IKey.str(CycleButton.shortName(v))
+                                    .scale(.8f))
                                 .source(
                                     () -> canvas.getGraph()
                                         .getBalanceMode())
                                 .onCycle(
                                     next -> canvas.getGraph()
-                                        .setBalanceMode(next)))
+                                        .setBalanceMode(next))
+                                .addTooltipLine("Cycle Balance Modes"))
                         .child(
                             new ButtonWidget<>().overlay(IKey.str("Ops"))
                                 .onMousePressed(_ -> {
@@ -279,29 +269,19 @@ public class FlowchartScreen extends ModularScreen {
                                         g.setOpsMode(!g.isOpsMode());
                                     }
                                     return true;
-                                }))
-                        /*
-                         * .child(
-                         * new CycleButtonWidget()
-                         * .value(
-                         * new EnumValue.Dynamic<>(
-                         * SummaryMode.class,
-                         * () -> Plan.getInstance()
-                         * .getSummaryMode(),
-                         * val -> Plan.getInstance()
-                         * .setSummaryMode(val)))
-                         * .stateOverlay(SummaryMode.CYCLES, IKey.str("S:C"))
-                         * .stateOverlay(SummaryMode.THROUGHPUT, IKey.str("S:T"))
-                         * .addTooltipLine("Cycle Summary Modes"))
-                         */
+                                })
+                                .addTooltipLine("Toggle Ops"))
                         .child(
-                            new CycleButton<>(SummaryMode.class).overlay(v -> IKey.str(CycleButton.shortName(v)))
+                            new CycleButton<>(SummaryMode.class).overlay(
+                                v -> IKey.str(CycleButton.shortName(v))
+                                    .scale(.8f))
                                 .current(
                                     Plan.getInstance()
                                         .getSummaryMode())
                                 .onCycle(
                                     next -> Plan.getInstance()
-                                        .setSummaryMode(next)))
+                                        .setSummaryMode(next))
+                                .addTooltipLine("Cycle Summary Modes"))
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
                             canvas.addGroup(canvas.getCanvasScreenCenterX(), canvas.getCanvasScreenCenterY());
                             return true;
@@ -699,7 +679,7 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawRect(0, TITLE_H, w, 1, PlannhColors.SUMMARY_TITLE_LINE.getColor());
             GuiDraw.drawText("Summary", TITLE_TEXT_X, TITLE_TEXT_Y, 1.0f, PlannhColors.TEXT_WHITE.getColor(), false);
             GuiDraw.drawText(
-                collapsed ? "[+]" : "\u2212",
+                collapsed ? "[+]" : "−",
                 w - COLLAPSE_W,
                 COLLAPSE_TEXT_Y,
                 1.0f,
@@ -884,7 +864,7 @@ public class FlowchartScreen extends ModularScreen {
             GuiDraw.drawText(title, SECTION_HEADER_TEXT_X, ly + SECTION_HEADER_TEXT_Y_OFF, 1.0f, titleColor, false);
             if (section != null) {
                 GuiDraw.drawText(
-                    sectionOpen(section) ? "\u2212" : "+",
+                    sectionOpen(section) ? "−" : "+",
                     w - SECTION_TOGGLE_X_OFF,
                     ly + SECTION_HEADER_TEXT_Y_OFF,
                     1.0f,
@@ -912,7 +892,7 @@ public class FlowchartScreen extends ModularScreen {
                     .get(node.getId());
                 if (nb == null || nb.operations() <= 0) continue;
                 GuiDraw.drawText(
-                    "\u00d7" + GuiHelper.formatCount(nb.operations()) + "  " + node.getMachineName(),
+                    "×" + GuiHelper.formatCount(nb.operations()) + "  " + node.getMachineName(),
                     ITEM_TEXT_X,
                     ly,
                     0.8f,
