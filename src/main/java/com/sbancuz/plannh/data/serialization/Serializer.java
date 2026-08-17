@@ -21,6 +21,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.reflect.TypeToken;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
@@ -88,7 +89,8 @@ public final class Serializer {
             final JsonObject root = GSON.fromJson(json.toString(), JsonObject.class);
             return jsonToGraph(root);
         } catch (final Exception e) {
-            throw new RuntimeException("Failed to decode flowchart", e);
+            PlanNH.LOG.warn("Failed to decode flowchart: {}", e.getMessage());
+            return new Graph("");
         }
     }
 
@@ -298,7 +300,9 @@ public final class Serializer {
 
         // Read independently of everything else, like the per-node targets: an old save has no such
         // key, and a corrupt one costs the user a preference rather than the chart.
-        graph.setExcessChoice(ChoiceKey.of(GSON.fromJson(root, new TypeToken<List<PortRef>>() {}.getType())));
+        graph.setExcessChoice(
+            ChoiceKey
+                .of(GSON.fromJson(root.getAsJsonArray("excessChoices"), new TypeToken<List<PortRef>>() {}.getType())));
 
         foldsFromJson(root.getAsJsonObject("sectionFolds"), graph.collapsedSummarySections);
 

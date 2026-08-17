@@ -28,7 +28,7 @@ public class MachineConfig {
     }
 
     public MachineConfig(@Nullable final MachineProfile requested) {
-        this(requested, Map.of());
+        this(requested, new HashMap<>());
     }
 
     public MachineConfig(@Nullable final MachineProfile requested, Map<String, Object> settings) {

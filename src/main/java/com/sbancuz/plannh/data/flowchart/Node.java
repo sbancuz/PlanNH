@@ -24,15 +24,15 @@ import lombok.Setter;
 public class Node extends GraphData {
 
     // cant be final because of transient deserialization resulting in null
-    private transient List<Port<?>> inputs = new ArrayList<>();
-    private transient List<Port<?>> outputs = new ArrayList<>();
+    private transient List<Port<?>> inputs;
+    private transient List<Port<?>> outputs;
 
     // needed for coloring to be machine specific
     private final String machineName;
     private final Recipe.RecipeId recipeId;
 
     private final MachineConfig machineConfig;
-    private transient Map<RecipeProperty<?>, Object> properties = new HashMap<>();
+    private transient Map<RecipeProperty<?>, Object> properties;
 
     @Setter
     private boolean machineCountFixed;
@@ -83,8 +83,11 @@ public class Node extends GraphData {
         IRecipeHandler handler = ref.handler;
         int recipeIndex = ref.recipeIndex;
 
+        if (inputs == null) inputs = new ArrayList<>();
         inputs.clear();
+        if (outputs == null) outputs = new ArrayList<>();
         outputs.clear();
+        if (properties == null) properties = new HashMap<>();
         properties.clear();
 
         Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);

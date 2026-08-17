@@ -27,4 +27,8 @@ public record ChoiceKey(List<PortRef> gateAnchors) implements Comparable<ChoiceK
         }
         return Integer.compare(gateAnchors.size(), other.gateAnchors.size());
     }
+
+    public static ChoiceKey none() {
+        return ChoiceKey.of(new ArrayList<>());
+    }
 }

@@ -61,7 +61,7 @@ public class Graph {
      * note rather than allowed to degrade it.
      */
     @Getter
-    private ChoiceKey excessChoice;
+    private ChoiceKey excessChoice = ChoiceKey.none();
 
     private BalanceResult balance = null;
     private Summary summary = null;

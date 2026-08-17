@@ -321,7 +321,6 @@ public class GTProvider implements PropertyProvider {
             props.put(SPECIAL_VALUE, r.mSpecialValue);
         }
 
-        // Reset everything to not ignore burnables
         if(!node.getInputs().isEmpty() || !node.getOutputs().isEmpty())
             throw new RuntimeException("inputs or outputs were initialized");
 
