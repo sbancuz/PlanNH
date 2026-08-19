@@ -173,6 +173,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final Map<UUID, List<int[]>> edgeRoutes = new HashMap<>();
     private long routeSignature = Long.MIN_VALUE;
 
+    private final ArrowWidget arrow;
+
     public CanvasWidget(Menu<?> menu, ModularPanel panel) {
         this.graph = Plan.getActiveGraph();
         this.panel = panel;
@@ -189,7 +191,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildNodeWidgets();
 
         // TODO remove after testing
-        child(new ArrowWidget());
+        arrow = new ArrowWidget(this);
+        child(arrow);
 
         background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
     }
@@ -1219,6 +1222,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         menuOpen = false;
 
         if (mouseButton == 0) {
+            arrow.increment();
             final int cmx = absMx - getArea().x;
             final int cmy = absMy - getArea().y;
             final float z = graph.getZoom();
@@ -1258,6 +1262,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         if (mouseButton == 1) {
             final int cmx = absMx - getArea().x;
             final int cmy = absMy - getArea().y;
+
+            arrow.setFollow(!arrow.isFollow());
 
             /*
              * // Check if over a group header (pass click through for its own right-click menu)

@@ -252,7 +252,7 @@ public class FlowchartScreen extends ModularScreen {
                         .child(
                             new CycleButton<>(BalanceMode.class).overlay(
                                 v -> IKey.str(CycleButton.shortName(v))
-                                    .scale(.8f))
+                                    .scale(.5f))
                                 .source(
                                     () -> canvas.getGraph()
                                         .getBalanceMode())
