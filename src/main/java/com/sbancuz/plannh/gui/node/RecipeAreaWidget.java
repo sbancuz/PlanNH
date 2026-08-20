@@ -83,6 +83,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                         .forEach(
                             pos -> child(
                                 new PortWidget(
+                                    parent.getCanvas(),
                                     port,
                                     port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
                                     yShift,
@@ -96,6 +97,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                     .forEach(
                         pos -> child(
                             new PortWidget(
+                                parent.getCanvas(),
                                 port,
                                 port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
                                 yShift,

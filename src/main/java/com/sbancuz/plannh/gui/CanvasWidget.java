@@ -140,12 +140,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private int panStartMouseX, panStartMouseY;
     private float panStartX, panStartY;
 
+    // private ArrowWidget arrowWidgetInCreation;
+    @Getter
     private boolean creatingEdge = false;
-    private UUID edgeSourceNodeId;
-    private int edgeSourcePortIndex;
-    private int edgeEndX, edgeEndY;
-    private UUID edgeHoverNodeId;
-    private int edgeHoverPortIndex;
 
     @Getter
     private boolean menuOpen;
@@ -173,8 +170,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final Map<UUID, List<int[]>> edgeRoutes = new HashMap<>();
     private long routeSignature = Long.MIN_VALUE;
 
-    private final ArrowWidget arrow;
-
     public CanvasWidget(Menu<?> menu, ModularPanel panel) {
         this.graph = Plan.getActiveGraph();
         this.panel = panel;
@@ -189,10 +184,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildNoteWidgets();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
-
-        // TODO remove after testing
-        arrow = new ArrowWidget(this);
-        child(arrow);
 
         background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
     }
@@ -350,41 +341,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         graph.markDirty();
         PlanAPI.save();
         closeTargetEditor();
-    }
-
-    public void moveGroupNodes(final UUID groupId, final int deltaX, final int deltaY) {
-        /*
-         * final Group group = graph.groups.get(groupId);
-         * if (group == null) return;
-         * for (final UUID nodeId : group.nodeIds) {
-         * final Node node = graph.nodes.get(nodeId);
-         * if (node == null) continue;
-         * node.x += deltaX;
-         * node.y += deltaY;
-         * final RecipeNodeWidget w = nodeWidgets.get(nodeId);
-         * if (w != null) {
-         * // w.syncTransform(zoom, panX, graph.getPanY());
-         * }
-         * }
-         */
-    }
-
-    public void setGroupNodesVisible(final UUID groupId, final boolean visible) {
-        /*
-         * final Group group = graph.groups.get(groupId);
-         * if (group == null) return;
-         * for (final UUID nodeId : group.nodeIds) {
-         * if (visible) {
-         * if (nodeWidgets.containsKey(nodeId)) continue;
-         * final Node node = graph.nodes.get(nodeId);
-         * if (node == null) continue;
-         * addNodeWidget(node);
-         * } else {
-         * final RecipeNodeWidget w = nodeWidgets.remove(nodeId);
-         * if (w != null) remove(w);
-         * }
-         * }
-         */
     }
 
     public void recheckMembershipAndFit() {
@@ -596,12 +552,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             drawGrid(width, height);
         }
 
-        drawArrows();
         drawExternalChips();
-
-        if (creatingEdge) {
-            drawPreviewLine();
-        }
 
         drawHoveredPortLabels();
     }
@@ -834,20 +785,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             false);
     }
 
-    /**
-     * Converts a canvas-space X coordinate to world space.
-     */
-    private int toWorldX(final int cx) {
-        return Math.round((cx - graph.getPanX()) / graph.getZoom());
-    }
-
-    /**
-     * Converts a canvas-space Y coordinate to world space.
-     */
-    private int toWorldY(final int cy) {
-        return Math.round((cy - graph.getPanY()) / graph.getZoom());
-    }
-
     public int getCanvasMouseX() {
         return Math.round((getContext().getAbsMouseX() - getArea().x - graph.getPanX()) / graph.getZoom());
     }
@@ -862,14 +799,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public int getCanvasScreenCenterY() {
         return Math.round(((float) getArea().height / 2 - getArea().y - graph.getPanY()) / graph.getZoom());
-    }
-
-    private static boolean containsPoint(final Area a, final int mx, final int my) {
-        return mx >= a.x && mx < a.x + a.width && my >= a.y && my < a.y + a.height;
-    }
-
-    private static boolean containsPointInclusive(final Area a, final int mx, final int my) {
-        return mx >= a.x && mx <= a.x + a.width && my >= a.y && my <= a.y + a.height;
     }
 
     /**
@@ -1024,118 +953,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return hash * 31 + value;
     }
 
-    private void drawArrows() {
-        ensureRoutes();
-        for (final Edge edge : graph.getEdges()
-            .values()) {
-            final RecipeNodeWidget srcWidget = nodeWidgets.get(edge.sourceNodeId);
-            final RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
-            if (srcWidget == null || dstWidget == null) continue;
-
-            final Node srcNode = graph.getNodes()
-                .get(edge.sourceNodeId);
-            final int color = edgeColor(srcNode, edge.sourceOutputIndex);
-
-            final List<int[]> route = edgeRoutes.get(edge.id);
-            if (route != null && route.size() >= 2) {
-                drawRoutedArrow(route, color);
-                continue;
-            }
-
-            final float z2 = graph.getZoom();
-            final int srcX = widgetX(srcWidget) + Math.round(worldWidth(srcWidget) * z2);
-            final int srcY = widgetY(srcWidget) + portY(edge.sourceOutputIndex);
-            final int dstX = widgetX(dstWidget);
-            final int dstY = widgetY(dstWidget) + portY(edge.targetInputIndex);
-
-            drawArrow(srcX, srcY, dstX, dstY, color);
-        }
-    }
-
-    /** Edge color follows the ingredient flowing through it; type color as fallback. */
-    private static int edgeColor(@Nullable final Node srcNode, final int outputIndex) {
-        if (srcNode == null || outputIndex < 0
-            || outputIndex >= srcNode.getOutputs()
-                .size()) {
-            return ARROW_COLOR_ITEM;
-        }
-        return srcNode.getOutputs()
-            .get(outputIndex)
-            .getArrowColor();
-    }
-
-    /**
-     * Draws a multi-segment orthogonal arrow from cached world-space waypoints.
-     */
-    private void drawRoutedArrow(final List<int[]> route, final int color) {
-        final int n = route.size();
-        final int[] sx = new int[n];
-        final int[] sy = new int[n];
-        for (int i = 0; i < n; i++) {
-            sx[i] = Math.round(route.get(i)[0] * graph.getZoom() + graph.getPanX());
-            sy[i] = Math.round(route.get(i)[1] * graph.getZoom() + graph.getPanY());
-        }
-
-        final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
-        final int x2 = sx[n - 1];
-        final int y2 = sy[n - 1];
-        // Stop the line at the arrow base so it does not poke through the head (last segment is horizontal).
-        sx[n - 1] = Math.round(x2 - as);
-
-        final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
-        // Contrast underlay so the colored line stays readable over any world background.
-        final int outline = IngredientColors.outlineFor(color);
-        drawLineStrip(sx, sy, outline, thickness + EDGE_OUTLINE_EXTRA);
-        drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, outline);
-        drawLineStrip(sx, sy, color, thickness);
-        drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO, color);
-    }
-
-    private void drawArrow(final int x1, final int y1, final int x2, final int y2, final int color) {
-        final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
-        final int ex = Math.round(x2 - as);
-        final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
-        final int outline = IngredientColors.outlineFor(color);
-        drawOrthogonalLine(x1, y1, x2, y2, ex, outline, thickness + EDGE_OUTLINE_EXTRA);
-        drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, outline);
-        drawOrthogonalLine(x1, y1, x2, y2, ex, color, thickness);
-        drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO, color);
-    }
-
-    private void drawPreviewLine() {
-        final RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
-        if (srcWidget == null) return;
-
-        final int x1 = widgetX(srcWidget) + Math.round(worldWidth(srcWidget) * graph.getZoom());
-        final int y1 = widgetY(srcWidget) + portY(edgeSourcePortIndex);
-
-        int x2 = edgeEndX;
-        int y2 = edgeEndY;
-
-        if (edgeHoverNodeId != null) {
-            final RecipeNodeWidget dstWidget = nodeWidgets.get(edgeHoverNodeId);
-            if (dstWidget != null) {
-                x2 = widgetX(dstWidget);
-                y2 = widgetY(dstWidget) + portY(edgeHoverPortIndex);
-            }
-        }
-
-        drawOrthogonalLine(
-            x1,
-            y1,
-            x2,
-            y2,
-            x2,
-            PREVIEW_COLOR,
-            Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
-    }
-
-    private void drawOrthogonalLine(final int x1, final int y1, final int x2, final int y2, final int xEnd,
-        final int color, final float thickness) {
-        final int midX = (x1 + x2) / 2;
-        drawLineStrip(new int[] { x1, midX, midX, xEnd }, new int[] { y1, y1, y2, y2 }, color, thickness);
-    }
-
     private static void drawLineStrip(final int[] xs, final int[] ys, final int color, final float thickness) {
         final int r = Color.getRed(color);
         final int g = Color.getGreen(color);
@@ -1149,20 +966,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             }
         });
         GL11.glLineWidth(1);
-    }
-
-    private static void drawArrowHead(final int tipX, final int tipY, final int baseX, final float halfBase,
-        final int color) {
-        final int r = Color.getRed(color);
-        final int g = Color.getGreen(color);
-        final int b = Color.getBlue(color);
-        final int a = Color.getAlpha(color);
-        Platform.setupDrawColor();
-        Platform.startDrawing(Platform.DrawMode.TRIANGLES, Platform.VertexFormat.POS_COLOR, buf -> {
-            addColoredVertex(buf, tipX, tipY, r, g, b, a);
-            addColoredVertex(buf, baseX, Math.round(tipY - halfBase), r, g, b, a);
-            addColoredVertex(buf, baseX, Math.round(tipY + halfBase), r, g, b, a);
-        });
     }
 
     private static void addColoredVertex(final BufferBuilder buf, final int x, final int y, final int r, final int g,
@@ -1222,32 +1025,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         menuOpen = false;
 
         if (mouseButton == 0) {
-            arrow.increment();
             final int cmx = absMx - getArea().x;
             final int cmy = absMy - getArea().y;
             final float z = graph.getZoom();
-            final int worldMx = Math.round((cmx - graph.getPanX()) / z);
-            final int worldMy = Math.round((cmy - graph.getPanY()) / z);
-            for (final RecipeNodeWidget widget : nodeWidgets.values()) {
-                final int localMx = worldMx - Math.round(
-                    widget.getNode()
-                        .getX());
-                final int localMy = worldMy - Math.round(
-                    widget.getNode()
-                        .getY());
-                final int port = widget.getOutputPortAt(localMx, localMy);
-                if (port >= 0) {
-                    creatingEdge = true;
-                    edgeSourceNodeId = widget.getNode()
-                        .getId();
-                    edgeSourcePortIndex = port;
-                    edgeEndX = cmx;
-                    edgeEndY = cmy;
-                    edgeHoverNodeId = null;
-                    edgeHoverPortIndex = -1;
-                    return Result.SUCCESS;
-                }
-            }
 
             if (!isMouseOverAnyNode(absMx, absMy) && !isMouseOverAnyGroup(absMx, absMy)) {
                 final Edge clicked = getEdgeAt(absMx, absMy);
@@ -1260,11 +1040,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             return Result.IGNORE;
         }
         if (mouseButton == 1) {
-            final int cmx = absMx - getArea().x;
-            final int cmy = absMy - getArea().y;
-
-            arrow.setFollow(!arrow.isFollow());
-
             /*
              * // Check if over a group header (pass click through for its own right-click menu)
              * for (final GroupWidget gw : groupWidgets.values()) {
@@ -1294,70 +1069,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private void openContextMenu() {
         contextMenu.pos(getContext().getAbsMouseX(), getContext().getAbsMouseY());
         menuOpen = true;
-    }
-
-    @Override
-    public boolean onMouseRelease(final int mouseButton) {
-        if (creatingEdge) {
-            if (edgeHoverNodeId != null) {
-                final Node srcNode = graph.getNodes()
-                    .get(edgeSourceNodeId);
-                final Node dstNode = graph.getNodes()
-                    .get(edgeHoverNodeId);
-                if (srcNode != null && dstNode != null) {
-                    PlanAPI.recordEdit(
-                        graph,
-                        () -> graph.addEdge(
-                            new Edge(
-                                UUID.randomUUID(),
-                                edgeSourceNodeId,
-                                edgeHoverNodeId,
-                                edgeSourcePortIndex,
-                                edgeHoverPortIndex)));
-                }
-            }
-            creatingEdge = false;
-            edgeHoverNodeId = null;
-            edgeHoverPortIndex = -1;
-            return true;
-        }
-        return true;
-    }
-
-    @Override
-    public void onMouseDrag(final int mouseButton, final long timeSinceClick) {
-        if (creatingEdge) {
-            final int cmx = getContext().getAbsMouseX() - getArea().x;
-            final int cmy = getContext().getAbsMouseY() - getArea().y;
-            edgeEndX = cmx;
-            edgeEndY = cmy;
-
-            edgeHoverNodeId = null;
-            edgeHoverPortIndex = -1;
-
-            final RecipeNodeWidget srcWidget = nodeWidgets.get(edgeSourceNodeId);
-            if (srcWidget == null) return;
-
-            final float z = graph.getZoom();
-            final int worldDragMx = Math.round((cmx - graph.getPanX()) / z);
-            final int worldDragMy = Math.round((cmy - graph.getPanY()) / z);
-            for (final RecipeNodeWidget widget : nodeWidgets.values()) {
-                if (widget == srcWidget) continue;
-                final int localMx = worldDragMx - Math.round(
-                    widget.getNode()
-                        .getX());
-                final int localMy = worldDragMy - Math.round(
-                    widget.getNode()
-                        .getY());
-                final int port = widget.getInputPortAt(localMx, localMy);
-                if (port >= 0 && canConnect(srcWidget.getNode(), edgeSourcePortIndex, widget.getNode(), port)) {
-                    edgeHoverNodeId = widget.getNode()
-                        .getId();
-                    edgeHoverPortIndex = port;
-                    break;
-                }
-            }
-        }
     }
 
     @Override
@@ -1636,5 +1347,22 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Override
     public @NotNull ModularPanel getPanel() {
         return panel;
+    }
+
+    public void startCreatingEdge(boolean edgeOrigin) {
+        creatingEdge = true;
+        ArrowWidget arrowWidget = new ArrowWidget(this);
+        child(arrowWidget);
+        onUpdateListener(_ -> {
+            List<int[]> coords = List.of(); // todo set this
+            arrowWidget.setCoords(edgeOrigin ? coords : coords.reversed());
+        });
+    }
+
+    public void stopCreatingEdge() {
+        creatingEdge = false;
+        onUpdateListener(_ -> {});
+
+        // todo assign edge
     }
 }

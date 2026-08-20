@@ -1014,8 +1014,8 @@ public class FlowchartScreen extends ModularScreen {
         @Override
         public void onMouseDrag(final int mouseButton, final long timeSinceClick) {
             if (!dragging) return;
-            floatX = dragStartX + (getContext().getAbsMouseX() - dragAbsMX);
-            floatY = dragStartY + (getContext().getAbsMouseY() - dragAbsMY);
+            floatX = dragStartX + getContext().getAbsMouseX() - dragAbsMX;
+            floatY = dragStartY + getContext().getAbsMouseY() - dragAbsMY;
             pos(floatX, floatY);
         }
     }
