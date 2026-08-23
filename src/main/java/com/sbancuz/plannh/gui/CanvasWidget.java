@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui;
 
+import static com.sbancuz.plannh.gui.edge.ArrowWidget.MIN_EDGE_WIDTH;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,6 +42,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.client.ScreenEffect;
 import com.sbancuz.plannh.client.UIBlurEffect;
 import com.sbancuz.plannh.data.flowchart.Edge;
+import com.sbancuz.plannh.data.flowchart.Edge2;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -52,6 +55,7 @@ import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
+import com.sbancuz.plannh.gui.node.PortWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
 import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
@@ -134,15 +138,20 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private Graph graph;
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
     @Getter
+    private final Map<UUID, NodeWidget> nodeWidgets2 = new HashMap<>();
+    @Getter
     private final Map<UUID, FlowchartWidget<?, ?>> flowchartWidgets = new HashMap<>();
 
     private boolean panning = false;
     private int panStartMouseX, panStartMouseY;
     private float panStartX, panStartY;
 
-    // private ArrowWidget arrowWidgetInCreation;
     @Getter
     private boolean creatingEdge = false;
+    @Nullable
+    private PortWidget edgeCreationSource;
+    @Nullable
+    private ArrowWidget arrowWidgetInCreation;
 
     @Getter
     private boolean menuOpen;
@@ -1349,20 +1358,66 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return panel;
     }
 
-    public void startCreatingEdge(boolean edgeOrigin) {
+    public void startCreatingEdge(PortWidget edgeCreationSource) {
+        // todo replace with return if never triggered
+        // failsafe just in case
+        if (creatingEdge) throw new RuntimeException("tried to create two arrows at once");
+
+        arrowWidgetInCreation = new ArrowWidget(this);
+        child(arrowWidgetInCreation);
+
         creatingEdge = true;
-        ArrowWidget arrowWidget = new ArrowWidget(this);
-        child(arrowWidget);
+        this.edgeCreationSource = edgeCreationSource;
+        Area startArea = edgeCreationSource.getArea();
+        Area canvasArea = getArea();
+        int startX = startArea.x + startArea.width / 2 - canvasArea.x;
+        int startY = startArea.y + startArea.height / 2 - canvasArea.y;
         onUpdateListener(_ -> {
-            List<int[]> coords = List.of(); // todo set this
-            arrowWidget.setCoords(edgeOrigin ? coords : coords.reversed());
+            int endX = getCanvasMouseX() + MIN_EDGE_WIDTH / 2;
+            int endY = getCanvasMouseY() + MIN_EDGE_WIDTH / 2;
+
+            // todo determine corner direction / switching
+            List<int[]> coords = List
+                .of(new int[] { startX, startY }, new int[] { startX, endY }, new int[] { endX, endY });
+            arrowWidgetInCreation.setCoords(
+                edgeCreationSource.getPortType()
+                    .isOrigin() ? coords : coords.reversed());
         });
     }
 
-    public void stopCreatingEdge() {
-        creatingEdge = false;
-        onUpdateListener(_ -> {});
+    public void stopCreatingEdge(PortWidget edgeCreationTarget) {
+        // todo replace with return if never triggered
+        // failsafe just in case
+        if (!creatingEdge || edgeCreationSource == null)
+            throw new RuntimeException("tried to create two arrows at once");
 
-        // todo assign edge
+        if (edgeCreationSource.canConnect(edgeCreationTarget)) {
+            Edge2 edge = new Edge2(
+                edgeCreationSource.getNodeId(),
+                edgeCreationTarget.getNodeId(),
+                edgeCreationSource.getIndex(),
+                edgeCreationTarget.getIndex());
+
+            graph.getEdges2()
+                .put(edge.getId(), edge);
+
+            stopCreatingEdge(false);
+        } else {
+            stopCreatingEdge(true);
+        }
+    }
+
+    private void stopCreatingEdge(boolean fail) {
+        creatingEdge = false;
+        edgeCreationSource = null;
+        onUpdateListener(_ -> {});
+        if (fail) remove(arrowWidgetInCreation);
+        arrowWidgetInCreation = null; // needs to be after resetting the update listener
+    }
+
+    @Override
+    public boolean onMouseRelease(int mouseButton) {
+        if (creatingEdge) stopCreatingEdge(true);
+        return Interactable.super.onMouseRelease(mouseButton);
     }
 }

@@ -65,6 +65,7 @@ dependencies {
     implementation("com.github.GTNewHorizons:TinkersConstruct:1.14.97-GTNH:dev")
     implementation("com.github.GTNewHorizons:GT5-Unofficial:5.09.54.90:dev")
     implementation("com.github.GTNewHorizons:Applied-Energistics-2-Unofficial:rv3-beta-999-GTNH:dev")
+    implementation("com.github.GTNewHorizons:twilightforest:2.7.36:dev")
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.2.4:dev') { transitive = false }
 
     // runtimeOnlyNonPublishable('net.neoforged:render-nurse:0.0.14')

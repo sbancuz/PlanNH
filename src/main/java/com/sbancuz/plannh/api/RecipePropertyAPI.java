@@ -89,7 +89,7 @@ public final class RecipePropertyAPI {
 
         for (ItemStack a : as) {
             for (ItemStack b : bs) {
-                if (ItemStack.areItemStacksEqual(a, b)) return true;
+                if (a.isItemEqual(b)) return true;
             }
         }
 

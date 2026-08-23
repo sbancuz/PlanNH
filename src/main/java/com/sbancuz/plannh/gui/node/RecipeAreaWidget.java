@@ -6,6 +6,7 @@ import static org.lwjgl.opengl.GL11.glEnable;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,6 +26,8 @@ import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
 
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
+import it.unimi.dsi.fastutil.ints.IntIntPair;
+import lombok.Getter;
 
 public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements IFlowchartDraggable {
 
@@ -34,23 +37,27 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
     private static final Set<NEIRecipeWidget> widgets = new HashSet<>();
 
     private final NodeWidget parent;
-    private final Node data;
     private final NEIRecipeWidget neiWidget;
     private final RecipeHandlerRef handlerRef;
+    // second index is used to differentiate duplicate item ports
+    @Getter
+    private final Map<IntIntPair, PortWidget> inputPorts = new HashMap<>();
+    @Getter
+    private final Map<IntIntPair, PortWidget> outputPorts = new HashMap<>();
 
     private static long lastHandlerUpdate = 0;
     private boolean success = true;
 
     public RecipeAreaWidget(NodeWidget parent) {
         this.parent = parent;
-        this.data = parent.getData();
+        Node data = parent.getData();
 
         handlerRef = RecipeHandlerRef.of(data.getRecipeId());
         if (handlerRef == null) {
             neiWidget = null;
             success = false;
             child(
-                IKey.str("AN ERROR OCCURED DURING LOADING")
+                IKey.str("AN ERROR OCCURRED DURING LOADING")
                     .asWidget());
             return;
         }
@@ -69,39 +76,53 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         int yShift = accessor.plannh$getHandlerInfo()
             .getYShift();
 
-        // inputs
-        if (data.getInputs() != null) {
-            accessor.plannh$setInputs(
-                data.getInputs()
-                    .stream()
-                    .map(Port::getStack)
-                    .toList());
+        List<Port<?>> inputs = data.getInputs();
+        List<Port<?>> outputs = data.getOutputs();
+        // todo needed?
+        if (inputs == null || outputs == null) throw new RuntimeException("inputs / outputs were incorrectly loaded");
 
-            data.getInputs()
-                .forEach(
-                    port -> port.getPositions()
-                        .forEach(
-                            pos -> child(
-                                new PortWidget(
-                                    parent.getCanvas(),
-                                    port,
-                                    port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
-                                    yShift,
-                                    pos))));
+        accessor.plannh$setInputs(
+            inputs.stream()
+                .map(Port::getStack)
+                .toList());
+
+        // inputs
+        for (int i = 0; i < inputs.size(); i++) {
+            Port<?> port = inputs.get(i);
+            List<IntIntPair> positions = port.getPositions();
+            for (int j = 0; j < positions.size(); j++) {
+                IntIntPair index = IntIntPair.of(i, j);
+                PortWidget portWidget = new PortWidget(
+                    parent.getCanvas(),
+                    port,
+                    port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
+                    yShift,
+                    positions.get(j),
+                    index,
+                    data.getId());
+                inputPorts.putIfAbsent(index, portWidget);
+                child(portWidget);
+            }
         }
 
         // outputs
-        if (data.getOutputs() != null) data.getOutputs()
-            .forEach(
-                port -> port.getPositions()
-                    .forEach(
-                        pos -> child(
-                            new PortWidget(
-                                parent.getCanvas(),
-                                port,
-                                port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
-                                yShift,
-                                pos))));
+        for (int i = 0; i < outputs.size(); i++) {
+            Port<?> port = outputs.get(i);
+            List<IntIntPair> positions = port.getPositions();
+            for (int j = 0; j < positions.size(); j++) {
+                IntIntPair index = IntIntPair.of(i, j);
+                PortWidget portWidget = new PortWidget(
+                    parent.getCanvas(),
+                    port,
+                    port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
+                    yShift,
+                    positions.get(j),
+                    index,
+                    data.getId());
+                outputPorts.putIfAbsent(index, portWidget);
+                child(portWidget);
+            }
+        }
     }
 
     @Override

@@ -27,6 +27,7 @@ public class Graph {
      */
     private final SortedMap<UUID, Node> nodes = new TreeMap<>();
     private final SortedMap<UUID, Edge> edges = new TreeMap<>();
+    private final SortedMap<UUID, Edge2> edges2 = new TreeMap<>();
     private final SortedMap<UUID, Note> notes = new TreeMap<>();
     private final SortedMap<UUID, Group> groups = new TreeMap<>();
 

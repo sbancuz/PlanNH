@@ -28,6 +28,9 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
     public NodeWidget(CanvasWidget canvas, Node data) {
         super(canvas, data);
+        canvas.getNodeWidgets2()
+            .put(data.getId(), this);
+
         coverChildren();
         background(bg);
         padding(5);
@@ -66,5 +69,12 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     protected SortedMap<UUID, Node> getDefaultContainer() {
         return canvas.getGraph()
             .getNodes();
+    }
+
+    @Override
+    public void removeFromGraph() {
+        super.removeFromGraph();
+        canvas.getNodeWidgets2()
+            .remove(data.getId());
     }
 }

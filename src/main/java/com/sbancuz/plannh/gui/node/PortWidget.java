@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui.node;
 
+import java.util.UUID;
+
 import org.jetbrains.annotations.NotNull;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
@@ -14,6 +16,7 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
+import lombok.Getter;
 
 public class PortWidget extends Widget<PortWidget> implements Interactable {
 
@@ -26,17 +29,25 @@ public class PortWidget extends Widget<PortWidget> implements Interactable {
 
     private final CanvasWidget canvas;
 
-    // save, so we can toggle permutation
+    // saved, so we can toggle permutation
     private final PositionedStack stack;
-    // this specifies highlight color and dragging behaviour (start/end of arrow)
+    @Getter
     private final PortType portType;
+    @Getter
     private final Port<?> port;
+    @Getter
+    private final IntIntPair index;
+    @Getter
+    private final UUID nodeId;
 
-    public PortWidget(CanvasWidget canvas, Port<?> port, PortType portType, int yShift, IntIntPair pos) {
+    public PortWidget(CanvasWidget canvas, Port<?> port, PortType portType, int yShift, IntIntPair pos,
+        IntIntPair index, UUID nodeId) {
         this.canvas = canvas;
         this.stack = port.getStack();
         this.portType = portType;
         this.port = port;
+        this.index = index;
+        this.nodeId = nodeId;
 
         background(
             new Rectangle().color(portType.borderColor)
@@ -68,37 +79,55 @@ public class PortWidget extends Widget<PortWidget> implements Interactable {
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
         if (mouseButton == 1) {
-            // todo add config menu
+            port.getStack();
+            // todo add config menu, mixin to set permutated and item, and one to early return from
+            // setPermutationToRender if permutated is false
         }
         return Result.SUCCESS;
     }
 
     @Override
-    public boolean onMouseRelease(int mouseButton) {
-        // if addingArrow & compatible, add arrow; else remove arrow
-
-        return Interactable.super.onMouseRelease(mouseButton);
+    public void onMouseDrag(int mouseButton, long timeSinceClick) {
+        if (mouseButton == 0 && portType.supportsEdge && !canvas.isCreatingEdge()) canvas.startCreatingEdge(this);
     }
 
     @Override
-    public void onMouseDrag(int mouseButton, long timeSinceClick) {
-        if (mouseButton == 0 && portType.supportsEdge && !canvas.isCreatingEdge()) return; // initiate arrow creation
+    public boolean onMouseRelease(int mouseButton) {
+        if (canvas.isCreatingEdge()) canvas.stopCreatingEdge(this);
+        return false;
     }
 
+    public boolean canConnect(PortWidget other) {
+        return portType.canConnect(other.portType) && port.canConnect(other.port);
+    }
+
+    @Getter
     public enum PortType {
 
         INPUT(Color.GREEN.main, true, false),
         OUTPUT(Color.BLUE.main, true, true),
-        CATALYST(Color.BLACK.main, false, false);
+        CATALYST(Color.BLACK.main, false);
 
         private final int borderColor;
         private final boolean supportsEdge;
-        private final boolean edgeOrigin;
+        private final boolean origin;
 
-        PortType(int borderColor, boolean supportsEdge, boolean edgeOrigin) {
+        PortType(int borderColor, boolean supportsEdge, boolean origin) {
             this.borderColor = borderColor;
             this.supportsEdge = supportsEdge;
-            this.edgeOrigin = edgeOrigin;
+            this.origin = origin;
+        }
+
+        PortType(int borderColor, boolean supportsEdge) {
+            this(borderColor, supportsEdge, false);
+        }
+
+        private boolean canConnect(PortType other) {
+            return switch (this) {
+                case CATALYST -> false;
+                case INPUT -> other == OUTPUT;
+                case OUTPUT -> other == INPUT;
+            };
         }
     }
 }
