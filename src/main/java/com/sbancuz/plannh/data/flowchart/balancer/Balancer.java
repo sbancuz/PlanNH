@@ -262,6 +262,7 @@ public final class Balancer {
         int totalDuration = 0;
 
         for (final Node node : graph.getNodes().values()) {
+            if (node.getExtractor() == null) continue; // incorrectly loaded node
             final double count = machineCounts.getOrDefault(node.getId(), 0.0);
             totalOps += count;
 

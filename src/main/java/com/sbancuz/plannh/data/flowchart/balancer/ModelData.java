@@ -115,6 +115,7 @@ public final class ModelData {
     ModelData(final Graph graph, final Heuristics heuristics) {
         for (final Node node : graph.getNodes()
             .values()) {
+            if (node.getExtractor() == null) continue; // incorrectly loaded node
             machineIndex.put(node.getId(), machines.size());
             machines.add(new Machine(node));
         }
