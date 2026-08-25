@@ -6,6 +6,7 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.theme.WidgetTheme;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.gui.node.PortWidget;
 
 public class CornerWidget extends Widget<CornerWidget> {
 
@@ -50,5 +51,10 @@ public class CornerWidget extends Widget<CornerWidget> {
 
         size(MIN_EDGE_WIDTH);
         pos(x1, y1);
+    }
+
+    @Override
+    public boolean canHover() {
+        return PortWidget.arrowWidgetInCreation == null;
     }
 }

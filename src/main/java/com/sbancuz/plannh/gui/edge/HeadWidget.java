@@ -5,6 +5,7 @@ import static com.sbancuz.plannh.gui.edge.ArrowWidget.MIN_EDGE_WIDTH;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.theme.WidgetTheme;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.gui.node.PortWidget;
 
 public class HeadWidget extends Widget<HeadWidget> {
 
@@ -35,5 +36,10 @@ public class HeadWidget extends Widget<HeadWidget> {
         size(MIN_EDGE_WIDTH);
 
         pos(x1, y1);
+    }
+
+    @Override
+    public boolean canHover() {
+        return PortWidget.arrowWidgetInCreation == null;
     }
 }

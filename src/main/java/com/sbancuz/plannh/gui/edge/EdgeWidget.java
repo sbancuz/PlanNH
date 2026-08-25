@@ -6,6 +6,7 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.theme.WidgetTheme;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.gui.node.PortWidget;
 
 public class EdgeWidget extends Widget<EdgeWidget> {
 
@@ -25,5 +26,10 @@ public class EdgeWidget extends Widget<EdgeWidget> {
             Math.max(Math.abs(y1 - y0) - MIN_EDGE_WIDTH, MIN_EDGE_WIDTH));
 
         pos(Math.min(x0, x1) + (y0 == y1 ? MIN_EDGE_WIDTH : 0), Math.min(y0, y1) + (x0 == x1 ? MIN_EDGE_WIDTH : 0));
+    }
+
+    @Override
+    public boolean canHover() {
+        return PortWidget.arrowWidgetInCreation == null;
     }
 }

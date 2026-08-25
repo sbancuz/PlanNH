@@ -6,6 +6,7 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.node.PortWidget;
 
 // todo redo component backgrounds such that fractional edge width is supported
 
@@ -86,5 +87,10 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
     public void setCoords(List<int[]> coords) {
         this.coords = coords;
         refresh();
+    }
+
+    @Override
+    public boolean canHover() {
+        return PortWidget.arrowWidgetInCreation == null;
     }
 }
