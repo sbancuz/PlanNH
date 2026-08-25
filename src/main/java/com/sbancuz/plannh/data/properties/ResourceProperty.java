@@ -3,12 +3,7 @@ package com.sbancuz.plannh.data.properties;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.function.ToIntFunction;
-
-import javax.annotation.Nullable;
-
-import net.minecraft.item.ItemStack;
 
 import com.sbancuz.plannh.data.flowchart.Port;
 
@@ -28,8 +23,6 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
     @lombok.Builder.Default
     private final ToIntFunction<T> hashCodeExtractor = Objects::hashCode;
 
-    @lombok.Builder.Default
-    private final Function<T, ItemStack> displayStackProvider = _ -> null;
     @lombok.Builder.Default
     private final ToIntFunction<T> colorProvider = _ -> -1;
 
@@ -63,12 +56,6 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
 
     public int hashValue(final T value) {
         return hashCodeExtractor.applyAsInt(value);
-    }
-
-    /** The ItemStack recipe viewers (NEI) show for this value; null if it has none. */
-    @Nullable
-    public ItemStack displayStack(final T value) {
-        return displayStackProvider.apply(value);
     }
 
     /** Representative bare-RGB color for this value, or -1 when none is derivable. */

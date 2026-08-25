@@ -8,7 +8,6 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -19,7 +18,6 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.data.provider.DefaultProvider;
-import com.sbancuz.plannh.data.provider.gregtech.GTHooks;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.IngredientColors;
 import com.sbancuz.plannh.gui.PlannhColors;
@@ -42,7 +40,6 @@ public final class RecipePropertyAPI {
         .hashCodeExtractor(
             s -> 31 * s.getItem()
                 .hashCode() + s.getItemDamage())
-        .displayStackProvider(stack -> stack)
         .colorProvider(IngredientColors::itemColor)
         .pinInputColor(PlannhColors.PIN_INPUT.getColor())
         .pinOutputColor(PlannhColors.PIN_OUTPUT.getColor())
@@ -64,19 +61,6 @@ public final class RecipePropertyAPI {
         .hashCodeExtractor(
             fs -> fs.getFluid()
                 .hashCode())
-        // Guard sits inside the lambda so GT classes only load if GT is present AND the
-        // lambda actually runs (lambda bodies resolve their classes at call time, not here).
-        .displayStackProvider(fs -> {
-            if (Compat.GREGTECH.isLoaded) {
-                final ItemStack display = GTHooks.fluidDisplayStack(fs);
-                if (display != null) return display;
-            }
-            // Forge's registry fills only from a full container's worth, so normalize the
-            // amount; null when the fluid has no registered container.
-            return FluidContainerRegistry.fillFluidContainer(
-                new FluidStack(fs.getFluid(), FluidContainerRegistry.BUCKET_VOLUME),
-                FluidContainerRegistry.EMPTY_BUCKET.copy());
-        })
         .colorProvider(IngredientColors::fluidColor)
         .pinInputColor(PlannhColors.PIN_FLUID_IN.getColor())
         .pinOutputColor(PlannhColors.PIN_FLUID_OUT.getColor())
@@ -84,8 +68,10 @@ public final class RecipePropertyAPI {
         .build();
 
     private static boolean itemPortsMatch(final Port<ItemStack> pa, final Port<ItemStack> pb) {
-        ItemStack[] as = pa.getStack().items;
-        ItemStack[] bs = pb.getStack().items;
+        ItemStack[] as = pa.getAllStacks()
+            .getFirst().items;
+        ItemStack[] bs = pb.getAllStacks()
+            .getFirst().items;
 
         for (ItemStack a : as) {
             for (ItemStack b : bs) {
@@ -99,10 +85,14 @@ public final class RecipePropertyAPI {
     private static boolean fluidPortsMatch(final Port<FluidStack> pa, final Port<FluidStack> pb) {
         if (Compat.GREGTECH.isLoaded) {
             // gregtech has fluid alternatives so we need to check those
-            FluidStack[] as = Arrays.stream(pa.getStack().items)
+            FluidStack[] as = Arrays.stream(
+                pa.getAllStacks()
+                    .getFirst().items)
                 .map(GTUtility::getFluidFromDisplayStack)
                 .toArray(FluidStack[]::new);
-            FluidStack[] bs = Arrays.stream(pb.getStack().items)
+            FluidStack[] bs = Arrays.stream(
+                pb.getAllStacks()
+                    .getFirst().items)
                 .map(GTUtility::getFluidFromDisplayStack)
                 .toArray(FluidStack[]::new);
 

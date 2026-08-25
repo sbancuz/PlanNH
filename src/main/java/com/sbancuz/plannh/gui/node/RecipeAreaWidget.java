@@ -24,6 +24,7 @@ import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
 import com.sbancuz.plannh.mixins.GTNEIDefaultHandlerAccessor;
 
+import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
@@ -83,21 +84,22 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
         accessor.plannh$setInputs(
             inputs.stream()
-                .map(Port::getStack)
+                .map(Port::getAllStacks)
+                .flatMap(List::stream)
                 .toList());
 
         // inputs
         for (int i = 0; i < inputs.size(); i++) {
             Port<?> port = inputs.get(i);
-            List<IntIntPair> positions = port.getPositions();
-            for (int j = 0; j < positions.size(); j++) {
+            List<PositionedStack> stacks = port.getAllStacks();
+            for (int j = 0; j < stacks.size(); j++) {
                 IntIntPair index = IntIntPair.of(i, j);
+
                 PortWidget portWidget = new PortWidget(
                     parent.getCanvas(),
                     port,
                     port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
                     yShift,
-                    positions.get(j),
                     index,
                     data.getId());
                 inputPorts.putIfAbsent(index, portWidget);
@@ -108,15 +110,15 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         // outputs
         for (int i = 0; i < outputs.size(); i++) {
             Port<?> port = outputs.get(i);
-            List<IntIntPair> positions = port.getPositions();
-            for (int j = 0; j < positions.size(); j++) {
+            List<PositionedStack> stacks = port.getAllStacks();
+            for (int j = 0; j < stacks.size(); j++) {
                 IntIntPair index = IntIntPair.of(i, j);
+
                 PortWidget portWidget = new PortWidget(
                     parent.getCanvas(),
                     port,
                     port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
                     yShift,
-                    positions.get(j),
                     index,
                     data.getId());
                 outputPorts.putIfAbsent(index, portWidget);

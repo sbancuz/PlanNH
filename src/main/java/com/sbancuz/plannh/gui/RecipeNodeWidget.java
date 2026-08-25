@@ -957,26 +957,27 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             }
         }
 
-        final int out = getOutputPortAt(mx, my);
-        if (out >= 0) return hitFor(
-            node.getOutputs()
-                .get(out),
-            true,
-            out);
-        final int in = getInputPortAt(mx, my);
-        if (in >= 0) return hitFor(
-            node.getInputs()
-                .get(in),
-            false,
-            in);
+        // final int out = getOutputPortAt(mx, my);
+        // if (out >= 0) return hitFor(
+        // node.getOutputs()
+        // .get(out),
+        // true,
+        // out);
+        // final int in = getInputPortAt(mx, my);
+        // if (in >= 0) return hitFor(
+        // node.getInputs()
+        // .get(in),
+        // false,
+        // in);
         return null;
     }
 
     @Nullable
     private IngredientHit hitFor(final Port<?> port, final boolean output, final int index) {
-        final ItemStack stack = port.getDisplayStack();
-        if (stack == null) return null;
-        return new IngredientHit(stack, new NodeLookupContext(node.getId(), output, index));
+        // final ItemStack stack = port.getDisplayStack();
+        // if (stack == null) return null;
+        // return new IngredientHit(stack, new NodeLookupContext(node.getId(), output, index));
+        return null;
     }
 
     /** Whether a hovered grid slot sits on the recipe's input side, by slot position. */
@@ -1003,15 +1004,16 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     @Nullable
     private NodeLookupContext portMatching(final ItemStack stack, final boolean output) {
         final List<Port<?>> ports = output ? node.getOutputs() : node.getInputs();
-        for (int i = 0; i < ports.size(); i++) {
-            if (displayMatches(ports.get(i), stack)) return new NodeLookupContext(node.getId(), output, i);
-        }
+        // for (int i = 0; i < ports.size(); i++) {
+        // if (displayMatches(ports.get(i), stack)) return new NodeLookupContext(node.getId(), output, i);
+        // }
         return null;
     }
 
     private static boolean displayMatches(final Port<?> port, final ItemStack stack) {
-        final ItemStack display = port.getDisplayStack();
-        return display != null && display.isItemEqual(stack);
+        // final ItemStack display = port.getDisplayStack();
+        // return display != null && display.isItemEqual(stack);
+        return false;
     }
 
     /** Whether the port draws a throughput row: it holds a value with a positive amount. */

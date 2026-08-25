@@ -5,8 +5,6 @@ import static codechicken.nei.PositionedStack.CHANCE_FULL;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.item.ItemStack;
 
 import com.cleanroommc.modularui.utils.Color;
@@ -14,7 +12,6 @@ import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
 
 import codechicken.nei.PositionedStack;
-import it.unimi.dsi.fastutil.ints.IntIntPair;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -25,15 +22,13 @@ public class Port<T> {
     private final ResourceProperty<T> type;
     private final T value;
     private float chance;
-    private final PositionedStack stack;
-    private final List<IntIntPair> positions = new ArrayList<>();
+    private final List<PositionedStack> allStacks = new ArrayList<>();
 
     public Port(final ResourceProperty<T> type, final T value, final float chance, PositionedStack stack) {
         this.type = type;
         this.value = value;
         this.chance = chance;
-        this.stack = stack;
-        positions.add(IntIntPair.of(stack.relx, stack.rely));
+        allStacks.add(stack);
     }
 
     public int getAmount() {
@@ -42,12 +37,6 @@ public class Port<T> {
 
     public String getDisplayName() {
         return type.formatDisplayName(value);
-    }
-
-    /** The ItemStack recipe viewers (NEI) show for this port's ingredient; null if none. */
-    @Nullable
-    public ItemStack getDisplayStack() {
-        return type.displayStack(value);
     }
 
     /** Pin color for this port's ingredient; the type's pin color when none is derivable. */
@@ -79,7 +68,7 @@ public class Port<T> {
         // chance it would leave here reaches the balancer as a NaN coefficient, where it poisons a
         // whole solve instead of failing anywhere near this line.
         if (newAmount != 0) chance = (getAmount() * chance + other.getAmount() * other.chance) / newAmount;
-        positions.addAll(other.positions);
+        allStacks.addAll(other.allStacks);
         type.setAmount(value, newAmount);
     }
 

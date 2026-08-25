@@ -50,10 +50,10 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private final IntIntPair index;
     private final UUID nodeId;
 
-    public PortWidget(CanvasWidget canvas, Port<?> port, PortType portType, int yShift, IntIntPair pos,
-        IntIntPair index, UUID nodeId) {
+    public PortWidget(CanvasWidget canvas, Port<?> port, PortType portType, int yShift, IntIntPair index, UUID nodeId) {
         this.canvas = canvas;
-        this.stack = port.getStack();
+        this.stack = port.getAllStacks()
+            .get(index.secondInt());
         this.portType = portType;
         this.port = port;
         this.index = index;
@@ -63,11 +63,10 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
             new Rectangle().color(portType.borderColor)
                 .hollow());
         hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
-        pos(pos.leftInt() + PORT_OFFSET_X, pos.rightInt() + PORT_OFFSET_Y + yShift);
+        pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
 
         tooltipBuilder(t -> {
             t.addFromItem(stack.item);
-            t.addLine(String.format("%.2f", port.getChance() * 100) + "%");
             if (stack.items.length > 1) t.addLine("Right-Click to Configure");
         });
         tooltipAutoUpdate(true);
@@ -89,7 +88,6 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
         if (mouseButton == 1) {
-            port.getStack();
             // todo add config menu, mixin to set permutated and item, and one to early return from
             // setPermutationToRender if permutated is false
             return Result.SUCCESS;
