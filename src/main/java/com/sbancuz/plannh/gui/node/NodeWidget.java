@@ -17,7 +17,12 @@ import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 
+import lombok.Getter;
+
 public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
+
+    @Getter
+    private final RecipeAreaWidget recipeAreaWidget;
 
     private static final UITexture bg = UITexture.builder()
         .location("nei:textures/gui/recipebg.png")
@@ -52,8 +57,9 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
         topRow.child(new CloseButtonWidget(this));
 
+        recipeAreaWidget = new RecipeAreaWidget(this);
         mainColumn.child(topRow)
-            .child(new RecipeAreaWidget(this));
+            .child(recipeAreaWidget);
 
         mainColumn.child(
             IKey.str("PROPERTIES TODO")

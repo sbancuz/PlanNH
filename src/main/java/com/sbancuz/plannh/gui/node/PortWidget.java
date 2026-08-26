@@ -1,7 +1,10 @@
 package com.sbancuz.plannh.gui.node;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import net.minecraft.item.ItemStack;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -9,16 +12,22 @@ import org.jetbrains.annotations.Nullable;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
+import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.cleanroommc.modularui.widgets.layout.Grid;
 import com.sbancuz.plannh.data.flowchart.Edge2;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
+import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.KeyManager;
 import codechicken.nei.PositionedStack;
@@ -35,6 +44,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     // needed for proper positioning of ports
     private static final int PORT_OFFSET_X = 1;
     private static final int PORT_OFFSET_Y = -1;
+    private static final int PORT_CONFIG_GRID_WIDTH = 4;
+    private static final int PORT_SIZE = 18;
 
     private final CanvasWidget canvas;
 
@@ -50,7 +61,12 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private final IntIntPair index;
     private final UUID nodeId;
 
-    public PortWidget(CanvasWidget canvas, Port<?> port, PortType portType, int yShift, IntIntPair index, UUID nodeId) {
+    private boolean isConfiguring = false;
+    private final Grid grid;
+    private final RecipeAreaWidget parent;
+
+    public PortWidget(CanvasWidget canvas, Port<?> port, PortType portType, int yShift, IntIntPair index, UUID nodeId,
+        RecipeAreaWidget parent) {
         this.canvas = canvas;
         this.stack = port.getAllStacks()
             .get(index.secondInt());
@@ -58,18 +74,60 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         this.port = port;
         this.index = index;
         this.nodeId = nodeId;
+        this.parent = parent;
 
         background(
             new Rectangle().color(portType.borderColor)
                 .hollow());
         hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
         pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
+        size(PORT_SIZE);
 
         tooltipBuilder(t -> {
             t.addFromItem(stack.item);
-            if (stack.items.length > 1) t.addLine("Right-Click to Configure");
+            if (configurable()) t.addLine("Right-Click to Configure");
         });
         tooltipAutoUpdate(true);
+
+        if (configurable()) {
+            List<ItemStack> items = new ArrayList<>(List.of(stack.items));
+            items.addFirst(null);
+
+            grid = new Grid().coverChildren()
+                .pos(stack.relx + PORT_OFFSET_X + PORT_SIZE, stack.rely + PORT_OFFSET_Y + yShift)
+                .setEnabledIf(_ -> isConfiguring)
+                .gridOfWidthElements(
+                    PORT_CONFIG_GRID_WIDTH,
+                    items,
+                    (_, _, _, itemStack) -> createConfigButton(itemStack));
+        } else grid = null;
+    }
+
+    private ButtonWidget<?> createConfigButton(@Nullable ItemStack itemStack) {
+        ButtonWidget<?> button = new ButtonWidget<>().padding(1)
+            .coverChildren()
+            .background(
+                new Rectangle().color(Color.GREY.darker(2)),
+                new Rectangle().hollow()
+                    .color(PlannhColors.CONTEXT_BORDER.getColor())) // todo this with themes
+            .onMousePressed(_ -> {
+                if (itemStack != null) setPermutationToStack(itemStack);
+                else enablePermutations();
+                isConfiguring = false;
+                parent.remove(grid);
+                return true;
+            });
+
+        if (itemStack == null) button.child(
+            GuiTextures.REFRESH.asWidget()
+                .size(PORT_SIZE - 2)
+                .addTooltipLine("Reset"));
+        else button.child(
+            new ItemDrawable(itemStack).asWidget()
+                .size(PORT_SIZE - 2)
+                .tooltipBuilder(t -> t.addFromItem(itemStack)));
+
+        return button;
     }
 
     @Override
@@ -87,21 +145,49 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
-        if (mouseButton == 1) {
-            // todo add config menu, mixin to set permutated and item, and one to early return from
-            // setPermutationToRender if permutated is false
+        if (mouseButton == 1 && configurable()) {
+            if (!isConfiguring) {
+                // child of the parent for proper z-layer positioning
+                parent.child(grid);
+                isConfiguring = true;
+            } else {
+                parent.remove(grid);
+                isConfiguring = false;
+            }
             return Result.SUCCESS;
         }
         return Result.ACCEPT;
     }
 
-    public boolean canConnect(PortWidget other) {
+    private void setPermutationToStack(ItemStack itemStack) {
+        port.getAllStacks()
+            .forEach(ps -> {
+                PositionedStackAccessor psa = (PositionedStackAccessor) ps;
+                psa.setPermutated(true);
+                ps.setPermutationToRender(itemStack);
+                psa.setPermutated(false);
+            });
+    }
+
+    private void enablePermutations() {
+        port.getAllStacks()
+            .forEach(ps -> {
+                PositionedStackAccessor psa = (PositionedStackAccessor) ps;
+                psa.setPermutated(true);
+            });
+    }
+
+    private boolean canConnect(PortWidget other) {
         return portType.canConnect(other.portType) && port.canConnect(other.port);
+    }
+
+    private boolean configurable() {
+        return stack.items.length > 1;
     }
 
     @Override
     public boolean onDragStart(int button) {
-        if (button == 0 && portType.supportsEdge) {
+        if (button == 0 && portType.supportsEdge && !isConfiguring) {
             arrowWidgetInCreation = new ArrowWidget(canvas);
             canvas.child(arrowWidgetInCreation);
 

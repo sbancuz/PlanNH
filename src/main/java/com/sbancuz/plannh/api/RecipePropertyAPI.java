@@ -21,7 +21,9 @@ import com.sbancuz.plannh.data.provider.DefaultProvider;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.IngredientColors;
 import com.sbancuz.plannh.gui.PlannhColors;
+import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
+import codechicken.nei.PositionedStack;
 import gregtech.api.util.GTUtility;
 
 public final class RecipePropertyAPI {
@@ -68,10 +70,13 @@ public final class RecipePropertyAPI {
         .build();
 
     private static boolean itemPortsMatch(final Port<ItemStack> pa, final Port<ItemStack> pb) {
-        ItemStack[] as = pa.getAllStacks()
-            .getFirst().items;
-        ItemStack[] bs = pb.getAllStacks()
-            .getFirst().items;
+        PositionedStack psa = pa.getAllStacks()
+            .getFirst();
+        PositionedStack psb = pb.getAllStacks()
+            .getFirst();
+
+        ItemStack[] as = ((PositionedStackAccessor) psa).getPermutated() ? psa.items : new ItemStack[] { psa.item };
+        ItemStack[] bs = ((PositionedStackAccessor) psb).getPermutated() ? psb.items : new ItemStack[] { psb.item };
 
         for (ItemStack a : as) {
             for (ItemStack b : bs) {
