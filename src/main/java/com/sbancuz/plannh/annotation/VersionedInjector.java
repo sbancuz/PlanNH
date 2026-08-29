@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -35,15 +36,8 @@ public final class VersionedInjector {
         injectAll(asmData, VersionedInjector::modPresent);
     }
 
-    /**
-     * As above, against a stated idea of which mods are installed.
-     *
-     * <p>
-     * Package-private for the test that covers the skip: outside a running game there is no Forge to
-     * ask, so {@link #modPresent} answers "yes" to everything and the branch that matters here -
-     * leaving an absent mod's provider unloaded - is unreachable any other way.
-     */
-    static void injectAll(final ASMDataTable asmData, final Predicate<String> installed) {
+    /** As above, against a stated set of installed mods rather than the one Forge reports. */
+    public static void injectAll(final ASMDataTable asmData, final Predicate<String> installed) {
         for (final ASMDataTable.ASMData data : asmData.getAll(Versioned.Mod.class.getName())) {
             // The mod id is read out of the ASM table rather than off the loaded class, because
             // loading a provider is exactly what has to be avoided when its mod is missing: the class
@@ -54,7 +48,10 @@ public final class VersionedInjector {
 
             try {
                 inject(Class.forName(data.getClassName()));
-            } catch (final ReflectiveOperationException | LinkageError e) {
+            } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
+                // RuntimeException covers a mirror declared with clazz() rather than value(): reading
+                // a Class-valued annotation element whose class is absent throws TypeNotPresentException,
+                // and one unusable mirror must not be the thing that stops the game loading.
                 PlanNH.LOG.error("PlanNH: cannot read versioned constants from {}", data.getClassName(), e);
             }
         }
@@ -81,7 +78,11 @@ public final class VersionedInjector {
             if (source == null) {
                 // Not "the mod is old": the class is named in full, so failing to find it means the
                 // dependency moved it, and every field under this mirror is now a guess.
-                warnIfNewEnough(modId, since, () -> "class " + named(declared) + " is gone");
+                warnIfNewEnough(
+                    modId,
+                    since,
+                    () -> "class " + (declared.clazz() != void.class ? declared.clazz()
+                        .getName() : declared.value()) + " is gone");
                 continue;
             }
 
@@ -96,8 +97,8 @@ public final class VersionedInjector {
         if (target.isSynthetic()) return;
         if (!Modifier.isStatic(target.getModifiers())) return;
 
-        // A final mirror is the failure this class was rewritten to stop. javac folds a constant
-        // variable into its use sites, so the write below would land somewhere nothing reads.
+        // javac folds a constant variable into its use sites, so writing this field would land
+        // somewhere nothing reads.
         if (Modifier.isFinal(target.getModifiers())) {
             PlanNH.LOG.error(
                 "PlanNH: {}.{} is final, so its value is compiled into every use site and cannot be "
@@ -203,17 +204,11 @@ public final class VersionedInjector {
         }
     }
 
-    private static String named(final Versioned.Class declared) {
-        return declared.clazz() != void.class ? declared.clazz()
-            .getName() : declared.value();
-    }
-
     /**
      * Reports a miss only against a mod new enough to have had what was looked for. On an older one
      * the fallback is the right answer and saying so every launch would train people to ignore it.
      */
-    private static void warnIfNewEnough(final String modId, final String sinceVersion,
-        final java.util.function.Supplier<String> what) {
+    private static void warnIfNewEnough(final String modId, final String sinceVersion, final Supplier<String> what) {
         final ModContainer container = installed(modId);
         if (container == null) return;
 

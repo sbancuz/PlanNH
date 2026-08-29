@@ -16,16 +16,11 @@ import java.lang.annotation.Target;
  * moved on, and {@link VersionedInjector} overwrites it during preInit with whatever the installed jar
  * actually says.
  *
- * <h2>Rules the injector enforces</h2>
- *
- * <ul>
- * <li>A mirror field must <b>not be final</b>. A {@code static final} field with a literal initializer
- * is a JLS 4.12.4 constant variable: javac folds its value into every use site, so overwriting the
- * field afterwards changes a field nobody reads. This is not theoretical - it is what the first
- * version of this annotation did, silently, for every scalar it was pointed at.
- * <li>{@link Class#value()} must name the dependency's class in full. There is no deriving it from
- * the mirror's own name.
- * </ul>
+ * <p>
+ * Two things a mirror has to get right. A field must not be final: a {@code static final} with a
+ * literal initializer is a JLS 4.12.4 constant variable, so javac folds its value into every use site
+ * and overwriting the field reaches nobody. And {@link Class#value()} must name the dependency's class
+ * in full, since nothing derives it from the mirror's own name.
  */
 public @interface Versioned {
 

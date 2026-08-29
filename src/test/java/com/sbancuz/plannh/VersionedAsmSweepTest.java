@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.annotation;
+package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -8,16 +8,18 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.sbancuz.plannh.annotation.Versioned;
+import com.sbancuz.plannh.annotation.VersionedInjector;
+
 import cpw.mods.fml.common.discovery.ASMDataTable;
 
 /**
  * The sweep over FML's annotation table, which is how the injector is actually entered in a game.
  *
  * <p>
- * The branch worth pinning is the one that skips a provider whose mod is absent. It exists because the
- * old sweep called {@code Class.forName} on every annotated provider unconditionally: a provider names
- * its mod's types throughout, so on a pack without that mod the load is what fails - and the catch
- * clause did not cover {@code LinkageError}, so it would have taken preInit with it.
+ * The branch worth pinning is the one that skips a provider whose mod is absent. A provider names its
+ * mod's types throughout, so on a pack without that mod loading it is what fails, and it fails with a
+ * {@code LinkageError} during preInit.
  *
  * <p>
  * A holder records in a static initializer that it was loaded at all, and the tests read that. Class
@@ -42,7 +44,7 @@ class VersionedAsmSweepTest {
         static int SPEED = 42;
     }
 
-    private static final String DEPENDENCY = "com.sbancuz.plannh.annotation.VersionedAsmSweepTest$Dependency";
+    private static final String DEPENDENCY = "com.sbancuz.plannh.VersionedAsmSweepTest$Dependency";
 
     @Versioned.Mod(modId = "presentmod", sinceVersion = "1.0")
     static final class PresentHolder {

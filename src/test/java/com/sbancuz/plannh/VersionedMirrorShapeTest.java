@@ -18,9 +18,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>
  * {@code static final int X = 100} is a JLS 4.12.4 constant variable: javac writes 100 into every use
- * site and the field is never read again, so injecting into it changes nothing at all. That is not a
- * hypothetical - every scalar mirror in this codebase was written that way, and the injection had been
- * a no-op for as long as the annotation existed.
+ * site and the field is never read again, so injecting into it changes nothing at all.
  *
  * <p>
  * Checked in the source rather than by reflection because reflection cannot see the difference: a

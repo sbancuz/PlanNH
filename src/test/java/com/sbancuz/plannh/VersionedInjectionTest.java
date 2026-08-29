@@ -12,14 +12,9 @@ import com.sbancuz.plannh.annotation.Versioned;
 import com.sbancuz.plannh.annotation.VersionedInjector;
 
 /**
- * The annotation shipped for months injecting nothing, and nothing said so: the target class was
- * looked up by its simple name, which never resolves, and the mirrors were {@code static final}
- * scalars whose values javac had already folded into every use site.
- *
- * <p>
- * Both failures were invisible because there was no test. This one drives the injector against a
- * stand-in "dependency" declared right here, so the mechanism is checked without needing a mod
- * installed - and without the check quietly turning into an assertion about that mod's balance.
+ * Drives the injector against a stand-in "dependency" declared right here, so the mechanism is
+ * checked without needing a mod installed - and without the check quietly turning into an assertion
+ * about that mod's balance.
  */
 class VersionedInjectionTest {
 
@@ -174,7 +169,7 @@ class VersionedInjectionTest {
 
     /**
      * A final mirror is refused outright. Writing it would appear to work while every use site kept
-     * the folded literal, which is exactly the silence this replaced.
+     * the folded literal.
      *
      * <p>
      * Read reflectively on purpose. {@code FinalHolder.Mirror.SPEED} written plainly is folded into
