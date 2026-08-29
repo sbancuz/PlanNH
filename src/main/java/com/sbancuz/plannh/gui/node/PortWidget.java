@@ -2,9 +2,10 @@ package com.sbancuz.plannh.gui.node;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
+import com.cleanroommc.modularui.api.UpOrDown;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -22,7 +23,10 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Grid;
+import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Edge2;
+import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
@@ -33,6 +37,7 @@ import codechicken.nei.KeyManager;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.GuiCraftingRecipe;
 import codechicken.nei.recipe.GuiUsageRecipe;
+import gregtech.api.util.GTUtility;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import lombok.Getter;
 
@@ -59,13 +64,13 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     @Getter
     private final Port<?> port;
     private final IntIntPair index;
-    private final UUID nodeId;
+    private final Node node;
 
     private boolean isConfiguring = false;
     private final Grid grid;
     private final RecipeAreaWidget parent;
 
-    public PortWidget(CanvasWidget canvas, Port<?> port, PortType portType, int yShift, IntIntPair index, UUID nodeId,
+    public PortWidget(CanvasWidget canvas, Port<?> port, PortType portType, int yShift, IntIntPair index, Node node,
         RecipeAreaWidget parent) {
         this.canvas = canvas;
         this.stack = port.getAllStacks()
@@ -73,7 +78,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         this.portType = portType;
         this.port = port;
         this.index = index;
-        this.nodeId = nodeId;
+        this.node = node;
         this.parent = parent;
 
         background(
@@ -159,7 +164,13 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         return Result.ACCEPT;
     }
 
+    @SuppressWarnings("unchecked")
     private void setPermutationToStack(ItemStack itemStack) {
+        if (port.getType() == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
+        if (port.getType() == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) ((Port<FluidStack>) port).setValue(
+            GTUtility.getFluidFromDisplayStack(itemStack)
+                .copy());
+
         port.getAllStacks()
             .forEach(ps -> {
                 PositionedStackAccessor psa = (PositionedStackAccessor) ps;
@@ -167,6 +178,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 ps.setPermutationToRender(itemStack);
                 psa.setPermutated(false);
             });
+
+        node.getInputConfigurations()
+            .put(index.firstInt(), stack.getPermutationIndex(itemStack));
     }
 
     private void enablePermutations() {
@@ -175,6 +189,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 PositionedStackAccessor psa = (PositionedStackAccessor) ps;
                 psa.setPermutated(true);
             });
+
+        node.getInputConfigurations()
+            .remove(index.firstInt());
     }
 
     private boolean canConnect(PortWidget other) {
@@ -183,6 +200,10 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     private boolean configurable() {
         return stack.items.length > 1;
+    }
+
+    private boolean notConfigured() {
+        return ((PositionedStackAccessor) stack).getPermutated();
     }
 
     @Override
@@ -199,11 +220,18 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     @Override
     public void onDragEnd(boolean successful) {
         if (successful) {
-            PortWidget other = (PortWidget) getContext().getTopHovered();
-            Edge2 edge;
+            PortWidget source;
+            PortWidget target;
+            if (portType.origin) {
+                source = this;
+                target = (PortWidget) getContext().getTopHovered();
+            } else {
+                source = (PortWidget) getContext().getTopHovered();
+                target = this;
+            }
 
-            if (portType.origin) edge = new Edge2(nodeId, other.nodeId, index, other.index);
-            else edge = new Edge2(other.nodeId, nodeId, other.index, index);
+            if (target.notConfigured()) target.setPermutationToStack(source.stack.item);
+            Edge2 edge = new Edge2(source.node.getId(), target.node.getId(), source.index, source.index);
 
             canvas.getGraph()
                 .getEdges2()

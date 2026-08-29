@@ -6,12 +6,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.utils.Color;
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.properties.ResourceProperty;
+import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.PositionedStack;
+import gregtech.api.util.GTUtility;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,7 +24,7 @@ import lombok.Setter;
 public class Port<T> {
 
     private final ResourceProperty<T> type;
-    private final T value;
+    private T value;
     private float chance;
     private final List<PositionedStack> allStacks = new ArrayList<>();
 
@@ -74,5 +78,28 @@ public class Port<T> {
 
     public static Port<ItemStack> itemPort(PositionedStack ps) {
         return new Port<>(RecipePropertyAPI.ITEM, ps.item.copy(), (float) ps.getChance() / CHANCE_FULL, ps.copy());
+    }
+
+    // pass a copy of the new value (item/fluid stack) to this method or else that gets modified
+    public void setValue(T value) {
+        type.setAmount(value, type.extractAmount(this.value));
+        this.value = value;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void setValue(int index) {
+        ItemStack itemStack = allStacks.getFirst().items[index];
+        if (type == RecipePropertyAPI.ITEM) ((Port<ItemStack>) this).setValue(itemStack.copy());
+
+        if (type == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) ((Port<FluidStack>) this).setValue(
+            GTUtility.getFluidFromDisplayStack(itemStack)
+                .copy());
+
+        allStacks.forEach(ps -> {
+            PositionedStackAccessor psa = (PositionedStackAccessor) ps;
+            psa.setPermutated(true);
+            ps.setPermutationToRender(itemStack);
+            psa.setPermutated(false);
+        });
     }
 }

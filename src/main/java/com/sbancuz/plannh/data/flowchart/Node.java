@@ -26,6 +26,7 @@ public class Node extends GraphData {
     // cant be final because of transient deserialization resulting in null
     private transient List<Port<?>> inputs;
     private transient List<Port<?>> outputs;
+    private final Map<Integer, Integer> inputConfigurations = new HashMap<>();
 
     // needed for coloring to be machine specific
     private final String machineName;
@@ -74,10 +75,10 @@ public class Node extends GraphData {
             machineConfig = new MachineConfig();
         }
 
-        refresh();
+        refresh(false);
     }
 
-    private void refresh() {
+    private void refresh(boolean init) {
         if (extractor == null) return;
         RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);
         IRecipeHandler handler = ref.handler;
@@ -89,6 +90,7 @@ public class Node extends GraphData {
         outputs.clear();
         if (properties == null) properties = new HashMap<>();
         properties.clear();
+        if (!init) inputConfigurations.clear();
 
         Map<RecipeProperty<?>, Object> props = extractor.extract(this, handler, recipeIndex);
         if (props != null && !props.isEmpty()) properties.putAll(props);
@@ -96,6 +98,10 @@ public class Node extends GraphData {
         deduplicate(inputs);
         deduplicate(outputs);
         machineConfig.seedRouteDefaults(properties); // todo test if this works
+
+        if (init) inputConfigurations.forEach(
+            (index, override) -> inputs.get(index)
+                .setValue(override));
     }
 
     private static void deduplicate(List<Port<?>> ports) {
@@ -133,7 +139,7 @@ public class Node extends GraphData {
             }
         }
 
-        refresh();
+        refresh(false);
     }
 
     private PropertyProvider pickBestExtractor(IRecipeHandler handler, int recipeIndex) {
@@ -156,7 +162,7 @@ public class Node extends GraphData {
         }
         extractor = availableExtractors.isEmpty() ? DefaultProvider.INSTANCE : availableExtractors.get(extractorIndex);
 
-        refresh();
+        refresh(true);
     }
 
     @Override

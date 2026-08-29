@@ -101,9 +101,9 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                     port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
                     yShift,
                     index,
-                    data.getId(),
+                    data,
                     this);
-                inputPorts.putIfAbsent(index, portWidget);
+                inputPorts.put(index, portWidget);
                 child(portWidget);
             }
         }
@@ -121,9 +121,9 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                     port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
                     yShift,
                     index,
-                    data.getId(),
+                    data,
                     this);
-                outputPorts.putIfAbsent(index, portWidget);
+                outputPorts.put(index, portWidget);
                 child(portWidget);
             }
         }

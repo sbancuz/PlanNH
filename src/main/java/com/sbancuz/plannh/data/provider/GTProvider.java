@@ -12,7 +12,7 @@ import java.util.function.BiPredicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
@@ -42,7 +42,6 @@ import gregtech.api.recipe.maps.LargeBoilerFuelBackend;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTRecipeConstants;
 import gregtech.api.util.recipe.Sievert;
-import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
 import gregtech.nei.formatter.HeatingCoilSpecialValueFormatter;
@@ -325,38 +324,31 @@ public class GTProvider implements PropertyProvider {
             props.put(SPECIAL_VALUE, r.mSpecialValue);
         }
 
-        if (!node.getInputs().isEmpty() || !node.getOutputs().isEmpty())
-            throw new RuntimeException("inputs or outputs were initialized");  // todo needed?
-
         List<Port<?>> inputs = node.getInputs();
         List<Port<?>> outputs = node.getOutputs();
 
         for (PositionedStack ps : inputStacks) {
             if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
-                inputs.add(
-                    new Port<>(
-                        RecipePropertyAPI.FLUID,
-                        fps.getFluidAlternatives().getFirst().copy(),
-                        (float) fps.getChance() / CHANCE_FULL,
-                        ps));
+                inputs.add(fluidPort(fps));
             else if(ps.item != null) inputs.add(Port.itemPort(ps));
         }
 
         for (PositionedStack ps : outputStacks) {
             if (ps instanceof GTNEIDefaultHandler.FixedPositionedStack fps && fps.isFluid())
-                outputs.add(
-                    new Port<>(
-                        RecipePropertyAPI.FLUID,
-                        fps.getFluidAlternatives().getFirst().copy(),
-                        (float) fps.getChance() / CHANCE_FULL,
-                        ps));
+                outputs.add(fluidPort(fps));
             else outputs.add(Port.itemPort(ps));
         }
 
-        if (node.getInputs().stream().anyMatch(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay)
-         || node.getOutputs().stream().anyMatch(p -> p.getValue() instanceof ItemStack stack && stack.getItem() instanceof ItemFluidDisplay))
-            throw new RuntimeException("illegal itemStack found"); // todo needed?
-
         return props;
+    }
+
+    private static Port<FluidStack> fluidPort(GTNEIDefaultHandler.FixedPositionedStack fps) {
+        return new Port<>(
+            RecipePropertyAPI.FLUID,
+            fps.getFluidAlternatives()
+                .getFirst()
+                .copy(),
+            (float) fps.getChance() / CHANCE_FULL,
+            fps);
     }
 }
