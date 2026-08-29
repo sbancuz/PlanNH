@@ -3,7 +3,6 @@ package com.sbancuz.plannh.gui.node;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.cleanroommc.modularui.api.UpOrDown;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
@@ -70,16 +69,16 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private final Grid grid;
     private final RecipeAreaWidget parent;
 
-    public PortWidget(CanvasWidget canvas, Port<?> port, PortType portType, int yShift, IntIntPair index, Node node,
-        RecipeAreaWidget parent) {
+    public PortWidget(CanvasWidget canvas, RecipeAreaWidget parent, Node node, IntIntPair index, boolean isInput,
+        PortType portType, int yShift) {
         this.canvas = canvas;
+        this.parent = parent;
+        this.node = node;
+        this.index = index;
+        this.port = (isInput ? node.getInputs() : node.getOutputs()).get(index.firstInt());
         this.stack = port.getAllStacks()
             .get(index.secondInt());
         this.portType = portType;
-        this.port = port;
-        this.index = index;
-        this.node = node;
-        this.parent = parent;
 
         background(
             new Rectangle().color(portType.borderColor)

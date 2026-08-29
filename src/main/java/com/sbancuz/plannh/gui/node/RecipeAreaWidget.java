@@ -97,12 +97,12 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
                 PortWidget portWidget = new PortWidget(
                     parent.getCanvas(),
-                    port,
-                    port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
-                    yShift,
-                    index,
+                    this,
                     data,
-                    this);
+                    index,
+                    true,
+                    port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
+                    yShift);
                 inputPorts.put(index, portWidget);
                 child(portWidget);
             }
@@ -117,12 +117,12 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
                 PortWidget portWidget = new PortWidget(
                     parent.getCanvas(),
-                    port,
-                    port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
-                    yShift,
-                    index,
+                    this,
                     data,
-                    this);
+                    index,
+                    false,
+                    port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
+                    yShift);
                 outputPorts.put(index, portWidget);
                 child(portWidget);
             }
