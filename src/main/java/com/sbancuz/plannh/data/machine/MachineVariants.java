@@ -88,10 +88,8 @@ public final class MachineVariants {
     }
 
     /**
-     * The last answer {@link #selected} gave. The settings rows ask which machine a node is using
-     * about a dozen times per frame with the same arguments, so the answer is memoized against the
-     * candidate list a source handed back - identity, not contents, because a source returns the same
-     * cached instance until its answer actually changes.
+     * The last answer {@link #selected} gave, memoized on the identity of the candidate list rather
+     * than its contents - a source returns the same instance until its answer changes.
      */
     @Nullable
     private static List<? extends MachineVariant> lastCandidates;
@@ -131,11 +129,11 @@ public final class MachineVariants {
 
     /** Shows a row only when the machine the node selected actually reads that setting. */
     @Nonnull
-    public static BiPredicate<RecipeContext, Map<String, Object>> usesKnob(final Settings knob) {
+    public static BiPredicate<RecipeContext, Map<String, Object>> usesSetting(final Settings setting) {
         return (ctx, settings) -> {
             final MachineVariant variant = selected(ctx, settings);
-            return variant != null && variant.knobs()
-                .contains(knob);
+            return variant != null && variant.settings()
+                .contains(setting);
         };
     }
 

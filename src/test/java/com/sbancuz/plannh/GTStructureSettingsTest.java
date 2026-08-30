@@ -53,7 +53,7 @@ class GTStructureSettingsTest {
         assertEquals(3601, HeatingCoilLevel.HV.getHeat());
     }
 
-    /** Unset knobs open on the best structure; a planner should show the endgame number. */
+    /** Unset settings open on the best structure; a planner should show the endgame number. */
     @Test
     void unsetKnobsDefaultToTheBestStructure() {
         final StructureState state = GTSettings.resolve(EMPTY, Map.of(), 5);
@@ -76,7 +76,7 @@ class GTStructureSettingsTest {
     }
 
     /**
-     * Both machines that read the knob take tier 1 as the Bronze Pipe Casing and count up from there,
+     * Both machines that read the setting take tier 1 as the Bronze Pipe Casing and count up from there,
      * so the row's own numbers are the tiers and the display is a lookup beside them. A tier outside
      * the range is a stored value from a pack with more casings, and must clamp rather than throw.
      */

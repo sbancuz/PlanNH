@@ -6,6 +6,8 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import net.minecraft.util.StatCollector;
+
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.machine.MachineVariant;
@@ -23,22 +25,29 @@ import com.sbancuz.plannh.data.properties.RecipeProperty;
  */
 public enum EnderIOMachines implements MachineVariant {
 
-    ALLOY_SMELTER("enderio:alloy_smelter", "Alloy Smelter", true),
-    SAG_MILL("enderio:sag_mill", "SAG Mill", true),
-    VAT("enderio:vat", "Vat", true),
-    SLICE_AND_SPLICE("enderio:slice_and_splice", "Slice'n'Splice", true),
-    SOUL_BINDER("enderio:soul_binder", "Soul Binder", true),
+    ALLOY_SMELTER("enderio:alloy_smelter", "tile.blockAlloySmelter.name", true),
+    SAG_MILL("enderio:sag_mill", "tile.blockSagMill.name", true),
+    VAT("enderio:vat", "tile.blockVat.name", true),
+    SLICE_AND_SPLICE("enderio:slice_and_splice", "tile.blockSliceAndSplice.name", true),
+    SOUL_BINDER("enderio:soul_binder", "tile.blockSoulBinder.name", true),
     /** Runs on experience levels rather than a capacitor, so it has no tier to choose. */
-    ENCHANTER("enderio:enchanter", "Enchanter", false);
+    ENCHANTER("enderio:enchanter", "tile.blockEnchanter.name", false);
 
     private final String id;
-    private final String displayName;
-    private final Set<Settings> knobs;
+    private final String nameKey;
+    private final Set<Settings> settings;
 
-    EnderIOMachines(final String id, final String displayName, final boolean capacitorDriven) {
+    /**
+     * @param id      what a chart persists. PlanNH's own, because EnderIO keys its recipe registry by
+     *                machine name rather than by block, and a chart has to survive a block being
+     *                renamed
+     * @param nameKey EnderIO's own unlocalized block name, so the picker reads the machine the way
+     *                the player's game does in whichever of the sixteen languages EnderIO ships
+     */
+    EnderIOMachines(final String id, final String nameKey, final boolean capacitorDriven) {
         this.id = id;
-        this.displayName = displayName;
-        this.knobs = capacitorDriven ? Set.of(Settings.EIO_CAPACITOR) : Set.of();
+        this.nameKey = nameKey;
+        this.settings = capacitorDriven ? Set.of(Settings.EIO_CAPACITOR) : Set.of();
     }
 
     @Override
@@ -50,13 +59,13 @@ public enum EnderIOMachines implements MachineVariant {
     @Override
     @Nonnull
     public String displayName() {
-        return displayName;
+        return StatCollector.translateToLocal(nameKey);
     }
 
     @Override
     @Nonnull
-    public Set<Settings> knobs() {
-        return knobs;
+    public Set<Settings> settings() {
+        return settings;
     }
 
     /**

@@ -129,7 +129,7 @@ class GTMachinePresetTest {
         final GTMachinePreset preset = GTMachinePresets
             .lookup(Class.forName(className, false, getClass().getClassLoader()));
         assertNotNull(preset);
-        if (!preset.knobs()
+        if (!preset.settings()
             .contains(Settings.GT_COIL)) return;
 
         for (int coil = 0; coil < GTStructureTiers.MAX_COIL_TIER; coil++) {

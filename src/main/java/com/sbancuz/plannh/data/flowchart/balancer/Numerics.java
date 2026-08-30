@@ -3,7 +3,7 @@ package com.sbancuz.plannh.data.flowchart.balancer;
 import com.sbancuz.plannh.Config;
 
 /**
- * The numeric knobs of a solve: feast/sensitivity tolerances, model time limits and node budgets,
+ * The numeric settings of a solve: feast/sensitivity tolerances, model time limits and node budgets,
  * the big-M growth policy and the effort scaler. These are carried inside {@link Heuristics} so a
  * new balancer type can trade fidelity against time differently without touching any stage code.
  */

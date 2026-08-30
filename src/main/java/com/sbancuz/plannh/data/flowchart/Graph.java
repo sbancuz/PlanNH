@@ -69,7 +69,7 @@ public class Graph {
      * user edits keeps what it was given.
      *
      * <p>
-     * Keyed rather than one field per knob, because which knobs a chart has a floor for is the
+     * Keyed rather than one field per setting, because which settings a chart has a floor for is the
      * installed mods' business, not this package's - naming them here would put GregTech in a class
      * that has to stay loadable without it. Sorted so a save writes them in a stable order.
      */
@@ -135,7 +135,7 @@ public class Graph {
         markDirty();
     }
 
-    /** What this chart plans at for one knob, or {@link #NO_MINIMUM} when it has not said. */
+    /** What this chart plans at for one setting, or {@link #NO_MINIMUM} when it has not said. */
     public int getMinimum(final String settingKey) {
         return minimums.getOrDefault(settingKey, NO_MINIMUM);
     }

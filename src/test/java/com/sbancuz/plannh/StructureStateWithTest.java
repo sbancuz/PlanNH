@@ -17,7 +17,7 @@ import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 /**
- * {@code with} writes one knob into one record component by slot number. That is short to read and
+ * {@code with} writes one setting into one record component by slot number. That is short to read and
  * easy to get wrong by one, and a wrong slot would not fail to compile - it would silently move a
  * coil onto the solenoid field and quietly corrupt every sensitivity scan. These pin the mapping.
  */
@@ -29,14 +29,14 @@ class StructureStateWithTest {
     private static final int SENTINEL = 99;
 
     /**
-     * The knobs under test. Settings holds far more than these, so the source is the list
-     * StructureState itself claims to have slots for - which is what makes a knob added there
+     * The settings under test. Settings holds far more than these, so the source is the list
+     * StructureState itself claims to have slots for - which is what makes a setting added there
      * without a slot fail here rather than pass unnoticed.
      */
-    static final List<Settings> KNOBS = List.copyOf(StructureState.KNOBS);
+    static final List<Settings> STRUCTURE_SETTINGS = List.copyOf(StructureState.STRUCTURE_SETTINGS);
 
-    static Stream<Settings> knobs() {
-        return KNOBS.stream();
+    static Stream<Settings> settings() {
+        return STRUCTURE_SETTINGS.stream();
     }
 
     private static int[] components(final StructureState s) {
@@ -50,34 +50,34 @@ class StructureStateWithTest {
         int found = -1;
         for (int i = 0; i < before.length; i++) {
             if (before[i] == after[i]) continue;
-            assertEquals(-1, found, "more than one component moved, so two knobs share a slot");
+            assertEquals(-1, found, "more than one component moved, so two settings share a slot");
             found = i;
         }
         return found;
     }
 
     @ParameterizedTest
-    @MethodSource("knobs")
-    void eachKnobMovesExactlyOneComponent(final Settings knob) {
-        final int slot = changedSlot(BASE.with(knob, SENTINEL));
+    @MethodSource("settings")
+    void eachKnobMovesExactlyOneComponent(final Settings setting) {
+        final int slot = changedSlot(BASE.with(setting, SENTINEL));
 
-        assertNotEquals(-1, slot, knob + " moved nothing, so its slot points at a field it already equals");
-        assertNotEquals(0, slot, "voltage is not a knob and must never be written by with()");
+        assertNotEquals(-1, slot, setting + " moved nothing, so its slot points at a field it already equals");
+        assertNotEquals(0, slot, "voltage is not a setting and must never be written by with()");
     }
 
-    /** Two knobs writing one slot would make the scan report whichever ran last. */
+    /** Two settings writing one slot would make the scan report whichever ran last. */
     @Test
     void everyKnobOwnsItsOwnComponent() {
         final Set<Integer> slots = new HashSet<>();
-        for (final Settings knob : KNOBS) {
-            final int slot = changedSlot(BASE.with(knob, SENTINEL));
-            assertEquals(true, slots.add(slot), knob + " writes a component another knob already writes");
+        for (final Settings setting : STRUCTURE_SETTINGS) {
+            final int slot = changedSlot(BASE.with(setting, SENTINEL));
+            assertEquals(true, slots.add(slot), setting + " writes a component another setting already writes");
         }
-        assertEquals(KNOBS.size(), slots.size());
+        assertEquals(STRUCTURE_SETTINGS.size(), slots.size());
     }
 
     /**
-     * A setting that is not a structure knob has no slot to write, and the switch can no longer say so
+     * A setting that is not a structure setting has no slot to write, and the switch can no longer say so
      * at compile time now that it reads from an enum holding every setting PlanNH has. Refusing loudly
      * is what stops it landing on slot 0 and silently rewriting the voltage tier.
      */
@@ -127,13 +127,13 @@ class StructureStateWithTest {
                 .mode());
     }
 
-    /** The voltage tier is carried through untouched, whichever knob moved. */
+    /** The voltage tier is carried through untouched, whichever setting moved. */
     @ParameterizedTest
-    @MethodSource("knobs")
-    void voltageSurvivesEveryKnob(final Settings knob) {
+    @MethodSource("settings")
+    void voltageSurvivesEveryKnob(final Settings setting) {
         assertEquals(
             BASE.voltageTier(),
-            BASE.with(knob, SENTINEL)
+            BASE.with(setting, SENTINEL)
                 .voltageTier());
     }
 }

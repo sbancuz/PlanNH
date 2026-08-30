@@ -31,29 +31,6 @@ class GTLegacyNodeMigrationTest {
         return settings;
     }
 
-    /** The picker became everyone's, so a machine chosen under the GregTech-only key has to carry over. */
-    @Test
-    void aMachineChosenUnderTheOldKeyIsKept() {
-        final Map<String, Object> s = loaded("gt_machine", "gt.blockmachines.multimachine.em.blastsmelter");
-        GTSettings.migrateLegacyNode(s);
-
-        assertEquals("gt.blockmachines.multimachine.em.blastsmelter", s.get(Settings.MACHINE.key()));
-        assertFalse(s.containsKey("gt_machine"), "the old key would be a second answer to the same question");
-    }
-
-    /**
-     * Picking a machine is what a chart does instead of hand-tuning, so a chart that picked one must
-     * not be read as predating the picker. It would open in advanced mode and stop following its
-     * machine.
-     */
-    @Test
-    void aChartThatPickedAMachineUnderTheOldKeyDoesNotOpenInAdvancedMode() {
-        final Map<String, Object> s = loaded("gt_machine", "anything", Settings.SPEED.key(), 250);
-        GTSettings.migrateLegacyNode(s);
-
-        assertFalse(GTSettings.isAdvanced(s));
-    }
-
     @Test
     void aNodeWithHandTunedSpeedOpensInAdvancedMode() {
         final Map<String, Object> s = loaded(Settings.SPEED.key(), 250);
@@ -112,28 +89,5 @@ class GTLegacyNodeMigrationTest {
         GTSettings.migrateLegacyNode(s);
 
         assertFalse(GTSettings.isAdvanced(s), "the user turning advanced off must stick");
-    }
-
-    /**
-     * The mode comes from the node's recipe now, so a stored one is dropped rather than honoured: a
-     * chart saved with tower mode on a distillery recipe describes a machine that cannot run it.
-     */
-    @Test
-    void aStoredModeIsDroppedBecauseTheRecipeSettlesItNow() {
-        final Map<String, Object> s = loaded(GTSettings.MODE, 1, GTSettings.COIL, "HV");
-        GTSettings.migrateLegacyNode(s);
-
-        assertFalse(s.containsKey(GTSettings.MODE), "a stored mode can contradict the recipe");
-        assertEquals("HV", s.get(GTSettings.COIL), "the other structure knobs are untouched");
-    }
-
-    /** A mode is a structure knob, so dropping it must not read as a hand-tuned overclock. */
-    @Test
-    void droppingTheModeDoesNotTriggerTheAdvancedMigration() {
-        final Map<String, Object> s = loaded(GTSettings.MODE, 1);
-        GTSettings.migrateLegacyNode(s);
-
-        assertFalse(GTSettings.isAdvanced(s));
-        assertTrue(s.isEmpty(), "nothing else was stored, so nothing else may appear");
     }
 }

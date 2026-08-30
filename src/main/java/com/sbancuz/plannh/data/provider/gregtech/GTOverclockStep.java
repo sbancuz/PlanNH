@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.effect.steps;
+package com.sbancuz.plannh.data.provider.gregtech;
 
 import static com.sbancuz.plannh.data.provider.GTProvider.EU_PER_TICK;
 import static com.sbancuz.plannh.data.provider.GTProvider.RECIPE_MAP;
@@ -22,8 +22,6 @@ import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.effect.EffectStep;
-import com.sbancuz.plannh.data.provider.gregtech.GTPresetApplier;
-import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 
 import gregtech.api.enums.GTValues;
 import gregtech.api.recipe.RecipeMap;
@@ -41,7 +39,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
 
     private boolean forceHeat;
     private boolean forcePerfectOC;
-    private boolean machineDriven;
     private final List<Condition> conditions = new ArrayList<>();
     private final Map<String, Consumer<GTOverclockStep>> routeModifiers = new HashMap<>();
     private SettingDef<Integer> catalystSetting;
@@ -55,16 +52,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
 
     public GTOverclockStep route(final String recipeMapId, final Consumer<GTOverclockStep> modifier) {
         routeModifiers.put(recipeMapId, modifier);
-        return this;
-    }
-
-    /**
-     * Marks the profile that offers the machine picker. Whether a node derives its numbers from a
-     * machine is a property of its profile, not of its settings: reading it off the settings map
-     * would make it depend on whether the user had happened to pick one yet.
-     */
-    public GTOverclockStep machineDriven() {
-        this.machineDriven = true;
         return this;
     }
 
@@ -131,43 +118,16 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         final long eut = recipeEUt(ctx, current);
         final int recipeDuration = current.durationTicks();
 
-        if (eut <= 0 || recipeDuration <= 0) {
-            current.durationTicks(recipeDuration);
-            current.energyPerT(eut);
-            current.throughputFactor(parallels * machines);
-            return current;
-        }
+        // The recipe as written, which is the answer on every path that does not overclock. Set once
+        // here so each of those paths is a bare return rather than a copy of these three lines.
+        current.durationTicks(recipeDuration);
+        current.energyPerT(eut);
+        current.throughputFactor(parallels * machines);
 
-        // The machine supplies every number, and anything the user stored is laid over it inside
-        // configure - so Advanced is an override rather than a separate set of maths. When no
-        // machine resolves (an unindexed recipemap, or one the pack no longer has) fall through to
-        // the manual path rather than silently dropping to unoverclocked values.
-        //
-        // A catalyst route is excluded: its parallel count comes from a recipe-driven item count
-        // that no machine preset can report, and configure would replace it with the structure's.
-        if (machineDriven && catalystSetting == null) {
-            final GTPresetApplier.Configured configured = GTPresetApplier.configure(s, ctx, eut, recipeDuration);
-            if (configured != null) {
-                configured.calculator()
-                    .calculate();
-                current.durationTicks(
-                    configured.calculator()
-                        .getDuration());
-                current.energyPerT(
-                    configured.calculator()
-                        .getConsumption());
-                current.throughputFactor(configured.parallels() * machines);
-                return current;
-            }
-        }
+        if (eut <= 0 || recipeDuration <= 0) return current;
 
         if (MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF")
-            .equals("OFF")) {
-            current.durationTicks(recipeDuration);
-            current.energyPerT(eut);
-            current.throughputFactor(parallels * machines);
-            return current;
-        }
+            .equals("OFF")) return current;
 
         final OverclockCalculator calc = buildGtCalc(s, eut, recipeDuration, parallels);
 
@@ -189,7 +149,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         calc.calculate();
         current.durationTicks(calc.getDuration());
         current.energyPerT(calc.getConsumption());
-        current.throughputFactor(parallels * machines);
         return current;
     }
 

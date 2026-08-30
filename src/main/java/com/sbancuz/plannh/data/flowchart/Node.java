@@ -65,11 +65,8 @@ public class Node {
 
         this.availableExtractors = extractorsFor(handler, recipeIndex);
         this.extractorIndex = 0;
-        if (availableExtractors.isEmpty()) {
-            this.extractor = DefaultProvider.INSTANCE;
-        } else {
-            this.extractor = pickBestExtractor(handler, recipeIndex);
-        }
+        // First, because extractorsFor has already put the providers that claim this recipe in front.
+        this.extractor = availableExtractors.isEmpty() ? DefaultProvider.INSTANCE : availableExtractors.getFirst();
 
         final String pid = this.extractor.getProfileId(handler, recipeIndex);
         if (pid != null && !MachineProfileRegistry.defaultId()
@@ -154,13 +151,6 @@ public class Node {
             if (p.canCraft(handler, recipeIndex)) claimed.add(p);
         }
         return claimed.isEmpty() ? all : List.copyOf(claimed);
-    }
-
-    private PropertyProvider pickBestExtractor(final IRecipeHandler handler, final int recipeIndex) {
-        for (final PropertyProvider p : availableExtractors) {
-            if (p.canCraft(handler, recipeIndex)) return p;
-        }
-        return availableExtractors.getFirst();
     }
 
     public int getRecipeDuration() {

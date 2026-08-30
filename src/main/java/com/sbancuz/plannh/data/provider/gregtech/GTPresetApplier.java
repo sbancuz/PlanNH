@@ -8,6 +8,8 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.effect.EffectResult;
+import com.sbancuz.plannh.data.machine.MachineVariant;
 import com.sbancuz.plannh.data.provider.GTProvider;
 
 import gregtech.api.enums.GTValues;
@@ -16,7 +18,7 @@ import gregtech.api.util.OverclockCalculator;
 
 /**
  * Turns "this node is a Maceration Stack with HSS-G coils at IV" into a configured
- * {@link OverclockCalculator}. The single place a machine-driven calculator is built, so the three
+ * {@link OverclockCalculator}. GregTech's implementation of {@link MachineVariant#run}, so the three
  * sources of truth - GT's own describer, the preset table, and hand-entered settings - are chosen
  * between once rather than at each call site.
  *
@@ -34,18 +36,40 @@ public final class GTPresetApplier {
     public record Configured(OverclockCalculator calculator, int parallels, long recipeEUt, int duration) {}
 
     /**
-     * @return null when no machine resolves, which leaves the caller on its existing settings path.
+     * The machine's own answer for this recipe, which is what {@code Effects.machineDriven} asks for.
+     * Null when the recipe carries no energy or duration to overclock, or when the machine has no
+     * parameters - either way the node falls back to its own settings rows rather than to numbers
+     * nothing stands behind.
      */
     @Nullable
-    public static Configured configure(final Map<String, Object> settings, final RecipeContext ctx,
-        final long recipeEUt, final int duration) {
-        final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
-        if (entry == null) return null;
+    public static EffectResult run(@Nonnull final GTMachineIndex.MachineEntry entry, final RecipeContext ctx,
+        final Map<String, Object> settings, final EffectResult recipe) {
+        final long recipeEUt = GTOverclockStep.recipeEUt(ctx, recipe);
+        final int duration = recipe.durationTicks();
+        if (recipeEUt <= 0 || duration <= 0) return null;
 
+        final Configured configured = configure(entry, settings, ctx, recipeEUt, duration);
+        if (configured == null) return null;
+
+        final OverclockCalculator calculator = configured.calculator();
+        calculator.calculate();
+        final int machines = MachineProfile.getInt(settings, Settings.MACHINES.key(), 1);
+        return new EffectResult(
+            calculator.getDuration(),
+            calculator.getConsumption(),
+            configured.parallels() * machines);
+    }
+
+    /**
+     * @return null when the machine has no parameters at all, which leaves the caller on its existing
+     *         settings path.
+     */
+    @Nullable
+    public static Configured configure(@Nonnull final GTMachineIndex.MachineEntry entry,
+        final Map<String, Object> settings, final RecipeContext ctx, final long recipeEUt, final int duration) {
         // A singleblock's tier is fixed by the block itself; only a multiblock's energy hatch is a
         // choice, so only there does the voltage row mean anything.
-        final int voltageTier = entry.kind() == GTMachineIndex.Kind.SINGLEBLOCK ? entry.voltageTier()
-            : GTSettings.voltageTier(ctx, settings);
+        final int voltageTier = entry.tieredByBuild() ? GTSettings.voltageTier(ctx, settings) : entry.voltageTier();
 
         final GTMachinePreset preset = entry.preset();
         final StructureState state = GTSettings

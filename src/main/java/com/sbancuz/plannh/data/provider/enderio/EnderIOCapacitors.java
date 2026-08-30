@@ -46,10 +46,7 @@ public final class EnderIOCapacitors {
         return List.copyOf(tiers);
     }
 
-    public static int count() {
-        return TIERS.size();
-    }
-
+    /** The strongest capacitor this pack ships, which is what an untouched row plans with. */
     public static int highestTier() {
         return TIERS.size() - 1;
     }

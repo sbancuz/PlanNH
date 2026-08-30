@@ -54,7 +54,7 @@ public enum Settings {
     // Only the key is declared. The provider attaches the def, so no mod's voltage names, coil names
     // or tier ceilings are written down here; see GTSettings and GTProvider.machineDriven. The GT_
     // prefix follows GT_MULTIBLOCK above, and is honest: a coil is a GregTech idea, and the next mod's
-    // tier knob will not be a coil. Structure knobs are declared in the order a machine table lists
+    // tier setting will not be a coil. Structure settings are declared in the order a machine table lists
     // them, because an EnumSet of them iterates in declaration order.
     MACHINE("machine"),
     VOLTAGE("voltage"),

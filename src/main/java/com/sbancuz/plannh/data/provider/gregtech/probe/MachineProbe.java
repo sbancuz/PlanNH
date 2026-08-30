@@ -83,7 +83,7 @@ public final class MachineProbe {
      */
     @Nullable
     public static GTMachinePreset probe(@Nonnull final IMetaTileEntity prototype) {
-        if (!enabled() || ProbeFields.RESOLVED == null) return null;
+        if (!enabled() || OverclockInternals.RESOLVED == null) return null;
         final Class<?> machineClass = prototype.getClass();
         if (UNPROBEABLE.containsKey(machineClass)) return null;
 
@@ -195,7 +195,7 @@ public final class MachineProbe {
     }
 
     /**
-     * The structure the probe reads a machine's flags at: every knob at the best available, matching
+     * The structure the probe reads a machine's flags at: every setting at the best available, matching
      * what {@code GTSettings.resolve} hands an untouched node. Whether a machine overclocks on heat or
      * rewrites its recipe cost is structural rather than tiered, so the voltage here is only the
      * lowest real one.
@@ -232,9 +232,9 @@ public final class MachineProbe {
             final ProbeReading at = subject.read(state, recipe);
             return at != null && at.isRunnable() ? at : reference;
         };
-        final EnumSet<Settings> knobs = SensitivityScan
-            .scan(reference(), subject.reachableKnobs(), subject.modeCount(), readings);
-        return toPreset(reference, readings, knobs);
+        final EnumSet<Settings> settings = SensitivityScan
+            .scan(reference(), subject.reachableSettings(), subject.modeCount(), readings);
+        return toPreset(reference, readings, settings);
     }
 
     /**
@@ -244,7 +244,7 @@ public final class MachineProbe {
      */
     @Nonnull
     public static GTMachinePreset toPreset(@Nonnull final ProbeReading reference,
-        @Nonnull final Function<StructureState, ProbeReading> readings, @Nonnull final EnumSet<Settings> knobs) {
+        @Nonnull final Function<StructureState, ProbeReading> readings, @Nonnull final EnumSet<Settings> settings) {
         final GTMachinePreset.Builder preset = GTMachinePreset.builder()
             .parallel(
                 s -> Math.max(
@@ -262,7 +262,7 @@ public final class MachineProbe {
                     .durationDecreasePerOC(),
                 s -> readings.apply(s)
                     .eutIncreasePerOC())
-            .knobs(knobs.toArray(new Settings[0]));
+            .settings(settings.toArray(new Settings[0]));
 
         // GregTech sets a machine heat even where it never overclocks on one, so record it either way
         // and let the flags decide whether the applier hands it to the calculator.

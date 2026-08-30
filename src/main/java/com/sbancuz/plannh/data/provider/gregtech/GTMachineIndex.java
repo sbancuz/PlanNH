@@ -18,6 +18,7 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.machine.MachineVariant;
 import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.provider.GTProvider;
@@ -52,24 +53,23 @@ public final class GTMachineIndex {
 
     private static final String DEPRECATED_LINE = "GT5U.MBTT.Deprecated.NEI";
 
-    /** How a machine is built, which is what decides whether voltage and parallels are editable. */
-    public enum Kind {
-        SINGLEBLOCK,
-        MULTIBLOCK
-    }
+    /** Appended to a singleblock's name in the picker. Translated, since the name it follows is. */
+    private static final String SINGLEBLOCK_SUFFIX = "plannh.machine.singleblock_suffix";
 
     /**
-     * @param id        {@code MetaTileEntity.getLocalNameKey()} - the value charts persist. Not the
-     *                  meta id, which GT reassigns between versions, nor the localized name, which
-     *                  is locale-dependent. Deliberately not getMetaName() either: that is declared
-     *                  on the tile entity, not on the prototypes this walks, so it does not identify
-     *                  them and several machines collided onto one entry.
-     * @param describer GT's own overclock behaviour for this machine, present on singleblocks and
-     *                  a handful of multis. When set it is authoritative and no preset is needed.
-     * @param preset    structure-derived parameters for multiblocks; null when uncovered.
-     * @param modes     how many modes the machine has, and which recipemap selects which.
+     * @param id            {@code MetaTileEntity.getLocalNameKey()} - the value charts persist. Not
+     *                      the meta id, which GT reassigns between versions, nor the localized name,
+     *                      which is locale-dependent. Deliberately not getMetaName() either: that is
+     *                      declared on the tile entity, not on the prototypes this walks, so it does
+     *                      not identify them and several machines collided onto one entry.
+     * @param tieredByBuild true for a multiblock, whose energy hatch is a choice; false for a
+     *                      singleblock, whose tier is the block a player placed.
+     * @param describer     GT's own overclock behaviour for this machine, present on singleblocks and
+     *                      a handful of multis. When set it is authoritative and no preset is needed.
+     * @param preset        structure-derived parameters for multiblocks; null when uncovered.
+     * @param modes         how many modes the machine has, and which recipemap selects which.
      */
-    public record MachineEntry(String id, String displayName, Kind kind, int voltageTier, int amperage,
+    public record MachineEntry(String id, String displayName, boolean tieredByBuild, int voltageTier, int amperage,
         int catalystPriority, @Nullable OverclockDescriber describer, @Nullable GTMachinePreset preset,
         GTMachineModes.Modes modes) implements MachineVariant {
 
@@ -85,8 +85,8 @@ public final class GTMachineIndex {
          */
         @Override
         @Nonnull
-        public Set<Settings> knobs() {
-            return preset == null ? Set.of() : preset.knobs();
+        public Set<Settings> settings() {
+            return preset == null ? Set.of() : preset.settings();
         }
 
         /**
@@ -98,7 +98,14 @@ public final class GTMachineIndex {
         @Override
         @Nonnull
         public String label() {
-            return kind == Kind.SINGLEBLOCK ? displayName + " (single)" : displayName;
+            return tieredByBuild ? displayName : displayName + StatCollector.translateToLocal(SINGLEBLOCK_SUFFIX);
+        }
+
+        @Override
+        @Nullable
+        public EffectResult run(final RecipeContext ctx, final Map<String, Object> settings,
+            final EffectResult recipe) {
+            return GTPresetApplier.run(this, ctx, settings, recipe);
         }
     }
 
@@ -128,13 +135,8 @@ public final class GTMachineIndex {
     private static final Map<String, List<MachineEntry>> byNeiTitle = new HashMap<>();
 
     /**
-     * The last answer {@link #candidates} gave.
-     *
-     * <p>
-     * Reached from settings-row visibility predicates, so a single open node asks the same question a
-     * dozen times per frame with the same arguments. One slot is enough because the asking is
-     * consecutive: the panel resolves one node's rows before it moves to the next. Which machine the
-     * node then selected out of this list is memoized once, in MachineVariants.
+     * The last answer {@link #candidates} gave. One slot, because the visibility predicates ask this
+     * a dozen times per frame with the same arguments and the panel finishes one node before the next.
      */
     @Nullable
     private static RecipeMap<?> lastMap;
@@ -143,6 +145,16 @@ public final class GTMachineIndex {
     private static List<MachineEntry> lastCandidates;
 
     private GTMachineIndex() {}
+
+    /** Drops the index and everything derived from it, so a reload rebuilds against the new pack. */
+    public static void reset() {
+        byRecipeMap = null;
+        byId = Map.of();
+        byNeiTitle.clear();
+        lastMap = null;
+        lastTitle = "";
+        lastCandidates = null;
+    }
 
     /**
      * Looks a machine up by its persisted id regardless of recipemap, so a row can still render the
@@ -235,14 +247,23 @@ public final class GTMachineIndex {
     }
 
     /**
-     * How far a machine scales, measured at a mid reference structure. Only used to order the
-     * picker, never to compute anything, so the reference values need only be consistent.
+     * The structure every machine is measured at when the picker ranks them. Nothing is built here
+     * and no chart reads these numbers: a machine's parallel count is a function of the blocks around
+     * it, so comparing machines needs one structure they are all asked about. Which structure barely
+     * matters, because only the order of the answers is used - so this is a middling one rather than
+     * a claim about how anybody builds.
+     */
+    private static final StructureState RANKING_REFERENCE = new StructureState(5, 5, 4, 4, 2, 0, 0, 1, 0, 0);
+
+    /**
+     * How far a machine scales, used only to order the picker. That order is also the default, since
+     * a node that has chosen nothing takes the first candidate.
      */
     private static int scale(final MachineEntry entry) {
         if (entry.preset() == null) return 0;
         return entry.preset()
             .maxParallel()
-            .applyAsInt(new StructureState(5, 5, 4, 4, 2, 0, 0, 1, 0, 0));
+            .applyAsInt(RANKING_REFERENCE);
     }
 
     @Nonnull
@@ -288,7 +309,7 @@ public final class GTMachineIndex {
             // it is never the better default. Without this it sorted first, because scale() has
             // nothing to report for it and zero reads as "simplest".
             .thenComparing(GTMachineIndex::isUncovered)
-            .thenComparing(MachineEntry::kind)
+            .thenComparing(MachineEntry::tieredByBuild)
             .thenComparingInt(MachineEntry::voltageTier)
             .thenComparingInt(GTMachineIndex::scale)
             .thenComparing(MachineEntry::id);
@@ -319,7 +340,7 @@ public final class GTMachineIndex {
         // turbines.
         if (isDeprecated(mte)) return;
 
-        final Kind kind = mte instanceof MTEMultiBlockBase ? Kind.MULTIBLOCK : Kind.SINGLEBLOCK;
+        final boolean tieredByBuild = mte instanceof MTEMultiBlockBase;
         final OverclockDescriber describer = mte instanceof final IOverclockDescriptionProvider provider
             ? provider.getOverclockDescriber()
             : null;
@@ -329,14 +350,14 @@ public final class GTMachineIndex {
         final GTMachinePreset probed = MachineProbe.probe(mte);
         MachineProbe.reportDisagreement(mte.getClass(), fromTable, probed);
         final GTMachinePreset preset = MachineProbe.drivesNumbers() && probed != null ? probed : fromTable;
-        if (preset == null && describer == null && kind == Kind.MULTIBLOCK) {
+        if (preset == null && describer == null && tieredByBuild) {
             uncovered.add(mte.getClass().getName());
         }
 
         final MachineEntry entry = new MachineEntry(
             mte.getLocalNameKey(),
             mte.getLocalName(),
-            kind,
+            tieredByBuild,
             mte instanceof final MTETieredMachineBlock tiered ? tiered.mTier : 0,
             mte instanceof final MTEBasicMachine basic ? basic.mAmperage : 1,
             workable.getRecipeCatalystPriority(),

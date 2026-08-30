@@ -5,17 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-
-import javax.annotation.Nonnull;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -84,63 +73,6 @@ class ChartMinimumsTest {
                 .isEmpty(),
             "a chart that set nothing must not come back holding sentinels");
         assertEquals(Graph.NO_MINIMUM, decoded.getMinimum(COIL));
-    }
-
-    /**
-     * Minimums first shipped as three fields named after the GregTech things they bounded. Charts
-     * saved that way are in the wild, so their floors have to land on the settings those fields turned
-     * out to be, rather than being silently dropped back to the best the game offers.
-     */
-    @Test
-    void aChartSavedWithTheOldNamedFieldsStillOpensAtItsFloors() {
-        final Graph decoded = Serializer.decode(
-            reEncode(
-                asJson(new Graph("Slot 1")),
-                "\"minCoilTier\": 3, \"minPipeCasingTier\": 2, \"minVoltageTier\": 5,"));
-
-        assertEquals(3, decoded.getMinimum(COIL));
-        assertEquals(2, decoded.getMinimum(PIPE_CASING));
-        assertEquals(5, decoded.getMinimum(VOLTAGE));
-    }
-
-    /** The old format wrote its sentinel on every save, so reading it back as a floor would pin every chart. */
-    @Test
-    void theUnsetSentinelInAnOldSaveDoesNotBecomeAFloor() {
-        final Graph decoded = Serializer.decode(
-            reEncode(
-                asJson(new Graph("Slot 1")),
-                "\"minCoilTier\": -1, \"minPipeCasingTier\": -1, \"minVoltageTier\": -1,"));
-
-        assertTrue(
-            decoded.getMinimums()
-                .isEmpty());
-    }
-
-    /** The graph JSON a save carries, which is gzipped and base64'd inside {@link Serializer#encode}. */
-    @Nonnull
-    private static String asJson(final Graph graph) {
-        try (GZIPInputStream gzip = new GZIPInputStream(
-            new ByteArrayInputStream(
-                Base64.getDecoder()
-                    .decode(Serializer.encode(graph))))) {
-            return new String(gzip.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (final IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /** The same JSON with {@code injected} spliced in after the opening brace, packed the way a save is. */
-    @Nonnull
-    private static String reEncode(final String json, final String injected) {
-        final String patched = json.replaceFirst("\\{", "{" + injected);
-        final ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (GZIPOutputStream gzip = new GZIPOutputStream(out)) {
-            gzip.write(patched.getBytes(StandardCharsets.UTF_8));
-        } catch (final IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        return Base64.getEncoder()
-            .encodeToString(out.toByteArray());
     }
 
     /**

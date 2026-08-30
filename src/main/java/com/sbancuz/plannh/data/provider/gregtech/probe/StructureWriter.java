@@ -10,7 +10,6 @@ import static com.sbancuz.plannh.data.Settings.GT_SOLENOID;
 import static com.sbancuz.plannh.data.Settings.GT_STRUCTURE_TIER;
 import static com.sbancuz.plannh.data.Settings.GT_WIDTH;
 
-import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -22,6 +21,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.item.ItemStack;
 
+import com.sbancuz.plannh.data.Reflect;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
@@ -31,7 +31,9 @@ import gregtech.api.enums.ItemList;
 import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
 
 /**
- * Writes the structure a player would have built into the instance fields the machine reads.
+ * Writes the structure a player would have built into the instance fields the machine reads. The
+ * other half of the probe, {@link OverclockInternals}, goes the other way: it reads GregTech's
+ * arithmetic back out once this has posed the question.
  *
  * <p>
  * A machine's own {@code checkMachine} scans the blocks around it and reduces them to a handful of
@@ -47,10 +49,10 @@ import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
  * rest are plain ints, so they need {@link #BY_NAME}. That list is shared across all machines rather
  * than written per machine, and it holds names, never formulas.
  */
-public final class FieldInjector {
+public final class StructureWriter {
 
     /**
-     * The knob a field carries, and how the field spells it. GregTech is not consistent about whether
+     * The setting a field carries, and how the field spells it. GregTech is not consistent about whether
      * a coil is stored as its level, its tier or its tier plus one, and the difference is a factor of
      * two in the answer.
      */
@@ -73,15 +75,15 @@ public final class FieldInjector {
         SLICES(GT_WIDTH),
         MACHINE_MODE(GT_MODE);
 
-        private final Settings knob;
+        private final Settings setting;
 
-        Coding(final Settings knob) {
-            this.knob = knob;
+        Coding(final Settings setting) {
+            this.setting = setting;
         }
     }
 
     /**
-     * Field names GregTech uses for the knobs it stores as plain numbers. {@code mTier} is deliberately
+     * Field names GregTech uses for the settings it stores as plain numbers. {@code mTier} is deliberately
      * absent: that is the controller's own voltage tier, which the energy hatch supplies instead.
      */
     private static final Map<String, Coding> BY_NAME = Map.ofEntries(
@@ -106,28 +108,27 @@ public final class FieldInjector {
         Map.entry("machineMode", Coding.MACHINE_MODE));
 
     private final List<Write> writes;
-    private final EnumSet<Settings> knobs;
+    private final EnumSet<Settings> settings;
     private final boolean takesSawblade;
 
     private record Write(Field field, Coding coding) {}
 
-    private FieldInjector(final List<Write> writes, final EnumSet<Settings> knobs, final boolean takesSawblade) {
+    private StructureWriter(final List<Write> writes, final EnumSet<Settings> settings, final boolean takesSawblade) {
         this.writes = writes;
-        this.knobs = knobs;
+        this.settings = settings;
         this.takesSawblade = takesSawblade;
     }
 
     @Nonnull
-    public static FieldInjector forClass(final Class<?> machineClass) {
+    public static StructureWriter forClass(final Class<?> machineClass) {
         final List<Write> found = new ArrayList<>();
         final EnumSet<Settings> reachable = EnumSet.noneOf(Settings.class);
         for (Class<?> c = machineClass; c != null; c = c.getSuperclass()) {
             for (final Field field : c.getDeclaredFields()) {
                 final Coding coding = codingOf(field);
                 if (coding == null) continue;
-                AccessibleObject.setAccessible(new AccessibleObject[] { field }, true);
-                found.add(new Write(field, coding));
-                reachable.add(coding.knob);
+                found.add(new Write(Reflect.accessible(field), coding));
+                reachable.add(coding.setting);
             }
         }
         final boolean sawblade = declaresSawbladeCheck(machineClass);
@@ -135,55 +136,42 @@ public final class FieldInjector {
         // Every multiblock inherits the machineMode field, so the field alone would put a mode row on
         // all of them. A machine that really has modes overrides GregTech's own answer to the question.
         if (!declaresModeSwitch(machineClass)) reachable.remove(GT_MODE);
-        return new FieldInjector(List.copyOf(found), reachable, sawblade);
-    }
-
-    /** True when a subclass of MTEMultiBlockBase answers {@code supportsMachineModeSwitch} for itself. */
-    private static boolean declaresModeSwitch(final Class<?> machineClass) {
-        for (Class<?> c = machineClass; c != null && c != MTEMultiBlockBase.class; c = c.getSuperclass()) {
-            try {
-                c.getDeclaredMethod("supportsMachineModeSwitch");
-                return true;
-            } catch (final NoSuchMethodException keepWalking) {
-                // Most machines, which is why the base class declaring it is not enough to go on.
-            }
-        }
-        return false;
+        return new StructureWriter(List.copyOf(found), reachable, sawblade);
     }
 
     /**
-     * The one knob a machine holds as an item rather than as a number: the Industrial Cutting Machine
+     * True when a subclass of MTEMultiBlockBase answers {@code supportsMachineModeSwitch} for itself.
+     * The walk stops at the base class, which declares it for every machine and so says nothing.
+     */
+    private static boolean declaresModeSwitch(final Class<?> machineClass) {
+        return Reflect.declaredMethod(machineClass, MTEMultiBlockBase.class, "supportsMachineModeSwitch") != null;
+    }
+
+    /**
+     * The one setting a machine holds as an item rather than as a number: the Industrial Cutting Machine
      * reads its sawblade straight out of the controller slot. Recognised by the machine declaring
      * GregTech's own {@code isValidSawblade} rather than by naming the class.
      */
     private static boolean declaresSawbladeCheck(final Class<?> machineClass) {
-        for (Class<?> c = machineClass; c != null; c = c.getSuperclass()) {
-            try {
-                c.getDeclaredMethod("isValidSawblade", ItemStack.class);
-                return true;
-            } catch (final NoSuchMethodException keepWalking) {
-                // Almost every machine, which is the point of asking.
-            }
-        }
-        return false;
+        return Reflect.declaredMethod(machineClass, null, "isValidSawblade", ItemStack.class) != null;
     }
 
-    /** The knobs this machine could possibly read. The sensitivity scan narrows it to those it does. */
+    /** The settings this machine could possibly read. The sensitivity scan narrows it to those it does. */
     @Nonnull
-    public EnumSet<Settings> reachableKnobs() {
-        return EnumSet.copyOf(knobs);
+    public EnumSet<Settings> reachableSettings() {
+        return EnumSet.copyOf(settings);
     }
 
     /**
      * Writes the state onto the machine. A field that refuses the write is skipped rather than
-     * abandoning the rest: a machine reading four knobs should still answer for the three that took.
+     * abandoning the rest: a machine reading four settings should still answer for the three that took.
      */
     void apply(@Nonnull final MTEMultiBlockBase machine, @Nonnull final StructureState state) {
         for (final Write write : writes) {
             try {
                 set(write, machine, state);
             } catch (final ReflectiveOperationException | RuntimeException skip) {
-                // Left as the machine's own default, which is what an unprobed knob already means.
+                // Left as the machine's own default, which is what an unprobed setting already means.
             }
         }
         if (takesSawblade) putSawblade(machine, state.sawbladeTier());
@@ -194,7 +182,7 @@ public final class FieldInjector {
             final int slot = machine.getControllerSlotIndex();
             if (slot < machine.mInventory.length) {
                 machine.mInventory[slot] = ItemList
-                    .valueOf("T" + (clamp(tier, GTStructureTiers.MAX_SAWBLADE_TIER) + 1) + "Sawblade")
+                    .valueOf("T" + (GTStructureTiers.clamp(tier, GTStructureTiers.MAX_SAWBLADE_TIER) + 1) + "Sawblade")
                     .get(1);
             }
         } catch (final RuntimeException skip) {
@@ -206,14 +194,17 @@ public final class FieldInjector {
         throws ReflectiveOperationException {
         if (write.coding() == Coding.COIL_LEVEL) {
             write.field()
-                .set(
-                    machine,
-                    HeatingCoilLevel.getFromTier((byte) clamp(state.coilTier(), GTStructureTiers.MAX_COIL_TIER)));
+                .set(machine, HeatingCoilLevel.getFromTier((byte) GTStructureTiers.clampCoil(state.coilTier())));
             return;
         }
         if (write.coding() == Coding.ELECTRODE_ITEM) {
-            write.field()
-                .set(machine, electrode(state.electrodeTier()));
+            // Left alone rather than nulled when kubatech has no electrode to give: the machine's own
+            // default is a state it can survive, and null is one it was never written to expect.
+            final Object electrode = GTStructureTiers.electrode(state.electrodeTier());
+            if (electrode != null) {
+                write.field()
+                    .set(machine, electrode);
+            }
             return;
         }
         setNumber(write.field(), machine, number(write.coding(), state));
@@ -251,22 +242,11 @@ public final class FieldInjector {
         }
     }
 
-    @Nonnull
-    private static Object electrode(final int tier) throws ReflectiveOperationException {
-        final Object[] all = Class.forName("kubatech.loaders.ArcFurnaceElectrode")
-            .getEnumConstants();
-        return all[clamp(tier, all.length - 1)];
-    }
-
-    private static int clamp(final int value, final int max) {
-        return Math.max(0, Math.min(max, value));
-    }
-
     @Nullable
     private static Coding codingOf(final Field field) {
         final Class<?> type = field.getType();
         if (type == HeatingCoilLevel.class) return Coding.COIL_LEVEL;
-        if ("kubatech.loaders.ArcFurnaceElectrode".equals(type.getName())) return Coding.ELECTRODE_ITEM;
+        if (GTStructureTiers.ELECTRODE_CLASS.equals(type.getName())) return Coding.ELECTRODE_ITEM;
         if (type != int.class && type != byte.class && type != Byte.class && type != Integer.class) return null;
         return BY_NAME.get(field.getName());
     }

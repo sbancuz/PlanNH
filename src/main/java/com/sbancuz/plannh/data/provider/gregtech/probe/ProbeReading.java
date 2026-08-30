@@ -7,8 +7,8 @@ import javax.annotation.Nonnull;
  * and every overclock field of the {@code OverclockCalculator} GregTech built for the probe recipe.
  *
  * <p>
- * Record equality is the whole comparison the knob sensitivity scan needs, once {@link #asShown()}
- * has dropped the fields a chart cannot show.
+ * Record equality is the whole comparison the sensitivity scan needs, once {@link #asShown()} has
+ * dropped the fields a chart cannot show.
  */
 public record ProbeReading(int maxParallel, double durationModifier, double euModifier, double eutIncreasePerOC,
     double durationDecreasePerOC, int maxTierSkip, boolean heatOC, boolean heatDiscount, int machineHeat,

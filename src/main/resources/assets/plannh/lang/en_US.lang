@@ -162,6 +162,7 @@ plannh.solver.inexact_residual=Returned an inexact port residual %s
 plannh.solver.under_supply=Returned a port that under-supplies: residual %s
 plannh.solver.gate_count_not_certified=Gate count %d is minimal but not certified optimal (exact search over budget)
 ## Names
+plannh.machine.singleblock_suffix= (single)
 plannh.solver.pin_extent=extent pin
 plannh.solver.pin_target=target rate
 plannh.solver.pin_count=fixed machine count

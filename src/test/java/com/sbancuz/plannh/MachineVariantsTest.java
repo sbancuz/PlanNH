@@ -33,7 +33,8 @@ class MachineVariantsTest {
     private static final RecipeProperty<String> KIND = RecipeProperty.<String>builder("test_kind", "")
         .build();
 
-    private record Fake(String id, String displayName, Set<Settings> knobs, String label) implements MachineVariant {}
+    private record Fake(String id, String displayName, Set<Settings> settings, String label)
+        implements MachineVariant {}
 
     private static final Fake SIMPLE = new Fake("mod:simple", "Simple Grinder", Set.of(), "Simple Grinder");
     private static final Fake FANCY = new Fake(
@@ -114,17 +115,17 @@ class MachineVariantsTest {
         assertNull(MachineVariants.selected(recipeOf("grinding"), chose("mod:removed")));
     }
 
-    /** The rows a node offers are the selected machine's, which is the whole point of registering knobs. */
+    /** The rows a node offers are the selected machine's, which is the whole point of registering settings. */
     @Test
     void knobRowsFollowTheSelectedMachine() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
         final RecipeContext ctx = recipeOf("grinding");
 
         assertFalse(
-            MachineVariants.usesKnob(Settings.GT_COIL)
+            MachineVariants.usesSetting(Settings.GT_COIL)
                 .test(ctx, chose("mod:simple")));
         assertTrue(
-            MachineVariants.usesKnob(Settings.GT_COIL)
+            MachineVariants.usesSetting(Settings.GT_COIL)
                 .test(ctx, chose("mod:fancy")));
     }
 

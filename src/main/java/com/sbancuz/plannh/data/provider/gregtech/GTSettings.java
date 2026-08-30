@@ -15,7 +15,7 @@ import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.Settings;
-import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
+import com.sbancuz.plannh.data.machine.MachineVariant;
 import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.provider.GTProvider;
 
@@ -30,7 +30,7 @@ import gregtech.api.util.GTUtility;
  * <p>
  * These describe the structure a player built - which coil, which solenoid - rather than raw
  * overclock arithmetic. Each row is shown only when the selected machine's preset says it reads that
- * knob, so a node asks for the two or three numbers that machine actually uses instead of the
+ * setting, so a node asks for the two or three numbers that machine actually uses instead of the
  * fifteen the old profiles offered.
  */
 public final class GTSettings {
@@ -41,8 +41,6 @@ public final class GTSettings {
     public static final String MACHINE = Settings.MACHINE.key();
     /** Still GregTech's own: it reveals the raw overclock rows, which no other provider has. */
     public static final String ADVANCED = "gt_advanced";
-    /** What {@link #MACHINE} was called while the picker was GregTech's alone. */
-    private static final String LEGACY_MACHINE = "gt_machine";
 
     // Read off the shared vocabulary rather than repeated as literals, so the key a preset names and
     // the key a node stores cannot drift apart. Sourcing them from a method call also keeps them out
@@ -136,42 +134,33 @@ public final class GTSettings {
      * chart on screen rather than handed in: a {@link SettingDef} is given the recipe and the node's
      * own settings, never the node or the graph holding it, and only the active chart draws rows.
      */
-    private static int chartMinimum(final Settings knob, final int best) {
-        return ChartMinimums.floor(knob, best);
+    private static int chartMinimum(final Settings setting, final int best) {
+        return ChartMinimums.floor(setting, best);
     }
 
     /**
-     * The knobs a GregTech chart can set a floor for. Registered rather than listed by the panel that
+     * The settings a GregTech chart can set a floor for. Registered rather than listed by the panel that
      * draws them, so that panel names no mod and keeps working on a pack without GregTech.
      */
     public static void registerChartMinimums() {
         ChartMinimums.register(
-            new ChartMinimums.Minimum(
+            ChartMinimums.Minimum.strongest(
                 Settings.GT_COIL,
                 "Coil",
                 0,
                 GTStructureTiers.MAX_COIL_TIER,
-                GTStructureTiers.MAX_COIL_TIER,
                 tier -> COIL_DEF.display(COIL_NAMES.get(tier))));
         ChartMinimums.register(
-            new ChartMinimums.Minimum(
+            ChartMinimums.Minimum.strongest(
                 Settings.GT_PIPE_CASING,
                 "Pipe",
                 1,
                 GTStructureTiers.MAX_PIPE_CASING_TIER,
-                GTStructureTiers.MAX_PIPE_CASING_TIER,
                 GTStructureTiers::pipeCasingName));
-        // One below the top of GregTech's own list, matching the tiers the voltage row offers. The
-        // weakest is the untouched value, because a voltage floor raises what a recipe costs rather
-        // than making it buildable.
+        // One below the top of GregTech's own list, matching the tiers the voltage row offers.
         ChartMinimums.register(
-            new ChartMinimums.Minimum(
-                Settings.VOLTAGE,
-                "Volt",
-                0,
-                GTValues.VN.length - 2,
-                0,
-                tier -> GTValues.VN[tier]));
+            ChartMinimums.Minimum
+                .weakest(Settings.VOLTAGE, "Volt", 0, GTValues.VN.length - 2, tier -> GTValues.VN[tier]));
     }
 
     /**
@@ -478,17 +467,17 @@ public final class GTSettings {
                 .count() - 1;
     }
 
-    /** What a structure knob can be set to, both ends included. */
+    /** What a structure setting can be set to, both ends included. */
     public record TierRange(int min, int max) {}
 
     /**
-     * The row a structure knob is edited through. The single place that says which def belongs to
+     * The row a structure setting is edited through. The single place that says which def belongs to
      * which setting, so a profile listing the rows and a scan sweeping their ranges cannot disagree
-     * about what a knob is.
+     * about what a setting is.
      */
     @Nonnull
-    public static SettingDef<?> knobDef(final Settings knob) {
-        return switch (knob) {
+    public static SettingDef<?> settingDef(final Settings setting) {
+        return switch (setting) {
             case GT_COIL -> COIL_DEF;
             case GT_SOLENOID -> SOLENOID_DEF;
             case GT_ITEM_PIPE -> ITEM_PIPE_DEF;
@@ -498,28 +487,28 @@ public final class GTSettings {
             case GT_STRUCTURE_TIER -> STRUCTURE_TIER_DEF;
             case GT_WIDTH -> WIDTH_DEF;
             case GT_MODE -> MODE_DEF;
-            default -> throw new IllegalArgumentException(knob + " is not a structure knob");
+            default -> throw new IllegalArgumentException(setting + " is not a structure setting");
         };
     }
 
     /**
-     * The range a knob offers, read off the row that offers it. Anything that varies a knob - the
+     * The range a setting offers, read off the row that offers it. Anything that varies a setting - the
      * probe's sensitivity scan - then covers exactly what the player can reach, and one edit to a row
      * moves both.
      */
     @Nonnull
-    public static TierRange knobRange(final Settings knob) {
+    public static TierRange knobRange(final Settings setting) {
         // The coil row stores a name rather than a number, so its range is the name list.
-        if (knob == Settings.GT_COIL) return new TierRange(0, COIL_NAMES.size() - 1);
+        if (setting == Settings.GT_COIL) return new TierRange(0, COIL_NAMES.size() - 1);
         // A sweep over modes takes its count from the machine, not from a range; the mode row's own
         // ceiling is a function of the selected machine and so cannot answer without one.
-        if (knob == Settings.GT_MODE) return new TierRange(0, 1);
-        final SettingDef<?> def = knobDef(knob);
+        if (setting == Settings.GT_MODE) return new TierRange(0, 1);
+        final SettingDef<?> def = settingDef(setting);
         return new TierRange(def.minInt, def.maxInt);
     }
 
     /**
-     * Structure knobs open on what the chart says it can build, and on the best the game offers where
+     * Structure settings open on what the chart says it can build, and on the best the game offers where
      * the chart has said nothing. The row is right there to move one node off that.
      */
     @Nonnull
@@ -563,16 +552,16 @@ public final class GTSettings {
         return MachineProfile.getBool(settings, ADVANCED, false);
     }
 
-    /** Shows a knob only when the machine the node selected actually reads it. */
+    /** Shows a setting only when the machine the node selected actually reads it. */
     @Nonnull
-    public static BiPredicate<RecipeContext, Map<String, Object>> usesKnob(final Settings knob) {
-        final BiPredicate<RecipeContext, Map<String, Object>> machineReadsIt = MachineVariants.usesKnob(knob);
+    public static BiPredicate<RecipeContext, Map<String, Object>> usesSetting(final Settings setting) {
+        final BiPredicate<RecipeContext, Map<String, Object>> machineReadsIt = MachineVariants.usesSetting(setting);
         return (ctx, settings) -> {
             // Two conditions the shared predicate cannot know about: advanced mode replaces these rows
             // with the raw overclock ones, and a recipe that already implies its machine's mode has
             // answered the question the mode row would ask.
             if (isAdvanced(settings)) return false;
-            if (knob == Settings.GT_MODE) {
+            if (setting == Settings.GT_MODE) {
                 final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
                 if (entry != null && entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null)) >= 0) return false;
             }
@@ -630,14 +619,14 @@ public final class GTSettings {
      * Whether the node stands for a multiblock. The machine picker already answers this, so the row is
      * never a question - but it stays a setting, because a node whose machine PlanNH cannot identify
      * still needs a way to say which form factor it is, and because a preset may want to state it.
-     * Unknown counts as a multiblock: the rows it gates are the ones a multiblock has, and offering
-     * them on a machine that turns out to be a singleblock is recoverable where withholding them is
-     * not.
+     * Read through {@link MachineVariant#tieredByBuild()} rather than off a GregTech type, so that the
+     * one fact has one authority and the question generalizes to a mod whose build choice is not a
+     * hatch.
      */
     public static final SettingDef<Boolean> MULTIBLOCK_DEF = SettingDef
         .autoBoolDef(Settings.GT_MULTIBLOCK.key(), (ctx, s) -> {
-            final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, s);
-            return entry == null || entry.kind() == GTMachineIndex.Kind.MULTIBLOCK ? 1 : 0;
+            final MachineVariant machine = MachineVariants.selected(ctx, s);
+            return machine == null || machine.tieredByBuild() ? 1 : 0;
         }, (v, c) -> v ? "M" : null);
 
     private static boolean multiblockOrUnknown(final RecipeContext ctx, final Map<String, Object> settings) {
@@ -671,17 +660,6 @@ public final class GTSettings {
         Settings.HEAT_DISCOUNT_MULT.key());
 
     public static void migrateLegacyNode(final Map<String, Object> settings) {
-        // The mode is derived from the recipe now. A stored one can contradict it - a chart saved with
-        // tower mode on a distillery recipe models a machine that cannot run it - so it is dropped
-        // rather than honoured. Machines that still ask for a mode re-store it on the next edit.
-        settings.remove(MODE);
-
-        // The picker became everyone's, so the machine a node chose is stored under a key that names
-        // no mod. Renamed before the check below, or a chart that had picked a machine would be read
-        // as one that predates the picker and would open in advanced mode.
-        final Object legacyMachine = settings.remove(LEGACY_MACHINE);
-        if (legacyMachine != null) settings.putIfAbsent(MACHINE, legacyMachine);
-
         if (settings.containsKey(ADVANCED) || settings.containsKey(MACHINE)) return;
         for (final String key : DERIVED_KEYS) {
             if (settings.containsKey(key)) {

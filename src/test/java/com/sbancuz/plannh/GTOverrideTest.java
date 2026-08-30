@@ -19,7 +19,7 @@ import gregtech.api.util.OverclockCalculator;
 
 /**
  * Advanced mode is an override, not a second set of maths: a stored value replaces just that one
- * knob and everything else stays exactly as the machine computed it. The old design ran a wholly
+ * setting and everything else stays exactly as the machine computed it. The old design ran a wholly
  * separate calculator whose unset rows fell back to global defaults, so ticking Advanced silently
  * changed numbers the user had not touched.
  */

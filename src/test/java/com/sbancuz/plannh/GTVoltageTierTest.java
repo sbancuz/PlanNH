@@ -10,8 +10,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.Settings;
-import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.provider.gregtech.GTOverclockStep;
 
 import gregtech.api.enums.GTValues;
 

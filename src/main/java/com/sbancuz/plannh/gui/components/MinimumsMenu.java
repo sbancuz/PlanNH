@@ -14,7 +14,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
- * The structure the active chart plans with: the knobs a node opens on when the user has said nothing
+ * The structure the active chart plans with: the settings a node opens on when the user has said nothing
  * about it.
  *
  * <p>

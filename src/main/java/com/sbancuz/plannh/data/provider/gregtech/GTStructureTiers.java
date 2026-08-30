@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data.provider.gregtech;
 
-import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 
 import javax.annotation.Nonnull;
@@ -9,12 +8,13 @@ import javax.annotation.Nullable;
 import net.minecraft.item.ItemStack;
 
 import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.data.Reflect;
 
 import gregtech.api.enums.HeatingCoilLevel;
 import gregtech.api.enums.ItemList;
 
 /**
- * How far each structure knob goes, and the per-tier numbers GregTech attaches to the two knobs that
+ * How far each structure setting goes, and the per-tier numbers GregTech attaches to the two settings that
  * carry their own parameter tables.
  *
  * <p>
@@ -45,7 +45,7 @@ public final class GTStructureTiers {
     public static final int MAX_ITEM_PIPE_TIER = 8;
 
     /**
-     * The pipe casings, weakest first, so tier 1 is Bronze. Both machines that read the knob agree on
+     * The pipe casings, weakest first, so tier 1 is Bronze. Both machines that read the setting agree on
      * this order: GT++'s Chemical Plant takes block meta 12 to 15 as tier 1 to 4, and GregTech's steam
      * multiblocks take the same two lowest metas as their tier 1 and 2.
      */
@@ -75,7 +75,7 @@ public final class GTStructureTiers {
     @Nullable
     public static final Sawblades SAWBLADES = readSawblades();
 
-    /** Ceilings for a pack whose tables would not read; the row then bounds a knob no machine offers. */
+    /** Ceilings for a pack whose tables would not read; the row then bounds a setting no machine offers. */
     private static final int ELECTRODE_TIERS_AT_5_09_52 = 13;
     private static final int SAWBLADE_TIERS_AT_5_09_52 = 3;
 
@@ -90,8 +90,13 @@ public final class GTStructureTiers {
             .getHeat();
     }
 
+    /** Into {@code [0, max]}. A stored tier from a pack with a longer table still resolves to a real one. */
+    public static int clamp(final int tier, final int max) {
+        return Math.max(0, Math.min(max, tier));
+    }
+
     public static int clampCoil(final int coilTier) {
-        return Math.max(0, Math.min(MAX_COIL_TIER, coilTier));
+        return clamp(coilTier, MAX_COIL_TIER);
     }
 
     /**
@@ -132,16 +137,44 @@ public final class GTStructureTiers {
 
     /** Clamps to the table, so a stored tier from a pack with more electrodes still resolves. */
     public static double at(@Nonnull final double[] table, final int tier) {
-        return table[Math.max(0, Math.min(table.length - 1, tier))];
+        return table[clamp(tier, table.length - 1)];
     }
 
     public static int at(@Nonnull final int[] table, final int tier) {
-        return table[Math.max(0, Math.min(table.length - 1, tier))];
+        return table[clamp(tier, table.length - 1)];
+    }
+
+    /**
+     * kubatech's own electrode enum, named once. The machine probe writes one of these constants into
+     * the Industrial Arc Furnace and recognises the field by this type, so a second spelling of the
+     * name would be a second answer to what an electrode is.
+     */
+    public static final String ELECTRODE_CLASS = "kubatech.loaders.ArcFurnaceElectrode";
+
+    /** Held rather than re-read: {@code getEnumConstants} hands back a fresh copy on every call. */
+    @Nullable
+    private static final Object[] ELECTRODE_CONSTANTS = electrodeConstants();
+
+    @Nullable
+    private static Object[] electrodeConstants() {
+        final Class<?> owner = Reflect.type(ELECTRODE_CLASS);
+        final Object[] all = owner == null ? null : owner.getEnumConstants();
+        return all == null || all.length == 0 ? null : all;
+    }
+
+    /**
+     * One electrode, for the probe, which hands the machine a constant rather than a tier. Null on a
+     * pack without kubatech, where the machine keeps whatever it was built holding.
+     */
+    @Nullable
+    public static Object electrode(final int tier) {
+        if (ELECTRODE_CONSTANTS == null) return null;
+        return ELECTRODE_CONSTANTS[clamp(tier, ELECTRODE_CONSTANTS.length - 1)];
     }
 
     @Nullable
     private static Electrodes readElectrodes() {
-        final String owner = "kubatech.loaders.ArcFurnaceElectrode";
+        final String owner = ELECTRODE_CLASS;
         final double[] speed = enumField(owner, "speedModifier");
         final double[] parallel = enumField(owner, "parallelLimit");
         final double[] ocSpeed = enumField(owner, "OCSpeedFactor");
@@ -181,14 +214,19 @@ public final class GTStructureTiers {
     /**
      * Reads one numeric field off every constant of an enum, in declaration order. The fields are not
      * all public - GT's sawblade parameters are package-private - so this goes through
-     * {@code setAccessible} rather than a typed reference.
+     * {@link Reflect} rather than a typed reference.
+     *
+     * <p>
+     * A missing class and a missing field are not the same news. kubatech is optional, so a pack
+     * without it is expected and says nothing; a class that is present but has lost a field means the
+     * mod moved under us, and that is worth a line in the log.
      */
     @Nullable
     private static double[] enumField(final String className, final String fieldName) {
+        final Class<?> owner = Reflect.type(className);
+        if (owner == null) return null;
         try {
-            final Class<?> owner = Class.forName(className);
-            final Field field = owner.getDeclaredField(fieldName);
-            AccessibleObject.setAccessible(new AccessibleObject[] { field }, true);
+            final Field field = Reflect.field(owner, fieldName);
             final Object[] constants = owner.getEnumConstants();
             final double[] read = new double[constants.length];
             for (int i = 0; i < constants.length; i++) {

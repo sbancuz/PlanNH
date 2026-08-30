@@ -19,7 +19,7 @@ import gregtech.api.util.OverclockCalculator;
 /**
  * Checks that a preset configures {@link OverclockCalculator} the way a hand-written GregTech call
  * would. The oracle is GT's calculator itself, never a reimplementation of its arithmetic - these
- * would still pass if GT changed how overclocking works, and fail if PlanNH wired a knob to the
+ * would still pass if GT changed how overclocking works, and fail if PlanNH wired a setting to the
  * wrong setter.
  */
 class GTPresetApplierTest {

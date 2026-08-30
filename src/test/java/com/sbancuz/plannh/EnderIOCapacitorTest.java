@@ -32,8 +32,7 @@ class EnderIOCapacitorTest {
     @Test
     void theDuplicateCapacitorItemsAreFoldedIntoOneTierEach() {
         assertEquals(10, Capacitors.VALUES.length, "EnderIO changed its capacitor list");
-        assertEquals(7, EnderIOCapacitors.count());
-        assertEquals(6, EnderIOCapacitors.highestTier());
+        assertEquals(6, EnderIOCapacitors.highestTier(), "ten items fold to seven tiers");
     }
 
     /** Read from EnderIO, so a pack that rebalances its capacitors is planned at its own numbers. */

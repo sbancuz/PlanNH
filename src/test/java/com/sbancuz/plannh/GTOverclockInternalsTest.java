@@ -28,7 +28,7 @@ import gregtech.api.util.OverclockCalculator;
  * {@code GregTechAPI.METATILEENTITIES} is empty outside a client, so the probe itself cannot run
  * here - only its reflection surface is checkable. Its output is verified in the client harness.
  */
-class GTProbeFieldsTest {
+class GTOverclockInternalsTest {
 
     /** 6 ProcessingLogic + 13 OverclockCalculator named in the CsvSources, plus processingLogic itself. */
     private static final long COVERED_FIELDS = 20;
@@ -104,18 +104,18 @@ class GTProbeFieldsTest {
 
         assertNotNull(
             resolved.get(null),
-            "ProbeFields gave up on GregTech, so the probe is off and every machine falls back");
+            "OverclockInternals gave up on GregTech, so the probe is off and every machine falls back");
     }
 
     private static Class<?> probeFields() throws ClassNotFoundException {
         return Class.forName(
-            "com.sbancuz.plannh.data.provider.gregtech.probe.ProbeFields",
+            "com.sbancuz.plannh.data.provider.gregtech.probe.OverclockInternals",
             true,
-            GTProbeFieldsTest.class.getClassLoader());
+            GTOverclockInternalsTest.class.getClassLoader());
     }
 
     /**
-     * The two lists above and ProbeFields' own members are separate authorities, so a field added to
+     * The two lists above and OverclockInternals' own members are separate authorities, so a field added to
      * the probe without a row here would be resolved at runtime and never asserted. This counts them.
      */
     @Test
@@ -127,7 +127,7 @@ class GTProbeFieldsTest {
         assertEquals(
             COVERED_FIELDS,
             resolved,
-            "ProbeFields resolves a field this test does not name - add the row, then bump the count");
+            "OverclockInternals resolves a field this test does not name - add the row, then bump the count");
     }
 
     private static Field declared(final Class<?> owner, final String name) {

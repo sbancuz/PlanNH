@@ -84,7 +84,7 @@ public final class GTMachinePresets {
             GTMachinePreset.builder()
                 .parallel(s -> 6 * s.solenoidTier() * s.voltageTier())
                 .speed(1 / 2.0)
-                .knobs(GT_SOLENOID));
+                .settings(GT_SOLENOID));
 
         // MTEIndustrialElectrolyzer: PARALLEL_PER_TIER 4, SPEED 2.8f, 0.9f
         put(
@@ -95,14 +95,14 @@ public final class GTMachinePresets {
                 .eu(0.9));
 
         // MTEIndustrialMacerator: parallel reads controllerTier, speed reads structureTier. They
-        // only diverge if the casings are rebuilt under an upgraded controller, so one knob drives
+        // only diverge if the casings are rebuilt under an upgraded controller, so one setting drives
         // both here.
         put(
             GT_MULTI + "MTEIndustrialMacerator",
             GTMachinePreset.builder()
                 .parallel(s -> Math.max(1, (s.structureTier() >= 2 ? 8 : 2) * Math.max(1, s.voltageTier())))
                 .speed(s -> 1 / (s.structureTier() >= 2 ? 6.4 : 1.6))
-                .knobs(GT_STRUCTURE_TIER));
+                .settings(GT_STRUCTURE_TIER));
 
         // MTEIndustrialWireMill: SPEED_INCREASE_TIER 0.5f * itemPipeTier
         put(
@@ -111,7 +111,7 @@ public final class GTMachinePresets {
                 .parallelPerVoltageTier(4)
                 .speed(s -> 1 / (0.5 * Math.max(1, s.itemPipeTier())))
                 .eu(0.75)
-                .knobs(GT_ITEM_PIPE));
+                .settings(GT_ITEM_PIPE));
 
         // MTEIndustrialMixer: 1 / (1 + (itemPipeTier + 1))
         put(
@@ -119,7 +119,7 @@ public final class GTMachinePresets {
             GTMachinePreset.builder()
                 .parallelPerVoltageTier(8)
                 .speed(s -> 1.0 / (s.itemPipeTier() + 2))
-                .knobs(GT_ITEM_PIPE));
+                .settings(GT_ITEM_PIPE));
 
         put(
             GT_MULTI + "MTEIndustrialSifter",
@@ -135,14 +135,14 @@ public final class GTMachinePresets {
                 .parallel(s -> 8 * s.voltageTier() + 2 * s.solenoidTier())
                 .speed(s -> 1 / (2.5 + 0.05 * clampCoil(s.coilTier())))
                 .eu(s -> 0.8 * Math.pow(0.95, clampCoil(s.coilTier())))
-                .knobs(GT_COIL, GT_SOLENOID));
+                .settings(GT_COIL, GT_SOLENOID));
 
         put(
             GT_MULTI + "MTEOreWashingPlant",
             GTMachinePreset.builder()
                 .parallelPerVoltageTier(4)
                 .speed(1 / 5.0)
-                .knobs(GT_MODE));
+                .settings(GT_MODE));
 
         put(
             GT_MULTI + "MTEIndustrialChemicalBath",
@@ -165,7 +165,7 @@ public final class GTMachinePresets {
                     .parallel(s -> at(sawblades.parallelPerVoltageTier(), s.sawbladeTier()) * s.voltageTier())
                     .speed(s -> at(sawblades.durationModifier(), s.sawbladeTier()))
                     .eu(s -> at(sawblades.euModifier(), s.sawbladeTier()))
-                    .knobs(GT_SAWBLADE));
+                    .settings(GT_SAWBLADE));
         }
 
         put(
@@ -185,20 +185,20 @@ public final class GTMachinePresets {
                     return (proof ? 32 : 16) + s.width() * (proof ? 16 : 8);
                 })
                 .eu(s -> Math.pow(0.98, clampCoil(s.coilTier()) + 1))
-                .knobs(GT_COIL, GT_WIDTH, GT_STRUCTURE_TIER));
+                .settings(GT_COIL, GT_WIDTH, GT_STRUCTURE_TIER));
 
         // MTEPyrolyseOven: coil is a speed bonus, not heat. No parallel.
         put(
             GT_MULTI + "MTEPyrolyseOven",
             GTMachinePreset.builder()
                 .speed(s -> 2.0 / (1 + clampCoil(s.coilTier())))
-                .knobs(GT_COIL));
+                .settings(GT_COIL));
 
         put(
             GT_MULTI + "MTEIndustrialFishingPond",
             GTMachinePreset.builder()
                 .parallel(s -> 2 * (s.voltageTier() + 1))
-                .knobs(GT_MODE));
+                .settings(GT_MODE));
 
         put(
             GT_MULTI + "MTEFrothFlotationCell",
@@ -229,7 +229,7 @@ public final class GTMachinePresets {
                 .speed(s -> s.mode() == 1 ? 1.5 : 1.2)
                 .eu(s -> s.mode() == 1 ? 0.5 : 0.9)
                 .unlimitedTierSkips()
-                .knobs(GT_MODE, GT_WIDTH));
+                .settings(GT_MODE, GT_WIDTH));
 
         put(
             GT_MULTI + "MTEMegaOilCracker",
@@ -237,7 +237,7 @@ public final class GTMachinePresets {
                 .parallel(s -> megaParallels())
                 .eu(s -> Math.pow(0.9, clampCoil(s.coilTier()) + 1))
                 .unlimitedTierSkips()
-                .knobs(GT_COIL));
+                .settings(GT_COIL));
 
         // MTEPlasmaForge: the coil sets a heat, but GT never calls setHeatOC here, unlike the EBF, so
         // the heat only decides which recipes will run. PlanNH plans a recipe the user already chose,
@@ -260,7 +260,7 @@ public final class GTMachinePresets {
                 .eu(0.9)
                 .heatOC(s -> coilHeat(s.coilTier()))
                 .heatDiscount()
-                .knobs(GT_COIL));
+                .settings(GT_COIL));
 
         // MTEAdvDistillationTower (Dangote): mode 0 tower, mode 1 distillery. Distillery's parallel
         // uses the structure height, tower mode is a flat 12.
@@ -270,7 +270,7 @@ public final class GTMachinePresets {
                 .parallel(s -> s.mode() == 1 ? (int) (2 * Math.floor((s.width() + 1) / 3f)) * s.voltageTier() : 12)
                 .speed(s -> s.mode() == 1 ? 1 / 2.0 : 1 / 3.5)
                 .eu(s -> s.mode() == 1 ? 0.15 : 1.0)
-                .knobs(GT_MODE, GT_WIDTH));
+                .settings(GT_MODE, GT_WIDTH));
 
         put(
             GTPP + "processing.MTEIndustrialFluidHeater",
@@ -288,7 +288,7 @@ public final class GTMachinePresets {
                 .eu(0.5)
                 .heatOC(s -> coilHeat(s.coilTier()))
                 .heatDiscount()
-                .knobs(GT_COIL, GT_MODE));
+                .settings(GT_COIL, GT_MODE));
 
         put(
             GTPP + "processing.MTEIsaMill",
@@ -305,7 +305,7 @@ public final class GTMachinePresets {
                 .speed(s -> 100.0 / (100 + 5 * (clampCoil(s.coilTier()) + 1)))
                 .heatOC(s -> coilHeat(s.coilTier()) * 2)
                 .recipeHeat(0)
-                .knobs(GT_COIL));
+                .settings(GT_COIL));
 
         // MTEChemicalPlant: pipe casing is parallel, coil is speed - same curve as the Pyrolyse Oven.
         put(
@@ -313,7 +313,7 @@ public final class GTMachinePresets {
             GTMachinePreset.builder()
                 .parallel(s -> 2 * Math.max(1, s.pipeCasingTier()))
                 .speed(s -> 2.0 / (1 + clampCoil(s.coilTier())))
-                .knobs(GT_COIL, GT_PIPE_CASING));
+                .settings(GT_COIL, GT_PIPE_CASING));
 
         put(
             GTPP + "production.MTEAutoCrafter",
@@ -336,7 +336,7 @@ public final class GTMachinePresets {
                         s -> at(electrodes.durationDecreasePerOC(), s.electrodeTier()),
                         s -> at(electrodes.eutIncreasePerOC(), s.electrodeTier()))
                     .maxTierSkips(0)
-                    .knobs(GT_ELECTRODE, GT_MODE));
+                    .settings(GT_ELECTRODE, GT_MODE));
         }
     }
 

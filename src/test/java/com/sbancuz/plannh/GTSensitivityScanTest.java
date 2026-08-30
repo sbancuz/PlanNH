@@ -16,7 +16,7 @@ import com.sbancuz.plannh.data.provider.gregtech.probe.ProbeReading;
 import com.sbancuz.plannh.data.provider.gregtech.probe.SensitivityScan;
 
 /**
- * The scan decides which settings rows a node shows, so its rule has to be exact: a knob counts only
+ * The scan decides which settings rows a node shows, so its rule has to be exact: a setting counts only
  * when moving it moves a number. A stub machine stands in for GregTech here, which lets the rule be
  * tested against a known answer rather than against whatever the pack happens to ship.
  */
@@ -71,7 +71,7 @@ class GTSensitivityScanTest {
         assertEquals(EnumSet.of(Settings.GT_COIL), used);
     }
 
-    /** Two knobs, one machine: only the one that is read comes back. */
+    /** Two settings, one machine: only the one that is read comes back. */
     @Test
     void knobsAreJudgedOneAtATime() {
         final Function<StructureState, ProbeReading> readings = state -> withParallel(2 * state.pipeCasingTier());
@@ -84,7 +84,7 @@ class GTSensitivityScanTest {
         assertEquals(EnumSet.of(Settings.GT_PIPE_CASING), used);
     }
 
-    /** A knob outside the candidate set is never asked about, however much the machine reads it. */
+    /** A setting outside the candidate set is never asked about, however much the machine reads it. */
     @Test
     void onlyCandidatesAreScanned() {
         final EnumSet<Settings> used = SensitivityScan
@@ -141,12 +141,12 @@ class GTSensitivityScanTest {
             "with only two modes nothing differs, so no row");
     }
 
-    /** The scan must cover what the row offers, or a knob could move outside the range it was tested on. */
+    /** The scan must cover what the row offers, or a setting could move outside the range it was tested on. */
     @Test
     void everyKnobRangeIsRealAndNonEmpty() {
-        for (final Settings knob : StructureState.KNOBS) {
-            final GTSettings.TierRange range = GTSettings.knobRange(knob);
-            assertTrue(range.min() < range.max(), knob + " offers nothing to scan: " + range);
+        for (final Settings setting : StructureState.STRUCTURE_SETTINGS) {
+            final GTSettings.TierRange range = GTSettings.knobRange(setting);
+            assertTrue(range.min() < range.max(), setting + " offers nothing to scan: " + range);
         }
     }
 }

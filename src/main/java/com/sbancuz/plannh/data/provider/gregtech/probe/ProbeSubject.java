@@ -46,7 +46,7 @@ final class ProbeSubject {
     private final MTEMultiBlockBase machine;
     private final ProcessingLogic logic;
     private final Method createCalculator;
-    private final FieldInjector injector;
+    private final StructureWriter structure;
     private final Map<StructureState, ProbeReading> readings = new HashMap<>();
 
     /** The recipe every cached reading answers for. */
@@ -57,13 +57,13 @@ final class ProbeSubject {
         this.machine = machine;
         this.logic = logic;
         this.createCalculator = createCalculator;
-        this.injector = FieldInjector.forClass(machine.getClass());
+        this.structure = StructureWriter.forClass(machine.getClass());
     }
 
-    /** The knobs this machine stores at all - not yet whether any of them changes a number. */
+    /** The settings this machine stores at all - not yet whether any of them changes a number. */
     @Nonnull
-    EnumSet<Settings> reachableKnobs() {
-        return injector.reachableKnobs();
+    EnumSet<Settings> reachableSettings() {
+        return structure.reachableSettings();
     }
 
     /**
@@ -78,14 +78,14 @@ final class ProbeSubject {
     /** Null for anything without processing logic to read: singleblocks, and the machines that hand-roll checkProcessing. */
     @Nullable
     static ProbeSubject of(@Nonnull final IMetaTileEntity prototype) {
-        final ProbeFields fields = ProbeFields.RESOLVED;
+        final OverclockInternals fields = OverclockInternals.RESOLVED;
         if (fields == null || !(prototype instanceof MTEMultiBlockBase)) return null;
         try {
             final IMetaTileEntity clone = prototype.newMetaEntity(null);
             if (!(clone instanceof final MTEMultiBlockBase multi)) return null;
             final Object logic = fields.machineLogic.get(multi);
             if (!(logic instanceof final ProcessingLogic processing)) return null;
-            return new ProbeSubject(multi, processing, ProbeFields.overclockCalculatorOf(processing));
+            return new ProbeSubject(multi, processing, OverclockInternals.overclockCalculatorOf(processing));
         } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
             PlanNH.LOG.debug("PlanNH: cannot clone {} for probing", prototype.getClass(), e);
             return null;
@@ -117,10 +117,10 @@ final class ProbeSubject {
 
     @Nullable
     private ProbeReading measure(final StructureState state, final GTRecipe recipe) {
-        final ProbeFields fields = ProbeFields.RESOLVED;
+        final OverclockInternals fields = OverclockInternals.RESOLVED;
         if (fields == null) return null;
         try {
-            injector.apply(machine, state);
+            structure.apply(machine, state);
             // Voltage is not a field the machine holds; it counts it off its energy hatches, so a
             // machine that scales per tier answers for tier zero until it has one.
             if (!FakeEnergyHatch.attach(machine, state.voltageTier())) {
@@ -158,7 +158,7 @@ final class ProbeSubject {
      * the probe does that step itself. Without it every machine that scales with its structure reads
      * as whatever the constructor happened to set.
      */
-    private void resolveSuppliers(final ProbeFields fields) throws ReflectiveOperationException {
+    private void resolveSuppliers(final OverclockInternals fields) throws ReflectiveOperationException {
         final Object parallel = fields.maxParallelSupplier.get(logic);
         if (parallel != null) fields.maxParallel.setInt(logic, (Integer) ((Supplier<?>) parallel).get());
 

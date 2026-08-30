@@ -11,26 +11,28 @@ import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 /**
- * Finds out which structure knobs a machine actually reads, by moving each one and seeing whether
- * any number changes.
+ * The last step of {@link MachineProbe#toPreset}: which structure settings a machine actually reads,
+ * found by moving each one and seeing whether any number changes. What comes back becomes
+ * {@code GTMachinePreset.settings()}, which is the list of rows a node offers for that machine - so
+ * every structure row a player sees was decided here.
  *
  * <p>
- * A settings row used to appear because somebody wrote the knob down next to the machine. That put
+ * A settings row used to appear because somebody wrote the setting down next to the machine. That put
  * rows on nodes that ignore them - the Ore Washing Plant offers a mode its recipe logic never looks
- * at - and it left the knob off machines nobody got around to. Asking the machine instead means a
+ * at - and it left the setting off machines nobody got around to. Asking the machine instead means a
  * row appears only when moving it moves a number the chart would show.
  *
  * <p>
  * Two readings are compared whole, because {@link ProbeReading} is a record. Any difference in
- * parallel count, speed, power, overclock behaviour or heat counts as the knob mattering.
+ * parallel count, speed, power, overclock behaviour or heat counts as the setting mattering.
  */
 public final class SensitivityScan {
 
     private SensitivityScan() {}
 
     /**
-     * The knobs among {@code candidates} that change what the machine reports. Only the two ends of
-     * each range are read, so a knob whose effect peaks mid-range and cancels at both ends is missed -
+     * The settings among {@code candidates} that change what the machine reports. Only the two ends of
+     * each range are read, so a setting whose effect peaks mid-range and cancels at both ends is missed -
      * no GregTech machine does that, they scale with a casing tier.
      */
     @Nonnull
@@ -39,7 +41,7 @@ public final class SensitivityScan {
         @Nonnull final Function<StructureState, ProbeReading> readings) {
         if (!candidates.contains(Settings.GT_MODE) || modeCount < 2) return scanAt(reference, candidates, readings);
 
-        // A mode picks which machine a multiblock is, so the other knobs have to be judged in each of
+        // A mode picks which machine a multiblock is, so the other settings have to be judged in each of
         // them. The Mega Distillation Tower scales with its height in distillery mode and ignores it in
         // tower mode, and judging it in tower mode alone would hide the height row. The count comes
         // from the machine rather than from a row, because GT ships three-mode machines.
@@ -65,19 +67,19 @@ public final class SensitivityScan {
     private static EnumSet<Settings> scanAt(final StructureState reference, final EnumSet<Settings> candidates,
         final Function<StructureState, ProbeReading> readings) {
         final EnumSet<Settings> used = EnumSet.noneOf(Settings.class);
-        for (final Settings knob : candidates) {
-            final GTSettings.TierRange range = GTSettings.knobRange(knob);
+        for (final Settings setting : candidates) {
+            final GTSettings.TierRange range = GTSettings.knobRange(setting);
             if (range.min() >= range.max()) continue;
 
-            final ProbeReading low = readings.apply(reference.with(knob, range.min()));
-            final ProbeReading high = readings.apply(reference.with(knob, range.max()));
-            if (differ(low, high)) used.add(knob);
+            final ProbeReading low = readings.apply(reference.with(setting, range.min()));
+            final ProbeReading high = readings.apply(reference.with(setting, range.max()));
+            if (differ(low, high)) used.add(setting);
         }
         return used;
     }
 
     /**
-     * A machine that declined one end says nothing about the knob, so the knob stays off. Hiding a row
+     * A machine that declined one end says nothing about the setting, so the setting stays off. Hiding a row
      * that does nothing is cheap to undo. Showing one that does nothing is the problem being fixed.
      */
     private static boolean differ(@Nullable final ProbeReading low, @Nullable final ProbeReading high) {

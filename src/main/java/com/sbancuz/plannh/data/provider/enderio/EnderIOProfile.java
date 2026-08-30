@@ -60,7 +60,7 @@ public final class EnderIOProfile {
             .setting(MachineVariants.pickerDef())
             .setting(Settings.MACHINES.def())
             .setting(Settings.TICK_MODIFIER.def())
-            .setting(CAPACITOR_DEF.withVisibility(MachineVariants.usesKnob(Settings.EIO_CAPACITOR)))
+            .setting(CAPACITOR_DEF.withVisibility(MachineVariants.usesSetting(Settings.EIO_CAPACITOR)))
             // A recipe carries the energy it needs, not how long it takes; how long is the capacitor's
             // business. Reading a duration off the recipe list would freeze whichever capacitor
             // happened to be assumed when the node was made. The total is left as the recipe stated it
@@ -72,11 +72,10 @@ public final class EnderIOProfile {
     /** The floor every EnderIO node opens at, so the capacitor is chosen once for a whole chart. */
     public static void registerChartMinimum() {
         ChartMinimums.register(
-            new ChartMinimums.Minimum(
+            ChartMinimums.Minimum.strongest(
                 Settings.EIO_CAPACITOR,
                 "Cap",
                 0,
-                EnderIOCapacitors.highestTier(),
                 EnderIOCapacitors.highestTier(),
                 EnderIOCapacitors::label));
     }

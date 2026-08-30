@@ -11,7 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.sbancuz.plannh.data.Settings;
-import com.sbancuz.plannh.data.provider.gregtech.probe.FieldInjector;
+import com.sbancuz.plannh.data.provider.gregtech.probe.StructureWriter;
 
 /**
  * The probe reaches a machine's structure through the instance fields its {@code checkMachine} would
@@ -23,13 +23,13 @@ import com.sbancuz.plannh.data.provider.gregtech.probe.FieldInjector;
  * Classes are loaded without initializing them, which is what lets a MetaTileEntity be reflected over
  * outside a client.
  */
-class GTFieldInjectorTest {
+class GTStructureWriterTest {
 
     private static final String GT_MULTI = "gregtech.common.tileentities.machines.multi.";
     private static final String GTPP = "gtPlusPlus.xmod.gregtech.common.tileentities.machines.multi.";
 
     /**
-     * Each machine must still expose at least the knobs its hand-written preset row declares. More is
+     * Each machine must still expose at least the settings its hand-written preset row declares. More is
      * allowed and expected: a field being present only means the machine stores it, not that any
      * number moves with it, which is what the sensitivity scan settles.
      */
@@ -42,11 +42,13 @@ class GTFieldInjectorTest {
         GTPP + "production.chemplant.MTEChemicalPlant,GT_COIL|GT_PIPE_CASING",
         GTPP + "processing.MTEIndustrialAlloySmelter,GT_COIL", GTPP + "processing.advanced.MTEAdvEBF,GT_COIL" })
     void theStructureFieldsAreStillReachable(final String className, final String expected) {
-        final EnumSet<Settings> reachable = FieldInjector.forClass(uninitialised(className))
-            .reachableKnobs();
+        final EnumSet<Settings> reachable = StructureWriter.forClass(uninitialised(className))
+            .reachableSettings();
         for (final String name : expected.split("\\|")) {
-            final Settings knob = Settings.valueOf(name);
-            assertTrue(reachable.contains(knob), className + " no longer exposes " + knob + ", found " + reachable);
+            final Settings setting = Settings.valueOf(name);
+            assertTrue(
+                reachable.contains(setting),
+                className + " no longer exposes " + setting + ", found " + reachable);
         }
     }
 
@@ -58,20 +60,20 @@ class GTFieldInjectorTest {
     @Test
     void onlyMachinesThatDeclareModesExposeTheModeKnob() {
         assertTrue(
-            FieldInjector.forClass(uninitialised(GT_MULTI + "MTEOreWashingPlant"))
-                .reachableKnobs()
+            StructureWriter.forClass(uninitialised(GT_MULTI + "MTEOreWashingPlant"))
+                .reachableSettings()
                 .contains(Settings.GT_MODE),
             "MTEOreWashingPlant no longer declares supportsMachineModeSwitch");
         assertFalse(
-            FieldInjector.forClass(uninitialised(GT_MULTI + "MTEIndustrialSifter"))
-                .reachableKnobs()
+            StructureWriter.forClass(uninitialised(GT_MULTI + "MTEIndustrialSifter"))
+                .reachableSettings()
                 .contains(Settings.GT_MODE),
             "the Industrial Sifter has no modes, so it must not offer the row");
     }
 
     private static Class<?> uninitialised(final String className) {
         try {
-            return Class.forName(className, false, GTFieldInjectorTest.class.getClassLoader());
+            return Class.forName(className, false, GTStructureWriterTest.class.getClassLoader());
         } catch (final ClassNotFoundException e) {
             return fail("GregTech no longer ships " + className, e);
         }

@@ -12,7 +12,7 @@ import com.sbancuz.plannh.data.Settings;
  * The structure a player built around a machine, as far as the overclock math cares. A prototype
  * MetaTileEntity cannot report any of this - it only exists once blocks are placed - so it is user
  * input, and each machine preset declares which fields it actually reads via
- * {@link GTMachinePreset#knobs()}.
+ * {@link GTMachinePreset#settings()}.
  *
  * <p>
  * Tier numbering follows GregTech's own, not the block list: {@code coilTier} is
@@ -27,9 +27,9 @@ public record StructureState(int voltageTier, int coilTier, int solenoidTier, in
      * authority: the probe's sensitivity scan sweeps these, {@link #slotOf} maps them to components,
      * and a machine table lists them. {@link Settings} holds many more settings than these, so the
      * switch below can no longer be exhaustive by construction - {@code StructureStateWithTest} is
-     * what now catches a knob added here without a slot.
+     * what now catches a setting added here without a slot.
      */
-    public static final Set<Settings> KNOBS = Collections.unmodifiableSet(
+    public static final Set<Settings> STRUCTURE_SETTINGS = Collections.unmodifiableSet(
         EnumSet.of(
             Settings.GT_COIL,
             Settings.GT_SOLENOID,
@@ -42,18 +42,18 @@ public record StructureState(int voltageTier, int coilTier, int solenoidTier, in
             Settings.GT_MODE));
 
     /**
-     * The same structure with one knob moved, which is how the probe finds out whether a knob matters.
+     * The same structure with one setting moved, which is how the probe finds out whether a setting matters.
      *
      * <p>
-     * The array literal is in record-component order, and {@link #slotOf} says which slot each knob
+     * The array literal is in record-component order, and {@link #slotOf} says which slot each setting
      * writes. Both are stated rather than derived from {@code Settings.ordinal()}: an enum reordered
-     * for display would otherwise silently move every knob onto its neighbour's field.
+     * for display would otherwise silently move every setting onto its neighbour's field.
      */
     @Nonnull
-    public StructureState with(@Nonnull final Settings knob, final int tier) {
+    public StructureState with(@Nonnull final Settings setting, final int tier) {
         final int[] tiers = { voltageTier, coilTier, solenoidTier, itemPipeTier, pipeCasingTier, sawbladeTier,
             electrodeTier, structureTier, width, mode };
-        tiers[slotOf(knob)] = tier;
+        tiers[slotOf(setting)] = tier;
         return new StructureState(
             tiers[0],
             tiers[1],
@@ -67,9 +67,12 @@ public record StructureState(int voltageTier, int coilTier, int solenoidTier, in
             tiers[9]);
     }
 
-    /** Which component a knob writes. Voltage is slot 0 and is not a knob, so no case yields it. */
-    private static int slotOf(@Nonnull final Settings knob) {
-        return switch (knob) {
+    /**
+     * Which component a setting writes. Voltage is slot 0 and is not a structure setting - it is the
+     * energy hatch, not a block of the structure - so no case yields it.
+     */
+    private static int slotOf(@Nonnull final Settings setting) {
+        return switch (setting) {
             case GT_COIL -> 1;
             case GT_SOLENOID -> 2;
             case GT_ITEM_PIPE -> 3;
@@ -79,7 +82,7 @@ public record StructureState(int voltageTier, int coilTier, int solenoidTier, in
             case GT_STRUCTURE_TIER -> 7;
             case GT_WIDTH -> 8;
             case GT_MODE -> 9;
-            default -> throw new IllegalArgumentException(knob + " is not a structure knob");
+            default -> throw new IllegalArgumentException(setting + " is not a structure setting");
         };
     }
 }

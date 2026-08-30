@@ -46,7 +46,7 @@ import gregtech.api.recipe.RecipeMap;
  *
  * <p>
  * The file exists because the interesting facts only hold in a loaded game: which machines the probe
- * can read, which knobs move a number, which rows a node ends up showing, and where the hand-written
+ * can read, which settings move a number, which rows a node ends up showing, and where the hand-written
  * rows still disagree. A test cannot see any of that - {@code GregTechAPI.METATILEENTITIES} is empty
  * outside a client - so this is how the answers get reviewed.
  */
@@ -67,7 +67,7 @@ public class MachineTableCommand extends CommandBase {
     private enum Source {
 
         BOTH("Both a hand-written row and a probe reading. The row is what a chart uses; the probe is"
-            + " the check on it. Anything in the knobs column with an arrow, or any machine listed"
+            + " the check on it. Anything in the settings column with an arrow, or any machine listed"
             + " under a differing headline in the log, is a row that no longer matches GregTech."),
         PROBE("Read from the installed GregTech at runtime, with no hand-written row behind it. These"
             + " are machines the table never covered, and they follow whatever GregTech the pack"
@@ -152,7 +152,7 @@ public class MachineTableCommand extends CommandBase {
         writer.println("  (Tier, Mach, Amp, Advanced). Blank means it asks nothing else, which is the goal.");
         writer
             .println("- **override** - why this machine is not read from GregTech. Only the override section has one.");
-        writer.println("- **knobs** - the structure settings that change a number this machine reports.");
+        writer.println("- **settings** - the structure settings that change a number this machine reports.");
         writer.println("  Blank means none do, so the node offers no structure rows at all. `a -> b` means the");
         writer.println("  hand-written row claims `a` and the machine itself reports `b`, which is a row to fix.");
         writer.println("- **modes** - machines that are two machines behind one controller. `{map=n}` says which");
@@ -171,7 +171,7 @@ public class MachineTableCommand extends CommandBase {
         if (rows.isEmpty()) return;
 
         rows.sort(Comparator.comparing(Row::machine));
-        writer.println("| machine | rows | override | knobs | modes | class | recipemaps |");
+        writer.println("| machine | rows | override | settings | modes | class | recipemaps |");
         writer.println("|---|---|---|---|---|---|---|");
         for (final Row row : rows) {
             writer.println(
@@ -181,7 +181,7 @@ public class MachineTableCommand extends CommandBase {
                     + " | "
                     + row.override()
                     + " | "
-                    + row.knobs()
+                    + row.settings()
                     + " | "
                     + row.modes()
                     + " | "
@@ -193,7 +193,7 @@ public class MachineTableCommand extends CommandBase {
         writer.println();
     }
 
-    private record Row(Source source, String machine, String knobs, String rows, String modes, String override,
+    private record Row(Source source, String machine, String settings, String rows, String modes, String override,
         String className, String recipeMaps) {}
 
     private static List<Row> collect() {
@@ -218,7 +218,7 @@ public class MachineTableCommand extends CommandBase {
         return new Row(
             source(entry, table, probed, reason),
             mte.getLocalName(),
-            knobs(table, probed),
+            settings(table, probed),
             visibleRows(entry, workable),
             modes(entry),
             reason == null ? "" : reason,
@@ -257,7 +257,7 @@ public class MachineTableCommand extends CommandBase {
      * not. A machine only reaching one source shows that one, because the section it is in already
      * says which source that is.
      */
-    private static String knobs(@Nullable final GTMachinePreset table, @Nullable final GTMachinePreset probed) {
+    private static String settings(@Nullable final GTMachinePreset table, @Nullable final GTMachinePreset probed) {
         if (table == null && probed == null) return "";
         if (table == null) return knobText(probed);
         if (probed == null) return knobText(table);
@@ -268,11 +268,11 @@ public class MachineTableCommand extends CommandBase {
     }
 
     private static String knobText(@Nullable final GTMachinePreset preset) {
-        if (preset == null || preset.knobs()
+        if (preset == null || preset.settings()
             .isEmpty()) return "";
         final List<String> names = new ArrayList<>();
-        preset.knobs()
-            .forEach(knob -> names.add(knob.name()));
+        preset.settings()
+            .forEach(setting -> names.add(setting.name()));
         return String.join(", ", names);
     }
 

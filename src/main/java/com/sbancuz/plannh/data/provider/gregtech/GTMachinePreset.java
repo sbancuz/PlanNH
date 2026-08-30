@@ -26,7 +26,7 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
     ToDoubleFunction<StructureState> euModifier, ToIntFunction<StructureState> maxParallel,
     ToDoubleFunction<StructureState> eutIncreasePerOC, ToDoubleFunction<StructureState> durationDecreasePerOC,
     ToIntFunction<StructureState> machineHeat, boolean heatOC, boolean heatDiscount, int recipeHeatOverride,
-    int maxTierSkips, boolean unlimitedTierSkips, @Nullable RecipeOverride recipeOverride, EnumSet<Settings> knobs) {
+    int maxTierSkips, boolean unlimitedTierSkips, @Nullable RecipeOverride recipeOverride, EnumSet<Settings> settings) {
 
     /** A machine that ignores the recipe's own cost, like the Multi Smelter's fixed 4 EU/t over 128t. */
     public record RecipeOverride(int eut, int duration) {}
@@ -60,7 +60,7 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
         private boolean unlimitedTierSkips;
         @Nullable
         private RecipeOverride recipeOverride;
-        private final EnumSet<Settings> knobs = EnumSet.noneOf(Settings.class);
+        private final EnumSet<Settings> settings = EnumSet.noneOf(Settings.class);
 
         private Builder() {}
 
@@ -159,9 +159,9 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
             return this;
         }
 
-        public Builder knobs(final Settings... used) {
-            for (final Settings knob : used) {
-                knobs.add(knob);
+        public Builder settings(final Settings... used) {
+            for (final Settings setting : used) {
+                settings.add(setting);
             }
             return this;
         }
@@ -181,7 +181,7 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
                 maxTierSkips,
                 unlimitedTierSkips,
                 recipeOverride,
-                EnumSet.copyOf(knobs));
+                EnumSet.copyOf(settings));
         }
     }
 }

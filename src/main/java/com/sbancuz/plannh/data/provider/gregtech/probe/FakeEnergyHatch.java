@@ -17,7 +17,7 @@ import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
  * Most multiblocks compute their parallel count from the voltage reaching them, which they read by
  * summing their energy hatches. A prototype has none, so it reports zero volts and one parallel - a
  * machine that scales six per tier looks like a machine that does not scale at all. Giving the probe
- * clone one hatch of the tier being asked about is what makes voltage just another knob.
+ * clone one hatch of the tier being asked about is what makes voltage just another setting.
  *
  * <p>
  * The hatch is built rather than taken from GregTech's registry so that every tier is available and
