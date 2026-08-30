@@ -8,6 +8,8 @@ import javax.annotation.Nullable;
 
 import net.minecraft.tileentity.TileEntityFurnace;
 
+import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.setting.Settings;
@@ -16,6 +18,7 @@ import com.sbancuz.plannh.nei.NEIPlanConfig;
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.IRecipeHandler;
+import gregtech.nei.GTNEIDefaultHandler;
 
 public interface PropertyProvider {
 
@@ -28,8 +31,13 @@ public interface PropertyProvider {
             .add(Port.itemPort(ps));
 
         final PositionedStack result = handler.getResultStack(recipeIndex);
-        if (result != null && result.item != null) node.getOutputs()
-            .add(Port.itemPort(result));
+        if (result != null && result.item != null) {
+            node.getOutputs()
+                .add(Port.itemPort(result));
+            // warn if we find any handlers outside gt that have multiple output permutations
+            if (result.items.length > 1 && (!Compat.GREGTECH.isLoaded || !(handler instanceof GTNEIDefaultHandler)))
+                PlanNH.LOG.warn("output found with permutations");
+        }
 
         final List<PositionedStack> others = handler.getOtherStacks(recipeIndex);
         for (final PositionedStack ps : others) {

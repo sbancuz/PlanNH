@@ -25,6 +25,7 @@ import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.PositionedStack;
 import gregtech.api.util.GTUtility;
+import gregtech.nei.GTNEIDefaultHandler;
 
 public final class RecipePropertyAPI {
 
@@ -77,6 +78,13 @@ public final class RecipePropertyAPI {
 
         ItemStack[] as = ((PositionedStackAccessor) psa).getPermutated() ? psa.items : new ItemStack[] { psa.item };
         ItemStack[] bs = ((PositionedStackAccessor) psb).getPermutated() ? psb.items : new ItemStack[] { psb.item };
+
+        if (Compat.GREGTECH.isLoaded) {
+            if (psa instanceof GTNEIDefaultHandler.FixedPositionedStack fpsa && !fpsa.isInput() && as.length > 1)
+                as = new ItemStack[] { psa.item };
+            if (psb instanceof GTNEIDefaultHandler.FixedPositionedStack fpsb && !fpsb.isInput() && bs.length > 1)
+                bs = new ItemStack[] { psb.item };
+        }
 
         for (ItemStack a : as) {
             for (ItemStack b : bs) {
