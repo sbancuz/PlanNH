@@ -72,6 +72,11 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     }
 
     @Override
+    public boolean isObstacle() {
+        return true;
+    }
+
+    @Override
     protected SortedMap<UUID, Node> getDefaultContainer() {
         return canvas.getGraph()
             .getNodes();

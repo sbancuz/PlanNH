@@ -151,4 +151,9 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
             .getTransformationMatrix()
             .unTransformY(context.getAbsMouseX(), context.getAbsMouseY());
     }
+
+    @Override
+    public boolean isObstacle() {
+        return false;
+    }
 }

@@ -42,4 +42,9 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
         return canvas.getGraph()
             .getNotes();
     }
+
+    @Override
+    public boolean isObstacle() {
+        return true;
+    }
 }
