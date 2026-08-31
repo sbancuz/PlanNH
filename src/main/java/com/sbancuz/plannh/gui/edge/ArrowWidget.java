@@ -35,6 +35,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
         // initial edge
         child(
             new EdgeWidget(
+                this,
                 coords.get(0)[0],
                 coords.get(0)[1],
                 coords.get(1)[0],
@@ -46,6 +47,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
         for (int i = 1; i < size - 1; i++) {
             child(
                 new CornerWidget(
+                    this,
                     coords.get(i - 1)[0],
                     coords.get(i - 1)[1],
                     coords.get(i)[0],
@@ -57,6 +59,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
 
             child(
                 new EdgeWidget(
+                    this,
                     coords.get(i)[0],
                     coords.get(i)[1],
                     coords.get(i + 1)[0],
@@ -68,6 +71,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
         // arrow head
         child(
             new HeadWidget(
+                this,
                 coords.get(size - 2)[0],
                 coords.get(size - 2)[1],
                 coords.getLast()[0],
@@ -87,6 +91,15 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
     public void setCoords(List<int[]> coords) {
         this.coords = coords;
         refresh();
+    }
+
+    public void removeFromGraph() {
+        canvas.getGraph()
+            .getEdges2()
+            .remove(edge.getId());
+        canvas.getArrowWidgets()
+            .remove(edge.getId());
+        canvas.remove(this);
     }
 
     @Override

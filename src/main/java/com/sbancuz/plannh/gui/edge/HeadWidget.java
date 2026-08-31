@@ -4,12 +4,12 @@ import static com.sbancuz.plannh.gui.edge.ArrowWidget.MIN_EDGE_WIDTH;
 
 import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.theme.WidgetTheme;
-import com.cleanroommc.modularui.widget.Widget;
-import com.sbancuz.plannh.gui.node.PortWidget;
 
-public class HeadWidget extends Widget<HeadWidget> {
+public class HeadWidget extends ArrowComponentWidget {
 
-    public HeadWidget(int x0, int y0, int x1, int y1, int outerColor, int innerColor) {
+    public HeadWidget(ArrowWidget parent, int x0, int y0, int x1, int y1, int outerColor, int innerColor) {
+        super(parent);
+
         Triangle.Direction direction;
 
         if (y0 == y1) { // incoming segment horizontal
@@ -36,10 +36,5 @@ public class HeadWidget extends Widget<HeadWidget> {
         size(MIN_EDGE_WIDTH);
 
         pos(x1, y1);
-    }
-
-    @Override
-    public boolean canHover() {
-        return PortWidget.arrowWidgetInCreation == null;
     }
 }

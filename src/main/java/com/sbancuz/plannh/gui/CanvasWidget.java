@@ -136,6 +136,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final Map<UUID, NodeWidget> nodeWidgets2 = new HashMap<>();
     @Getter
     private final Map<UUID, FlowchartWidget<?, ?>> flowchartWidgets = new HashMap<>();
+    @Getter
+    private final Map<UUID, ArrowWidget> arrowWidgets = new HashMap<>();
 
     private boolean panning = false;
     private int panStartMouseX, panStartMouseY;
@@ -178,9 +180,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         marginBottom(18);
 
         contextMenu = menu;
-        rebuildNoteWidgets();
-        rebuildGroupWidgets();
-        rebuildNodeWidgets();
+        rebuildWidgets();
 
         background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
     }
@@ -249,6 +249,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildNoteWidgets();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
+        rebuildArrowWidgets();
     }
 
     public void undoGraph() {
@@ -523,8 +524,19 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildNodeWidgets() {
+        nodeWidgets2.clear();
         for (final Node node : graph.getNodes()
-            .values()) child(new NodeWidget(this, node));
+            .values()) {
+            child(new NodeWidget(this, node));
+        }
+    }
+
+    public void rebuildArrowWidgets() {
+        arrowWidgets.clear();
+        for (final Edge2 edge : graph.getEdges2()
+            .values()) {
+            child(new ArrowWidget(this, edge));
+        }
     }
 
     public int getBackgroundColor() {
