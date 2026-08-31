@@ -24,6 +24,7 @@ import com.google.gson.reflect.TypeToken;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Edge;
+import com.sbancuz.plannh.data.flowchart.Edge2;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
@@ -37,6 +38,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
 import com.sbancuz.plannh.data.flowchart.balancer.PortRef;
 
 import codechicken.nei.recipe.Recipe;
+import it.unimi.dsi.fastutil.ints.IntIntPair;
 
 public final class Serializer {
 
@@ -45,6 +47,7 @@ public final class Serializer {
         .registerTypeAdapter(GraphData.class, new GraphDataDeserializer())
         .registerTypeAdapter(Recipe.RecipeId.class, new RecipeIdAdapter())
         .registerTypeAdapter(MachineConfig.class, new MachineConfigAdapter())
+        .registerTypeAdapter(IntIntPair.class, new IntIntPairDeserializer())
         .create();
 
     // ── Public API ──
@@ -250,34 +253,26 @@ public final class Serializer {
         root.addProperty("panY", graph.getPanY());
         root.addProperty("name", graph.getName());
 
-        final JsonArray edgesArray = new JsonArray();
-        for (final Edge edge : graph.getEdges()
-            .values()) {
-            final JsonObject obj = new JsonObject();
-            obj.addProperty("id", edge.id.toString());
-            obj.addProperty("src", edge.sourceNodeId.toString());
-            obj.addProperty("dst", edge.targetNodeId.toString());
-            obj.addProperty("srcOut", edge.sourceOutputIndex);
-            obj.addProperty("dstIn", edge.targetInputIndex);
-            edgesArray.add(obj);
-        }
-        root.add("edges", edgesArray);
-
-        // todo make this simpler by serializing values as a whole
-        final JsonArray notesArray = new JsonArray();
-        for (Note note : graph.getNotes()
-            .values()) notesArray.add(GSON.toJsonTree(note));
-        root.add("notes", notesArray);
-
-        final JsonArray groupsArray = new JsonArray();
-        for (Group group : graph.getGroups()
-            .values()) groupsArray.add(GSON.toJsonTree(group));
-        root.add("groups", groupsArray);
-
-        final JsonArray nodesArray = new JsonArray();
-        for (Node node : graph.getNodes()
-            .values()) nodesArray.add(GSON.toJsonTree(node));
-        root.add("nodes", nodesArray);
+        root.add(
+            "notes",
+            GSON.toJsonTree(
+                graph.getNotes()
+                    .values()));
+        root.add(
+            "groups",
+            GSON.toJsonTree(
+                graph.getGroups()
+                    .values()));
+        root.add(
+            "nodes",
+            GSON.toJsonTree(
+                graph.getNodes()
+                    .values()));
+        root.add(
+            "edges",
+            GSON.toJsonTree(
+                graph.getEdges2()
+                    .values()));
 
         return root;
     }
@@ -316,26 +311,6 @@ public final class Serializer {
             root.get("panY")
                 .getAsFloat());
 
-        final JsonArray edgesArray = root.getAsJsonArray("edges");
-        for (final JsonElement elem : edgesArray) {
-            final JsonObject obj = elem.getAsJsonObject();
-            final UUID id = UUID.fromString(
-                obj.get("id")
-                    .getAsString());
-            final UUID src = UUID.fromString(
-                obj.get("src")
-                    .getAsString());
-            final UUID dst = UUID.fromString(
-                obj.get("dst")
-                    .getAsString());
-            final int srcOut = obj.get("srcOut")
-                .getAsInt();
-            final int dstIn = obj.get("dstIn")
-                .getAsInt();
-            graph.getEdges()
-                .put(id, new Edge(id, src, dst, srcOut, dstIn));
-        }
-
         for (final JsonElement elem : root.getAsJsonArray("notes")) {
             final Note note = GSON.fromJson(elem, Note.class);
             graph.getNotes()
@@ -353,6 +328,12 @@ public final class Serializer {
             node.init();
             graph.getNodes()
                 .put(node.getId(), node);
+        }
+
+        for (final JsonElement elem : root.getAsJsonArray("edges")) {
+            final Edge2 edge = GSON.fromJson(elem, Edge2.class);
+            graph.getEdges2()
+                .put(edge.getId(), edge);
         }
 
         return graph;
