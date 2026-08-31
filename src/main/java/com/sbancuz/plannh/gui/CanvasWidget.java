@@ -239,9 +239,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     /**
      * One entry point, not three: removeAll() drops every child, so a partial rebuild loses the rest.
      */
-    public void rebuildWidgets() {
+    private void rebuildWidgets() {
         removeAll();
         flowchartWidgets.clear();
+        nodeWidgets2.clear(); // needs to be here since groups can also add nodes
         rebuildNoteWidgets();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
@@ -520,7 +521,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildNodeWidgets() {
-        nodeWidgets2.clear();
         for (final Node node : graph.getNodes()
             .values()) {
             child(new NodeWidget(this, node));

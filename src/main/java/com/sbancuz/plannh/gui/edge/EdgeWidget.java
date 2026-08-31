@@ -8,8 +8,16 @@ import com.cleanroommc.modularui.theme.WidgetTheme;
 
 public class EdgeWidget extends ArrowComponentWidget {
 
-    public EdgeWidget(ArrowWidget parent, int x0, int y0, int x1, int y1, int outerColor, int innerColor) {
+    public EdgeWidget(ArrowWidget parent) {
         super(parent);
+    }
+
+    @Override
+    public void configure(int outerColor, int innerColor, int[]... coords) {
+        int x0 = coords[0][0];
+        int y0 = coords[0][1];
+        int x1 = coords[1][0];
+        int y1 = coords[1][1];
 
         background(new Rectangle().color(outerColor), new Rectangle() {
 

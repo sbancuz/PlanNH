@@ -238,7 +238,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
             Graph graph = canvas.getGraph();
             PlanAPI.recordEdit(graph, () -> {
-                if (target.notConfigured()) target.setPermutationToStack(source.stack.item);
+                if (target.notConfigured() && target.configurable()) target.setPermutationToStack(source.stack.item);
 
                 Edge2 edge = new Edge2(source.node.getId(), target.node.getId(), source.index, target.index);
                 graph.getEdges2()

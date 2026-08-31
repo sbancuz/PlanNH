@@ -7,8 +7,16 @@ import com.cleanroommc.modularui.theme.WidgetTheme;
 
 public class HeadWidget extends ArrowComponentWidget {
 
-    public HeadWidget(ArrowWidget parent, int x0, int y0, int x1, int y1, int outerColor, int innerColor) {
+    public HeadWidget(ArrowWidget parent) {
         super(parent);
+    }
+
+    @Override
+    public void configure(int outerColor, int innerColor, int[]... coords) {
+        int x0 = coords[0][0];
+        int y0 = coords[0][1];
+        int x1 = coords[1][0];
+        int y1 = coords[1][1];
 
         Triangle.Direction direction;
 

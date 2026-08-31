@@ -8,9 +8,18 @@ import com.cleanroommc.modularui.theme.WidgetTheme;
 
 public class CornerWidget extends ArrowComponentWidget {
 
-    public CornerWidget(ArrowWidget parent, int x0, int y0, int x1, int y1, int x2, int y2, int outerColor,
-        int innerColor) {
+    public CornerWidget(ArrowWidget parent) {
         super(parent);
+    }
+
+    @Override
+    public void configure(int outerColor, int innerColor, int[]... coords) {
+        int x0 = coords[0][0];
+        int y0 = coords[0][1];
+        int x1 = coords[1][0];
+        int y1 = coords[1][1];
+        int x2 = coords[2][0];
+        int y2 = coords[2][1];
 
         int xOffset;
         int yOffset;

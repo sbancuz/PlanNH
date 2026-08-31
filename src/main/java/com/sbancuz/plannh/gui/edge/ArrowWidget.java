@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.gui.edge;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.cleanroommc.modularui.utils.Color;
@@ -24,6 +25,11 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
     @Getter
     private final Edge2 edge;
 
+    private final List<EdgeWidget> edges = new ArrayList<>();
+    private final List<CornerWidget> corners = new ArrayList<>();
+    private final HeadWidget head = new HeadWidget(this);
+    private int size;
+
     // use this ctor in edge creation, creates an arrow without a backing edge data
     public ArrowWidget(CanvasWidget canvas) {
         this(canvas, null);
@@ -33,6 +39,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
     public ArrowWidget(CanvasWidget canvas, Edge2 edge) {
         this.canvas = canvas;
         this.edge = edge;
+        child(head);
 
         if (edge != null) {
             canvas.getArrowWidgets()
@@ -42,10 +49,9 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
     }
 
     private void refresh() {
-        int size = coords.size();
-        if (size < 2) throw new IllegalStateException("invalid arrow");
+        int newSize = coords.size();
+        if (newSize < 2) throw new IllegalStateException("invalid arrow");
 
-        removeAll();
         // shift coords for proper positioning
         coords.forEach(coord -> {
             coord[0] -= MIN_EDGE_WIDTH / 2;
@@ -56,52 +62,42 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
         int outerColor = Color.WHITE.main;
         int innerColor = Color.BLACK.main;
 
+        if (newSize < size) {
+            List<EdgeWidget> edgesForRemoval = edges.subList(newSize - 1, size - 1);
+            edgesForRemoval.forEach(this::remove);
+            edgesForRemoval.clear();
+
+            List<CornerWidget> cornersForRemoval = corners.subList(newSize - 2, size - 2);
+            cornersForRemoval.forEach(this::remove);
+            cornersForRemoval.clear();
+        } else if (newSize > size) {
+            for (int i = 0; i < newSize - size; i++) {
+                EdgeWidget edgeWidget = new EdgeWidget(this);
+                edges.add(edgeWidget);
+                child(edgeWidget);
+
+                CornerWidget cornerWidget = new CornerWidget(this);
+                corners.add(cornerWidget);
+                child(cornerWidget);
+            }
+        }
+        size = newSize;
+
         // initial edge
-        child(
-            new EdgeWidget(
-                this,
-                coords.get(0)[0],
-                coords.get(0)[1],
-                coords.get(1)[0],
-                coords.get(1)[1],
-                outerColor,
-                innerColor));
+        edges.getFirst()
+            .configure(outerColor, innerColor, coords.get(0), coords.get(1));
 
         // corner + edge
         for (int i = 1; i < size - 1; i++) {
-            child(
-                new CornerWidget(
-                    this,
-                    coords.get(i - 1)[0],
-                    coords.get(i - 1)[1],
-                    coords.get(i)[0],
-                    coords.get(i)[1],
-                    coords.get(i + 1)[0],
-                    coords.get(i + 1)[1],
-                    outerColor,
-                    innerColor));
+            corners.get(i - 1)
+                .configure(outerColor, innerColor, coords.get(i - 1), coords.get(i), coords.get(i + 1));
 
-            child(
-                new EdgeWidget(
-                    this,
-                    coords.get(i)[0],
-                    coords.get(i)[1],
-                    coords.get(i + 1)[0],
-                    coords.get(i + 1)[1],
-                    outerColor,
-                    innerColor));
+            edges.get(i)
+                .configure(outerColor, innerColor, coords.get(i), coords.get(i + 1));
         }
 
         // arrow head
-        child(
-            new HeadWidget(
-                this,
-                coords.get(size - 2)[0],
-                coords.get(size - 2)[1],
-                coords.getLast()[0],
-                coords.getLast()[1],
-                outerColor,
-                innerColor));
+        head.configure(outerColor, innerColor, coords.get(size - 2), coords.getLast());
     }
 
     public void setCoords(List<int[]> coords) {
