@@ -53,6 +53,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         pos(data.getX(), data.getY());
         canvas.getFlowchartWidgets()
             .put(data.getId(), this);
+        if (isObstacle()) canvas.needsReroute();
     }
 
     @Override
@@ -153,6 +154,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     protected void reposition() {
         pos(data.getX(), data.getY());
+        canvas.needsReroute();
     }
 
     @SuppressWarnings("unchecked")

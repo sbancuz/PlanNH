@@ -241,10 +241,10 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 if (target.notConfigured()) target.setPermutationToStack(source.stack.item);
 
                 Edge2 edge = new Edge2(source.node.getId(), target.node.getId(), source.index, target.index);
-                ArrowWidget arrow = new ArrowWidget(canvas, edge);
-
                 graph.getEdges2()
                     .put(edge.getId(), edge);
+
+                ArrowWidget arrow = new ArrowWidget(canvas, edge);
                 canvas.child(arrow);
             });
         }

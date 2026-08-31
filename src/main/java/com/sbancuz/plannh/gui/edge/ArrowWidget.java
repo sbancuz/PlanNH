@@ -2,11 +2,13 @@ package com.sbancuz.plannh.gui.edge;
 
 import java.util.List;
 
-import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.sbancuz.plannh.data.flowchart.Edge2;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.node.PortWidget;
+
+import lombok.Getter;
 
 // todo redo component backgrounds such that fractional edge width is supported
 
@@ -16,10 +18,27 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
 
     private List<int[]> coords;
 
+    @Getter
     private final CanvasWidget canvas;
 
+    @Getter
+    private final Edge2 edge;
+
+    // use this ctor in edge creation, creates an arrow without a backing edge data
     public ArrowWidget(CanvasWidget canvas) {
+        this(canvas, null);
+    }
+
+    // normal ctor
+    public ArrowWidget(CanvasWidget canvas, Edge2 edge) {
         this.canvas = canvas;
+        this.edge = edge;
+
+        if (edge != null) {
+            canvas.getArrowWidgets()
+                .put(edge.getId(), this);
+            canvas.needsReroute();
+        }
     }
 
     private void refresh() {
@@ -27,6 +46,11 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
         if (size < 2) throw new IllegalStateException("invalid arrow");
 
         removeAll();
+        // shift coords for proper positioning
+        coords.forEach(coord -> {
+            coord[0] -= MIN_EDGE_WIDTH / 2;
+            coord[1] -= MIN_EDGE_WIDTH / 2;
+        });
 
         // todo add filled & border color based on item color
         int outerColor = Color.WHITE.main;
@@ -100,6 +124,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
         canvas.getArrowWidgets()
             .remove(edge.getId());
         canvas.remove(this);
+        canvas.needsReroute();
     }
 
     @Override

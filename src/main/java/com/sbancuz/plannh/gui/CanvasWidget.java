@@ -39,7 +39,7 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.client.ScreenEffect;
 import com.sbancuz.plannh.client.UIBlurEffect;
-import com.sbancuz.plannh.data.flowchart.Edge;
+import com.sbancuz.plannh.data.flowchart.Edge2;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -49,6 +49,7 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.UndoHistory;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
+import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
@@ -124,7 +125,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     // Orthogonal arrow routing (world-space units).
     private static final int ROUTE_CELL = 6;
     private static final int ROUTE_MARGIN = 12;
-    private static final long ROUTE_HASH_SEED = 1125899906842597L;
     private static final ArrowRouter ARROW_ROUTER = new ArrowRouter(ROUTE_CELL, ROUTE_MARGIN);
     private static final Log log = LogFactory.getLog(CanvasWidget.class);
 
@@ -163,11 +163,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final ConfigTag showGrid;
     private final ConfigTag backgroundColor;
 
-    /**
-     * Cached arrow routes (world-space waypoints) keyed by edge id, plus the layout they were built for.
-     */
-    private final Map<UUID, List<int[]>> edgeRoutes = new HashMap<>();
-    private long routeSignature = Long.MIN_VALUE;
+    private boolean needsReroute = true;
 
     public CanvasWidget(Menu<?> menu, ModularPanel panel) {
         this.graph = Plan.getActiveGraph();
@@ -623,29 +619,32 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      * World-space rectangles the chips occupy, for the router to route around.
      */
     private List<ArrowRouter.Rect> chipRects() {
-        final List<ArrowRouter.Rect> rects = new ArrayList<>();
-        for (final BalanceView.Boundary flow : graph.boundary()) {
-            final RecipeNodeWidget widget = nodeWidgets.get(
-                flow.port()
-                    .nodeId());
-            if (widget == null) continue;
-            final int index = flow.port()
-                .portIndex();
-            final int width = chipWorldWidth(flow);
-            final boolean input = flow.port()
-                .input();
-            final int x = input ? widget.getNode()
-                .getX() - CHIP_GAP
-                - width
-                : widget.getNode()
-                    .getX() + worldWidth(widget)
-                    + CHIP_GAP;
-            final int y = widget.getNode()
-                .getY() + portWorldY(index)
-                + chipOffset(flow.kind(), CHIP_H, CHIP_DROP);
-            rects.add(new ArrowRouter.Rect(x, y, width, CHIP_H));
-        }
-        return rects;
+        /*
+         * final List<ArrowRouter.Rect> rects = new ArrayList<>();
+         * for (final BalanceView.Boundary flow : graph.boundary()) {
+         * final RecipeNodeWidget widget = nodeWidgets.get(
+         * flow.port()
+         * .nodeId());
+         * if (widget == null) continue;
+         * final int index = flow.port()
+         * .portIndex();
+         * final int width = chipWorldWidth(flow);
+         * final boolean input = flow.port()
+         * .input();
+         * final int x = input ? widget.getNode()
+         * .getX() - CHIP_GAP
+         * - width
+         * : widget.getNode()
+         * .getX() + worldWidth(widget)
+         * + CHIP_GAP;
+         * final int y = widget.getNode()
+         * .getY() + portWorldY(index)
+         * + chipOffset(flow.kind(), CHIP_H, CHIP_DROP);
+         * rects.add(new ArrowRouter.Rect(x, y, width, CHIP_H));
+         * }
+         * return rects;
+         */
+        return List.of();
     }
 
     /**
@@ -815,45 +814,57 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      * Routes are stored in world space so panning does not invalidate them.
      */
     private void ensureRoutes() {
-        final long signature = computeRouteSignature();
-        if (signature == routeSignature) return;
-        routeSignature = signature;
+        if (!needsReroute) return;
 
-        edgeRoutes.clear();
-        final List<ArrowRouter.Rect> obstacles = new ArrayList<>();
-        for (final RecipeNodeWidget w : nodeWidgets.values()) {
-            obstacles.add(
-                new ArrowRouter.Rect(
-                    w.getNode()
-                        .getX(),
-                    w.getNode()
-                        .getY(),
-                    worldWidth(w),
-                    worldHeight(w)));
-        }
+        Area area = getArea();
+        final List<ArrowRouter.Rect> obstacles = flowchartWidgets.values()
+            .stream()
+            .filter(FlowchartWidget::isObstacle)
+            .map(flowchartWidget -> {
+                Area widgetArea = flowchartWidget.getArea();
+                return new ArrowRouter.Rect(
+                    widgetArea.x - area.x,
+                    widgetArea.y - area.y,
+                    widgetArea.width,
+                    widgetArea.height,
+                    flowchartWidget.getData()
+                        .getId());
+            })
+            .toList();
+
         final List<ArrowRouter.Request> requests = new ArrayList<>();
-        for (final Edge edge : graph.getEdges()
+        for (final Edge2 edge : graph.getEdges2()
             .values()) {
-            final RecipeNodeWidget src = nodeWidgets.get(edge.sourceNodeId);
-            final RecipeNodeWidget dst = nodeWidgets.get(edge.targetNodeId);
+            final NodeWidget src = nodeWidgets2.get(edge.getSourceNodeId());
+            final NodeWidget dst = nodeWidgets2.get(edge.getTargetNodeId());
             if (src == null || dst == null) continue;
-            final int sx = src.getNode()
-                .getX() + worldWidth(src);
-            final int sy = src.getNode()
-                .getY() + portWorldY(edge.sourceOutputIndex);
-            final int dx = dst.getNode()
-                .getX();
-            final int dy = dst.getNode()
-                .getY() + portWorldY(edge.targetInputIndex);
-            requests.add(new ArrowRouter.Request(edge.id, sx, sy, dx, dy));
+
+            Area srcArea = src.getPortArea(edge.getSourceOutputIndex(), false);
+            Area dstArea = dst.getPortArea(edge.getTargetInputIndex(), true);
+
+            requests.add(
+                new ArrowRouter.Request(
+                    edge.getId(),
+                    srcArea.x + srcArea.width / 2 - area.x,
+                    srcArea.y + srcArea.height / 2 - area.y,
+                    dstArea.x + dstArea.width / 2 - area.x,
+                    dstArea.y + dstArea.height / 2 - area.y,
+                    src.getData()
+                        .getId(),
+                    dst.getData()
+                        .getId()));
         }
 
+        // todo refresh this comment
         // Chips are no-turn zones rather than obstacles: a chip sits directly on the approach to
         // its own port, so blocking it would seal the only way in and drop the edge to a
         // straight-line fallback that ignores everything. Passing behind a label is fine; turning
         // under one is what reads as the arrow terminating there.
         final Set<UUID> fellBack = new HashSet<>();
-        edgeRoutes.putAll(ARROW_ROUTER.route(obstacles, chipRects(), requests, fellBack));
+        Map<UUID, List<int[]>> edgeRoutes = ARROW_ROUTER.route(obstacles, new ArrayList<>(), requests, fellBack);
+        edgeRoutes.forEach(
+            (uuid, coords) -> arrowWidgets.get(uuid)
+                .setCoords(coords));
 
         // A fallback ignores every obstacle, so it is the one route that can end up crossing a
         // node or cornering under a label however the zones are set up. Worth saying out loud
@@ -862,6 +873,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             PlanNH.LOG
                 .info("Arrow routing fell back for {} of {} edges: {}", fellBack.size(), requests.size(), fellBack);
         }
+
+        needsReroute = false;
 
         if (!Config.debugRouteDump) return;
 
@@ -918,50 +931,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return sb.toString();
     }
 
-    private long computeRouteSignature() {
-        long sig = ROUTE_HASH_SEED;
-        // The chips are obstacles, so a re-solve that moves or renames one has to invalidate the
-        // routes with it. The balance object's identity is the cheap proxy for "the chips changed":
-        // it is memoized and replaced wholesale whenever the chart is re-solved, where rebuilding
-        // every chip rectangle to hash it would run on each frame.
-        sig = mixRouteHash(sig, System.identityHashCode(graph.balance()));
-        for (final Edge edge : graph.getEdges()
-            .values()) {
-            final RecipeNodeWidget src = nodeWidgets.get(edge.sourceNodeId);
-            final RecipeNodeWidget dst = nodeWidgets.get(edge.targetNodeId);
-            if (src == null || dst == null) continue;
-            sig = mixRouteHash(sig, edge.id.getMostSignificantBits());
-            sig = mixRouteHash(sig, edge.id.getLeastSignificantBits());
-            sig = mixRouteHash(sig, edge.sourceOutputIndex);
-            sig = mixRouteHash(sig, edge.targetInputIndex);
-            sig = mixRouteHash(
-                sig,
-                src.getNode()
-                    .getX());
-            sig = mixRouteHash(
-                sig,
-                src.getNode()
-                    .getY());
-            sig = mixRouteHash(sig, worldWidth(src));
-            sig = mixRouteHash(sig, worldHeight(src));
-            sig = mixRouteHash(
-                sig,
-                dst.getNode()
-                    .getX());
-            sig = mixRouteHash(
-                sig,
-                dst.getNode()
-                    .getY());
-            sig = mixRouteHash(sig, worldWidth(dst));
-            sig = mixRouteHash(sig, worldHeight(dst));
-        }
-        return sig;
-    }
-
-    private static long mixRouteHash(final long hash, final long value) {
-        return hash * 31 + value;
-    }
-
     private static void drawLineStrip(final int[] xs, final int[] ys, final int color, final float thickness) {
         final int r = Color.getRed(color);
         final int g = Color.getGreen(color);
@@ -984,70 +953,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             .endVertex();
     }
 
-    @Nullable
-    private Edge getEdgeAt(final int absMx, final int absMy) {
-        ensureRoutes();
-        final int margin = Math.max(EDGE_MARGIN_BASE, Math.round(EDGE_MARGIN_BASE * graph.getZoom()));
-        final int cmx = absMx - getArea().x;
-        final int cmy = absMy - getArea().y;
-        for (final Edge edge : graph.getEdges()
-            .values()) {
-            final List<int[]> route = edgeRoutes.get(edge.id);
-            if (route == null || route.size() < 2) continue;
-            for (int i = 0; i < route.size() - 1; i++) {
-                final int x1 = Math.round(route.get(i)[0] * graph.getZoom() + graph.getPanX());
-                final int y1 = Math.round(route.get(i)[1] * graph.getZoom() + graph.getPanY());
-                final int x2 = Math.round(route.get(i + 1)[0] * graph.getZoom() + graph.getPanX());
-                final int y2 = Math.round(route.get(i + 1)[1] * graph.getZoom() + graph.getPanY());
-                // Segments are axis-aligned, so this is a simple inflated-rectangle test.
-                if (cmx >= Math.min(x1, x2) - margin && cmx <= Math.max(x1, x2) + margin
-                    && cmy >= Math.min(y1, y2) - margin
-                    && cmy <= Math.max(y1, y2) + margin) {
-                    return edge;
-                }
-            }
-        }
-        return null;
-    }
-
-    private boolean canConnect(final Node srcNode, final int srcOutIdx, final Node dstNode, final int dstInIdx) {
-        if (srcNode == dstNode) return false;
-        if (srcOutIdx < 0 || dstInIdx < 0) return false;
-        if (srcOutIdx >= srcNode.getOutputs()
-            .size() || dstInIdx
-                >= dstNode.getInputs()
-                    .size())
-            return false;
-        return srcNode.getOutputs()
-            .get(srcOutIdx)
-            .canConnect(
-                dstNode.getInputs()
-                    .get(dstInIdx));
-    }
-
     @Override
     public @NotNull Result onMousePressed(final int mouseButton) {
-        final int absMx = getContext().getAbsMouseX();
-        final int absMy = getContext().getAbsMouseY();
-
         // Close context menu on any click
         menuOpen = false;
 
-        if (mouseButton == 0) {
-            final int cmx = absMx - getArea().x;
-            final int cmy = absMy - getArea().y;
-            final float z = graph.getZoom();
-
-            if (!isMouseOverAnyNode(absMx, absMy) && !isMouseOverAnyGroup(absMx, absMy)) {
-                final Edge clicked = getEdgeAt(absMx, absMy);
-                if (clicked != null) {
-                    PlanAPI.recordEdit(graph, () -> graph.removeEdge(clicked.id));
-                    return Result.SUCCESS;
-                }
-                return Result.ACCEPT;
-            }
-            return Result.IGNORE;
-        }
         if (mouseButton == 1) {
             /*
              * // Check if over a group header (pass click through for its own right-click menu)
@@ -1356,5 +1266,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     @Override
     public @NotNull ModularPanel getPanel() {
         return panel;
+    }
+
+    @Override
+    public void postResize() {
+        ensureRoutes();
+    }
+
+    public void needsReroute() {
+        needsReroute = true;
     }
 }

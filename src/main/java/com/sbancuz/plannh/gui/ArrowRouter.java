@@ -65,10 +65,10 @@ public final class ArrowRouter {
     private static final int[] DY = { 0, 0, 1, -1 };
 
     /** A rectangular obstacle (a recipe node) in world space. */
-    public record Rect(int x, int y, int w, int h) {}
+    public record Rect(int x, int y, int w, int h, UUID exceptionKey) {}
 
     /** A single arrow to route, from a source output port to a target input port. */
-    public record Request(UUID key, int sx, int sy, int dx, int dy) {}
+    public record Request(UUID key, int sx, int sy, int dx, int dy, UUID... exceptions) {}
 
     private final int baseCell;
     private final int margin;
@@ -199,7 +199,7 @@ public final class ArrowRouter {
     private static final class Grid {
 
         final int originX, originY, cols, rows, cell, stub;
-        final boolean[] blocked;
+        final UUID[] blocked;
         /** Cells an arrow may pass straight through but may not turn in. */
         final boolean[] straightOnly;
         final int[] occupancy;
@@ -216,7 +216,7 @@ public final class ArrowRouter {
             this.rows = rows;
             this.cell = cell;
             this.stub = stub;
-            this.blocked = new boolean[cols * rows];
+            this.blocked = new UUID[cols * rows];
             this.straightOnly = new boolean[cols * rows];
             this.occupancy = new int[cols * rows];
             this.anchorOwner = new int[cols * rows];
@@ -252,7 +252,7 @@ public final class ArrowRouter {
                 for (int y = y0; y <= y1; y++) {
                     for (int x = x0; x <= x1; x++) {
                         if (x >= bx0 && x <= bx1 && y >= by0 && y <= by1) {
-                            blocked[y * cols + x] = true;
+                            blocked[y * cols + x] = r.exceptionKey;
                         } else {
                             occupancy[y * cols + x] += MARGIN_COST;
                         }
@@ -340,7 +340,8 @@ public final class ArrowRouter {
                     final int ny = cy + DY[nd];
                     if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
                     final int nIdx = ny * cols + nx;
-                    if (blocked[nIdx]) continue;
+                    if (blocked[nIdx] != null && Arrays.stream(q.exceptions)
+                        .noneMatch(uuid -> blocked[nIdx].equals(uuid))) continue;
                     // A corner inside a label reads as the arrow ending there. Crossing it does not.
                     if (nd != dir && (straightOnly[nIdx] || straightOnly[idx])) continue;
 

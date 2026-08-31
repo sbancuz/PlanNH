@@ -8,6 +8,7 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
+import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.gui.CanvasWidget;
@@ -17,11 +18,10 @@ import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 
-import lombok.Getter;
+import it.unimi.dsi.fastutil.ints.IntIntPair;
 
 public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
-    @Getter
     private final RecipeAreaWidget recipeAreaWidget;
 
     private static final UITexture bg = UITexture.builder()
@@ -87,5 +87,10 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         super.removeFromGraph();
         canvas.getNodeWidgets2()
             .remove(data.getId());
+    }
+
+    public Area getPortArea(IntIntPair index, boolean isInput) {
+        return (isInput ? recipeAreaWidget.getInputPorts() : recipeAreaWidget.getOutputPorts()).get(index)
+            .getArea();
     }
 }
