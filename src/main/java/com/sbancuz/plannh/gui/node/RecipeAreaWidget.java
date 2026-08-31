@@ -58,7 +58,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
             neiWidget = null;
             success = false;
             child(
-                IKey.str("AN ERROR OCCURRED DURING LOADING")
+                IKey.str("AN ERROR OCCURRED DURING LOADING: handler is null")
                     .asWidget());
             return;
         }
@@ -79,8 +79,13 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
 
         List<Port<?>> inputs = data.getInputs();
         List<Port<?>> outputs = data.getOutputs();
-        // todo needed?
-        if (inputs == null || outputs == null) throw new RuntimeException("inputs / outputs were incorrectly loaded");
+        if (inputs == null || outputs == null) {
+            success = false;
+            child(
+                IKey.str("AN ERROR OCCURRED DURING LOADING: inputs/outputs is null")
+                    .asWidget());
+            return;
+        }
 
         accessor.plannh$setInputs(
             inputs.stream()

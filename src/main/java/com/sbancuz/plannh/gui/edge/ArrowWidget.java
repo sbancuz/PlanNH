@@ -102,14 +102,6 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
                 coords.getLast()[1],
                 outerColor,
                 innerColor));
-
-        // helper pos, todo remove
-        coords.forEach(
-            pos -> child(
-                new Rectangle().color(Color.GREEN.main)
-                    .asWidget()
-                    .size(1)
-                    .pos(pos[0] + MIN_EDGE_WIDTH / 2, pos[1] + MIN_EDGE_WIDTH / 2)));
     }
 
     public void setCoords(List<int[]> coords) {
