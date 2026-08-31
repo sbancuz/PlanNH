@@ -23,8 +23,10 @@ import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Grid;
 import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Edge2;
+import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.CanvasWidget;
@@ -115,8 +117,10 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 new Rectangle().hollow()
                     .color(PlannhColors.CONTEXT_BORDER.getColor())) // todo this with themes
             .onMousePressed(_ -> {
-                if (itemStack != null) setPermutationToStack(itemStack);
-                else enablePermutations();
+                PlanAPI.recordEdit(canvas.getGraph(), () -> {
+                    if (itemStack != null) setPermutationToStack(itemStack);
+                    else enablePermutations();
+                });
                 isConfiguring = false;
                 parent.remove(grid);
                 return true;
@@ -218,6 +222,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     @Override
     public void onDragEnd(boolean successful) {
+        canvas.remove(arrowWidgetInCreation);
+        arrowWidgetInCreation = null;
+
         if (successful) {
             PortWidget source;
             PortWidget target;
@@ -229,16 +236,18 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 target = this;
             }
 
-            if (target.notConfigured()) target.setPermutationToStack(source.stack.item);
-            Edge2 edge = new Edge2(source.node.getId(), target.node.getId(), source.index, source.index);
+            Graph graph = canvas.getGraph();
+            PlanAPI.recordEdit(graph, () -> {
+                if (target.notConfigured()) target.setPermutationToStack(source.stack.item);
 
-            canvas.getGraph()
-                .getEdges2()
-                .put(edge.getId(), edge);
-        } else {
-            canvas.remove(arrowWidgetInCreation);
+                Edge2 edge = new Edge2(source.node.getId(), target.node.getId(), source.index, target.index);
+                ArrowWidget arrow = new ArrowWidget(canvas, edge);
+
+                graph.getEdges2()
+                    .put(edge.getId(), edge);
+                canvas.child(arrow);
+            });
         }
-        arrowWidgetInCreation = null;
     }
 
     @Override

@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.gui.node.PortWidget;
 
 public abstract class ArrowComponentWidget extends Widget<ArrowComponentWidget> implements Interactable {
@@ -17,8 +18,10 @@ public abstract class ArrowComponentWidget extends Widget<ArrowComponentWidget> 
 
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
-        // todo add to history
-        parent.removeFromGraph();
+        PlanAPI.recordEdit(
+            parent.getCanvas()
+                .getGraph(),
+            parent::removeFromGraph);
         return Result.SUCCESS;
     }
 
@@ -26,4 +29,6 @@ public abstract class ArrowComponentWidget extends Widget<ArrowComponentWidget> 
     public boolean canHover() {
         return PortWidget.arrowWidgetInCreation == null;
     }
+
+    public abstract void configure(int outerColor, int innerColor, int[]... coords);
 }
