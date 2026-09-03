@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
@@ -13,6 +14,8 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.Nonnull;
+
+import org.jetbrains.annotations.Nullable;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -228,13 +231,9 @@ public final class Serializer {
 
     @Nonnull
     private static JsonObject graphToJson(final Graph graph) {
-        // todo add null tolerancy
         final JsonObject root = new JsonObject();
 
-        root.addProperty(
-            "balanceMode",
-            graph.getBalanceMode()
-                .name());
+        root.add("balanceMode", GSON.toJsonTree(graph.getBalanceMode()));
 
         root.addProperty("opsMode", graph.isOpsMode());
 
@@ -279,61 +278,88 @@ public final class Serializer {
 
     @Nonnull
     private static Graph jsonToGraph(final JsonObject root) {
-        // todo add null tolerancy
-        final Graph graph = new Graph(
-            root.get("name")
-                .getAsString());
+        final Graph graph = new Graph(getSafeString(root.get("name"), ""));
 
-        graph.setBalanceMode(
-            BalanceMode.valueOf(
-                root.get("balanceMode")
-                    .getAsString()));
+        graph.setBalanceMode(getSafe(root.get("balanceMode"), BalanceMode.class, BalanceMode.AUTO));
 
-        graph.setOpsMode(
-            root.get("opsMode")
-                .getAsBoolean());
+        graph.setOpsMode(getSafeBoolean(root.get("opsMode"), false));
 
         // Read independently of everything else, like the per-node targets: an old save has no such
         // key, and a corrupt one costs the user a preference rather than the chart.
         graph.setExcessChoice(
-            ChoiceKey
-                .of(GSON.fromJson(root.getAsJsonArray("excessChoices"), new TypeToken<List<PortRef>>() {}.getType())));
+            ChoiceKey.of(
+                getSafe(root.getAsJsonArray("excessChoices"), new TypeToken<List<PortRef>>() {}.getType(), List.of())));
 
-        foldsFromJson(root.getAsJsonObject("sectionFolds"), graph.collapsedSummarySections);
+        // todo rework summary and remove this
+        try {
+            foldsFromJson(root.getAsJsonObject("sectionFolds"), graph.collapsedSummarySections);
+        } catch (Exception ignored) {}
 
-        graph.setZoom(
-            root.get("zoom")
-                .getAsFloat());
-        graph.setPanX(
-            root.get("panX")
-                .getAsFloat());
-        graph.setPanY(
-            root.get("panY")
-                .getAsFloat());
+        graph.setZoom(getSafeFloat(root.get("zoom"), 1));
+        graph.setPanX(getSafeFloat(root.get("panX"), 0));
+        graph.setPanY(getSafeFloat(root.get("panY"), 0));
 
-        for (final JsonElement elem : root.getAsJsonArray("notes")) {
-            final Note note = GSON.fromJson(elem, Note.class);
-            graph.getNotes()
-                .put(note.getId(), note);
+        if (root.has("notes")) {
+            for (final JsonElement elem : root.getAsJsonArray("notes")) {
+                final Note note = GSON.fromJson(elem, Note.class);
+
+                if (note.invalid()) {
+                    PlanNH.LOG.warn("Invalid state found for a note!");
+                    continue;
+                }
+
+                graph.getNotes()
+                    .put(note.getId(), note);
+            }
         }
 
-        for (final JsonElement elem : root.getAsJsonArray("groups")) {
-            final Group group = GSON.fromJson(elem, Group.class);
-            graph.getGroups()
-                .put(group.getId(), group);
+        if (root.has("groups")) {
+            for (final JsonElement elem : root.getAsJsonArray("groups")) {
+                final Group group;
+                try {
+                    // do this to catch errors in child loading
+                    group = GSON.fromJson(elem, Group.class);
+                } catch (Exception ignored) {
+                    continue;
+                }
+
+                if (group.invalid()) {
+                    PlanNH.LOG.warn("Invalid state found for a group!");
+                    continue;
+                }
+
+                graph.getGroups()
+                    .put(group.getId(), group);
+            }
         }
 
-        for (final JsonElement elem : root.getAsJsonArray("nodes")) {
-            final Node node = GSON.fromJson(elem, Node.class);
-            node.init();
-            graph.getNodes()
-                .put(node.getId(), node);
+        if (root.has("nodes")) {
+            for (final JsonElement elem : root.getAsJsonArray("nodes")) {
+                final Node node = GSON.fromJson(elem, Node.class);
+
+                if (node.invalid()) {
+                    PlanNH.LOG.warn("Invalid state found for a node!");
+                    continue;
+                }
+
+                node.init();
+                graph.getNodes()
+                    .put(node.getId(), node);
+            }
         }
 
-        for (final JsonElement elem : root.getAsJsonArray("edges")) {
-            final Edge2 edge = GSON.fromJson(elem, Edge2.class);
-            graph.getEdges2()
-                .put(edge.getId(), edge);
+        if (root.has("edges")) {
+            for (final JsonElement elem : root.getAsJsonArray("edges")) {
+                final Edge2 edge = GSON.fromJson(elem, Edge2.class);
+
+                if (edge.invalid()) {
+                    PlanNH.LOG.warn("Invalid state found for an edge!");
+                    continue;
+                }
+
+                graph.getEdges2()
+                    .put(edge.getId(), edge);
+            }
         }
 
         return graph;
@@ -368,5 +394,29 @@ public final class Serializer {
             return port.getDisplayName();
         }
         return "";
+    }
+
+    private static <T> T getSafe(@Nullable JsonElement json, Type type, T defaultValue) {
+        return json == null ? defaultValue : GSON.fromJson(json, type);
+    }
+
+    private static <T> T getSafe(JsonElement json, Class<T> clazz, T defaultValue) {
+        return getSafe(json, (Type) clazz, defaultValue);
+    }
+
+    private static String getSafeString(JsonElement json, String defaultValue) {
+        return getSafe(json, String.class, defaultValue);
+    }
+
+    private static boolean getSafeBoolean(JsonElement json, boolean defaultValue) {
+        return getSafe(json, Boolean.class, defaultValue);
+    }
+
+    private static int getSafeInteger(JsonElement json, int defaultValue) {
+        return getSafe(json, Integer.class, defaultValue);
+    }
+
+    private static float getSafeFloat(JsonElement json, float defaultValue) {
+        return getSafe(json, Float.class, defaultValue);
     }
 }

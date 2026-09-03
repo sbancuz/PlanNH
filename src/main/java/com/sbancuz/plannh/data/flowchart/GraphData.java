@@ -9,7 +9,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public abstract class GraphData {
+public abstract class GraphData implements IValidated {
 
     protected final UUID id;
     protected int x;
@@ -23,4 +23,9 @@ public abstract class GraphData {
     }
 
     public abstract String getType();
+
+    @Override
+    public boolean invalid() {
+        return id == null || header == null || type == null;
+    }
 }

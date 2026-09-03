@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.jetbrains.annotations.NotNull;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,7 +11,6 @@ import lombok.Setter;
 @Setter
 public class Note extends GraphData {
 
-    @NotNull
     private List<String> text = new ArrayList<>();
 
     public Note() {
@@ -23,5 +20,10 @@ public class Note extends GraphData {
     @Override
     public String getType() {
         return "note";
+    }
+
+    @Override
+    public boolean invalid() {
+        return super.invalid() || text == null;
     }
 }

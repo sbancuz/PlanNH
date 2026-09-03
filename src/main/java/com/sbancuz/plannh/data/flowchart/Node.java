@@ -169,4 +169,13 @@ public class Node extends GraphData {
     public String getType() {
         return "node";
     }
+
+    @Override
+    public boolean invalid() {
+        return super.invalid() || machineName == null
+            || inputConfigurations == null
+            || recipeId == null
+            || machineConfig == null
+            || targetOutputRates == null;
+    }
 }

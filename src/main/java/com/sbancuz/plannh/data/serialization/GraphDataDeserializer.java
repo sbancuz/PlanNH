@@ -16,7 +16,7 @@ public class GraphDataDeserializer implements JsonDeserializer<GraphData> {
     @Override
     public GraphData deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
         throws JsonParseException {
-        return switch (json.getAsJsonObject()
+        GraphData data = switch (json.getAsJsonObject()
             .get("type")
             .getAsString()) {
             case "note" -> Serializer.GSON.fromJson(json, Note.class);
@@ -28,5 +28,9 @@ public class GraphDataDeserializer implements JsonDeserializer<GraphData> {
             }
             default -> throw new JsonParseException("Invalid type detected during GroupData deserialization");
         };
+
+        if (data.invalid()) throw new IllegalStateException("Invalid state found for graph data!");
+
+        return data;
     }
 }

@@ -5,8 +5,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import org.jetbrains.annotations.NotNull;
-
 import com.cleanroommc.modularui.utils.Color;
 
 import lombok.Getter;
@@ -32,7 +30,6 @@ public class Group extends GraphData {
      * LinkedTreeMap, so the declared type here is what makes a reloaded group iterate like a
      * built one.
      */
-    @NotNull
     private final SortedMap<UUID, GraphData> children = new TreeMap<>();
 
     public Group() {
@@ -46,5 +43,10 @@ public class Group extends GraphData {
 
     private int getRandomColor() {
         return Color.argb(colorRandom.nextFloat(), colorRandom.nextFloat(), colorRandom.nextFloat(), 0.5f);
+    }
+
+    @Override
+    public boolean invalid() {
+        return super.invalid() || children == null;
     }
 }
