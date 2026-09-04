@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui.node;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.SortedMap;
 import java.util.UUID;
 
@@ -17,12 +19,16 @@ import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
+import com.sbancuz.plannh.gui.edge.ArrowWidget;
 
 import it.unimi.dsi.fastutil.ints.IntIntPair;
+import lombok.Getter;
 
 public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
     private final RecipeAreaWidget recipeAreaWidget;
+    @Getter
+    private final List<ArrowWidget> arrowWidgets = new ArrayList<>();
 
     private static final UITexture bg = UITexture.builder()
         .location("nei:textures/gui/recipebg.png")
@@ -87,6 +93,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         super.removeFromGraph();
         canvas.getNodeWidgets2()
             .remove(data.getId());
+        arrowWidgets.forEach(ArrowWidget::removeFromGraph);
     }
 
     public Area getPortArea(IntIntPair index, boolean isInput) {

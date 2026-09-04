@@ -44,6 +44,14 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
         if (edge != null) {
             canvas.getArrowWidgets()
                 .put(edge.getId(), this);
+            canvas.getNodeWidgets2()
+                .get(edge.getSourceNodeId())
+                .getArrowWidgets()
+                .add(this);
+            canvas.getNodeWidgets2()
+                .get(edge.getTargetNodeId())
+                .getArrowWidgets()
+                .add(this);
             canvas.needsReroute();
         }
     }
