@@ -3,6 +3,8 @@ package com.sbancuz.plannh.gui.node;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.UUID;
 
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
@@ -71,7 +73,6 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private final IntIntPair index;
     @Getter
     private final Node node;
-    private final boolean isInput;
 
     private boolean isConfiguring = false;
     private final Grid grid;
@@ -84,7 +85,6 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         this.parent = parent;
         this.node = node;
         this.index = index;
-        this.isInput = isInput;
         this.portType = portType;
         port = (isInput ? node.getInputs() : node.getOutputs()).get(index.firstInt());
         stack = port.getAllStacks()
@@ -131,6 +131,18 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                     .color(PlannhColors.CONTEXT_BORDER.getColor())) // todo this with themes
             .onMousePressed(_ -> {
                 PlanAPI.recordEdit(canvas.getGraph(), () -> {
+                    // remove all arrows pointing to this port and its siblings, since config changed
+                    List<ArrowWidget> arrowWidgets = parent.getNodeWidget()
+                        .getArrowWidgets();
+                    List<ArrowWidget> removed = arrowWidgets.stream()
+                        .filter(
+                            arrowWidget -> arrowWidget.getEdge()
+                                .getTargetInputIndex()
+                                .leftInt() == index.leftInt())
+                        .toList();
+                    removed.forEach(ArrowWidget::removeFromGraph);
+                    arrowWidgets.removeAll(removed);
+
                     if (itemStack != null) setPermutationToStack(itemStack);
                     else enablePermutations();
                 });
@@ -216,7 +228,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     }
 
     private boolean configurable() {
-        return stack.items.length > 1 && isInput;
+        return stack.items.length > 1 && !portType.origin;
     }
 
     private boolean notConfigured() {
@@ -257,11 +269,28 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
             Graph graph = canvas.getGraph();
             PlanAPI.recordEdit(graph, () -> {
+                SortedMap<UUID, Edge2> edges = graph.getEdges2();
+
                 if (target.notConfigured() && target.configurable()) target.setPermutationToStack(source.stack.item);
 
+                edges.values()
+                    .stream()
+                    .filter(
+                        edge -> edge.getSourceOutputIndex()
+                            .leftInt() == source.index.leftInt() && edge.getSourceNodeId()
+                                .equals(source.node.getId())
+                            && edge.getTargetInputIndex()
+                                .leftInt() == target.index.leftInt()
+                            && edge.getTargetNodeId()
+                                .equals(target.node.getId()))
+                    .findAny()
+                    .ifPresent(
+                        edge -> canvas.getArrowWidgets()
+                            .get(edge.getId())
+                            .removeFromGraph());
+
                 Edge2 edge = new Edge2(source, target);
-                graph.getEdges2()
-                    .put(edge.getId(), edge);
+                edges.put(edge.getId(), edge);
 
                 ArrowWidget arrow = new ArrowWidget(canvas, edge);
                 canvas.child(arrow);

@@ -176,4 +176,8 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         }
         super.dispose();
     }
+
+    public NodeWidget getNodeWidget() {
+        return parent;
+    }
 }

@@ -50,18 +50,19 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
             canvas.getArrowWidgets()
                 .put(edge.getId(), this);
 
-            NodeWidget source = canvas.getNodeWidgets2()
-                .get(edge.getSourceNodeId());
-            source.getArrowWidgets()
-                .add(this);
-            innerColor = source.getPort(edge.getSourceOutputIndex(), false)
-                .getArrowColor();
-            outerColor = IngredientColors.outlineFor(innerColor);
-
             canvas.getNodeWidgets2()
                 .get(edge.getTargetNodeId())
                 .getArrowWidgets()
                 .add(this);
+
+            NodeWidget source = canvas.getNodeWidgets2()
+                .get(edge.getSourceNodeId());
+            source.getArrowWidgets()
+                .add(this);
+
+            innerColor = source.getPort(edge.getSourceOutputIndex(), false)
+                .getArrowColor();
+            outerColor = IngredientColors.outlineFor(innerColor);
 
             canvas.needsReroute();
         } else {

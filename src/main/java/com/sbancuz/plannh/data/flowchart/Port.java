@@ -77,7 +77,7 @@ public class Port<T> {
     }
 
     /**
-     * @param value a copy of the new value (item/fluid stack) to allow for modifictaions
+     * @param value a copy of the new value (item/fluid stack) to allow for modifications
      */
     public void setValue(T value) {
         type.setAmount(value, type.extractAmount(this.value));
