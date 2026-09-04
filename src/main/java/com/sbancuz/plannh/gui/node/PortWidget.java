@@ -98,10 +98,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
         size(PORT_SIZE);
 
-        tooltipBuilder(t -> {
-            t.addFromItem(stack.item);
-            if (configurable()) t.addLine("Right-Click to Configure");
-        });
+        tooltipBuilder(t -> t.addFromItem(stack.item));
         tooltipAutoUpdate(true);
 
         if (configurable()) {
@@ -119,7 +116,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
             overlay(
                 GuiTextures.GEAR.asIcon()
                     .size(9)
-                    .alignment(Alignment.TopLeft));
+                    .alignment(Alignment.TopRight));
+
+            addTooltipLine("Right-Click to Configure");
         } else grid = null;
     }
 
@@ -127,7 +126,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         ButtonWidget<?> button = new ButtonWidget<>().padding(1)
             .coverChildren()
             .background(
-                new Rectangle().color(Color.GREY.darker(2)),
+                new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
                 new Rectangle().hollow()
                     .color(PlannhColors.CONTEXT_BORDER.getColor())) // todo this with themes
             .onMousePressed(_ -> {
@@ -138,7 +137,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 isConfiguring = false;
                 parent.remove(grid);
                 return true;
-            });
+            })
+            .onKeyPressed((_, _) -> true);
 
         if (itemStack == null) button.child(
             GuiTextures.REFRESH.asWidget()
