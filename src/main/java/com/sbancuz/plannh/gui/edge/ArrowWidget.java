@@ -7,6 +7,8 @@ import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.sbancuz.plannh.data.flowchart.Edge2;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.IngredientColors;
+import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.node.PortWidget;
 
 import lombok.Getter;
@@ -30,6 +32,9 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
     private final HeadWidget head = new HeadWidget(this);
     private int size;
 
+    private final int innerColor;
+    private final int outerColor;
+
     // use this ctor in edge creation, creates an arrow without a backing edge data
     public ArrowWidget(CanvasWidget canvas) {
         this(canvas, null);
@@ -44,15 +49,24 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
         if (edge != null) {
             canvas.getArrowWidgets()
                 .put(edge.getId(), this);
-            canvas.getNodeWidgets2()
-                .get(edge.getSourceNodeId())
-                .getArrowWidgets()
+
+            NodeWidget source = canvas.getNodeWidgets2()
+                .get(edge.getSourceNodeId());
+            source.getArrowWidgets()
                 .add(this);
+            innerColor = source.getPort(edge.getSourceOutputIndex(), false)
+                .getArrowColor();
+            outerColor = IngredientColors.outlineFor(innerColor);
+
             canvas.getNodeWidgets2()
                 .get(edge.getTargetNodeId())
                 .getArrowWidgets()
                 .add(this);
+
             canvas.needsReroute();
+        } else {
+            innerColor = Color.BLACK.main;
+            outerColor = Color.WHITE.main;
         }
     }
 
@@ -65,10 +79,6 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
             coord[0] -= MIN_EDGE_WIDTH / 2;
             coord[1] -= MIN_EDGE_WIDTH / 2;
         });
-
-        // todo add filled & border color based on item color
-        int outerColor = Color.WHITE.main;
-        int innerColor = Color.BLACK.main;
 
         if (newSize < size) {
             List<EdgeWidget> edgesForRemoval = edges.subList(newSize - 1, size - 1);

@@ -13,6 +13,7 @@ import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
@@ -96,8 +97,15 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         arrowWidgets.forEach(ArrowWidget::removeFromGraph);
     }
 
+    private PortWidget getPortWidget(IntIntPair index, boolean isInput) {
+        return (isInput ? recipeAreaWidget.getInputPortWidgets() : recipeAreaWidget.getOutputPortWidgets()).get(index);
+    }
+
     public Area getPortArea(IntIntPair index, boolean isInput) {
-        return (isInput ? recipeAreaWidget.getInputPortWidgets() : recipeAreaWidget.getOutputPortWidgets()).get(index)
-            .getArea();
+        return getPortWidget(index, isInput).getArea();
+    }
+
+    public Port<?> getPort(IntIntPair index, boolean isInput) {
+        return getPortWidget(index, isInput).getPort();
     }
 }
