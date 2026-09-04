@@ -2,6 +2,7 @@ package com.sbancuz.plannh.gui.node;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
@@ -75,6 +76,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private boolean isConfiguring = false;
     private final Grid grid;
     private final RecipeAreaWidget parent;
+    private final Map<IntIntPair, PortWidget> siblingPortWidgets;
 
     public PortWidget(CanvasWidget canvas, RecipeAreaWidget parent, Node node, IntIntPair index, boolean isInput,
         PortType portType, int yShift) {
@@ -83,10 +85,11 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         this.node = node;
         this.index = index;
         this.isInput = isInput;
-        this.port = (isInput ? node.getInputs() : node.getOutputs()).get(index.firstInt());
-        this.stack = port.getAllStacks()
-            .get(index.secondInt());
         this.portType = portType;
+        port = (isInput ? node.getInputs() : node.getOutputs()).get(index.firstInt());
+        stack = port.getAllStacks()
+            .get(index.secondInt());
+        siblingPortWidgets = isInput ? parent.getInputPortWidgets() : parent.getOutputPortWidgets();
 
         background(
             new Rectangle().color(portType.borderColor)
@@ -341,5 +344,27 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 case OUTPUT -> other == INPUT;
             };
         }
+    }
+
+    @Override
+    public void onMouseStartHover() {
+        // this will call super in the for each
+        siblingPortWidgets.forEach(
+            (index, portWidget) -> { if (this.index.leftInt() == index.leftInt()) portWidget.onSiblingStartHover(); });
+    }
+
+    private void onSiblingStartHover() {
+        super.onMouseStartHover();
+    }
+
+    @Override
+    public void onMouseEndHover() {
+        // this will call super in the for each
+        siblingPortWidgets.forEach(
+            (index, portWidget) -> { if (this.index.leftInt() == index.leftInt()) portWidget.onSiblingEndHover(); });
+    }
+
+    private void onSiblingEndHover() {
+        super.onMouseEndHover();
     }
 }

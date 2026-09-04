@@ -42,9 +42,9 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
     private final RecipeHandlerRef handlerRef;
     // second index is used to differentiate duplicate item ports
     @Getter
-    private final Map<IntIntPair, PortWidget> inputPorts = new HashMap<>();
+    private final Map<IntIntPair, PortWidget> inputPortWidgets = new HashMap<>();
     @Getter
-    private final Map<IntIntPair, PortWidget> outputPorts = new HashMap<>();
+    private final Map<IntIntPair, PortWidget> outputPortWidgets = new HashMap<>();
 
     private static long lastHandlerUpdate = 0;
     private boolean success = true;
@@ -108,7 +108,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                     true,
                     port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
                     yShift);
-                inputPorts.put(index, portWidget);
+                inputPortWidgets.put(index, portWidget);
                 child(portWidget);
             }
         }
@@ -128,7 +128,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                     false,
                     port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
                     yShift);
-                outputPorts.put(index, portWidget);
+                outputPortWidgets.put(index, portWidget);
                 child(portWidget);
             }
         }
