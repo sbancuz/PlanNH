@@ -41,15 +41,14 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     private int dragStartX, dragStartY;
     @Getter
     @Setter
-    private SortedMap<UUID, GraphData> dataContainer;
+    private SortedMap<UUID, ? super D> dataContainer;
     private String dragEditToken;
     private List<FlowchartWidget<?, ?>> dragStartIntersect;
 
-    @SuppressWarnings("unchecked")
     protected FlowchartWidget(CanvasWidget canvas, D data) {
         this.canvas = canvas;
         this.data = data;
-        dataContainer = (SortedMap<UUID, GraphData>) getDefaultContainer();
+        dataContainer = getDefaultContainer();
         pos(data.getX(), data.getY());
         canvas.getFlowchartWidgets()
             .put(data.getId(), this);
@@ -157,7 +156,6 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         canvas.needsReroute();
     }
 
-    @SuppressWarnings("unchecked")
     private void adjustGroupMembership() {
         ParentWidget<?> oldParent = (ParentWidget<?>) getParent();
         ParentWidget<?> newParent = StreamSupport.stream(
@@ -182,7 +180,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
                 data.setY(groupWidget.getMouseGroupY() - dragOffsetY);
             } else {
                 newParent.child(this);
-                dataContainer = (SortedMap<UUID, GraphData>) getDefaultContainer();
+                dataContainer = getDefaultContainer();
                 data.setX(canvas.getCanvasMouseX() - dragOffsetX);
                 data.setY(canvas.getCanvasMouseY() - dragOffsetY);
             }
