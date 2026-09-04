@@ -7,16 +7,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
+
+import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.provider.DefaultProvider;
+import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.RecipeHandlerRef;
+import gregtech.api.util.GTUtility;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,7 +32,7 @@ public class Node extends GraphData {
     // cant be final because of transient deserialization resulting in null
     private transient List<Port<?>> inputs;
     private transient List<Port<?>> outputs;
-    private final Map<Integer, Integer> inputConfigurations = new HashMap<>();
+    private final Map<Integer, ItemStack> inputConfigurations = new HashMap<>();
 
     // needed for coloring to be machine specific
     private final String machineName;
@@ -99,9 +105,34 @@ public class Node extends GraphData {
         deduplicate(outputs);
         machineConfig.seedRouteDefaults(properties); // todo test if this works
 
-        if (init) inputConfigurations.forEach(
-            (index, override) -> inputs.get(index)
-                .setValue(override));
+        if (init) {
+            // sanitise input configs
+            inputConfigurations.keySet()
+                .removeIf(
+                    index -> inputs.get(index)
+                        .getAllStacks()
+                        .getFirst().items.length <= 1);
+            inputConfigurations.forEach(this::setConfiguration);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void setConfiguration(int index, ItemStack itemStack) {
+        Port<?> port = inputs.get(index);
+        RecipeProperty<?> type = port.getType();
+        if (type == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
+
+        if (type == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) ((Port<FluidStack>) port).setValue(
+            GTUtility.getFluidFromDisplayStack(itemStack)
+                .copy());
+
+        port.getAllStacks()
+            .forEach(ps -> {
+                PositionedStackAccessor psa = (PositionedStackAccessor) ps;
+                psa.setPermutated(true);
+                ps.setPermutationToRender(itemStack);
+                psa.setPermutated(false);
+            });
     }
 
     private static void deduplicate(List<Port<?>> ports) {

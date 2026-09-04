@@ -183,7 +183,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
             });
 
         node.getInputConfigurations()
-            .put(index.firstInt(), stack.getPermutationIndex(itemStack));
+            .put(index.firstInt(), itemStack);
     }
 
     private void enablePermutations() {

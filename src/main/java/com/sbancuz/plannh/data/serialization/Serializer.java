@@ -15,6 +15,8 @@ import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.item.ItemStack;
+
 import org.jetbrains.annotations.Nullable;
 
 import com.google.gson.Gson;
@@ -51,6 +53,7 @@ public final class Serializer {
         .registerTypeAdapter(Recipe.RecipeId.class, new RecipeIdAdapter())
         .registerTypeAdapter(MachineConfig.class, new MachineConfigAdapter())
         .registerTypeAdapter(IntIntPair.class, new IntIntPairDeserializer())
+        .registerTypeAdapter(ItemStack.class, new ItemStackAdapter())
         .create();
 
     // ── Public API ──
