@@ -17,12 +17,14 @@ import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
+import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Grid;
 import com.sbancuz.plannh.Compat;
+import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Edge2;
@@ -64,8 +66,11 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private final PortType portType;
     @Getter
     private final Port<?> port;
+    @Getter
     private final IntIntPair index;
+    @Getter
     private final Node node;
+    private final boolean isInput;
 
     private boolean isConfiguring = false;
     private final Grid grid;
@@ -77,6 +82,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         this.parent = parent;
         this.node = node;
         this.index = index;
+        this.isInput = isInput;
         this.port = (isInput ? node.getInputs() : node.getOutputs()).get(index.firstInt());
         this.stack = port.getAllStacks()
             .get(index.secondInt());
@@ -106,6 +112,11 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                     PORT_CONFIG_GRID_WIDTH,
                     items,
                     (_, _, _, itemStack) -> createConfigButton(itemStack));
+
+            overlay(
+                GuiTextures.GEAR.asIcon()
+                    .size(9)
+                    .alignment(Alignment.TopLeft));
         } else grid = null;
     }
 
@@ -202,7 +213,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     }
 
     private boolean configurable() {
-        return stack.items.length > 1;
+        return stack.items.length > 1 && isInput;
     }
 
     private boolean notConfigured() {
@@ -236,11 +247,16 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 target = this;
             }
 
+            if (source == null || target == null) {
+                PlanNH.LOG.warn("Edge creation unsuccessful: ports were null");
+                return;
+            }
+
             Graph graph = canvas.getGraph();
             PlanAPI.recordEdit(graph, () -> {
                 if (target.notConfigured() && target.configurable()) target.setPermutationToStack(source.stack.item);
 
-                Edge2 edge = new Edge2(source.node.getId(), target.node.getId(), source.index, target.index);
+                Edge2 edge = new Edge2(source, target);
                 graph.getEdges2()
                     .put(edge.getId(), edge);
 
