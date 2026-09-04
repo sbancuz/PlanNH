@@ -113,7 +113,8 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
 
     @Override
     public void removeFromGraph() {
-        getChildren().stream()
+        areaWidget.getChildren()
+            .stream()
             .filter(w -> w instanceof FlowchartWidget<?, ?>)
             .map(w -> (FlowchartWidget<?, ?>) w)
             .forEach(FlowchartWidget::removeFromGraph);
