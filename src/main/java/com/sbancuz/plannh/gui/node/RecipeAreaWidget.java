@@ -177,7 +177,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         super.dispose();
     }
 
-    public NodeWidget getNodeWidget() {
-        return parent;
+    public Map<IntIntPair, PortWidget> getPortWidgets(boolean isInput) {
+        return isInput ? inputPortWidgets : outputPortWidgets;
     }
 }

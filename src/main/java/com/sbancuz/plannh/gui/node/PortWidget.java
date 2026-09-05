@@ -301,10 +301,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     @Override
     public void onDrag(int mouseButton, long timeSinceLastClick) {
         Area startArea = getArea();
-        Area canvasArea = canvas.getArea();
 
-        int startX = startArea.x + startArea.width / 2 - canvasArea.x;
-        int startY = startArea.y + startArea.height / 2 - canvasArea.y;
+        int startX = canvas.getCanvasPosX(startArea.x + startArea.width / 2);
+        int startY = canvas.getCanvasPosY(startArea.y + startArea.height / 2);
         int endX = canvas.getCanvasMouseX();
         int endY = canvas.getCanvasMouseY();
 

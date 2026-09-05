@@ -794,19 +794,27 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public int getCanvasMouseX() {
-        return Math.round((getContext().getAbsMouseX() - getArea().x - graph.getPanX()) / graph.getZoom());
+        return Math.round((getCanvasPosX(getContext().getAbsMouseX()) - graph.getPanX()) / graph.getZoom());
     }
 
     public int getCanvasMouseY() {
-        return Math.round((getContext().getAbsMouseY() - getArea().y - graph.getPanY()) / graph.getZoom());
+        return Math.round((getCanvasPosY(getContext().getAbsMouseY()) - graph.getPanY()) / graph.getZoom());
     }
 
     public int getCanvasScreenCenterX() {
-        return Math.round(((float) getArea().width / 2 - getArea().x - graph.getPanX()) / graph.getZoom());
+        return Math.round((getCanvasPosX(getArea().width / 2) - graph.getPanX()) / graph.getZoom());
     }
 
     public int getCanvasScreenCenterY() {
-        return Math.round(((float) getArea().height / 2 - getArea().y - graph.getPanY()) / graph.getZoom());
+        return Math.round((getCanvasPosY(getArea().height / 2) - graph.getPanY()) / graph.getZoom());
+    }
+
+    public int getCanvasPosX(int absPosX) {
+        return absPosX - getArea().x;
+    }
+
+    public int getCanvasPosY(int absPosY) {
+        return absPosY - getArea().y;
     }
 
     /**
@@ -816,15 +824,14 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private void ensureRoutes() {
         if (!needsReroute) return;
 
-        Area area = getArea();
         final List<ArrowRouter.Rect> obstacles = flowchartWidgets.values()
             .stream()
             .filter(FlowchartWidget::isObstacle)
             .map(flowchartWidget -> {
                 Area widgetArea = flowchartWidget.getArea();
                 return new ArrowRouter.Rect(
-                    widgetArea.x - area.x,
-                    widgetArea.y - area.y,
+                    getCanvasPosX(widgetArea.x),
+                    getCanvasPosY(widgetArea.y),
                     widgetArea.width,
                     widgetArea.height,
                     flowchartWidget.getData()
@@ -845,10 +852,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             requests.add(
                 new ArrowRouter.Request(
                     edge.getId(),
-                    srcArea.x + srcArea.width / 2 - area.x,
-                    srcArea.y + srcArea.height / 2 - area.y,
-                    dstArea.x + dstArea.width / 2 - area.x,
-                    dstArea.y + dstArea.height / 2 - area.y,
+                    getCanvasPosX(srcArea.x + srcArea.width / 2),
+                    getCanvasPosY(srcArea.y + srcArea.height / 2),
+                    getCanvasPosX(dstArea.x + dstArea.width / 2),
+                    getCanvasPosY(dstArea.y + dstArea.height / 2),
                     src.getData()
                         .getId(),
                     dst.getData()
@@ -1001,8 +1008,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         graph.setZoom(Math.clamp(graph.getZoom() + delta, ZOOM_MIN, ZOOM_MAX));
         final float ratio = graph.getZoom() / oldZoom;
 
-        final float mxRel = getContext().getAbsMouseX() - getArea().x;
-        final float myRel = getContext().getAbsMouseY() - getArea().y;
+        final float mxRel = getCanvasPosX(getContext().getAbsMouseX());
+        final float myRel = getCanvasPosY(getContext().getAbsMouseY());
 
         graph.setPanX(mxRel - (mxRel - graph.getPanX()) * ratio);
         graph.setPanY(myRel - (myRel - graph.getPanY()) * ratio);
@@ -1259,8 +1266,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public boolean isMouseInsideCanvas() {
         ModularGuiContext context = getContext();
-        Area area = getArea();
-        return isInside(context, context.getAbsMouseX() - area.x, context.getAbsMouseY() - area.y, false);
+        return isInside(context, getCanvasPosX(context.getAbsMouseX()), getCanvasPosY(context.getAbsMouseY()), false);
     }
 
     @Override

@@ -98,7 +98,8 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     }
 
     private PortWidget getPortWidget(IntIntPair index, boolean isInput) {
-        return (isInput ? recipeAreaWidget.getInputPortWidgets() : recipeAreaWidget.getOutputPortWidgets()).get(index);
+        return recipeAreaWidget.getPortWidgets(isInput)
+            .get(index);
     }
 
     public Area getPortArea(IntIntPair index, boolean isInput) {
