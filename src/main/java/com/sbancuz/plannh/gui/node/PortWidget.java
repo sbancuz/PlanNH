@@ -55,7 +55,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     // needed for proper positioning of ports
     private static final int PORT_OFFSET_X = 1;
     private static final int PORT_OFFSET_Y = -1;
-    private static final int PORT_CONFIG_GRID_WIDTH = 4;
+    private static final int PORT_CONFIG_GRID_WIDTH = 9;
     private static final int PORT_SIZE = 18;
 
     private final CanvasWidget canvas;
@@ -76,20 +76,21 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     private boolean isConfiguring = false;
     private final Grid grid;
-    private final RecipeAreaWidget parent;
+    private final NodeWidget parent;
     private final Map<IntIntPair, PortWidget> siblingPortWidgets;
 
-    public PortWidget(CanvasWidget canvas, RecipeAreaWidget parent, Node node, IntIntPair index, boolean isInput,
-        PortType portType, int yShift) {
-        this.canvas = canvas;
+    public PortWidget(NodeWidget parent, IntIntPair index, boolean isInput, PortType portType, int yShift,
+        Map<IntIntPair, PortWidget> siblingPortWidgets) {
         this.parent = parent;
-        this.node = node;
         this.index = index;
         this.portType = portType;
+        this.siblingPortWidgets = siblingPortWidgets;
+
+        canvas = parent.getCanvas();
+        node = parent.getData();
         port = (isInput ? node.getInputs() : node.getOutputs()).get(index.firstInt());
         stack = port.getAllStacks()
             .get(index.secondInt());
-        siblingPortWidgets = isInput ? parent.getInputPortWidgets() : parent.getOutputPortWidgets();
 
         background(
             new Rectangle().color(portType.borderColor)
@@ -106,8 +107,6 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
             items.addFirst(null);
 
             grid = new Grid().coverChildren()
-                .pos(stack.relx + PORT_OFFSET_X + PORT_SIZE, stack.rely + PORT_OFFSET_Y + yShift)
-                .setEnabledIf(_ -> isConfiguring)
                 .gridOfWidthElements(
                     PORT_CONFIG_GRID_WIDTH,
                     items,
@@ -126,14 +125,13 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         ButtonWidget<?> button = new ButtonWidget<>().padding(1)
             .coverChildren()
             .background(
-                new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                new Rectangle().color(Color.GREY.darker(2)),
                 new Rectangle().hollow()
                     .color(PlannhColors.CONTEXT_BORDER.getColor())) // todo this with themes
             .onMousePressed(_ -> {
                 PlanAPI.recordEdit(canvas.getGraph(), () -> {
                     // remove all arrows pointing to this port and its siblings, since config changed
-                    List<ArrowWidget> arrowWidgets = parent.getNodeWidget()
-                        .getArrowWidgets();
+                    List<ArrowWidget> arrowWidgets = parent.getArrowWidgets();
                     List<ArrowWidget> removed = arrowWidgets.stream()
                         .filter(
                             arrowWidget -> arrowWidget.getEdge()
@@ -147,7 +145,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                     else enablePermutations();
                 });
                 isConfiguring = false;
-                parent.remove(grid);
+                canvas.remove(grid);
                 return true;
             })
             .onKeyPressed((_, _) -> true);
@@ -181,16 +179,24 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     public @NotNull Result onMousePressed(int mouseButton) {
         if (mouseButton == 1 && configurable()) {
             if (!isConfiguring) {
-                // child of the parent for proper z-layer positioning
-                parent.child(grid);
+                // child of the canvas for proper z-layer positioning
+                canvas.child(getGridWithPosition());
                 isConfiguring = true;
             } else {
-                parent.remove(grid);
+                canvas.remove(grid);
                 isConfiguring = false;
             }
             return Result.SUCCESS;
         }
         return Result.ACCEPT;
+    }
+
+    private Grid getGridWithPosition() {
+        Area area = getArea();
+
+        return grid.pos(
+            canvas.getCanvasPosX(area.x) - PORT_SIZE * Math.min(PORT_CONFIG_GRID_WIDTH, stack.items.length + 1),
+            canvas.getCanvasPosY(area.y));
     }
 
     @SuppressWarnings("unchecked")

@@ -179,7 +179,10 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
                 data.setX(groupWidget.getMouseGroupX() - dragOffsetX);
                 data.setY(groupWidget.getMouseGroupY() - dragOffsetY);
             } else {
-                newParent.child(this);
+                newParent.child(
+                    canvas.getArrowWidgets()
+                        .size(),
+                    this);
                 dataContainer = getDefaultContainer();
                 data.setX(canvas.getCanvasMouseX() - dragOffsetX);
                 data.setY(canvas.getCanvasMouseY() - dragOffsetY);

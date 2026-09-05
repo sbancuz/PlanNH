@@ -28,7 +28,6 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
-import lombok.Getter;
 
 public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements IFlowchartDraggable {
 
@@ -41,9 +40,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
     private final NEIRecipeWidget neiWidget;
     private final RecipeHandlerRef handlerRef;
     // second index is used to differentiate duplicate item ports
-    @Getter
     private final Map<IntIntPair, PortWidget> inputPortWidgets = new HashMap<>();
-    @Getter
     private final Map<IntIntPair, PortWidget> outputPortWidgets = new HashMap<>();
 
     private static long lastHandlerUpdate = 0;
@@ -101,13 +98,12 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                 IntIntPair index = IntIntPair.of(i, j);
 
                 PortWidget portWidget = new PortWidget(
-                    parent.getCanvas(),
-                    this,
-                    data,
+                    parent,
                     index,
                     true,
                     port.getAmount() > 0 ? PortWidget.PortType.INPUT : PortWidget.PortType.CATALYST,
-                    yShift);
+                    yShift,
+                    getPortWidgets(true));
                 inputPortWidgets.put(index, portWidget);
                 child(portWidget);
             }
@@ -121,13 +117,12 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
                 IntIntPair index = IntIntPair.of(i, j);
 
                 PortWidget portWidget = new PortWidget(
-                    parent.getCanvas(),
-                    this,
-                    data,
+                    parent,
                     index,
                     false,
                     port.getAmount() > 0 ? PortWidget.PortType.OUTPUT : PortWidget.PortType.CATALYST,
-                    yShift);
+                    yShift,
+                    getPortWidgets(false));
                 outputPortWidgets.put(index, portWidget);
                 child(portWidget);
             }
