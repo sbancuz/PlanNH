@@ -2,6 +2,7 @@ package com.sbancuz.plannh.gui.node;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.UUID;
 
@@ -10,10 +11,8 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
-import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
@@ -97,16 +96,11 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         arrowWidgets.forEach(ArrowWidget::removeFromGraph);
     }
 
-    private PortWidget getPortWidget(IntIntPair index, boolean isInput) {
-        return recipeAreaWidget.getPortWidgets(isInput)
-            .get(index);
+    public Map<IntIntPair, PortWidget> getPortWidgets(boolean isInput) {
+        return recipeAreaWidget.getPortWidgets(isInput);
     }
 
-    public Area getPortArea(IntIntPair index, boolean isInput) {
-        return getPortWidget(index, isInput).getArea();
-    }
-
-    public Port<?> getPort(IntIntPair index, boolean isInput) {
-        return getPortWidget(index, isInput).getPort();
+    public PortWidget getPortWidget(IntIntPair index, boolean isInput) {
+        return getPortWidgets(isInput).get(index);
     }
 }

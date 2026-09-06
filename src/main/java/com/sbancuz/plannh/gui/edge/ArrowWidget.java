@@ -60,7 +60,8 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
             source.getArrowWidgets()
                 .add(this);
 
-            innerColor = source.getPort(edge.getSourceOutputIndex(), false)
+            innerColor = source.getPortWidget(edge.getSourceOutputIndex(), false)
+                .getPort()
                 .getArrowColor();
             outerColor = IngredientColors.outlineFor(innerColor);
 

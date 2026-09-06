@@ -31,7 +31,6 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.flowchart.Edge2;
-import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.CanvasWidget;
@@ -166,10 +165,12 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     public @NotNull Result onKeyPressed(char typedChar, int keyCode) {
         if (keyCode == RECIPE_KEYCODE) {
             GuiCraftingRecipe.openRecipeGui("item", stack.item);
+            if (portType.isSupportsEdge() && !portType.isEdgeSource()) canvas.setNeiTransferSource(this);
             return Result.ACCEPT;
         }
         if (keyCode == USAGE_KEYCODE) {
             GuiUsageRecipe.openRecipeGui("item", stack.item);
+            if (portType.isSupportsEdge() && portType.isEdgeSource()) canvas.setNeiTransferSource(this);
             return Result.ACCEPT;
         }
         return Interactable.super.onKeyPressed(typedChar, keyCode);
@@ -229,12 +230,12 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
             .remove(index.firstInt());
     }
 
-    private boolean canConnect(PortWidget other) {
+    public boolean canConnect(PortWidget other) {
         return portType.canConnect(other.portType) && port.canConnect(other.port);
     }
 
     private boolean configurable() {
-        return stack.items.length > 1 && !portType.origin;
+        return stack.items.length > 1 && !portType.edgeSource;
     }
 
     private boolean notConfigured() {
@@ -260,7 +261,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         if (successful) {
             PortWidget source;
             PortWidget target;
-            if (portType.origin) {
+            if (portType.edgeSource) {
                 source = this;
                 target = (PortWidget) getContext().getTopHovered();
             } else {
@@ -273,35 +274,37 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                 return;
             }
 
-            Graph graph = canvas.getGraph();
-            PlanAPI.recordEdit(graph, () -> {
-                SortedMap<UUID, Edge2> edges = graph.getEdges2();
-
-                if (target.notConfigured() && target.configurable()) target.setPermutationToStack(source.stack.item);
-
-                edges.values()
-                    .stream()
-                    .filter(
-                        edge -> edge.getSourceOutputIndex()
-                            .leftInt() == source.index.leftInt() && edge.getSourceNodeId()
-                                .equals(source.node.getId())
-                            && edge.getTargetInputIndex()
-                                .leftInt() == target.index.leftInt()
-                            && edge.getTargetNodeId()
-                                .equals(target.node.getId()))
-                    .findAny()
-                    .ifPresent(
-                        edge -> canvas.getArrowWidgets()
-                            .get(edge.getId())
-                            .removeFromGraph());
-
-                Edge2 edge = new Edge2(source, target);
-                edges.put(edge.getId(), edge);
-
-                ArrowWidget arrow = new ArrowWidget(canvas, edge);
-                canvas.child(arrow);
-            });
+            PlanAPI.recordEdit(canvas.getGraph(), () -> addArrow(canvas, source, target));
         }
+    }
+
+    public static void addArrow(CanvasWidget canvas, PortWidget source, PortWidget target) {
+        SortedMap<UUID, Edge2> edges = canvas.getGraph()
+            .getEdges2();
+
+        if (target.notConfigured() && target.configurable()) target.setPermutationToStack(source.stack.item);
+
+        edges.values()
+            .stream()
+            .filter(
+                edge -> edge.getSourceOutputIndex()
+                    .leftInt() == source.index.leftInt() && edge.getSourceNodeId()
+                        .equals(source.node.getId())
+                    && edge.getTargetInputIndex()
+                        .leftInt() == target.index.leftInt()
+                    && edge.getTargetNodeId()
+                        .equals(target.node.getId()))
+            .findAny()
+            .ifPresent(
+                edge -> canvas.getArrowWidgets()
+                    .get(edge.getId())
+                    .removeFromGraph());
+
+        Edge2 edge = new Edge2(source, target);
+        edges.put(edge.getId(), edge);
+
+        ArrowWidget arrow = new ArrowWidget(canvas, edge);
+        canvas.child(arrow);
     }
 
     @Override
@@ -316,7 +319,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         List<int[]> coords = List
             .of(new int[] { startX, startY }, new int[] { endX, startY }, new int[] { endX, endY });
 
-        arrowWidgetInCreation.setCoords(portType.origin ? coords : coords.reversed());
+        arrowWidgetInCreation.setCoords(portType.edgeSource ? coords : coords.reversed());
     }
 
     @Override
@@ -359,12 +362,12 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
         private final int borderColor;
         private final boolean supportsEdge;
-        private final boolean origin;
+        private final boolean edgeSource;
 
-        PortType(int borderColor, boolean supportsEdge, boolean origin) {
+        PortType(int borderColor, boolean supportsEdge, boolean edgeSource) {
             this.borderColor = borderColor;
             this.supportsEdge = supportsEdge;
-            this.origin = origin;
+            this.edgeSource = edgeSource;
         }
 
         PortType(int borderColor, boolean supportsEdge) {

@@ -10,8 +10,6 @@ import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
@@ -52,6 +50,7 @@ import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
+import com.sbancuz.plannh.gui.node.PortWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
 import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
@@ -126,7 +125,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int ROUTE_CELL = 6;
     private static final int ROUTE_MARGIN = 12;
     private static final ArrowRouter ARROW_ROUTER = new ArrowRouter(ROUTE_CELL, ROUTE_MARGIN);
-    private static final Log log = LogFactory.getLog(CanvasWidget.class);
 
     @NotNull
     @Getter
@@ -156,6 +154,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private Node targetEditNode;
     private int targetEditOutput = -1;
     private boolean targetFocusPending;
+
+    @Nullable
+    @Getter
+    @Setter
+    private PortWidget neiTransferSource;
 
     private final ModularPanel panel;
 
@@ -846,8 +849,10 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final NodeWidget dst = nodeWidgets2.get(edge.getTargetNodeId());
             if (src == null || dst == null) continue;
 
-            Area srcArea = src.getPortArea(edge.getSourceOutputIndex(), false);
-            Area dstArea = dst.getPortArea(edge.getTargetInputIndex(), true);
+            Area srcArea = src.getPortWidget(edge.getSourceOutputIndex(), false)
+                .getArea();
+            Area dstArea = dst.getPortWidget(edge.getTargetInputIndex(), true)
+                .getArea();
 
             requests.add(
                 new ArrowRouter.Request(
@@ -1079,7 +1084,35 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             graph.getNodes()
                 .put(node.getId(), node);
 
-            child(new NodeWidget(this, node));
+            NodeWidget nodeWidget = new NodeWidget(this, node);
+            child(nodeWidget);
+
+            if (neiTransferSource != null) {
+                PortWidget portWidget = neiTransferSource;
+                PortWidget.PortType portType = neiTransferSource.getPortType();
+
+                nodeWidget.getPortWidgets(portType.isEdgeSource())
+                    .values()
+                    .stream()
+                    .filter(other -> other.canConnect(portWidget))
+                    .findFirst()
+                    .ifPresent(other -> {
+                        PortWidget source;
+                        PortWidget target;
+
+                        if (portType.isEdgeSource()) {
+                            source = portWidget;
+                            target = other;
+                        } else {
+                            source = other;
+                            target = portWidget;
+                        }
+
+                        PortWidget.addArrow(this, source, target);
+                    });
+
+                neiTransferSource = null;
+            }
         });
 
         menuOpen = false;
