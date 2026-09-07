@@ -170,7 +170,6 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
     @Override
     public boolean onDragStart(final int mouseButton) {
         if (mouseButton != 0) return false;
-        moving = true;
         dragStartMouseX = getContext().getAbsMouseX();
         dragStartMouseY = getContext().getAbsMouseY();
         dragStartX = data.getX();
@@ -196,7 +195,6 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             data.setY(Math.clamp(data.getY(), a.ry, maxY));
             reposition();
         }
-        moving = false;
         PlanAPI.save();
     }
 
