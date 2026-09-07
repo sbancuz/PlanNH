@@ -118,6 +118,33 @@ public final class ModelBuilder {
         return this;
     }
 
+    /**
+     * One capacity row per machine-sharing pool: the machines framed by a capped group may spend
+     * no more machine time between them than the group has machines. A machine's own time is its
+     * extent times the seconds one craft takes, so the row is {@code Σ extent_i * durTicks_i/TPS <=
+     * capacity} - the same number the group header shows, held as a constraint instead of read off
+     * afterwards. In count space the variable already IS machine time, so the coefficient is 1.
+     *
+     * <p>
+     * Nothing is added when the chart has no capped group, which is every chart that never touched
+     * the feature. Requires {@link #extents(double[])} or {@link #extentCounts()}.
+     */
+    public ModelBuilder pools() {
+        require(extents, "extents() or extentCounts()");
+        final ModelData model = ctx.model;
+        for (int p = 0; p < model.pools.size(); p++) {
+            final ModelData.Pool pool = model.pools.get(p);
+            final Expression row = m.addExpression("pool_" + p);
+            for (final int machine : pool.machines()) {
+                row.set(
+                    extentVars[machine],
+                    countsSpace ? 1.0 : model.machines.get(machine).durTicks / (double) Numerics.TICKS_PER_SECOND);
+            }
+            row.upper(pool.capacity());
+        }
+        return this;
+    }
+
     /** One nonnegative flow (items/s) variable per drawn edge. */
     public ModelBuilder flows() {
         final ModelData model = ctx.model;

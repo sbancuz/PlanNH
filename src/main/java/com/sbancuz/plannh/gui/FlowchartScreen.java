@@ -139,6 +139,18 @@ public class FlowchartScreen extends ModularScreen {
                                 .color(PlannhColors.CONTEXT_BORDER.getColor()))
                         .overlay(
                             IKey.str("Add Group")
+                                .color(Color.WHITE.main)))
+                    .child(new ButtonWidget<>().onMousePressed(_ -> {
+                        canvas.addMachineGroup(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
+                        return true;
+                    })
+                        .fullWidth()
+                        .background(
+                            new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                            new Rectangle().hollow()
+                                .color(PlannhColors.CONTEXT_BORDER.getColor()))
+                        .overlay(
+                            IKey.lang("plannh.gui.group.add_machine_group")
                                 .color(Color.WHITE.main))));
 
         mainColumn.child(

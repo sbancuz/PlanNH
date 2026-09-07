@@ -391,7 +391,9 @@ public final class Serializer {
         }
 
         for (final JsonElement elem : root.getAsJsonArray("groups")) {
-            final Group group = GSON.fromJson(elem, Group.class);
+            // Through GraphData, not Group: the type field decides whether this is a plain group or
+            // a machine group, and reading it as Group would drop the machine group's own fields.
+            final Group group = (Group) GSON.fromJson(elem, GraphData.class);
             graph.groups.put(group.getId(), group);
         }
 

@@ -618,6 +618,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 openNeiRecipe();
                 return true;
             }
+            // A machine group is one machine, so a node running another recipe handler has no place
+            // in it. There is nowhere to say so - the canvas has no message popup - so the drag
+            // simply does not take: the node goes back where it was picked up from.
+            if (dragging && canvas.refusesNode(node)) {
+                node.x = nodeStartX;
+                node.y = nodeStartY;
+                syncTransform(
+                    canvas.getGraph()
+                        .getZoom(),
+                    canvas.getGraph()
+                        .getPanX(),
+                    canvas.getGraph()
+                        .getPanY());
+            }
             dragging = false;
             canvas.recheckMembershipAndFit();
             PlanAPI.undoHistory()
