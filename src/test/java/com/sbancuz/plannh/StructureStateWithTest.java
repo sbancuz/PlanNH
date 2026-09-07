@@ -58,7 +58,7 @@ class StructureStateWithTest {
 
     @ParameterizedTest
     @MethodSource("settings")
-    void eachKnobMovesExactlyOneComponent(final Settings setting) {
+    void eachSettingMovesExactlyOneComponent(final Settings setting) {
         final int slot = changedSlot(BASE.with(setting, SENTINEL));
 
         assertNotEquals(-1, slot, setting + " moved nothing, so its slot points at a field it already equals");
@@ -67,7 +67,7 @@ class StructureStateWithTest {
 
     /** Two settings writing one slot would make the scan report whichever ran last. */
     @Test
-    void everyKnobOwnsItsOwnComponent() {
+    void everySettingOwnsItsOwnComponent() {
         final Set<Integer> slots = new HashSet<>();
         for (final Settings setting : STRUCTURE_SETTINGS) {
             final int slot = changedSlot(BASE.with(setting, SENTINEL));
@@ -82,7 +82,7 @@ class StructureStateWithTest {
      * is what stops it landing on slot 0 and silently rewriting the voltage tier.
      */
     @Test
-    void aSettingThatIsNotAKnobIsRefused() {
+    void aSettingWithNoComponentIsRefused() {
         assertThrows(IllegalArgumentException.class, () -> BASE.with(Settings.MACHINES, SENTINEL));
     }
 
@@ -130,7 +130,7 @@ class StructureStateWithTest {
     /** The voltage tier is carried through untouched, whichever setting moved. */
     @ParameterizedTest
     @MethodSource("settings")
-    void voltageSurvivesEveryKnob(final Settings setting) {
+    void voltageSurvivesEverySetting(final Settings setting) {
         assertEquals(
             BASE.voltageTier(),
             BASE.with(setting, SENTINEL)

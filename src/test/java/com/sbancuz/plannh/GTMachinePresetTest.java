@@ -1,7 +1,6 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -14,17 +13,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePresets;
 import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.enums.HeatingCoilLevel;
 
 /**
- * The preset table is a hand-copied mirror of ~30 MetaTileEntities, pinned to one GT version. It
- * cannot be checked by re-deriving the same arithmetic, so these assert the things that actually go
- * wrong: keys that stop resolving, and formulas whose direction is inverted.
+ * The override rows are hand-copied from one pinned GT version, so they cannot be checked by
+ * re-deriving the same arithmetic. These assert the things that actually go wrong instead: keys that
+ * stop resolving, and formulas whose direction is inverted.
  */
 class GTMachinePresetTest {
 
@@ -34,7 +33,7 @@ class GTMachinePresetTest {
 
     static List<String> presetKeys() {
         final List<String> keys = new ArrayList<>();
-        GTMachinePresets.keys()
+        GTMachineOverrides.keys()
             .forEach(keys::add);
         return keys;
     }
@@ -60,15 +59,15 @@ class GTMachinePresetTest {
             false,
             getClass().getClassLoader());
 
-        assertNotNull(GTMachinePresets.lookup(ebf));
+        assertNotNull(GTMachineOverrides.preset(ebf));
         assertTrue(
-            GTMachinePresets.lookup(ebf)
+            GTMachineOverrides.preset(ebf)
                 .usesHeat());
     }
 
     @Test
     void anUnknownMachineHasNoPreset() {
-        assertEquals(null, GTMachinePresets.lookup(String.class));
+        assertEquals(null, GTMachineOverrides.preset(String.class));
     }
 
     /**
@@ -78,7 +77,7 @@ class GTMachinePresetTest {
      */
     @Test
     void blastFurnaceHeatMatchesCoilPlusVoltageBonus() throws ClassNotFoundException {
-        final GTMachinePreset ebf = GTMachinePresets.lookup(
+        final GTMachinePreset ebf = GTMachineOverrides.preset(
             Class.forName(
                 "gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace",
                 false,
@@ -99,35 +98,12 @@ class GTMachinePresetTest {
                 .applyAsInt(state(5, 0)));
     }
 
-    /**
-     * The Plasma Forge sets a heat from its coil, but spends it on deciding which recipes will run
-     * rather than on overclocking - GregTech never calls {@code setHeatOC} for it. Conflating it with
-     * the EBF gave it overclocks it does not have, so both halves are pinned here.
-     */
-    @Test
-    void plasmaForgeHeatGatesRecipesAndDoesNotOverclock() throws ClassNotFoundException {
-        final GTMachinePreset dtpf = GTMachinePresets.lookup(
-            Class.forName(
-                "gregtech.common.tileentities.machines.multi.MTEPlasmaForge",
-                false,
-                getClass().getClassLoader()));
-
-        assertFalse(dtpf.heatOC(), "GregTech does not overclock the Plasma Forge on heat");
-        assertFalse(dtpf.usesHeat(), "so the calculator must not be given a heat at all");
-        assertEquals(
-            dtpf.machineHeat()
-                .applyAsInt(state(2, 5)),
-            dtpf.machineHeat()
-                .applyAsInt(state(9, 5)),
-            "voltage must not change Plasma Forge heat");
-    }
-
     /** More coil is never worse: faster or equal, and never more EU per tick. */
     @ParameterizedTest
     @MethodSource("presetKeys")
     void coilDrivenFormulasImproveMonotonically(final String className) throws ClassNotFoundException {
-        final GTMachinePreset preset = GTMachinePresets
-            .lookup(Class.forName(className, false, getClass().getClassLoader()));
+        final GTMachinePreset preset = GTMachineOverrides
+            .preset(Class.forName(className, false, getClass().getClassLoader()));
         assertNotNull(preset);
         if (!preset.settings()
             .contains(Settings.GT_COIL)) return;
@@ -161,8 +137,8 @@ class GTMachinePresetTest {
     @ParameterizedTest
     @MethodSource("presetKeys")
     void parallelNeverShrinksWithVoltage(final String className) throws ClassNotFoundException {
-        final GTMachinePreset preset = GTMachinePresets
-            .lookup(Class.forName(className, false, getClass().getClassLoader()));
+        final GTMachinePreset preset = GTMachineOverrides
+            .preset(Class.forName(className, false, getClass().getClassLoader()));
         assertNotNull(preset);
 
         for (int tier = 1; tier < 14; tier++) {
@@ -179,8 +155,8 @@ class GTMachinePresetTest {
     @ParameterizedTest
     @MethodSource("presetKeys")
     void parallelIsAlwaysPositive(final String className) throws ClassNotFoundException {
-        final GTMachinePreset preset = GTMachinePresets
-            .lookup(Class.forName(className, false, getClass().getClassLoader()));
+        final GTMachinePreset preset = GTMachineOverrides
+            .preset(Class.forName(className, false, getClass().getClassLoader()));
         assertNotNull(preset);
 
         for (int tier = 1; tier <= 14; tier++) {
@@ -195,8 +171,8 @@ class GTMachinePresetTest {
     @ParameterizedTest
     @MethodSource("presetKeys")
     void modifiersStayPositive(final String className) throws ClassNotFoundException {
-        final GTMachinePreset preset = GTMachinePresets
-            .lookup(Class.forName(className, false, getClass().getClassLoader()));
+        final GTMachinePreset preset = GTMachineOverrides
+            .preset(Class.forName(className, false, getClass().getClassLoader()));
         assertNotNull(preset);
 
         for (int coil = 0; coil <= GTStructureTiers.MAX_COIL_TIER; coil++) {

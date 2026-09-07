@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
+import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePresets;
 import com.sbancuz.plannh.data.provider.gregtech.GTPresetApplier;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
@@ -25,14 +25,11 @@ import gregtech.api.util.OverclockCalculator;
 class GTPresetApplierTest {
 
     private static final String EBF = "gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace";
-    private static final String LCR = "gregtech.common.tileentities.machines.multi.MTELargeChemicalReactor";
-    private static final String DTPF = "gregtech.common.tileentities.machines.multi.MTEPlasmaForge";
-    private static final String ARC = "kubatech.tileentity.gregtech.multiblock.MTEIndustrialArcFurnace";
     private static final String MULTI_SMELTER = "gregtech.common.tileentities.machines.multi.MTEMultiFurnace";
 
     private static GTMachinePreset preset(final String className) throws ClassNotFoundException {
-        final GTMachinePreset found = GTMachinePresets
-            .lookup(Class.forName(className, false, GTPresetApplierTest.class.getClassLoader()));
+        final GTMachinePreset found = GTMachineOverrides
+            .preset(Class.forName(className, false, GTPresetApplierTest.class.getClassLoader()));
         assertNotNull(found, className);
         return found;
     }
@@ -99,9 +96,13 @@ class GTPresetApplierTest {
 
     /** Perfect overclock is 4x duration per 4x EU, not GT's default 2x per 4x. */
     @Test
-    void perfectOverclockHalvesDurationTwiceAsFast() throws ClassNotFoundException {
+    void perfectOverclockHalvesDurationTwiceAsFast() {
+        final GTMachinePreset perfectOC = GTMachinePreset.builder()
+            .perfectOC()
+            .build();
+
         final OverclockCalculator perfect = GTPresetApplier
-            .buildFromPreset(preset(LCR), state(5, 0), GTValues.VP[1], 1024, GTValues.V[5], 1, 0)
+            .buildFromPreset(perfectOC, state(5, 0), GTValues.VP[1], 1024, GTValues.V[5], 1, 0)
             .setParallel(1)
             .setAmperageOC(true)
             .calculate();
@@ -122,28 +123,34 @@ class GTPresetApplierTest {
     /**
      * Tier skipping is how far <em>above</em> the machine's own voltage a recipe may sit, so it only
      * shows up on a recipe the machine could not otherwise run. A ZPM recipe is four tiers over an
-     * IV machine: out of reach at GT's default of one skip, fine for the Plasma Forge.
+     * IV machine: out of reach at GT's default of one skip, fine for a preset that lifts the limit.
      */
     @Test
-    void plasmaForgeAllowsUnlimitedTierSkips() throws ClassNotFoundException {
+    void unlimitedTierSkipsReachAFourTierGap() {
+        final GTMachinePreset unlimited = GTMachinePreset.builder()
+            .unlimitedTierSkips()
+            .build();
+
         final OverclockCalculator forge = GTPresetApplier
-            .buildFromPreset(preset(DTPF), state(5, 8), GTValues.V[7], 1024, GTValues.V[5], 1, 1800);
+            .buildFromPreset(unlimited, state(5, 8), GTValues.V[7], 1024, GTValues.V[5], 1, 1800);
         final OverclockCalculator defaultLimit = new OverclockCalculator().setRecipeEUt(GTValues.V[7])
             .setEUt(GTValues.V[5])
             .setDuration(1024);
 
-        assertTrue(forge.getAllowedTierSkip(), "the Plasma Forge lifts the skip limit");
+        assertTrue(forge.getAllowedTierSkip(), "an unlimited-skip preset lifts the limit");
         assertTrue(!defaultLimit.getAllowedTierSkip(), "GT's default of one skip does not reach four tiers");
     }
 
     /**
-     * The arc furnace forbids skipping outright, so it cannot even reach one tier up - which is
-     * exactly what the settings-map path cannot express, since 0 there means "unset". Hence the
-     * preset's own sentinel.
+     * A preset may forbid skipping outright, so it cannot even reach one tier up - which is exactly
+     * what the settings-map path cannot express, since 0 there means "unset". Hence the preset's own
+     * sentinel.
      */
     @Test
-    void arcFurnaceForbidsTierSkipping() throws ClassNotFoundException {
-        final GTMachinePreset arc = preset(ARC);
+    void zeroTierSkipsRefusesEvenOneTier() {
+        final GTMachinePreset arc = GTMachinePreset.builder()
+            .maxTierSkips(0)
+            .build();
         assertEquals(0, arc.maxTierSkips());
 
         // One tier up: allowed by GT's default of a single skip, refused with skipping disabled.
@@ -153,7 +160,7 @@ class GTPresetApplierTest {
             .setEUt(GTValues.V[5])
             .setDuration(1024);
 
-        assertTrue(!noSkips.getAllowedTierSkip(), "an EV recipe must not run in an IV arc furnace");
+        assertTrue(!noSkips.getAllowedTierSkip(), "an EV recipe must not run in an IV machine");
         assertTrue(defaultLimit.getAllowedTierSkip(), "GT's default would have allowed it");
     }
 

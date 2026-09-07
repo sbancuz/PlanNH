@@ -11,13 +11,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
-import com.sbancuz.plannh.data.provider.gregtech.GTMachinePresets;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 /**
  * The override file is the only place PlanNH still asserts a number against the machine that owns it,
- * so its contract is worth pinning: every row names a machine that exists, every row says why it is
- * there, and a row here beats the general table rather than racing it.
+ * so its contract is worth pinning: every row names a machine that exists, and every row says why it
+ * is there - the reason is what takes the machine off the probe.
  */
 class GTMachineOverridesTest {
 
@@ -45,16 +44,13 @@ class GTMachineOverridesTest {
     void aMachineWithNoOverrideHasNoReason() {
         assertNull(
             GTMachineOverrides.reason(uninitialised("gregtech.common.tileentities.machines.multi.MTEIndustrialSifter")),
-            "only overridden machines may carry a reason, or the shadow log stops meaning anything");
+            "only overridden machines may carry a reason: it is what takes them off the probe");
     }
 
-    /**
-     * The whole point of the split: an overridden machine resolves to its override, not to whatever
-     * the general table happens to hold for it or for a superclass.
-     */
+    /** An overridden machine resolves to its own row, including through a superclass walk. */
     @Test
     void anOverrideWinsTheLookup() {
-        final var ebf = GTMachinePresets.lookup(uninitialised(EBF));
+        final var ebf = GTMachineOverrides.preset(uninitialised(EBF));
         assertNotNull(ebf);
 
         // The voltage term is the reason the EBF is overridden at all, so it is what proves the win.

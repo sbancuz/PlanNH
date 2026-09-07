@@ -70,15 +70,6 @@ public final class Config {
     public static final int SOLVER_EFFORT_MAX = 200;
 
     /**
-     * Whether GregTech multiblocks are asked for their own overclock numbers instead of read from
-     * PlanNH's table. {@code shadow} runs the probe and logs where the two disagree without changing
-     * a single chart, which is how a table row earns its deletion.
-     */
-    public static String gtProbeMode = "shadow";
-
-    public static final String[] GT_PROBE_MODES = { "off", "shadow", "on" };
-
-    /**
      * {@link #solverEffortPercent} as the solver reads it. Clamped rather than trusted: Forge
      * clamps what it parses out of the config file, but the field is public and nothing stops a
      * later caller from assigning to it, and an unclamped percentage multiplies a 20-second budget.
@@ -124,16 +115,6 @@ public final class Config {
             "How long AUTO balancing may spend looking for a better answer, as a percentage of the"
                 + " default. Lower gives up sooner on big charts; higher makes them balance better"
                 + " and the GUI pause longer, because the solve runs while the screen draws.");
-
-        gtProbeMode = configuration.getString(
-            "gtProbeMode",
-            "gregtech",
-            "shadow",
-            "Where GregTech multiblock overclock numbers come from. off: PlanNH's own table only."
-                + " shadow: also ask each machine what it would do and log the disagreements, but"
-                + " chart numbers stay on the table. on: the machine's own answer wins, which"
-                + " tracks a GregTech version PlanNH was not built against.",
-            GT_PROBE_MODES);
 
         if (configuration.hasChanged()) {
             configuration.save();

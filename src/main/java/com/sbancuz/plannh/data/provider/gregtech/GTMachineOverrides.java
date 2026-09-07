@@ -36,8 +36,9 @@ import javax.annotation.Nullable;
  * exists to remove, and these rows are where it could not.
  *
  * <p>
- * In shadow mode the log names a machine whose row disagrees with the probe. A machine listed here
- * disagreeing is expected and its reason is printed with it. A machine <em>not</em> listed here
+ * Being named here is also what takes a machine off the probe: {@code GTMachineIndex.presetFor} reads
+ * the row instead. The probe is still asked, so the disagreement log still covers these machines - one
+ * listed here disagreeing is expected and its reason is printed with it, one not listed here
  * disagreeing is news.
  */
 public final class GTMachineOverrides {
@@ -86,28 +87,36 @@ public final class GTMachineOverrides {
                 .settings(GT_COIL));
     }
 
-    @Nullable
-    static GTMachinePreset lookup(final String className) {
-        final Override found = BY_CLASS.get(className);
-        return found == null ? null : found.preset();
-    }
-
     /**
-     * Why this machine is not read from GregTech, or null when it is. Walks superclasses for the same
-     * reason {@link GTMachinePresets#lookup} does: a subclass inherits its parent's row, so it
-     * inherits the parent's reason for disagreeing with the probe rather than reading as news.
+     * A subclass inherits its parent's row, and with it the parent's reason for not being read from
+     * GregTech - so the walk is here rather than at each caller, and the preset and the reason can
+     * never come from different rows.
      */
     @Nullable
-    public static String reason(@Nonnull final Class<?> mteClass) {
+    private static Override find(@Nonnull final Class<?> mteClass) {
         for (Class<?> c = mteClass; c != null; c = c.getSuperclass()) {
             final Override found = BY_CLASS.get(c.getName());
-            if (found != null) return found.reason();
+            if (found != null) return found;
         }
         return null;
     }
 
+    /** The row that stands in for this machine, or null when GregTech's own answer is used. */
+    @Nullable
+    public static GTMachinePreset preset(@Nonnull final Class<?> mteClass) {
+        final Override found = find(mteClass);
+        return found == null ? null : found.preset();
+    }
+
+    /** Why this machine is not read from GregTech, or null when it is. */
+    @Nullable
+    public static String reason(@Nonnull final Class<?> mteClass) {
+        final Override found = find(mteClass);
+        return found == null ? null : found.reason();
+    }
+
     @Nonnull
-    static Iterable<String> keys() {
+    public static Iterable<String> keys() {
         return BY_CLASS.keySet();
     }
 }

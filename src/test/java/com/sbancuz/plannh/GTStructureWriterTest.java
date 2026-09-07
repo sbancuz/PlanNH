@@ -58,7 +58,7 @@ class GTStructureWriterTest {
      * that is what the probe goes on.
      */
     @Test
-    void onlyMachinesThatDeclareModesExposeTheModeKnob() {
+    void onlyMachinesThatDeclareModesExposeTheModeSetting() {
         assertTrue(
             StructureWriter.forClass(uninitialised(GT_MULTI + "MTEOreWashingPlant"))
                 .reachableSettings()

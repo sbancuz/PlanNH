@@ -117,7 +117,7 @@ class MachineVariantsTest {
 
     /** The rows a node offers are the selected machine's, which is the whole point of registering settings. */
     @Test
-    void knobRowsFollowTheSelectedMachine() {
+    void settingRowsFollowTheSelectedMachine() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
         final RecipeContext ctx = recipeOf("grinding");
 

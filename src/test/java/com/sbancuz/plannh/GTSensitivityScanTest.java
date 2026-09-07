@@ -41,7 +41,7 @@ class GTSensitivityScanTest {
     }
 
     @Test
-    void aKnobThatChangesNothingIsNotUsed() {
+    void aSettingThatChangesNothingIsNotUsed() {
         final EnumSet<Settings> used = SensitivityScan
             .scan(REFERENCE, EnumSet.of(Settings.GT_COIL, Settings.GT_MODE, Settings.GT_WIDTH), MODES, state -> flat());
 
@@ -49,7 +49,7 @@ class GTSensitivityScanTest {
     }
 
     @Test
-    void aKnobThatChangesTheParallelCountIsUsed() {
+    void aSettingThatChangesTheParallelCountIsUsed() {
         final EnumSet<Settings> used = SensitivityScan.scan(
             REFERENCE,
             EnumSet.of(Settings.GT_COIL, Settings.GT_MODE),
@@ -61,7 +61,7 @@ class GTSensitivityScanTest {
 
     /** Heat is as much a chart number as speed is, so a coil that only changes heat still counts. */
     @Test
-    void aKnobThatOnlyChangesHeatIsUsed() {
+    void aSettingThatOnlyChangesHeatIsUsed() {
         final EnumSet<Settings> used = SensitivityScan.scan(
             REFERENCE,
             EnumSet.of(Settings.GT_COIL),
@@ -73,7 +73,7 @@ class GTSensitivityScanTest {
 
     /** Two settings, one machine: only the one that is read comes back. */
     @Test
-    void knobsAreJudgedOneAtATime() {
+    void settingsAreJudgedOneAtATime() {
         final Function<StructureState, ProbeReading> readings = state -> withParallel(2 * state.pipeCasingTier());
         final EnumSet<Settings> used = SensitivityScan.scan(
             REFERENCE,
@@ -95,7 +95,7 @@ class GTSensitivityScanTest {
 
     /** A machine that declines an end says nothing, so the row stays off rather than guessing. */
     @Test
-    void aDeclinedReadingLeavesTheKnobOff() {
+    void aDeclinedReadingLeavesTheSettingOff() {
         final EnumSet<Settings> used = SensitivityScan.scan(
             REFERENCE,
             EnumSet.of(Settings.GT_COIL),
@@ -143,9 +143,9 @@ class GTSensitivityScanTest {
 
     /** The scan must cover what the row offers, or a setting could move outside the range it was tested on. */
     @Test
-    void everyKnobRangeIsRealAndNonEmpty() {
+    void everySettingRangeIsRealAndNonEmpty() {
         for (final Settings setting : StructureState.STRUCTURE_SETTINGS) {
-            final GTSettings.TierRange range = GTSettings.knobRange(setting);
+            final GTSettings.TierRange range = GTSettings.settingRange(setting);
             assertTrue(range.min() < range.max(), setting + " offers nothing to scan: " + range);
         }
     }

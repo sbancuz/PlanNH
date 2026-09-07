@@ -55,7 +55,7 @@ class GTStructureSettingsTest {
 
     /** Unset settings open on the best structure; a planner should show the endgame number. */
     @Test
-    void unsetKnobsDefaultToTheBestStructure() {
+    void unsetSettingsDefaultToTheBestStructure() {
         final StructureState state = GTSettings.resolve(EMPTY, Map.of(), 5);
 
         assertEquals(GTStructureTiers.MAX_COIL_TIER, state.coilTier());

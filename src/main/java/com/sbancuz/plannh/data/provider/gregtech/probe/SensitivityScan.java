@@ -68,7 +68,7 @@ public final class SensitivityScan {
         final Function<StructureState, ProbeReading> readings) {
         final EnumSet<Settings> used = EnumSet.noneOf(Settings.class);
         for (final Settings setting : candidates) {
-            final GTSettings.TierRange range = GTSettings.knobRange(setting);
+            final GTSettings.TierRange range = GTSettings.settingRange(setting);
             if (range.min() >= range.max()) continue;
 
             final ProbeReading low = readings.apply(reference.with(setting, range.min()));

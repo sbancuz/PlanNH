@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.data.provider.gregtech.probe;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -8,7 +10,6 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
@@ -20,19 +21,20 @@ import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.util.GTRecipe;
 
 /**
- * Asks a GregTech multiblock what it would do with a recipe, and turns the answer into the same
- * {@link GTMachinePreset} the hand-written table produces.
+ * Asks a GregTech multiblock what it would do with a recipe, and turns the answer into a
+ * {@link GTMachinePreset}.
  *
  * <p>
  * The point is that the arithmetic stays in GregTech. A machine's parallel count, speed, EU discount,
  * overclock factors and heat behaviour are read off the {@code OverclockCalculator} its own processing
  * logic builds, so a pack running a GregTech that PlanNH was never compiled against still gets that
- * version's numbers instead of a transcription of an older one.
+ * version's numbers instead of a transcription of an older one. Singleblocks need none of this: they
+ * publish an {@code OverclockDescriber} and {@code GTPresetApplier} calls it directly.
  *
  * <p>
- * This probe reads a machine in its unbuilt state, so what it returns does not yet vary with the coil
- * or pipe casing the player would place. Machines whose numbers move with their structure therefore
- * still need their table row; the shadow mode exists to find out which those are.
+ * Numbers come back as functions of a {@link StructureState}: {@link StructureWriter} writes the coil
+ * and casing tiers a player would have built into the fields the machine reads, so a machine is asked
+ * again for every structure rather than answered once.
  */
 public final class MachineProbe {
 
@@ -64,26 +66,17 @@ public final class MachineProbe {
     @Nullable
     private static GTRecipe sentinel;
 
-    /** Whether the probe's numbers reach a chart, or only the log. */
-    public static boolean drivesNumbers() {
-        return "on".equals(Config.gtProbeMode);
-    }
-
-    private static boolean shadowing() {
-        return "shadow".equals(Config.gtProbeMode);
-    }
-
-    private static boolean enabled() {
-        return drivesNumbers() || shadowing();
-    }
-
     /**
-     * The probed preset for a machine, or null when it has nothing to read or the probe is off. Cached
-     * per machine class: the answer cannot change without the pack changing.
+     * What the machine says it would do, or null when it cannot be read. Cached per machine class: the
+     * answer cannot change without the pack changing.
+     *
+     * <p>
+     * Reading is unconditional even where {@link GTMachineOverrides} names the machine, because a
+     * reading that is not used is still the thing {@link #reportDisagreement} compares against.
      */
     @Nullable
     public static GTMachinePreset probe(@Nonnull final IMetaTileEntity prototype) {
-        if (!enabled() || OverclockInternals.RESOLVED == null) return null;
+        if (OverclockInternals.RESOLVED == null) return null;
         final Class<?> machineClass = prototype.getClass();
         if (UNPROBEABLE.containsKey(machineClass)) return null;
 
@@ -91,23 +84,17 @@ public final class MachineProbe {
         if (cached != null) return cached;
 
         final GTMachinePreset probed = build(prototype);
-        if (probed == null) {
-            UNPROBEABLE.put(machineClass, Boolean.TRUE);
-        } else if (drivesNumbers()) {
-            // Only worth keeping when a chart reads it. In shadow mode the answer feeds one log line,
-            // and holding it would pin a cloned MetaTileEntity per machine for the client's lifetime.
-            PROBED.put(machineClass, probed);
-        }
+        if (probed == null) UNPROBEABLE.put(machineClass, Boolean.TRUE);
+        else PROBED.put(machineClass, probed);
         return probed;
     }
 
     /**
-     * Logs where the probe and the hand-written table disagree. Shadow mode's whole purpose: a row may
-     * only be deleted from the table once this says nothing about it.
+     * Logs where the probe and a hand-written row disagree: a row may only be deleted once this says
+     * nothing about it.
      */
     public static void reportDisagreement(@Nonnull final Class<?> machineClass, @Nullable final GTMachinePreset table,
         @Nullable final GTMachinePreset probed) {
-        if (!shadowing()) return;
         if (table == null || probed == null) {
             PlanNH.LOG.debug(
                 "PlanNH probe: {} is covered by {} only",
@@ -162,6 +149,61 @@ public final class MachineProbe {
         private static boolean sameNumber(final double table, final double probed) {
             return Math.abs(table - probed) <= SAME_NUMBER * Math.max(1, Math.abs(table));
         }
+    }
+
+    /**
+     * Every number a preset resolves to, at the structure an untouched node shows. Rendered rather
+     * than returned as fields so the machine table can carry it as one cell and a GregTech update
+     * shows up as a diff on the machines whose numbers moved. All ten always, in a fixed order: a
+     * snapshot that omits defaults cannot tell a value leaving its default from a value never set.
+     */
+    @Nonnull
+    public static String numbersText(@Nonnull final GTMachinePreset preset) {
+        final Headline h = headline(preset, reference());
+        return "par=" + h.parallel()
+            + " dur="
+            + num(h.duration())
+            + " eu="
+            + num(h.eu())
+            + " ocD="
+            + num(h.ocDuration())
+            + " ocE="
+            + num(h.ocEut())
+            + " heat="
+            + h.machineHeat()
+            + " hOC="
+            + (h.heatOC() ? 1 : 0)
+            + " hDisc="
+            + (h.heatDiscount() ? 1 : 0)
+            + " rHeat="
+            + h.recipeHeat()
+            + " skips="
+            + h.tierSkips();
+    }
+
+    /** Denominators a GregTech modifier is plausibly built from; 1/3 and 9/4 both fall inside this. */
+    private static final int MAX_DENOMINATOR = 64;
+
+    /**
+     * Two significant digits where that is exact, and the fraction where it is not - GregTech writes
+     * these as ratios, so 1/3 says what 0.33 hides. Locale-independent, because the file is read on
+     * whatever machine generated it.
+     */
+    @Nonnull
+    private static String num(final double value) {
+        if (value == Math.rint(value) && Math.abs(value) < 1e15) return Long.toString((long) value);
+
+        final BigDecimal rounded = BigDecimal.valueOf(value)
+            .round(new MathContext(2));
+        if (rounded.doubleValue() == value) return rounded.stripTrailingZeros()
+            .toPlainString();
+
+        for (int d = 2; d <= MAX_DENOMINATOR; d++) {
+            final double scaled = value * d;
+            if (Math.abs(scaled - Math.rint(scaled)) < 1e-9) return (long) Math.rint(scaled) + "/" + d;
+        }
+        return rounded.stripTrailingZeros()
+            .toPlainString();
     }
 
     @Nonnull

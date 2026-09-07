@@ -24,7 +24,7 @@ import gregtech.api.enums.ItemList;
  * registries filled at mod init, neither of which a class can read.
  *
  * <p>
- * Addon classes are named by string for the same reason {@link GTMachinePresets} keys are: an addon
+ * Addon classes are named by string for the same reason {@link GTMachineOverrides} keys are: an addon
  * that is not installed then costs nothing instead of throwing NoClassDefFoundError. A table that
  * cannot be read comes back null and drops its machine out of the preset table, which surfaces as
  * the uncovered-multiblock warning - louder than quietly reporting numbers from a version nobody is
@@ -133,15 +133,6 @@ public final class GTStructureTiers {
         } catch (final RuntimeException | LinkageError e) {
             return fallback;
         }
-    }
-
-    /** Clamps to the table, so a stored tier from a pack with more electrodes still resolves. */
-    public static double at(@Nonnull final double[] table, final int tier) {
-        return table[clamp(tier, table.length - 1)];
-    }
-
-    public static int at(@Nonnull final int[] table, final int tier) {
-        return table[clamp(tier, table.length - 1)];
     }
 
     /**

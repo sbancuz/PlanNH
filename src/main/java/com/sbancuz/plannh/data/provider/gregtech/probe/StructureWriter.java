@@ -215,7 +215,7 @@ public final class StructureWriter {
             case COIL_TIER -> state.coilTier();
             case COIL_TIER_FROM_ONE -> state.coilTier() + 1;
             // What the coil alone supplies. A machine that adds a voltage term to this in checkMachine
-            // then reads low, which the shadow log reports as a heat difference against the table.
+            // then reads low, which the disagreement log reports as a heat difference against the row.
             case COIL_HEAT -> GTStructureTiers.coilHeat(state.coilTier());
             case ITEM_PIPE_TIER -> state.itemPipeTier();
             case SOLENOID_TIER -> state.solenoidTier();
@@ -240,6 +240,15 @@ public final class StructureWriter {
         } else if (type == Integer.class) {
             field.set(machine, value);
         }
+    }
+
+    /**
+     * Whether this field is one the probe knows how to set. A field it does not know is a structure
+     * the probe silently cannot vary, so {@code GTStructureCoverageTest} asks this of every GregTech
+     * multiblock rather than letting a new casing tier go unnoticed.
+     */
+    public static boolean covers(@Nonnull final Field field) {
+        return codingOf(field) != null;
     }
 
     @Nullable

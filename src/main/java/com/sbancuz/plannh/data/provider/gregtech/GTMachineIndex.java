@@ -56,6 +56,18 @@ public final class GTMachineIndex {
     /** Appended to a singleblock's name in the picker. Translated, since the name it follows is. */
     private static final String SINGLEBLOCK_SUFFIX = "plannh.machine.singleblock_suffix";
 
+    /** Where {@link MachineEntry#preset} was taken from, recorded so nothing has to work it out again. */
+    public enum NumberSource {
+        /** The machine's own answer, read off the installed GregTech. */
+        PROBE,
+        /** A hand-written row that supersedes the probe, because the probe is wrong here. */
+        OVERRIDE,
+        /** A hand-written row standing in because the probe could not read the machine at all. */
+        HAND_WRITTEN_FALLBACK,
+        /** Neither answered, so the machine plans as a plain single-speed one. */
+        NONE
+    }
+
     /**
      * @param id            {@code MetaTileEntity.getLocalNameKey()} - the value charts persist. Not
      *                      the meta id, which GT reassigns between versions, nor the localized name,
@@ -67,11 +79,12 @@ public final class GTMachineIndex {
      * @param describer     GT's own overclock behaviour for this machine, present on singleblocks and
      *                      a handful of multis. When set it is authoritative and no preset is needed.
      * @param preset        structure-derived parameters for multiblocks; null when uncovered.
+     * @param numberSource  which of the two answers {@code preset} is, for whoever has to review it.
      * @param modes         how many modes the machine has, and which recipemap selects which.
      */
     public record MachineEntry(String id, String displayName, boolean tieredByBuild, int voltageTier, int amperage,
         int catalystPriority, @Nullable OverclockDescriber describer, @Nullable GTMachinePreset preset,
-        GTMachineModes.Modes modes) implements MachineVariant {
+        NumberSource numberSource, GTMachineModes.Modes modes) implements MachineVariant {
 
         /** The mode this recipe implies, or -1 when the user still has to say. */
         public int modeFor(@Nullable final RecipeMap<?> recipeMap) {
@@ -344,12 +357,11 @@ public final class GTMachineIndex {
         final OverclockDescriber describer = mte instanceof final IOverclockDescriptionProvider provider
             ? provider.getOverclockDescriber()
             : null;
-        // The table is what a chart reads until the probe has been proven against it machine by
-        // machine, so the probe only takes over once it is switched on.
-        final GTMachinePreset fromTable = GTMachinePresets.lookup(mte.getClass());
+        final GTMachinePreset fromTable = GTMachineOverrides.preset(mte.getClass());
         final GTMachinePreset probed = MachineProbe.probe(mte);
         MachineProbe.reportDisagreement(mte.getClass(), fromTable, probed);
-        final GTMachinePreset preset = MachineProbe.drivesNumbers() && probed != null ? probed : fromTable;
+        final NumberSource numberSource = sourceOf(mte.getClass(), probed, fromTable);
+        final GTMachinePreset preset = numberSource == NumberSource.PROBE ? probed : fromTable;
         if (preset == null && describer == null && tieredByBuild) {
             uncovered.add(mte.getClass().getName());
         }
@@ -363,6 +375,7 @@ public final class GTMachineIndex {
             workable.getRecipeCatalystPriority(),
             describer,
             preset,
+            numberSource,
             GTMachineModes.of(mte));
 
         // Two machines sharing an id would silently render as one another in the picker, which is
@@ -376,5 +389,18 @@ public final class GTMachineIndex {
             index.computeIfAbsent(recipeMap.unlocalizedName, k -> new ArrayList<>())
                 .add(entry);
         }
+    }
+
+    /**
+     * Which numbers a chart reads, and the only place that is decided. GregTech's own answer wins
+     * wherever it can be read, so a pack running a GregTech PlanNH was never compiled against gets that
+     * version's numbers - except for the machines {@link GTMachineOverrides} names, where the answer
+     * has been shown to be wrong and a hand-written row stands in.
+     */
+    private static NumberSource sourceOf(final Class<?> machineClass, @Nullable final GTMachinePreset probed,
+        @Nullable final GTMachinePreset fromTable) {
+        if (GTMachineOverrides.reason(machineClass) != null) return NumberSource.OVERRIDE;
+        if (probed != null) return NumberSource.PROBE;
+        return fromTable != null ? NumberSource.HAND_WRITTEN_FALLBACK : NumberSource.NONE;
     }
 }

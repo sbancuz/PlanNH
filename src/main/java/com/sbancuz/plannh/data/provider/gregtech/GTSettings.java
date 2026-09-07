@@ -497,7 +497,7 @@ public final class GTSettings {
      * moves both.
      */
     @Nonnull
-    public static TierRange knobRange(final Settings setting) {
+    public static TierRange settingRange(final Settings setting) {
         // The coil row stores a name rather than a number, so its range is the name list.
         if (setting == Settings.GT_COIL) return new TierRange(0, COIL_NAMES.size() - 1);
         // A sweep over modes takes its count from the machine, not from a range; the mode row's own
