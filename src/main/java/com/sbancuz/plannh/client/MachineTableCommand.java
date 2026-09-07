@@ -56,6 +56,9 @@ public class MachineTableCommand extends CommandBase {
 
     private static final String FILE_NAME = "plannh-machines.md";
 
+    /** Every row starts unchecked; the reviewer swaps it for a tick as each machine is verified. */
+    private static final String UNCHECKED = "❌";
+
     /**
      * Rows every multiblock shows, so listing them says nothing about any particular machine. Matched
      * by key rather than by label, which is translated.
@@ -148,6 +151,8 @@ public class MachineTableCommand extends CommandBase {
     private static void writeLegend(final PrintWriter writer) {
         writer.println("## Columns");
         writer.println();
+        writer.println("- **checked by hand** - review state, not generated data. Every machine starts " + UNCHECKED);
+        writer.println("  and stays that way until someone has read its row against the machine in game.");
         writer.println("- **rows** - what a node for this machine asks beyond the four every multiblock shows");
         writer.println("  (Tier, Mach, Amp, Advanced). Blank means it asks nothing else, which is the goal.");
         writer
@@ -171,11 +176,13 @@ public class MachineTableCommand extends CommandBase {
         if (rows.isEmpty()) return;
 
         rows.sort(Comparator.comparing(Row::machine));
-        writer.println("| machine | rows | override | settings | modes | class | recipemaps |");
-        writer.println("|---|---|---|---|---|---|---|");
+        writer.println("| checked by hand | machine | rows | override | settings | modes | class | recipemaps |");
+        writer.println("|---|---|---|---|---|---|---|---|");
         for (final Row row : rows) {
             writer.println(
-                "| " + row.machine()
+                "| " + UNCHECKED
+                    + " | "
+                    + row.machine()
                     + " | "
                     + row.rows()
                     + " | "
