@@ -6,11 +6,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
@@ -28,10 +26,7 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.Settings;
-import com.sbancuz.plannh.data.flowchart.Summary.SummarySection;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
-import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
-import com.sbancuz.plannh.data.flowchart.balancer.PortRef;
 
 import codechicken.nei.recipe.Recipe;
 
@@ -102,28 +97,20 @@ public final class Serializer {
      */
     @Nonnull
     public static String encodePlan(final Plan plan) {
-        final JsonObject root = GSON.toJsonTree(plan, Plan.class)
-            .getAsJsonObject();
-
-        final JsonArray arr = new JsonArray();
-        for (final Graph graph : plan.getGraphs()) {
-            final JsonObject slotObj = new JsonObject();
-            slotObj.addProperty("name", graph.getName());
-            slotObj.addProperty("data", encode(graph));
-            slotObj.add("sectionFolds", foldsToJson(graph.collapsedSummarySections));
-            arr.add(slotObj);
-        }
-        root.add("graphs", arr);
-
-        return GSON.toJson(root);
+        return encodePlan(plan, false);
     }
 
     /**
-     * Encodes a Plan (with all its graphs) to a JSON string. Graph bodies are stored compressed,
-     * each with its slot name and summary section folds.
+     * The same plan, but with each slot's data written as readable JSON instead of the compressed
+     * base64 {@code encodePlan} uses - for debugging a save.
      */
     @Nonnull
     public static String encodePlanDebug(final Plan plan) {
+        return encodePlan(plan, true);
+    }
+
+    @Nonnull
+    private static String encodePlan(final Plan plan, final boolean debug) {
         final JsonObject root = GSON.toJsonTree(plan, Plan.class)
             .getAsJsonObject();
 
@@ -131,8 +118,8 @@ public final class Serializer {
         for (final Graph graph : plan.getGraphs()) {
             final JsonObject slotObj = new JsonObject();
             slotObj.addProperty("name", graph.getName());
-            slotObj.add("data", graphToJson(graph));
-            slotObj.add("sectionFolds", foldsToJson(graph.collapsedSummarySections));
+            if (debug) slotObj.add("data", graphToJson(graph));
+            else slotObj.addProperty("data", encode(graph));
             arr.add(slotObj);
         }
         root.add("graphs", arr);
@@ -166,49 +153,12 @@ public final class Serializer {
                     graph = new Graph(name);
                 }
                 graph.setName(name);
-                if (obj.has("sectionFolds")) {
-                    foldsFromJson(obj.getAsJsonObject("sectionFolds"), graph.collapsedSummarySections);
-                }
                 plan.getGraphs()
                     .add(graph);
             }
         }
 
         return plan;
-    }
-
-    /**
-     * Every section, not just the folded ones: a section this save has never heard of has to be
-     * distinguishable from one the user deliberately left open, or adding a section would silently
-     * unfold it for everyone who had already saved.
-     */
-    private static JsonObject foldsToJson(final Set<SummarySection> folded) {
-        final JsonObject folds = new JsonObject();
-        for (final SummarySection section : SummarySection.values()) {
-            folds.addProperty(section.name(), folded.contains(section));
-        }
-        return folds;
-    }
-
-    /**
-     * Reads section by section over whatever {@code folded} already holds rather than replacing it:
-     * an unmentioned section is one the save predates, and it keeps the fold a fresh chart gives it.
-     */
-    private static void foldsFromJson(final JsonObject folds, final Set<SummarySection> folded) {
-        for (final var fold : folds.entrySet()) {
-            final SummarySection section;
-            try {
-                section = SummarySection.valueOf(fold.getKey());
-            } catch (final IllegalArgumentException ignored) {
-                continue; // a section this build has dropped
-            }
-            if (fold.getValue()
-                .getAsBoolean()) {
-                folded.add(section);
-            } else {
-                folded.remove(section);
-            }
-        }
     }
 
     /**
@@ -264,24 +214,6 @@ public final class Serializer {
             "balanceMode",
             graph.getBalanceMode()
                 .name());
-        root.addProperty("opsMode", graph.isOpsMode());
-        // The chosen answer travels as the ports it opens, never as gate indices: those are rebuilt
-        // from scratch on every solve and mean nothing across a save.
-        if (graph.getExcessChoice() != null) {
-            final JsonArray anchors = new JsonArray();
-            for (final PortRef ref : graph.getExcessChoice()
-                .gateAnchors()) {
-                final JsonObject a = new JsonObject();
-                a.addProperty(
-                    "node",
-                    ref.nodeId()
-                        .toString());
-                a.addProperty("port", ref.portIndex());
-                a.addProperty("input", ref.input());
-                anchors.add(a);
-            }
-            root.add("excessChoice", anchors);
-        }
         root.addProperty("zoom", graph.getZoom());
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
@@ -353,6 +285,11 @@ public final class Serializer {
         for (Group group : graph.getGroups()) groupsArray.add(GSON.toJsonTree(group));
         root.add("groups", groupsArray);
 
+        // The summary rides the chart it belongs to. GSON's registered adapters draw and read it
+        // like every other GraphData, so the position survives a reload without a plan-level copy.
+        // Raw access, never graph.summary(): deriving here would re-enter the plan load in progress.
+        root.add("summary", GSON.toJsonTree(graph.getSummary()));
+
         return root;
     }
 
@@ -370,31 +307,6 @@ public final class Serializer {
                             .getAsString()));
             } catch (final IllegalArgumentException ignored) {}
         }
-        if (root.has("opsMode")) {
-            graph.setOpsMode(
-                root.get("opsMode")
-                    .getAsBoolean());
-        }
-        // Read independently of everything else, like the per-node targets: an old save has no such
-        // key, and a corrupt one costs the user a preference rather than the chart.
-        if (root.has("excessChoice")) {
-            try {
-                final List<PortRef> anchors = new ArrayList<>();
-                for (final JsonElement elem : root.getAsJsonArray("excessChoice")) {
-                    final JsonObject a = elem.getAsJsonObject();
-                    anchors.add(
-                        new PortRef(
-                            UUID.fromString(
-                                a.get("node")
-                                    .getAsString()),
-                            a.get("port")
-                                .getAsInt(),
-                            a.get("input")
-                                .getAsBoolean()));
-                }
-                if (!anchors.isEmpty()) graph.setExcessChoice(ChoiceKey.of(anchors));
-            } catch (final RuntimeException ignored) {}
-        }
         graph.setZoom(
             root.get("zoom")
                 .getAsFloat());
@@ -409,6 +321,11 @@ public final class Serializer {
         if (root.has("minimums")) {
             final SortedMap<String, Integer> stored = GSON.fromJson(root.get("minimums"), MINIMUMS);
             stored.forEach(graph::setMinimum);
+        }
+
+        if (root.has("summary")) {
+            final Summary saved = (Summary) GSON.fromJson(root.get("summary"), GraphData.class);
+            graph.setSummary(saved);
         }
 
         final JsonArray nodesArray = root.getAsJsonArray("nodes");

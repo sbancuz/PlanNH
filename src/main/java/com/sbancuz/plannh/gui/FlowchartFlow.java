@@ -7,13 +7,17 @@ public class FlowchartFlow extends Flow implements IFlowchartDraggable {
 
     private final FlowchartWidget<?, ?> parent;
 
-    private FlowchartFlow(GuiAxis axis, FlowchartWidget<?, ?> parent) {
+    protected FlowchartFlow(GuiAxis axis, FlowchartWidget<?, ?> parent) {
         super(axis);
         this.parent = parent;
     }
 
     public static FlowchartFlow row(FlowchartWidget<?, ?> parent) {
         return new FlowchartFlow(GuiAxis.X, parent);
+    }
+
+    public static FlowchartFlow col(FlowchartWidget<?, ?> parent) {
+        return new FlowchartFlow(GuiAxis.Y, parent);
     }
 
     public static FlowchartFlow column(FlowchartWidget<?, ?> parent) {

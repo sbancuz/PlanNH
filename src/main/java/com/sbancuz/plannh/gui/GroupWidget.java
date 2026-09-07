@@ -23,12 +23,12 @@ import com.sbancuz.plannh.data.flowchart.Group;
 
 import lombok.Getter;
 
-public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
+public final class GroupWidget extends GroupableWidget<GroupWidget, Group> {
 
     @Getter
     private final GroupAreaWidget areaWidget;
 
-    protected GroupWidget(CanvasWidget canvas, Group data) {
+    public GroupWidget(CanvasWidget canvas, Group data) {
         super(canvas, data);
         areaWidget = new GroupAreaWidget(this);
 
@@ -42,7 +42,7 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
         data.getChildren()
             .values()
             .forEach(subData -> {
-                FlowchartWidget<?, ?> widget = FlowchartWidget.getFlowchartWidgetFromData(canvas, subData);
+                GroupableWidget<?, ?> widget = GroupableWidget.getFlowchartWidgetFromData(canvas, subData);
                 widget.dataContainer = data.getChildren();
                 areaWidget.child(widget);
             });
@@ -106,48 +106,10 @@ public class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
     @Override
     public void removeFromGraph() {
         getChildren().stream()
-            .filter(w -> w instanceof FlowchartWidget<?, ?>)
-            .map(w -> (FlowchartWidget<?, ?>) w)
-            .forEach(FlowchartWidget::removeFromGraph);
+            .filter(w -> w instanceof GroupableWidget<?, ?>)
+            .map(w -> (GroupableWidget<?, ?>) w)
+            .forEach(GroupableWidget::removeFromGraph);
         super.removeFromGraph();
-    }
-
-    @Override
-    public boolean onDragStart(int mouseButton) {
-        if (mouseButton == 0) {
-            final float z = canvas.getGraph()
-                .getZoom();
-            final int worldMx = Math.round(
-                (getContext().getAbsMouseX() - canvas.getArea().x
-                    - canvas.getGraph()
-                        .getPanX())
-                    / z);
-            final int worldMy = Math.round(
-                (getContext().getAbsMouseY() - canvas.getArea().y
-                    - canvas.getGraph()
-                        .getPanY())
-                    / z);
-            if (canvas.isOutputPortHit(worldMx, worldMy)) return false;
-        }
-        return super.onDragStart(mouseButton);
-    }
-
-    @Override
-    public void onDrag(int mouseButton, long timeSinceLastClick) {
-        final int oldX = data.getX();
-        final int oldY = data.getY();
-        super.onDrag(mouseButton, timeSinceLastClick);
-        final int deltaX = data.getX() - oldX;
-        final int deltaY = data.getY() - oldY;
-        if (deltaX != 0 || deltaY != 0) {
-            canvas.moveGroupNodes(data.getId(), deltaX, deltaY);
-        }
-    }
-
-    @Override
-    public void onDragEnd(boolean successful) {
-        super.onDragEnd(successful);
-        canvas.recheckMembershipAndFit();
     }
 
     @Override

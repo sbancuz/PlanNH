@@ -4,6 +4,7 @@ import static org.lwjgl.opengl.GL11.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.function.IntConsumer;
 
@@ -420,7 +421,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 if (!simpleTiming.isEmpty()) simpleTiming.append("  ");
                 simpleTiming.append(simpleDurPerOp)
                     .append("t (")
-                    .append(String.format("%.1f", (float) simpleDurPerOp / GuiHelper.TICKS_PER_SECOND))
+                    .append(String.format(Locale.ROOT, "%.1f", (float) simpleDurPerOp / GuiHelper.TICKS_PER_SECOND))
                     .append("s)");
             }
             final String tier = collapsedVoltageTier();
@@ -549,7 +550,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             if (!opsLine.isEmpty()) opsLine.append("  ");
             opsLine.append(durPerOp)
                 .append("t (")
-                .append(String.format("%.2f", (float) durPerOp / GuiHelper.TICKS_PER_SECOND))
+                .append(String.format(Locale.ROOT, "%.2f", (float) durPerOp / GuiHelper.TICKS_PER_SECOND))
                 .append("s)");
         }
         GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);

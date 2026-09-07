@@ -164,6 +164,6 @@ class PreferenceOrderTest {
     }
 
     private static Alternatives alternatives(final Graph graph) {
-        return Balancer.alternatives(BalanceMode.AUTO, graph, false);
+        return Balancer.alternatives(BalanceMode.AUTO, graph);
     }
 }

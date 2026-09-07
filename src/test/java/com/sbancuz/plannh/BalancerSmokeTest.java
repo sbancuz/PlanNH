@@ -40,7 +40,7 @@ class BalancerSmokeTest {
     @MethodSource("corpus")
     void noneModeUsesConfiguredCounts(final String name) {
         final LoadedChart chart = GtnhFlowLoader.load(name);
-        final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.NONE, false);
+        final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.NONE);
         assertNotNull(result);
         for (final Node node : chart.machines()) {
             assertTrue(
@@ -61,7 +61,7 @@ class BalancerSmokeTest {
         final LoadedChart chart = GtnhFlowLoader.load(name);
         final BalanceResult result = assertTimeoutPreemptively(
             Duration.ofSeconds(60),
-            () -> Balancer.balance(chart.graph(), BalanceMode.AUTO, false),
+            () -> Balancer.balance(chart.graph(), BalanceMode.AUTO),
             name + " exceeded the auto-balance budget");
         assertNotNull(result);
         // A failed solve also fills nodeBalances - with zeros - so presence alone would pass even
@@ -86,7 +86,7 @@ class BalancerSmokeTest {
         final Node lcr = chart.machine(1);
         assertFalse(lcr.machineConfig.isMachineCountPinned());
 
-        Balancer.balance(chart.graph(), BalanceMode.AUTO, false);
+        Balancer.balance(chart.graph(), BalanceMode.AUTO);
 
         assertFalse(
             lcr.machineConfig.isMachineCountPinned(),
@@ -100,7 +100,7 @@ class BalancerSmokeTest {
         final Node lcr = chart.machine(1);
         lcr.machineConfig.setMachineCount(3);
 
-        Balancer.balance(chart.graph(), BalanceMode.AUTO, false);
+        Balancer.balance(chart.graph(), BalanceMode.AUTO);
 
         assertTrue(lcr.machineConfig.isMachineCountPinned());
         assertEquals(3, lcr.machineConfig.getMachineCount(), "configured count must survive viewing");
@@ -112,7 +112,7 @@ class BalancerSmokeTest {
         final LoadedChart chart = GtnhFlowLoader.load("loopGraph");
         final Node lcr = chart.machine(1);
 
-        final double ops = Balancer.balance(chart.graph(), BalanceMode.AUTO, false)
+        final double ops = Balancer.balance(chart.graph(), BalanceMode.AUTO)
             .nodeBalances()
             .get(lcr.id)
             .operations();
@@ -130,7 +130,7 @@ class BalancerSmokeTest {
     @MethodSource("corpus")
     void outputModeSolvesWholeMachineCounts(final String name) {
         final LoadedChart chart = GtnhFlowLoader.load(name);
-        final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.OUTPUT, false);
+        final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.OUTPUT);
 
         for (final Node node : chart.machines()) {
             final double ops = result.nodeBalances()
@@ -156,7 +156,7 @@ class BalancerSmokeTest {
         final LoadedChart chart = GtnhFlowLoader.load("mk1");
         GtnhFlowLoader.clearTargetPins(chart);
 
-        final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.AUTO, false);
+        final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.AUTO);
 
         assertEquals(0.0, result.totalOperations(), 1e-9);
         for (final Node node : chart.machines()) {
@@ -186,7 +186,7 @@ class BalancerSmokeTest {
         final LoadedChart chart = GtnhFlowLoader.load("mk1_tiberium");
         GtnhFlowLoader.removeEdgesInto(chart, chart.machine(0), 0);
 
-        final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.AUTO, false);
+        final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.AUTO);
 
         assertTrue(
             result.notes()
@@ -202,7 +202,7 @@ class BalancerSmokeTest {
         final LoadedChart chart = GtnhFlowLoader.load(name);
         final BalanceResult result = assertTimeoutPreemptively(
             BUDGET,
-            () -> Balancer.balance(chart.graph(), BalanceMode.OUTPUT, false),
+            () -> Balancer.balance(chart.graph(), BalanceMode.OUTPUT),
             name + " exceeded the " + BUDGET.toSeconds() + "s solve budget");
         assertNotNull(result);
         for (final Node node : chart.machines()) {

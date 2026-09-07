@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui;
 
+import java.util.Locale;
+
 import net.minecraft.client.Minecraft;
 
 import org.apache.commons.lang3.StringUtils;
@@ -23,8 +25,8 @@ public final class GuiHelper {
         if (Math.abs(count - rounded) < 5e-3 && (rounded != 0 || count == 0)) {
             return String.valueOf(rounded);
         }
-        return count > 0 && count < 0.01 ? trimTrailingZeros(String.format("%.5f", count))
-            : String.format("%.2f", count);
+        return count > 0 && count < 0.01 ? trimTrailingZeros(String.format(Locale.ROOT, "%.5f", count))
+            : String.format(Locale.ROOT, "%.2f", count);
     }
 
     public static String trimTrailingZeros(final String s) {
@@ -41,14 +43,14 @@ public final class GuiHelper {
         // Suffixes and base match NEI's and AE2's ReadableNumberConverter (both "kMGTPE" over 1000),
         // which is what a player reads everywhere else in the pack. G rather than B also keeps a
         // billion apart from the B fluid amounts already use for buckets.
-        if (rate >= 1e18f) return String.format("%.1fE", rate / 1e18f);
-        if (rate >= 1e15f) return String.format("%.1fP", rate / 1e15f);
-        if (rate >= 1e12f) return String.format("%.1fT", rate / 1e12f);
-        if (rate >= 1e9f) return String.format("%.1fG", rate / 1e9f);
-        if (rate >= 1e6f) return String.format("%.1fM", rate / 1e6f);
-        if (rate >= 1000f) return String.format("%.1fk", rate / 1000f);
-        if (rate >= 1f) return String.format("%.2f", rate);
-        return trimTrailingZeros(String.format("%.5f", rate));
+        if (rate >= 1e18f) return String.format(Locale.ROOT, "%.1fE", rate / 1e18f);
+        if (rate >= 1e15f) return String.format(Locale.ROOT, "%.1fP", rate / 1e15f);
+        if (rate >= 1e12f) return String.format(Locale.ROOT, "%.1fT", rate / 1e12f);
+        if (rate >= 1e9f) return String.format(Locale.ROOT, "%.1fG", rate / 1e9f);
+        if (rate >= 1e6f) return String.format(Locale.ROOT, "%.1fM", rate / 1e6f);
+        if (rate >= 1000f) return String.format(Locale.ROOT, "%.1fk", rate / 1000f);
+        if (rate >= 1f) return String.format(Locale.ROOT, "%.2f", rate);
+        return trimTrailingZeros(String.format(Locale.ROOT, "%.5f", rate));
     }
 
     public static void drawRectBorder(final int x, final int y, final int w, final int h, final int bw,

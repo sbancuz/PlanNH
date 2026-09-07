@@ -55,6 +55,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.UndoHistory;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
+import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 import com.sbancuz.plannh.nei.NodeLookupContext;
@@ -108,8 +109,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     /** How far below the pin the chip hangs, in world units. */
     private static final int CHIP_DROP = 3;
     private static final float CHIP_TEXT_SCALE = 0.5f;
-    /** Below this zoom the labels are unreadable, so the chips are only clutter. */
-    private static final float CHIP_MIN_ZOOM = 0.45f;
 
     private static final int GROUP_FIT_PAD = 12;
     private static final float ZOOM_STEP = 0.15f;
@@ -128,6 +127,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
     @Getter
     private final Map<UUID, FlowchartWidget<?, ?>> flowchartWidgets = new HashMap<>();
+    private SummaryWidget summaryWidget;
 
     private boolean panning = false;
     private int panStartMouseX, panStartMouseY;
@@ -186,6 +186,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildGroupWidgets();
         rebuildNodeWidgets();
 
+        attachSummary();
         background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
     }
 
@@ -252,6 +253,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         flowchartWidgets.clear();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
+        attachSummary();
     }
 
     /** One entry point, not three: removeAll() drops every child, so a partial rebuild loses the rest. */
@@ -261,6 +263,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         flowchartWidgets.clear();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
+        attachSummary();
+    }
+
+    private void attachSummary() {
+        summaryWidget = new SummaryWidget(
+            this,
+            graph.getSummary()
+                .recompute(graph));
+        child(summaryWidget);
     }
 
     public void undoGraph() {
@@ -287,7 +298,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         restored.setPanY(graph.getPanY());
         restored.setSnapToGrid(graph.isSnapToGrid());
         restored.setBalanceMode(graph.getBalanceMode());
-        restored.setOpsMode(graph.isOpsMode());
         final Plan plan = Plan.getInstance();
         plan.getGraphs()
             .set(plan.getActiveIndex(), restored);
@@ -589,6 +599,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             drawGrid(width, height);
         }
 
+        Stencil.applyAtZero(getArea(), context);
         drawArrows();
         drawExternalChips();
 
@@ -597,6 +608,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
 
         drawHoveredPortLabels();
+        Stencil.remove();
     }
 
     private void drawGrid(final int w, final int h) {
@@ -703,7 +715,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      * solve and never stored: they are not {@link Node}s and take no part in layout or routing.
      */
     private void drawExternalChips() {
-        if (graph.getZoom() < CHIP_MIN_ZOOM) return;
         for (final BalanceView.Boundary flow : graph.boundary()) {
             drawChip(flow);
         }

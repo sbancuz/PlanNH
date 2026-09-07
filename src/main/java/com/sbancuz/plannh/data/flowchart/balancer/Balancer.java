@@ -30,10 +30,10 @@ public final class Balancer {
     /**
      * Runs the mode's chain against the chart and returns the context plus its {@link Settlement}
      * (a point, or the reason there is none). Callers that want a fresh budget hand one rebuilt per
-     * call; {@link Graph#balance()} thunks the mode and ops-mode here.
+     * call; {@link Graph#balance()} thunks the mode here.
      */
-    public static RunContext run(final BalanceMode mode, final Graph graph, final boolean opsMode) {
-        return run(mode, graph, opsMode, Profiler.disabled());
+    public static RunContext run(final BalanceMode mode, final Graph graph) {
+        return run(mode, graph, Profiler.disabled());
     }
 
     /**
@@ -42,9 +42,8 @@ public final class Balancer {
      * hands back a {@link SolutionView} - only ever built here, when a profiler is actually
      * attached, so the default path never constructs it.
      */
-    public static RunContext run(final BalanceMode mode, final Graph graph, final boolean opsMode,
-        final Profiler profiler) {
-        final SolveContext ctx = ctxOf(mode, graph, opsMode, Map.of(), profiler);
+    public static RunContext run(final BalanceMode mode, final Graph graph, final Profiler profiler) {
+        final SolveContext ctx = ctxOf(mode, graph, Map.of(), profiler);
         profiler.runStarted(
             mode,
             ctx.model.machines.size(),
@@ -73,12 +72,12 @@ public final class Balancer {
     public record RunContext(SolveContext ctx, Settlement settlement) {}
 
     /** The shared context each entry point runs its mode's chain under; see {@link #run}. */
-    private static SolveContext ctxOf(final BalanceMode mode, final Graph graph, final boolean opsMode,
+    private static SolveContext ctxOf(final BalanceMode mode, final Graph graph,
         final Map<UUID, Double> extraExtentPins) {
-        return ctxOf(mode, graph, opsMode, extraExtentPins, Profiler.disabled());
+        return ctxOf(mode, graph, extraExtentPins, Profiler.disabled());
     }
 
-    private static SolveContext ctxOf(final BalanceMode mode, final Graph graph, final boolean opsMode,
+    private static SolveContext ctxOf(final BalanceMode mode, final Graph graph,
         final Map<UUID, Double> extraExtentPins, final Profiler profiler) {
         final long budgetMillis = mode.heuristics()
             .numerics().solveBudgetMillis;
@@ -86,7 +85,6 @@ public final class Balancer {
             graph,
             mode.heuristics(),
             Budget.of(budgetMillis),
-            opsMode,
             extraExtentPins,
             mode.pins(),
             profiler);
@@ -98,17 +96,17 @@ public final class Balancer {
      * point. A stored {@link ChoiceKey} that cannot be resolved or needs more gates than the
      * answer produces the same notes the corpus keys on, and the point stays the solver's own.
      */
-    public static Alternatives alternatives(final BalanceMode mode, final Graph graph, final boolean opsMode) {
-        return alternatives(mode, graph, opsMode, null, Map.of());
+    public static Alternatives alternatives(final BalanceMode mode, final Graph graph) {
+        return alternatives(mode, graph, null, Map.of());
     }
 
     /**
      * As above, but with a stored {@link ChoiceKey} to honour (applied between the solve and the
      * enumeration) and per-machine extent pins.
      */
-    public static Alternatives alternatives(final BalanceMode mode, final Graph graph, final boolean opsMode,
+    public static Alternatives alternatives(final BalanceMode mode, final Graph graph,
                                             @Nullable final ChoiceKey choice, final Map<UUID, Double> extraExtentPins) {
-        final SolveContext ctx = ctxOf(mode, graph, opsMode, extraExtentPins);
+        final SolveContext ctx = ctxOf(mode, graph, extraExtentPins);
         if (mode == BalanceMode.AUTO && !ctx.anyPin || ctx.model.machines.isEmpty()) {
             return new Alternatives(null, List.of(), true, List.of());
         }
@@ -138,9 +136,9 @@ public final class Balancer {
      *                        enumeration, or null for the solver's own answer.
      * @param extraExtentPins per-machine extent pins (crafts/s), e.g. from a target-rate pin.
      */
-    public static Answer solveWithAlternatives(final BalanceMode mode, final Graph graph, final boolean opsMode,
+    public static Answer solveWithAlternatives(final BalanceMode mode, final Graph graph,
         @Nullable final ChoiceKey choice, final Map<UUID, Double> extraExtentPins) {
-        final SolveContext ctx = ctxOf(mode, graph, opsMode, extraExtentPins);
+        final SolveContext ctx = ctxOf(mode, graph, extraExtentPins);
         final long start = System.currentTimeMillis();
         if (ctx.model.machines.isEmpty()) {
             return new Answer.Failed(SolverMessage.EMPTY_GRAPH.toNote());
@@ -150,8 +148,8 @@ public final class Balancer {
         }
         final Settlement settlement = mode.chain()
             .run(ctx);
-        if (settlement instanceof Settlement.Stalled(Note reason)) {
-            return new Answer.Failed(reason);
+        if (settlement instanceof final Settlement.Stalled stalled) {
+            return new Answer.Failed(stalled.reason());
         }
         if (ctx.point() == null) {
             return new Answer.Failed(SolverMessage.BALANCE_FAILED.toNote(ctx.rejection));
@@ -192,14 +190,15 @@ public final class Balancer {
      * cannot express (an empty chain stalls rather than succeeding-without-a-point).
      */
     @Nonnull
-    public static BalanceResult balance(final Graph graph, final BalanceMode mode, final boolean opsMode) {
+    public static BalanceResult balance(final Graph graph, final BalanceMode mode) {
         if (mode == BalanceMode.NONE) {
             return buildResultFractional(graph, configuredCounts(graph), List.of(), null, null);
         }
         // One pass produces both the chart and the answers it could have had: the panel shows the
         // alternatives unconditionally now, and re-deriving them would mean solving twice per edit.
-        final Answer answer = solveWithAlternatives(mode, graph, opsMode, graph.getExcessChoice(), Map.of());
-        if (answer instanceof Answer.Failed(Note reason)) {
+        final Answer answer = solveWithAlternatives(mode, graph, graph.getExcessChoice(), Map.of());
+        if (answer instanceof final Answer.Failed failed) {
+            final Note reason = failed.failure();
             if (reason != null && reason.message() == SolverMessage.NO_PIN) {
                 // Expected state, not an error: an unpinned chart is just wiring, so it gets no
                 // quantities at all rather than numbers derived from an anchor nobody set.

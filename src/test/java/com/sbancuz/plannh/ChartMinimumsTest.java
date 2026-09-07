@@ -11,7 +11,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Serializer;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
@@ -45,16 +44,12 @@ class ChartMinimumsTest {
 
     @Test
     void everyMinimumSurvivesASave() {
-        final Plan plan = Plan.createEmpty();
-        final Graph graph = plan.getGraphs()
-            .getFirst();
+        final Graph graph = new Graph("Slot 1");
         graph.setMinimum(COIL, 3);
         graph.setMinimum(PIPE_CASING, 2);
         graph.setMinimum(VOLTAGE, 5);
 
-        final Graph decoded = Serializer.decodePlan(Serializer.encodePlan(plan))
-            .getGraphs()
-            .getFirst();
+        final Graph decoded = Serializer.decode(Serializer.encode(graph));
 
         assertEquals(3, decoded.getMinimum(COIL));
         assertEquals(2, decoded.getMinimum(PIPE_CASING));
@@ -64,9 +59,7 @@ class ChartMinimumsTest {
     /** Charts saved before minimums existed carry none, and must open the way they always did. */
     @Test
     void aSaveWithoutTheKeysKeepsTheDefaults() {
-        final Graph decoded = Serializer.decodePlan(Serializer.encodePlan(Plan.createEmpty()))
-            .getGraphs()
-            .getFirst();
+        final Graph decoded = Serializer.decode(Serializer.encode(new Graph("Slot 1")));
 
         assertTrue(
             decoded.getMinimums()

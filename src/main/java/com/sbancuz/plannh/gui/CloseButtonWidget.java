@@ -11,9 +11,9 @@ import com.sbancuz.plannh.api.PlanAPI;
 
 public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
 
-    private final FlowchartWidget<?, ?> parent;
+    private final GroupableWidget<?, ?> parent;
 
-    public CloseButtonWidget(FlowchartWidget<?, ?> parent) {
+    public CloseButtonWidget(GroupableWidget<?, ?> parent) {
         this.parent = parent;
         background(
             new Rectangle().color(PlannhColors.NOTE_CLOSE_BG.getColor()),
