@@ -6,13 +6,9 @@ import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.widget.Widget;
-import com.sbancuz.plannh.data.flowchart.Graph;
-import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
 import com.sbancuz.plannh.data.flowchart.balancer.Severity;
-import com.sbancuz.plannh.gui.FlowchartFlow;
-import com.sbancuz.plannh.gui.FlowchartWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
@@ -22,52 +18,44 @@ import com.sbancuz.plannh.gui.PlannhColors;
  * which lets the layout engine re-sizes the panel through its ordinary dirty chain. The body covers
  * its children so the section always grows to exactly its rows.
  */
-class SummaryBody extends FlowchartFlow {
+class SummaryBody extends SummaryFlow {
 
     protected static final int LINE_H = 13;
     protected static final int TEXT_X = 12;
 
     private final Summary data;
-    private final Graph graph;
     private final Summary.Section section;
     private long rowsBuiltAt = Long.MIN_VALUE;
-    private Plan.Mode rowsMode = null;
-    private Plan.RateUnit rowsUnit = Plan.RateUnit.SECONDS;
+    private Summary.Mode rowsMode = null;
+    private Summary.RateUnit rowsUnit = Summary.RateUnit.SECONDS;
 
-    SummaryBody(final FlowchartWidget<?, ?> panel, final Summary data, final Graph graph,
-        final Summary.Section section) {
-        super(GuiAxis.Y, panel);
+    SummaryBody(final SummaryWidget panel, final Summary data, final Summary.Section section) {
+        super(GuiAxis.Y);
         this.data = data;
-        this.graph = graph;
         this.section = section;
-        final Plan plan = Plan.getInstance();
         this.rowsMode = data.computedMode();
-        this.rowsUnit = plan.getRateUnit();
+        this.rowsUnit = data.getRateUnit();
 
         fullWidth().coverChildrenHeight()
             .setEnabledIf(_ -> !data.isSummaryFold(section));
 
-        rebuildRows();
+        rebuildRows(panel);
     }
 
     @Override
     public void onUpdate() {
         super.onUpdate();
-        // Reload both when the chart moves and when the plan-wide throughput/cycles mode or rate
-        // unit changes (which re-derive the rows but not the graph version).
-        final Plan plan = Plan.getInstance();
-        final Plan.Mode mode = data.computedMode();
-        final Plan.RateUnit unit = plan.getRateUnit();
+        final Summary.Mode mode = data.computedMode();
+        final Summary.RateUnit unit = data.getRateUnit();
         if (rowsBuiltAt != data.calculatedAt() || rowsMode != mode || rowsUnit != unit) {
             rowsBuiltAt = data.calculatedAt();
             rowsMode = mode;
             rowsUnit = unit;
-            rebuildRows();
+            rebuildRows(null);
         }
     }
 
-    /** Swap the whole row list for the summary's current lines; child churn re-sizes the panel. */
-    private void rebuildRows() {
+    private void rebuildRows(final SummaryWidget panel) {
         removeAll();
         for (final Line<?> line : data.lines(section)) {
             if (line instanceof Line.Totals) {
@@ -76,22 +64,21 @@ class SummaryBody extends FlowchartFlow {
                         .height(1)
                         .background(new Rectangle().color(PlannhColors.SEPARATOR_DIM.getColor())));
             }
-            child(row(line));
+            child(row(line, panel));
         }
         scheduleResize();
     }
 
-    private Widget<?> row(final Line<?> line) {
-        final FlowchartWidget<?, ?> panel = getFlowchartParent();
+    private Widget<?> row(final Line<?> line, final SummaryWidget panel) {
         return switch (line) {
-            case Line.Measure<?> measure -> new MeasureRow(panel, measure, rowSuffix(), amountScale());
-            case Line.Message message -> new TextRow(panel, IKey.str(message.displayName()),
+            case Line.Measure<?> measure -> new MeasureRow(measure, rowSuffix(), amountScale());
+            case Line.Message message -> new TextRow(IKey.str(message.displayName()),
                 severityColor(message.note().severity()));
-            case Line.Text(String key) -> new TextRow(panel, IKey.lang(key), PlannhColors.SUMMARY_TEXT.getColor());
-            case Line.Heading heading -> new TextRow(panel, IKey.str(heading.displayName()),
+            case Line.Text(String key) -> new TextRow(IKey.lang(key), PlannhColors.SUMMARY_TEXT.getColor());
+            case Line.Heading heading -> new TextRow(IKey.str(heading.displayName()),
                 PlannhColors.SUMMARY_TEXT_MUTED.getColor());
-            case Line.Choice choice -> new ChoiceRow(panel, graph, choice);
-            case Line.Totals totals -> new TotalsRow(panel, totals, rowsMode);
+            case Line.Choice choice -> new ChoiceRow(choice);
+            case Line.Totals totals -> new TotalsRow(totals, rowsMode);
         };
     }
 
@@ -104,19 +91,17 @@ class SummaryBody extends FlowchartFlow {
     }
 
     private String rowSuffix() {
-        if (!isRateSection() || rowsMode != Plan.Mode.THROUGHPUT) {
+        if (!isRateSection() || rowsMode != Summary.Mode.THROUGHPUT) {
             return " x";
         }
         return StatCollector.translateToLocal(rowsUnit.suffixKey());
     }
 
-    /** Only outputs and inputs carry rates; machine counts and properties are per-cycle totals. */
     private boolean isRateSection() {
         return section == Summary.Section.OUTPUTS || section == Summary.Section.INPUTS;
     }
 
     private double amountScale() {
-        return isRateSection() && rowsMode == Plan.Mode.THROUGHPUT ? rowsUnit.secondsPerUnit : 1.0;
+        return isRateSection() && rowsMode == Summary.Mode.THROUGHPUT ? rowsUnit.secondsPerUnit : 1.0;
     }
-
 }

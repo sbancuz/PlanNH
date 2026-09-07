@@ -11,6 +11,8 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
 
 /**
@@ -96,12 +98,20 @@ public final class ModelData {
     /** One gate: an ingredient component in one direction, covering the listed ports. */
     public record Gate(boolean input, List<Integer> ports) {}
 
+    /**
+     * One machine-sharing group with a capacity: the machines that run on the same hardware and how
+     * many machines that hardware is. Only groups the player capped are built - a sharing group
+     * without a capacity constrains nothing, so it never reaches the model.
+     */
+    public record Pool(List<Integer> machines, int capacity) {}
+
     public final List<Machine> machines = new ArrayList<>();
     public final Map<UUID, Integer> machineIndex = new HashMap<>();
     public final List<EdgeData> edges = new ArrayList<>();
     public final List<ConnectedPort> connectedPorts = new ArrayList<>();
     public final Map<Long, Integer> portLookup = new HashMap<>();
     public final List<Gate> gates = new ArrayList<>();
+    public final List<Pool> pools = new ArrayList<>();
     public int[] portGate;
     public int[] portComponent;
     /** Packed lexicographic per-gate weights from the type's heuristics. */
@@ -138,6 +148,7 @@ public final class ModelData {
                 .add(e);
         }
 
+        buildPools(graph);
         buildGates();
         final boolean[] gateInput = new boolean[gates.size()];
         for (int g = 0; g < gates.size(); g++) {
@@ -145,6 +156,24 @@ public final class ModelData {
                 .input();
         }
         gateWeights = heuristics.gateWeights(gates.size(), gateInput);
+    }
+
+    /**
+     * The capped machine-sharing groups, as machine indices. A group holds node ids by geometry, so
+     * a node that has since left the chart is skipped, and a group left with nothing to constrain
+     * (no machines, or a capacity of zero) is not a pool at all.
+     */
+    private void buildPools(final Graph graph) {
+        for (final Group group : graph.getGroups()) {
+            if (!(group instanceof final MachineGroup machineGroup) || machineGroup.getMachineCapacity() <= 0) continue;
+            final List<Integer> members = new ArrayList<>();
+            for (final UUID nodeId : group.getNodeIds()) {
+                final Integer m = machineIndex.get(nodeId);
+                if (m != null) members.add(m);
+            }
+            if (members.isEmpty()) continue;
+            pools.add(new Pool(List.copyOf(members), machineGroup.getMachineCapacity()));
+        }
     }
 
     /**

@@ -15,11 +15,11 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
- * A screen that names a GregTech class fails to open on a pack that does not have GregTech, and
- * PlanNH's own screen is the one thing every pack sees. The rule is the GUI's, not the build's: it
- * holds however GregTech happens to be scoped in {@code dependencies.gradle} on any given day. This
- * is a source check rather than a runtime one because the failure is a {@code NoClassDefFoundError}
- * raised by classloading, which no headless test can provoke while the jar is on the test classpath.
+ * GregTech has been a compile-only dependency since the no-gt-harddep change, so a screen that names
+ * a GregTech class fails to open on a pack without it - and PlanNH's own screen is the one thing every
+ * pack sees. This is a source check rather than a runtime one because the failure is a
+ * {@code NoClassDefFoundError} raised by classloading, which no headless test can provoke while the
+ * jar is on the test classpath.
  *
  * <p>
  * An allowlist rather than a list of banned mods: the next mod integration should have to say out

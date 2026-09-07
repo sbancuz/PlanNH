@@ -149,6 +149,20 @@ public class MachineConfig {
     }
 
     /**
+     * Takes another node's machine settings, for the members of a machine group: they are one
+     * machine, so they run at one tier with one set of upgrades. The machine count is left alone -
+     * it is how much of that machine each recipe asks for, not part of what the machine is.
+     */
+    public void copySettingsFrom(final MachineConfig other) {
+        final Object count = settings.get(Settings.MACHINES.key());
+        settings.clear();
+        settings.putAll(other.settings);
+        // Absence is a state: an unpinned node must not inherit the other's pin.
+        if (count != null) settings.put(Settings.MACHINES.key(), count);
+        else settings.remove(Settings.MACHINES.key());
+    }
+
+    /**
      * How many machines this node stands for, one when it has not been pinned. Pinning is the presence
      * of the key: a node that never had a count typed into it follows whatever the solver works out,
      * so it must not contribute a multiplier of its own.

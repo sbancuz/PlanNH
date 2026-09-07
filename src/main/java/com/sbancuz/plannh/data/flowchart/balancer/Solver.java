@@ -71,6 +71,7 @@ public final class Solver {
     public static SolveResult flowMinimal(final SolveContext ctx, final Set<Integer> open, final double qtyCap) {
         final Handles h = ModelBuilder.over(ctx)
             .extents(autoLower(ctx))
+            .pools()
             .flows()
             .externals()
             .conservation()
@@ -88,6 +89,7 @@ public final class Solver {
     public static SolveResult externalsLp(final SolveContext ctx, final Set<Integer> open) {
         final Handles h = ModelBuilder.over(ctx)
             .extents(autoLower(ctx))
+            .pools()
             .flows()
             .externals()
             .conservation()
@@ -114,6 +116,7 @@ public final class Solver {
         for (int growth = 0; growth <= n.maxMGrowths; growth++) {
             final Handles h = ModelBuilder.over(ctx)
                 .extents(autoLower(ctx))
+                .pools()
                 .flows()
                 .externals()
                 .gates(bigM)
@@ -157,6 +160,7 @@ public final class Solver {
     public static SolveResult fixedQuantity(final SolveContext ctx, final Set<Integer> open) {
         final Handles h = ModelBuilder.over(ctx)
             .extents(autoLower(ctx))
+            .pools()
             .flows()
             .externals()
             .conservation()
@@ -178,6 +182,7 @@ public final class Solver {
         for (int growth = 0; growth <= n.maxMGrowths; growth++) {
             final Handles h = ModelBuilder.over(ctx)
                 .extents(autoLower(ctx))
+                .pools()
                 .flows()
                 .externals()
                 .gates(bigM)
@@ -209,6 +214,7 @@ public final class Solver {
     public static StageOutcome canonicalize(final SolveContext ctx, final Set<Integer> open, final StageOutcome s3) {
         final Handles h = ModelBuilder.over(ctx)
             .extents(autoLower(ctx))
+            .pools()
             .flows()
             .externals()
             .conservation()
@@ -411,6 +417,7 @@ public final class Solver {
     public static SolveResult extentFlow(final SolveContext ctx, final boolean inputPriority) {
         final ModelBuilder natural = ModelBuilder.over(ctx)
             .extentCounts()
+            .pools()
             .extentsWeighted(i -> 1.0)
             .flows()
             .portRows(inputPriority);
@@ -428,6 +435,7 @@ public final class Solver {
         }
         final ModelBuilder rescue = ModelBuilder.over(ctx)
             .extentCounts()
+            .pools()
             .extentsWeighted(i -> 1.0)
             .flows()
             .externals()

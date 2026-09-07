@@ -35,6 +35,7 @@ import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.gui.components.MinimumsMenu;
+import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
 import codechicken.nei.LayoutManager;
@@ -168,6 +169,18 @@ public class FlowchartScreen extends ModularScreen {
                                 .color(PlannhColors.CONTEXT_BORDER.getColor()))
                         .overlay(
                             IKey.str("Add Group")
+                                .color(Color.WHITE.main)))
+                    .child(new ButtonWidget<>().onMousePressed(_ -> {
+                        canvas.addMachineGroup(canvas.getCanvasMouseX(), canvas.getCanvasMouseY());
+                        return true;
+                    })
+                        .fullWidth()
+                        .background(
+                            new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
+                            new Rectangle().hollow()
+                                .color(PlannhColors.CONTEXT_BORDER.getColor()))
+                        .overlay(
+                            IKey.lang("plannh.gui.group.add_machine_group")
                                 .color(Color.WHITE.main))));
 
         mainColumn.child(
@@ -325,6 +338,7 @@ public class FlowchartScreen extends ModularScreen {
             .child(canvas);
 
         panel.child(mainColumn);
+        panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
         panel.child(targetEditor);
         panel.child(machinePicker);

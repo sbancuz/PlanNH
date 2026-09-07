@@ -7,10 +7,7 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.TextWidget;
-import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
-import com.sbancuz.plannh.gui.FlowchartFlow;
-import com.sbancuz.plannh.gui.FlowchartWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
 
@@ -19,14 +16,14 @@ import com.sbancuz.plannh.gui.PlannhColors;
  * supplies the numbers; the sentence is built and localized here, in the panel, in the shape
  * the current mode wants (cycles: "Time: 240t (12.0s/cycle)", throughput: "Cycle: 12.0s").
  */
-final class TotalsRow extends FlowchartFlow {
+final class TotalsRow extends SummaryFlow {
 
-    TotalsRow(final FlowchartWidget<?, ?> panel, final Summary.Line.Totals totals, final Plan.Mode mode) {
-        super(GuiAxis.X, panel);
+    TotalsRow(final Summary.Line.Totals totals, final Summary.Mode mode) {
+        super(GuiAxis.X);
         final String ops = GuiHelper.formatCount(totals.operations());
         final String sec = String
             .format(Locale.ROOT, "%.2f", (double) totals.durationTicks() / GuiHelper.TICKS_PER_SECOND);
-        final IKey text = mode == Plan.Mode.THROUGHPUT ? IKey.lang("plannh.summary.totals.throughput", ops, sec)
+        final IKey text = mode == Summary.Mode.THROUGHPUT ? IKey.lang("plannh.summary.totals.throughput", ops, sec)
             : IKey.lang("plannh.summary.totals.cycles", ops, totals.durationTicks(), sec);
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
             .paddingLeft(SummaryBody.TEXT_X)

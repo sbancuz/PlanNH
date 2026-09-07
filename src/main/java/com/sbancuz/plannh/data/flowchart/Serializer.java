@@ -285,11 +285,6 @@ public final class Serializer {
         for (Group group : graph.getGroups()) groupsArray.add(GSON.toJsonTree(group));
         root.add("groups", groupsArray);
 
-        // The summary rides the chart it belongs to. GSON's registered adapters draw and read it
-        // like every other GraphData, so the position survives a reload without a plan-level copy.
-        // Raw access, never graph.summary(): deriving here would re-enter the plan load in progress.
-        root.add("summary", GSON.toJsonTree(graph.getSummary()));
-
         return root;
     }
 
@@ -321,11 +316,6 @@ public final class Serializer {
         if (root.has("minimums")) {
             final SortedMap<String, Integer> stored = GSON.fromJson(root.get("minimums"), MINIMUMS);
             stored.forEach(graph::setMinimum);
-        }
-
-        if (root.has("summary")) {
-            final Summary saved = (Summary) GSON.fromJson(root.get("summary"), GraphData.class);
-            graph.setSummary(saved);
         }
 
         final JsonArray nodesArray = root.getAsJsonArray("nodes");
@@ -417,7 +407,9 @@ public final class Serializer {
         }
 
         for (final JsonElement elem : root.getAsJsonArray("groups")) {
-            final Group group = GSON.fromJson(elem, Group.class);
+            // Through GraphData, not Group: the type field decides whether this is a plain group or
+            // a machine group, and reading it as Group would drop the machine group's own fields.
+            final Group group = (Group) GSON.fromJson(elem, GraphData.class);
             graph.groups.put(group.getId(), group);
         }
 
