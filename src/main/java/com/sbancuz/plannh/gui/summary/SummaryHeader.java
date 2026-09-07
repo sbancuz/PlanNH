@@ -11,9 +11,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
 import com.sbancuz.plannh.data.flowchart.balancer.Note;
-import com.sbancuz.plannh.gui.FlowchartFlow;
 import com.sbancuz.plannh.gui.FlowchartList;
-import com.sbancuz.plannh.gui.FlowchartWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
@@ -27,18 +25,18 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
     public static final int HEADER_H = 18;
     private static final int PAD = 4;
 
-    protected SummaryHeader(final FlowchartWidget<?, ?> panel, final Summary data, final Summary.Section section,
+    protected SummaryHeader(final SummaryWidget panel, final Summary data, final Summary.Section section,
         FlowchartList sectionsList) {
         fullWidth().height(HEADER_H)
             .background(new Rectangle().color(PlannhColors.SUMMARY_HEADER_BG.getColor()));
 
         child(
-            FlowchartFlow.row(panel)
+            SummaryFlow.row()
                 .full()
                 .childPadding(PAD)
                 .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
                 .child(
-                    FlowchartFlow.row(panel)
+                    SummaryFlow.row()
                         .coverChildren()
                         .childPadding(PAD)
                         .child(new FlowchartList.Grip(sectionsList, accentColor(section), textColor(section)))
@@ -52,7 +50,7 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
 
         if (section == Summary.Section.CHOICES) {
             tooltipDynamic(tooltip -> {
-                for (final Note note : data.choiceNotes()) {
+                for (final Note note : data.getChoiceNotes()) {
                     tooltip.add(note.render())
                         .newLine();
                 }
@@ -60,7 +58,6 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
         }
     }
 
-    /// TODO: Find a better way to have a palette
     private static int accentColor(final Summary.Section section) {
         return switch (section) {
             case OUTPUTS -> PlannhColors.SECTION_PRODUCT.getColor();

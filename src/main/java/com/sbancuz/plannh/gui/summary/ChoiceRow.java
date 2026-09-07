@@ -10,23 +10,19 @@ import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.api.PlanAPI;
-import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
-import com.sbancuz.plannh.gui.FlowchartFlow;
-import com.sbancuz.plannh.gui.FlowchartWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
  * A clickable choice row: the active answer is lead-marked; the reason it gives up on hover.
  */
-final class ChoiceRow extends FlowchartFlow implements Interactable {
+final class ChoiceRow extends SummaryFlow implements Interactable {
 
-    private final Graph graph;
     private final Summary.Line.Choice choice;
 
-    ChoiceRow(final FlowchartWidget<?, ?> panel, final Graph graph, final Summary.Line.Choice choice) {
-        super(GuiAxis.X, panel);
-        this.graph = graph;
+    ChoiceRow(final Summary.Line.Choice choice) {
+        super(GuiAxis.X);
         this.choice = choice;
 
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
@@ -51,7 +47,13 @@ final class ChoiceRow extends FlowchartFlow implements Interactable {
     @Override
     public @Nonnull Result onMousePressed(final int mouseButton) {
         if (mouseButton != 0) return Result.IGNORE;
-        PlanAPI.recordEdit(graph, () -> graph.setExcessChoice(choice.key()));
+        PlanAPI.recordEdit(Plan.getActiveGraph(), () -> {
+            Plan.getInstance()
+                .getSummary()
+                .setExcessChoice(choice.key());
+            Plan.getActiveGraph()
+                .markDirty();
+        });
         return Result.SUCCESS;
     }
 }

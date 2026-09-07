@@ -1,6 +1,7 @@
 package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -24,7 +25,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(fluent = true)
+@Getter
+@Setter
 public final class Summary extends GraphData {
 
     public static final String TYPE = "summary";
@@ -51,6 +53,38 @@ public final class Summary extends GraphData {
         /** Localization key for the header's name; the GUI resolves it at draw time. */
         public String titleKey() {
             return titleKey;
+        }
+    }
+
+    /** The panel-wide display mode: aligned per-cycle totals or per-second rates. */
+    public enum Mode {
+        CYCLES,
+        THROUGHPUT
+    }
+
+    /**
+     * The time unit per-second rates are spelled in. {@code secondsPerUnit} rescales a rate that
+     * is stored per second; the lang keys cover the button's short form and the row suffix.
+     */
+    public enum RateUnit {
+
+        SECONDS("second", 1),
+        MINUTES("minute", 60),
+        HOURS("hour", 60 * 60),
+        DAYS("day", 60 * 60 * 24);
+
+        public static final RateUnit[] VALUES = RateUnit.values();
+
+        public final String langKey;
+        public final double secondsPerUnit;
+
+        RateUnit(final String name, final double secondsPerUnit) {
+            this.langKey = "plannh.summary.rate." + name;
+            this.secondsPerUnit = secondsPerUnit;
+        }
+
+        public String suffixKey() {
+            return langKey + ".suffix";
         }
     }
 
@@ -151,6 +185,7 @@ public final class Summary extends GraphData {
 
     @Getter
     @Nullable
+    @Accessors(fluent = true)
     transient private BalanceResult balance = null;
 
     /** Whether the choice enumeration ran its full budget; false means the list is truncated. */
@@ -165,12 +200,27 @@ public final class Summary extends GraphData {
     @Setter
     private ChoiceKey excessChoice;
 
+    @Getter
+    private Mode mode = Mode.CYCLES;
+    @Getter
+    private RateUnit rateUnit = RateUnit.SECONDS;
+    private int[] sectionOrder = defaultSectionOrder();
+
+    /**
+     * Bumped by every settings change; part of the derived-cache key so a toggle
+     * invalidates the rows without touching any {@code graph.version()}.
+     */
+    private transient long settingsVersion = 0;
+
     transient private long atVersion = -1;
 
-    /** The {@link Plan.Mode} the current {@link #lines} were derived for; a switch re-derives. */
-    transient private Plan.Mode atMode = null;
+    /** The {@link Graph} the current rows were derived for; a switch re-derives. */
+    transient private Graph atGraph = null;
 
-    /** The plan's {@code settingsVersion} the current rows were derived under. */
+    /** The {@link Mode} the current {@link #lines} were derived for; a switch re-derives. */
+    transient private Mode atMode = null;
+
+    /** The {@code settingsVersion} the current rows were derived under. */
     transient private long atSettings = -1;
 
     /** Where a fresh chart's summary panel starts; kept in the GraphData so the spot is per-chart. */
@@ -196,6 +246,52 @@ public final class Summary extends GraphData {
         return TYPE;
     }
 
+    public void setMode(final Mode mode) {
+        this.mode = mode;
+        settingsVersion++;
+    }
+
+    public void setRateUnit(final RateUnit rateUnit) {
+        this.rateUnit = rateUnit;
+        settingsVersion++;
+    }
+
+    public void setSectionOrder(final int[] sectionOrder) {
+        this.sectionOrder = sectionOrder;
+        settingsVersion++;
+    }
+
+    /**
+     * The sanitized display order; a corrupt or missing array (old saves) repairs to the default
+     * in place, so callers can keep the returned reference.
+     */
+    public int[] getSectionOrder() {
+        final int n = Section.VALUES.length;
+        boolean valid = sectionOrder != null && sectionOrder.length == n;
+        if (valid) {
+            final boolean[] seen = new boolean[n];
+            for (final int ordinal : sectionOrder) {
+                if (ordinal < 0 || ordinal >= n || seen[ordinal]) {
+                    valid = false;
+                    break;
+                }
+                seen[ordinal] = true;
+            }
+        }
+        if (!valid) sectionOrder = defaultSectionOrder();
+        return sectionOrder;
+    }
+
+    private static int[] defaultSectionOrder() {
+        return Arrays.stream(Section.VALUES)
+            .mapToInt(Section::ordinal)
+            .toArray();
+    }
+
+    public long getSettingsVersion() {
+        return settingsVersion;
+    }
+
     public List<Line<?>> lines(final Section section) {
         return lines.getOrDefault(section, List.of());
     }
@@ -210,8 +306,8 @@ public final class Summary extends GraphData {
         return atVersion;
     }
 
-    /** The {@link Plan.Mode} the current rows were derived for; the panel pings it to reload. */
-    public Plan.Mode computedMode() {
+    /** The {@link Mode} the current rows were derived for; the panel pings it to reload. */
+    public Mode computedMode() {
         return atMode;
     }
 
@@ -239,15 +335,15 @@ public final class Summary extends GraphData {
 
     /**
      * Re-derive this summary's lines from a fresh balance: every node's throughput is scaled up to
-     * the longest recipe on the chart (one cycle's rates) or to a per-second rate, per the plan's
-     * {@link Plan.Mode}.
+     * the longest recipe on the chart (one cycle's rates) or to a per-second rate, per this
+     * summary's {@link Mode}.
      */
     public Summary recompute(final Graph graph) {
-        final Plan plan = Plan.getInstance();
-        final Plan.Mode mode = plan.getMode();
-        if (atVersion >= graph.version() && atMode == mode && atSettings == plan.getSettingsVersion()) return this;
+        if (atGraph == graph && atVersion >= graph.version() && atMode == mode && atSettings == settingsVersion)
+            return this;
+        atGraph = graph;
         atMode = mode;
-        atSettings = plan.getSettingsVersion();
+        atSettings = settingsVersion;
 
         this.balance = Balancer.balance(graph, graph.getBalanceMode());
 
@@ -263,7 +359,7 @@ public final class Summary extends GraphData {
                 .get(node.id);
             if (nb == null) continue;
 
-            final float scale = mode == Plan.Mode.THROUGHPUT
+            final float scale = mode == Mode.THROUGHPUT
                 ? (float) GuiHelper.TICKS_PER_SECOND / Math.max(1, nb.durationPerOp())
                 : (float) cycleTicks / Math.max(1, nb.durationPerOp());
             accumulate(node.outputs, nb.effectiveOutputs(), scale, outputs);

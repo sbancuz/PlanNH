@@ -52,10 +52,6 @@ public class Graph {
      */
     public final transient UndoHistory undoHistory = new UndoHistory();
 
-    @Getter
-    @Setter
-    private Summary summary = new Summary();
-
     /**
      * The display view, built on first ask after a solve rather than with it: the canvas wants the
      * boundary every frame and never the choices, which the summary reads straight from the solve.
@@ -99,11 +95,15 @@ public class Graph {
     }
 
     public ChoiceKey getExcessChoice() {
-        return summary.excessChoice();
+        return Plan.getInstance()
+            .getSummary()
+            .getExcessChoice();
     }
 
     public void setExcessChoice(final ChoiceKey choice) {
-        summary.excessChoice(choice);
+        Plan.getInstance()
+            .getSummary()
+            .setExcessChoice(choice);
         bumpVersion();
     }
 
@@ -121,10 +121,14 @@ public class Graph {
 
     public BalanceResult balance() {
         if (solvedAt != version) {
-            summary.recompute(this);
+            Plan.getInstance()
+                .getSummary()
+                .recompute(this);
             solvedAt = version;
         }
-        return summary.balance();
+        return Plan.getInstance()
+            .getSummary()
+            .balance();
     }
 
     /**

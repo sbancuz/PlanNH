@@ -268,11 +268,6 @@ public final class Serializer {
         for (Group group : graph.getGroups()) groupsArray.add(GSON.toJsonTree(group));
         root.add("groups", groupsArray);
 
-        // The summary rides the chart it belongs to. GSON's registered adapters draw and read it
-        // like every other GraphData, so the position survives a reload without a plan-level copy.
-        // Raw access, never graph.summary(): deriving here would re-enter the plan load in progress.
-        root.add("summary", GSON.toJsonTree(graph.getSummary()));
-
         return root;
     }
 
@@ -299,11 +294,6 @@ public final class Serializer {
         graph.setPanY(
             root.get("panY")
                 .getAsFloat());
-
-        if (root.has("summary")) {
-            final Summary saved = (Summary) GSON.fromJson(root.get("summary"), GraphData.class);
-            graph.setSummary(saved);
-        }
 
         final JsonArray nodesArray = root.getAsJsonArray("nodes");
         for (final JsonElement elem : nodesArray) {
