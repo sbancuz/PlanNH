@@ -48,7 +48,6 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.UndoHistory;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
-import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 import com.sbancuz.plannh.nei.NodeLookupContext;
@@ -123,7 +122,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
     @Getter
     private final Map<UUID, FlowchartWidget<?, ?>> flowchartWidgets = new HashMap<>();
-    private SummaryWidget summaryWidget;
 
     private boolean panning = false;
     private int panStartMouseX, panStartMouseY;
@@ -175,7 +173,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildGroupWidgets();
         rebuildNodeWidgets();
 
-        attachSummary();
         background(new DynamicDrawable(() -> new Rectangle().color(getBackgroundColor())));
     }
 
@@ -242,7 +239,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         flowchartWidgets.clear();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
-        attachSummary();
     }
 
     /** One entry point, not three: removeAll() drops every child, so a partial rebuild loses the rest. */
@@ -252,15 +248,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         flowchartWidgets.clear();
         rebuildGroupWidgets();
         rebuildNodeWidgets();
-        attachSummary();
-    }
-
-    private void attachSummary() {
-        summaryWidget = new SummaryWidget(
-            this,
-            graph.getSummary()
-                .recompute(graph));
-        child(summaryWidget);
     }
 
     public void undoGraph() {

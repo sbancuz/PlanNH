@@ -1,10 +1,9 @@
 package com.sbancuz.plannh.gui.summary;
 
 import com.cleanroommc.modularui.widget.ParentWidget;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
-import com.sbancuz.plannh.gui.FlowchartFlow;
 import com.sbancuz.plannh.gui.FlowchartList;
-import com.sbancuz.plannh.gui.FlowchartWidget;
 
 /**
  * One section of the summary panel: the accent-bar title row with its fold toggle, plus the row
@@ -18,27 +17,22 @@ class SummarySection extends ParentWidget<SummarySection> {
     private final Summary data;
     private final Summary.Section section;
 
-    SummarySection(final FlowchartWidget<?, ?> panel, final Summary.Section section, FlowchartList sectionsList) {
-        this.data = (Summary) panel.getData();
+    SummarySection(final SummaryWidget panel, final Summary.Section section, FlowchartList sectionsList) {
+        this.data = Plan.getInstance()
+            .getSummary();
         this.section = section;
 
         fullWidth().coverChildrenHeight()
             .setEnabledIf(_ -> data.lineCount(section) > 0);
 
         child(
-            FlowchartFlow.col(panel)
+            SummaryFlow.col()
                 .fullWidth()
                 .coverChildrenHeight()
                 .childPadding(INNER_GAP)
                 .collapseDisabledChild()
                 .child(new SummaryHeader(panel, data, section, sectionsList))
-                .child(
-                    new SummaryBody(
-                        panel,
-                        data,
-                        panel.getCanvas()
-                            .getGraph(),
-                        section).setEnabledIf(_ -> !data.isSummaryFold(section))));
+                .child(new SummaryBody(panel, data, section).setEnabledIf(_ -> !data.isSummaryFold(section))));
     }
 
     Summary.Section section() {

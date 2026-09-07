@@ -32,7 +32,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 
 import lombok.Getter;
 
-public final class GroupWidget extends GroupableWidget<GroupWidget, Group> {
+public final class GroupWidget extends FlowchartWidget<GroupWidget, Group> {
 
     @Getter
     private final GroupAreaWidget areaWidget;
@@ -52,7 +52,7 @@ public final class GroupWidget extends GroupableWidget<GroupWidget, Group> {
         data.getChildren()
             .values()
             .forEach(subData -> {
-                GroupableWidget<?, ?> widget = GroupableWidget.getFlowchartWidgetFromData(canvas, subData);
+                FlowchartWidget<?, ?> widget = FlowchartWidget.getFlowchartWidgetFromData(canvas, subData);
                 widget.dataContainer = data.getChildren();
                 areaWidget.child(widget);
             });
@@ -210,9 +210,9 @@ public final class GroupWidget extends GroupableWidget<GroupWidget, Group> {
     @Override
     public void removeFromGraph() {
         getChildren().stream()
-            .filter(w -> w instanceof GroupableWidget<?, ?>)
-            .map(w -> (GroupableWidget<?, ?>) w)
-            .forEach(GroupableWidget::removeFromGraph);
+            .filter(w -> w instanceof FlowchartWidget<?, ?>)
+            .map(w -> (FlowchartWidget<?, ?>) w)
+            .forEach(FlowchartWidget::removeFromGraph);
         super.removeFromGraph();
     }
 

@@ -6,17 +6,14 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.data.flowchart.Summary;
-import com.sbancuz.plannh.gui.FlowchartFlow;
-import com.sbancuz.plannh.gui.FlowchartWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 
-final class MeasureRow extends FlowchartFlow {
+final class MeasureRow extends SummaryFlow {
 
     private static final float NAME_RATIO = 2 / 3f;
 
-    MeasureRow(final FlowchartWidget<?, ?> panel, final Summary.Line.Measure<?> measure, final String suffix,
-        final double scale) {
-        super(GuiAxis.X, panel);
+    MeasureRow(final Summary.Line.Measure<?> measure, final String suffix, final double scale) {
+        super(GuiAxis.X);
         final String raw = measure.displayAmount((float) (measure.amount() * scale));
         final String amount = raw.isEmpty() ? "" : raw + suffix;
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)

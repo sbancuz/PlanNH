@@ -8,7 +8,7 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.flowchart.Note;
 
-public class NoteWidget extends GroupableWidget<NoteWidget, Note> {
+public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
 
     protected NoteWidget(CanvasWidget canvas, Note note) {
         super(canvas, note);
