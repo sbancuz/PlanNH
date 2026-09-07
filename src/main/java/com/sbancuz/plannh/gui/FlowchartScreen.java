@@ -12,6 +12,7 @@ import net.minecraft.util.StatCollector;
 import org.lwjgl.opengl.GL11;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
@@ -33,6 +34,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
+import com.sbancuz.plannh.gui.components.MinimumsMenu;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
@@ -45,6 +47,8 @@ public class FlowchartScreen extends ModularScreen {
     private static final int LEFT_MARGIN = 5;
     private static final int RIGHT_MARGIN = 15;
     private static final int TOP_MARGIN = 30;
+    /** Where the button row ends, and so the highest a panel it opens may sit. */
+    private static final int TOOLBAR_BOTTOM = TOP_MARGIN + 20;
     private static final int BOTTOM_MARGIN = 30;
 
     public static CanvasWidget canvas;
@@ -74,6 +78,9 @@ public class FlowchartScreen extends ModularScreen {
         Menu<?> contextMenu = new Menu<>();
 
         canvas = new CanvasWidget(contextMenu, panel);
+
+        // The structure every node in this chart opens on. One panel rather than three rows per node.
+        final MinimumsMenu minimums = new MinimumsMenu();
 
         // Target-rate editor: one numeric field in a floating menu. numbersDouble gives the MUI2
         // math parser, so "2k" and "1/3" work; committing (enter or clicking away) closes it.
@@ -109,6 +116,28 @@ public class FlowchartScreen extends ModularScreen {
             .relativeToScreen()
             .child(targetField);
         canvas.setTargetEditorMenu(targetEditor);
+
+        // Machine picker: the choices depend on which recipe the node holds, so the canvas refills
+        // this list each time it opens rather than the children being fixed here.
+        final Menu<?> machinePicker = new Menu<>();
+        final ListWidget<IWidget, ?> machineList = new ListWidget<>().coverChildrenHeight()
+            .width(140);
+        machinePicker.setEnabledIf(_ -> canvas.isMachinePickerOpen())
+            .coverChildren()
+            .background()
+            .relativeToScreen()
+            .child(machineList);
+        canvas.setMachinePicker(machinePicker, machineList);
+
+        final TextFieldWidget slotNameField = new TextFieldWidget()
+            .value(
+                new StringValue.Dynamic(
+                    () -> Plan.getActiveGraph()
+                        .getName(),
+                    val -> Plan.getActiveGraph()
+                        .setName(val)))
+            .background()
+            .hoverBackground();
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
@@ -164,28 +193,23 @@ public class FlowchartScreen extends ModularScreen {
                         .coverChildren()
                         .childPadding(2)
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
-                            cycleGraphs(canvas, -1);
+                            cycleGraphs(canvas, -1, slotNameField);
                             return true;
                         })
                             .overlay(IKey.str("<"))
                             .addTooltipLine("Previous Graph"))
+                        .child(slotNameField)
                         .child(
-                            new TextFieldWidget().value(
-                                new StringValue.Dynamic(
-                                    () -> Plan.getActiveGraph()
-                                        .getName(),
-                                    val -> Plan.getActiveGraph()
-                                        .setName(val)))
-                                .background()
-                                .hoverBackground())
+                            IKey.dynamicKey(() -> IKey.str(slotPosition()))
+                                .asWidget())
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
-                            cycleGraphs(canvas, 1);
+                            cycleGraphs(canvas, 1, slotNameField);
                             return true;
                         })
                             .overlay(IKey.str(">"))
                             .addTooltipLine("Next Graph"))
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
-                            addGraph(canvas);
+                            addGraph(canvas, slotNameField);
                             return true;
                         })
                             .overlay(
@@ -193,7 +217,7 @@ public class FlowchartScreen extends ModularScreen {
                                     .color(Color.GREEN.main))
                             .addTooltipLine("Add Graph"))
                         .child(new ButtonWidget<>().onMousePressed(_ -> {
-                            deleteGraph(canvas);
+                            deleteGraph(canvas, slotNameField);
                             return true;
                         })
                             .overlay(
@@ -226,6 +250,18 @@ public class FlowchartScreen extends ModularScreen {
                                 .onMousePressed(_ -> {
                                     canvas.autoLayoutNodes();
                                     PlanAPI.save();
+                                    return true;
+                                }))
+                        .child(
+                            new ButtonWidget<>().overlay(IKey.str("Min"))
+                                .tooltipStatic(
+                                    t -> t.addLine(IKey.str("Structure this chart plans with"))
+                                        .addLine(IKey.str("A node needing more raises itself")))
+                                .onMousePressed(_ -> {
+                                    minimums.toggle(
+                                        canvas.getContext()
+                                            .getAbsMouseX(),
+                                        TOOLBAR_BOTTOM);
                                     return true;
                                 }))
                         .child(
@@ -305,6 +341,8 @@ public class FlowchartScreen extends ModularScreen {
         panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
         panel.child(targetEditor);
+        panel.child(machinePicker);
+        panel.child(minimums.widget());
 
         return new FlowchartScreen(panel);
     }
@@ -359,26 +397,47 @@ public class FlowchartScreen extends ModularScreen {
         canvas.setGraph(Plan.getActiveGraph());
     }
 
-    private static void cycleGraphs(CanvasWidget canvas, final int dir) {
+    /**
+     * The name box holds its own text once it has been drawn, so switching charts under it leaves
+     * the previous name on screen. Push the new one in whenever the active chart changes.
+     */
+    private static void refreshGraph(final CanvasWidget canvas, final TextFieldWidget nameField) {
+        refreshGraph(canvas);
+        nameField.setText(
+            Plan.getActiveGraph()
+                .getName());
+    }
+
+    /** "(4/8)": which chart is on screen, and how many there are to page through. */
+    private static String slotPosition() {
+        final Plan plan = Plan.getInstance();
+        final int count = Math.max(
+            1,
+            plan.getGraphs()
+                .size());
+        return "(" + Math.min(count, plan.getActiveIndex() + 1) + "/" + count + ")";
+    }
+
+    private static void cycleGraphs(CanvasWidget canvas, final int dir, final TextFieldWidget nameField) {
         final Plan plan = Plan.getInstance();
         final int size = plan.getGraphs()
             .size();
         if (size <= 1) return;
         plan.setActiveIndex((plan.getActiveIndex() + dir + size) % size);
-        refreshGraph(canvas);
+        refreshGraph(canvas, nameField);
     }
 
-    private static void addGraph(CanvasWidget canvas) {
+    private static void addGraph(CanvasWidget canvas, final TextFieldWidget nameField) {
         final Plan plan = Plan.getInstance();
         final int size = plan.getGraphs()
             .size();
         plan.getGraphs()
             .add(new Graph("Slot " + (size + 1)));
         plan.setActiveIndex(size);
-        refreshGraph(canvas);
+        refreshGraph(canvas, nameField);
     }
 
-    private static void deleteGraph(CanvasWidget canvas) {
+    private static void deleteGraph(CanvasWidget canvas, final TextFieldWidget nameField) {
         final Plan plan = Plan.getInstance();
         final int size = plan.getGraphs()
             .size();
@@ -387,6 +446,6 @@ public class FlowchartScreen extends ModularScreen {
         plan.getGraphs()
             .remove(active);
         if (active >= size - 1) plan.setActiveIndex(size - 2);
-        refreshGraph(canvas);
+        refreshGraph(canvas, nameField);
     }
 }

@@ -4,10 +4,12 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -19,11 +21,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.SettingDef;
+import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 
 import codechicken.nei.recipe.Recipe;
@@ -34,6 +36,12 @@ public final class Serializer {
         .enableComplexMapKeySerialization()
         .registerTypeAdapter(GraphData.class, new GraphDataAdapter())
         .create();
+
+    /**
+     * Declared as a SortedMap so Gson rebuilds a TreeMap on read: the field it lands in is sorted, and
+     * a save has to come back in the same order it went out.
+     */
+    private static final Type MINIMUMS = new TypeToken<SortedMap<String, Integer>>() {}.getType();
 
     // ── Public API ──
 
@@ -210,6 +218,12 @@ public final class Serializer {
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
         root.addProperty("name", graph.getName());
+        // Keyed by setting, so a chart records floors for whichever settings the installed mods offer.
+        // Only what was set is written: absence is the unset state.
+        if (!graph.getMinimums()
+            .isEmpty()) {
+            root.add("minimums", GSON.toJsonTree(graph.getMinimums(), MINIMUMS));
+        }
 
         final JsonArray nodesArray = new JsonArray();
         for (final Node node : graph.getNodes()) {
@@ -225,9 +239,12 @@ public final class Serializer {
             }
             obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
             obj.addProperty("extractorIndex", node.getExtractorIndex());
-            obj.addProperty("machineCount", node.machineConfig.getMachineCount());
-            if (node.isMachineCountFixed()) {
-                obj.addProperty("machineCountFixed", true);
+            // Only a pinned node has a count worth keeping; the rest follow the solver on reload. The
+            // marker is written too, because there is no schema version and a bare machineCount cannot
+            // otherwise be told from the one older charts wrote on every node whether pinned or not.
+            if (node.machineConfig.isMachineCountPinned()) {
+                obj.addProperty("machineCount", node.machineConfig.getMachineCount());
+                obj.addProperty("machineCountPinned", true);
             }
             if (!node.targetOutputRates.isEmpty()) {
                 final JsonObject targets = new JsonObject();
@@ -240,7 +257,7 @@ public final class Serializer {
             obj.add("inputs", portListToJson(node.inputs));
             obj.add("outputs", portListToJson(node.outputs));
 
-            if (node.machineConfig.hasAnyBoost()) {
+            if (node.machineConfig.hasStoredSettings()) {
                 obj.add("machineConfig", machineConfigToJson(node.machineConfig));
             }
 
@@ -294,6 +311,12 @@ public final class Serializer {
         graph.setPanY(
             root.get("panY")
                 .getAsFloat());
+        // Through setMinimum rather than into the map, because a floor changes what every untouched
+        // node runs at and the graph has to come back dirty enough to re-solve.
+        if (root.has("minimums")) {
+            final SortedMap<String, Integer> stored = GSON.fromJson(root.get("minimums"), MINIMUMS);
+            stored.forEach(graph::setMinimum);
+        }
 
         final JsonArray nodesArray = root.getAsJsonArray("nodes");
         for (final JsonElement elem : nodesArray) {
@@ -318,14 +341,18 @@ public final class Serializer {
             node.initExtractor();
             node.refresh();
 
-            if (obj.has("machineCount")) {
+            // Older charts stored a count on every node and marked the deliberate ones with
+            // machineCountFixed; only those stay pinned, and the rest are dropped so the node follows
+            // the solver, which is what an unmarked count always meant.
+            final boolean pinned = obj.has("machineCountPinned") ? obj.get("machineCountPinned")
+                .getAsBoolean()
+                : obj.has("machineCountFixed") && obj.get("machineCountFixed")
+                    .getAsBoolean();
+            if (pinned && obj.has("machineCount")) {
                 node.machineConfig.setMachineCount(
                     obj.get("machineCount")
                         .getAsInt());
             }
-            node.setMachineCountFixed(
-                obj.has("machineCountFixed") && obj.get("machineCountFixed")
-                    .getAsBoolean());
             // Read independently of every other key.
             if (obj.has("targets")) {
                 for (final Map.Entry<String, JsonElement> t : obj.getAsJsonObject("targets")
@@ -351,7 +378,6 @@ public final class Serializer {
             if (obj.has("machineConfig")) {
                 jsonToMachineConfig(obj.getAsJsonObject("machineConfig"), node.machineConfig);
             }
-            node.machineConfig.seedRouteDefaults();
 
             graph.addNode(node);
         }
@@ -430,21 +456,24 @@ public final class Serializer {
     @Nonnull
     private static JsonObject machineConfigToJson(final MachineConfig cfg) {
         final JsonObject obj = new JsonObject();
-        final MachineProfile profile = cfg.getProfile();
 
         if (!MachineProfileRegistry.defaultId()
             .equals(cfg.profileId)) {
             obj.addProperty("profile", cfg.profileId);
         }
 
+        // Walk what the node actually stores, not what its profile declares: the map is sparse, so
+        // a key being there is already the statement "the user chose this". Iterating the defs
+        // instead used to silently drop any stored key the current profile no longer lists.
         final JsonObject settingsObj = new JsonObject();
-        for (final SettingDef<?> def : profile.settings()) {
-            final Object val = cfg.settings.get(def.key);
-            if (val == null) continue;
-            if (val.equals(def.defaultValue)) continue;
-            if (val instanceof final Boolean b) settingsObj.addProperty(def.key, b);
-            else if (val instanceof final Integer i) settingsObj.addProperty(def.key, i);
-            else if (val instanceof final String s) settingsObj.addProperty(def.key, s);
+        for (final Map.Entry<String, Object> entry : cfg.settings.entrySet()) {
+            // The machine count has its own slot and is rewritten by the solver every frame.
+            if (Settings.MACHINES.key()
+                .equals(entry.getKey())) continue;
+            final Object val = entry.getValue();
+            if (val instanceof final Boolean b) settingsObj.addProperty(entry.getKey(), b);
+            else if (val instanceof final Integer i) settingsObj.addProperty(entry.getKey(), i);
+            else if (val instanceof final String s) settingsObj.addProperty(entry.getKey(), s);
         }
         if (!settingsObj.entrySet()
             .isEmpty()) obj.add("settings", settingsObj);
@@ -484,6 +513,10 @@ public final class Serializer {
         if (obj.has("outMul")) {
             jsonToMultiplierArray(obj.getAsJsonArray("outMul"), cfg.outputProductivity);
         }
+
+        cfg.getProfile()
+            .onLoad()
+            .accept(cfg.settings);
     }
 
     // ── Multiplier helpers ──

@@ -2,7 +2,7 @@ package com.sbancuz.plannh.data.flowchart.balancer;
 
 /**
  * The strategy bundle of a balancer type: how a measure is weighted (externals, source tilt) and
- * how gate costs are packed into one lexicographic objective, plus the numeric knobs of the solve.
+ * how gate costs are packed into one lexicographic objective, plus the numeric settings of the solve.
  * Swapping the object swaps the heuristic - a new balancer type is a new combination, not an edit
  * to a big shared class.
  */
