@@ -11,6 +11,8 @@ import lombok.Setter;
 @Setter
 public class Note extends GraphData {
 
+    public static final String TYPE = "note";
+
     private List<String> text = new ArrayList<>();
 
     public Note() {
@@ -19,7 +21,7 @@ public class Note extends GraphData {
 
     @Override
     public String getType() {
-        return "note";
+        return TYPE;
     }
 
     @Override

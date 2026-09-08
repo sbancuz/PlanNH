@@ -11,8 +11,9 @@ public final class PlannhColors {
     // ── Backgrounds ──
     public static final ColorResource
         SLOT_BAR_BG       = C.argb("slot_bar_bg",        "0x3C242428"),
-        SUMMARY_BG        = C.argb("summary_bg",         "0x2D1E1E23"),
-        SUMMARY_TITLE_BG  = C.argb("summary_title_bg",   "0x3C323237"),
+        SUMMARY_BG        = C.argb("summary_bg",         "0xC8282C34"),
+        SUMMARY_HEADER_BG = C.argb("summary_header_bg",  "0xCC323841"),
+        SUMMARY_TITLE_BG  = C.argb("summary_title_bg",   "0xE0484F5C"),
         NODE_BG           = C.argb("node_bg",            "0x323232E6"),
         CHIP_BG           = C.argb("chip_bg",            "0xE6141414"),
         NOTE_BG           = C.argb("note_bg",            "0xC8FFF0A0"),
@@ -23,6 +24,8 @@ public final class PlannhColors {
     public static final ColorResource
         SLOT_BAR_LINE      = C.argb("slot_bar_line",       "0x6464A0DC"),
         SUMMARY_TITLE_LINE = C.argb("summary_title_line",  "0x5078A0DC"),
+        SUMMARY_BORDER     = C.argb("summary_border",      "0x5A9CB8D0"),
+        SUMMARY_SEPARATOR  = C.argb("summary_separator",   "0x3A98B4CC"),
         NODE_BORDER        = C.argb("node_border",         "0x6496C8FF"),
         NODE_TITLE_LINE    = C.argb("node_title_line",     "0x3CFFFFFF"),
         NOTE_BORDER        = C.argb("note_border",         "0xA0B4A050"),
@@ -33,13 +36,13 @@ public final class PlannhColors {
 
     // ── Section Headers (summary highlight bars) ──
     public static final ColorResource
-        SECTION_PRODUCT   = C.argb("section_product",    "0x32B48C3C"),
-        SECTION_INPUT     = C.argb("section_input",      "0x3250A050"),
-        SECTION_FLUID_OUT = C.argb("section_fluid_out",  "0x323C8CB4"),
-        SECTION_FLUID_IN  = C.argb("section_fluid_in",   "0x323C64B4"),
-        SECTION_OPS       = C.argb("section_ops",        "0x326478C8"),
-        SECTION_CHOICE    = C.argb("section_choice",     "0x3250A0A0"),
-        SECTION_WARN      = C.argb("section_warn",       "0x32C86450");
+        SECTION_PRODUCT   = C.argb("section_product",    "0x92B48C3C"),
+        SECTION_INPUT     = C.argb("section_input",      "0x9250A050"),
+        SECTION_FLUID_OUT = C.argb("section_fluid_out",  "0x923C8CB4"),
+        SECTION_FLUID_IN  = C.argb("section_fluid_in",   "0x923C64B4"),
+        SECTION_OPS       = C.argb("section_ops",        "0x926478C8"),
+        SECTION_CHOICE    = C.argb("section_choice",     "0x9250A0A0"),
+        SECTION_WARN      = C.argb("section_warn",       "0x92C86450");
 
     // ── Text Colors (opaque) ──
     public static final ColorResource
@@ -52,6 +55,12 @@ public final class PlannhColors {
         TEXT_DARK    = C.rgb("text_dark",    "0x444444"),
         TEXT_NOTE    = C.rgb("text_note",    "0x555555"),
         TEXT_BADGE   = C.rgb("text_badge",   "0xAAFFFF");
+
+    // ── Summary Panel ──
+    public static final ColorResource
+        SUMMARY_TEXT        = C.rgb("summary_text",        "0xB8BDC8"),
+        SUMMARY_TEXT_MUTED  = C.rgb("summary_text_muted",  "0x99A0AC"),
+        SUMMARY_ROW_HOVER   = C.argb("summary_row_hover",  "0x1EFFFFFF");
 
     // ── Accent Text Colors (opaque) ──
     public static final ColorResource

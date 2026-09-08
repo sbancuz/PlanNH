@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 
@@ -19,9 +20,10 @@ public class GraphDataDeserializer implements JsonDeserializer<GraphData> {
         GraphData data = switch (json.getAsJsonObject()
             .get("type")
             .getAsString()) {
-            case "note" -> Serializer.GSON.fromJson(json, Note.class);
-            case "group" -> Serializer.GSON.fromJson(json, Group.class);
-            case "node" -> {
+            case Note.TYPE -> Serializer.GSON.fromJson(json, Note.class);
+            case Group.TYPE -> Serializer.GSON.fromJson(json, Group.class);
+            case MachineGroup.TYPE -> Serializer.GSON.fromJson(json, MachineGroup.class);
+            case Node.TYPE -> {
                 Node node = Serializer.GSON.fromJson(json, Node.class);
                 node.init();
                 yield node;

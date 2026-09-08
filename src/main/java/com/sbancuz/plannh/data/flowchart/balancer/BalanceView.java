@@ -2,15 +2,18 @@ package com.sbancuz.plannh.data.flowchart.balancer;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import javax.annotation.Nullable;
-
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternative;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
 import com.sbancuz.plannh.gui.GuiHelper;
@@ -55,52 +58,13 @@ public final class BalanceView {
     public record Boundary(PortRef port, Kind kind, double ratePerSecond, String ingredient, Note label) {}
 
     /**
-     * One answer on offer.
-     *
-     * @param reason what it gives up against the default, null for the default itself. A
-     *               preference the user cannot read is one they cannot disagree with.
-     * @param active whether this is the answer currently on screen.
-     */
-    public record Choice(ChoiceKey key, Note label, @Nullable Note reason, boolean active) {}
-
-    /**
-     * The answers to ONE of the chart's independent questions: where a particular surplus goes, or
-     * where a particular shortfall comes from.
-     *
-     * @param heading the ingredient the current answer uses, which is what names the decision.
-     */
-    public record Group(Note heading, List<Choice> rows) {}
-
-    /**
-     * @param complete false when the search stopped on its budget or its cap. The caller has to say
-     *                 so rather than present a truncated list as the whole truth.
-     * @param rows     every row across every group, for callers that only need a flat list to click
-     *                 through. Flattened once at construction: the panel reads it twice per frame,
-     *                 to measure itself and again to draw.
-     */
-    public record Choices(List<Group> groups, boolean complete, List<Note> notes, List<Choice> rows) {
-
-        Choices(final List<Group> groups, final boolean complete, final List<Note> notes) {
-            this(groups, complete, notes, flatten(groups));
-        }
-
-        private static List<Choice> flatten(final List<Group> groups) {
-            final List<Choice> all = new ArrayList<>();
-            for (final Group group : groups) {
-                all.addAll(group.rows());
-            }
-            return List.copyOf(all);
-        }
-    }
-
-    /**
      * Everything crossing the chart's boundary. Reads the balance already on hand and runs no
      * solver of its own, but still builds a list and a label per flow, so callers drawing every
      * frame want {@link Graph#boundary()} rather than this.
      */
     public static List<Boundary> boundary(final Graph graph) {
         final BalanceResult balance = graph.balance();
-        if (!(balance instanceof final BalanceResult.Solved solved)) return List.of();
+        if (!(balance instanceof final BalanceResult.Solved solved)) return configuredBoundary(graph);
         final SolutionView auto = solved.auto();
         final List<Boundary> out = new ArrayList<>();
         collect(graph, auto.gatedSinks, Kind.EXCESS, SolverMessage.BOUNDARY_EXCESS, out);
@@ -111,13 +75,69 @@ public final class BalanceView {
     }
 
     /**
-     * The answers this chart could equally well have had, each marked with what it gives up and
-     * which one is on screen. Rebuilds every row and group from the enumeration behind
-     * {@link Graph#alternatives()}, so callers drawing every frame want {@link Graph#choices()}
-     * rather than this. Row order within a decision is {@link #sortedRows}.
+     * The no-solve image of the boundary: every unwired port drawn at the rate its configured
+     * machine count implies. NONE mode and a stalled solve have no answer to read, but the chart
+     * still says what it runs on and what it makes - an empty canvas reads as "nothing crosses
+     * the boundary", which is a claim about the solver, not about the chart. Gated flows (excess,
+     * imports) need a solve and are simply absent here.
      */
-    public static Choices choices(final Graph graph) {
-        final Alternatives alternatives = graph.alternatives();
+    private static List<Boundary> configuredBoundary(final Graph graph) {
+        final Set<PortRef> wired = new HashSet<>();
+        for (final Edge edge : graph.getEdges()
+            .values()) {
+            wired.add(new PortRef(edge.sourceNodeId, edge.sourceOutputIndex, false));
+            wired.add(new PortRef(edge.targetNodeId, edge.targetInputIndex, true));
+        }
+        final List<Boundary> out = new ArrayList<>();
+        for (final Node node : graph.getNodes()
+            .values()) {
+            collectConfigured(node, wired, false, out);
+            collectConfigured(node, wired, true, out);
+        }
+        return List.copyOf(out);
+    }
+
+    /** One {@link Boundary} per unwired port of {@code node}, rated by its configured count. */
+    private static void collectConfigured(final Node node, final Set<PortRef> wired, final boolean input,
+        final List<Boundary> out) {
+        final MachineConfig cfg = node.getMachineConfig();
+        final double count = cfg.getMachineCount();
+        if (count <= 0) return;
+        final var eff = cfg.computeEffect(node.getProperties());
+        final int durTicks = Math.max(1, eff.durationTicks());
+        final int tf = eff.throughputFactor();
+        final List<Port<?>> ports = input ? node.getInputs() : node.getOutputs();
+        for (int i = 0; i < ports.size(); i++) {
+            final Port<?> port = ports.get(i);
+            if (wired.contains(new PortRef(node.getId(), i, input))) continue;
+            final double qty = Math.max(0, port.getAmount()) * port.getChance()
+                * (input ? cfg.inputMultiplier(i) : cfg.outputMultiplier(i))
+                * tf;
+            if (qty <= 0) continue;
+            final double rate = count * qty * GuiHelper.TICKS_PER_SECOND / (double) durTicks;
+            out.add(
+                new Boundary(
+                    new PortRef(node.getId(), i, input),
+                    input ? Kind.SUPPLY : Kind.PRODUCT,
+                    rate,
+                    port.getDisplayName(),
+                    SolverMessage.BOUNDARY_FLOW.toNote(
+                        port.getType()
+                            .formatAmount((float) rate) + "/s "
+                            + port.getDisplayName())));
+        }
+    }
+
+    /**
+     * The answers this chart could equally well have had, as the summary panel's {@code CHOICES}
+     * rows: one choice per answer plus a decision heading where the chart poses more than one
+     * question. Reads the alternatives already handed over by the solve and rebuilds every row in
+     * {@link #sortedRows} order. This is the single channel the panel reads; the old grouped
+     * {@code Choices} view is gone because recompute() stores the complete flags itself.
+     */
+    public static List<Summary.Line<?>> toLineChoices(final Graph graph, final Alternatives alternatives) {
+        if (alternatives.options()
+            .isEmpty()) return List.of();
         // Grouped by the decision each option answers, in the order the solver emitted them, so a
         // chart posing two questions shows two short lists instead of one list of everything.
         final Map<PortRef, List<Alternative>> byDecision = new LinkedHashMap<>();
@@ -127,23 +147,35 @@ public final class BalanceView {
                 .add(option);
             if (option.isCurrent()) headings.put(option.replaces(), describe(graph, option));
         }
-        final List<Group> groups = new ArrayList<>();
-        for (final Map.Entry<PortRef, List<Alternative>> entry : byDecision.entrySet()) {
+        final List<List<Alternative>> decisions = new ArrayList<>();
+        for (final List<Alternative> options : byDecision.values()) {
             // A decision with only its current answer under it is not a decision. Showing it would
             // put a heading above a row that repeats the heading, and imply a choice that is not
             // being offered.
-            if (entry.getValue()
-                .size() < 2) continue;
-            final List<Choice> rows = new ArrayList<>();
-            for (final Alternative option : sortedRows(entry.getValue())) {
-                rows.add(new Choice(option.key(), describe(graph, option), option.toNote(), option.isCurrent()));
-            }
-            groups.add(
-                new Group(
-                    headings.getOrDefault(entry.getKey(), SolverMessage.BOUNDARY_NOTHING.toNote()),
-                    List.copyOf(rows)));
+            if (options.size() < 2) continue;
+            decisions.add(options);
         }
-        return new Choices(List.copyOf(groups), alternatives.complete(), alternatives.notes());
+        if (decisions.isEmpty()) return List.of();
+        final List<Summary.Line<?>> out = new ArrayList<>(decisions.size() * 3);
+        for (final List<Alternative> options : decisions) {
+            if (decisions.size() > 1) {
+                out.add(
+                    new Summary.Line.Heading(
+                        headings.getOrDefault(
+                            options.getFirst()
+                                .replaces(),
+                            SolverMessage.BOUNDARY_NOTHING.toNote())));
+            }
+            for (final Alternative option : sortedRows(options)) {
+                out.add(
+                    new Summary.Line.Choice(
+                        option.key(),
+                        describe(graph, option),
+                        option.toNote(),
+                        option.isCurrent()));
+            }
+        }
+        return out;
     }
 
     /**
@@ -177,12 +209,6 @@ public final class BalanceView {
             rate += e.ratePerSecond();
         }
         return rate;
-    }
-
-    /** Whether there is anything to choose between - cheap enough to ask every frame. */
-    public static boolean hasChoices(final Graph graph) {
-        final BalanceResult balance = graph.balance();
-        return balance instanceof final BalanceResult.Solved solved && solved.auto().openGates > 0;
     }
 
     private static void collect(final Graph graph, final List<External> externals, final Kind kind,

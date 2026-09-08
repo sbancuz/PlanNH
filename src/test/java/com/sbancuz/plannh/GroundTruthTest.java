@@ -676,11 +676,11 @@ class GroundTruthTest {
     }
 
     private static Answer solveWith(final Graph graph) {
-        return Balancer.solveWithAlternatives(BalanceMode.AUTO, graph, false, null, Map.of());
+        return Balancer.solveWithAlternatives(BalanceMode.AUTO, graph, null, Map.of());
     }
 
     private static Answer solveWith(final Graph graph, final Map<UUID, Double> pins) {
-        return Balancer.solveWithAlternatives(BalanceMode.AUTO, graph, false, null, pins);
+        return Balancer.solveWithAlternatives(BalanceMode.AUTO, graph, null, pins);
     }
 
     /** The solved answer's view, failing the test with the rejection when the solve did not commit. */

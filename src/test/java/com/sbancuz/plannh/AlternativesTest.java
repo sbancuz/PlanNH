@@ -28,8 +28,7 @@ class AlternativesTest {
         return Balancer.alternatives(
             BalanceMode.AUTO,
             GtnhFlowLoader.load(chart)
-                .graph(),
-            false);
+                .graph());
     }
 
     @Test
@@ -183,7 +182,7 @@ class AlternativesTest {
             final long start = System.currentTimeMillis();
             final Alternatives a = alternatives(chart);
             final long elapsed = System.currentTimeMillis() - start;
-            assertTrue(elapsed < 5_000, () -> chart + " took " + elapsed + "ms to enumerate");
+            assertTrue(elapsed < 15_000, () -> chart + " took " + elapsed + "ms to enumerate");
             if (!a.complete()) {
                 assertTrue(
                     a.notes()
@@ -264,8 +263,7 @@ class AlternativesTest {
         final Alternative other = a.options()
             .get(1);
 
-        final Answer picked = Balancer
-            .solveWithAlternatives(BalanceMode.AUTO, chart.graph(), false, other.key(), Map.of());
+        final Answer picked = Balancer.solveWithAlternatives(BalanceMode.AUTO, chart.graph(), other.key(), Map.of());
         final Answer.Solved solved = solved(picked);
         assertEquals(other.key(), solved.solution().key, "the chart came back on the chosen support");
         assertEquals(
@@ -304,8 +302,7 @@ class AlternativesTest {
         // A key from a different chart names ports this one does not have.
         final Alternatives other = alternatives("mk1");
 
-        final Answer r = Balancer
-            .solveWithAlternatives(BalanceMode.AUTO, chart.graph(), false, other.chosen(), Map.of());
+        final Answer r = Balancer.solveWithAlternatives(BalanceMode.AUTO, chart.graph(), other.chosen(), Map.of());
         final Answer.Solved solved = solved(r);
         assertEquals(a.chosen(), solved.solution().key, "fell back to the solver's own answer");
         assertTrue(

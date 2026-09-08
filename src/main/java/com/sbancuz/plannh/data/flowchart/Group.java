@@ -14,6 +14,8 @@ import lombok.Setter;
 @Setter
 public class Group extends GraphData {
 
+    public static final String TYPE = "group";
+
     public static final int GROUP_MIN_W = 300;
     public static final int GROUP_MIN_H = 200;
 
@@ -38,7 +40,7 @@ public class Group extends GraphData {
 
     @Override
     public String getType() {
-        return "group";
+        return TYPE;
     }
 
     private int getRandomColor() {

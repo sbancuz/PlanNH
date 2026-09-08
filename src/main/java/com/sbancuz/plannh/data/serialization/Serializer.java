@@ -8,7 +8,6 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -25,7 +24,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.google.gson.reflect.TypeToken;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Edge;
@@ -37,10 +35,7 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
-import com.sbancuz.plannh.data.flowchart.Summary.SummarySection;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
-import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
-import com.sbancuz.plannh.data.flowchart.balancer.PortRef;
 
 import codechicken.nei.recipe.Recipe;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
@@ -111,25 +106,32 @@ public final class Serializer {
      */
     @Nonnull
     public static String encodePlan(final Plan plan) {
+        return encodePlan(plan, false);
+    }
+
+    /**
+     * The same plan, but with each slot's data written as readable JSON instead of the compressed
+     * base64 {@code encodePlan} uses - for debugging a save.
+     */
+    @Nonnull
+    public static String encodePlanDebug(final Plan plan) {
+        return encodePlan(plan, true);
+    }
+
+    /**
+     * Encodes a Plan (with all its graphs) to a JSON string. Graph bodies are stored compressed,
+     * each with its slot name and summary section folds.
+     */
+    @Nonnull
+    private static String encodePlan(final Plan plan, final boolean debug) {
         final JsonObject root = GSON.toJsonTree(plan, Plan.class)
             .getAsJsonObject();
 
         // graphs need to be encoded
-        final JsonArray arr = new JsonArray();
-        for (final Graph graph : plan.getGraphs()) arr.add(new JsonPrimitive(encodeGraph(graph)));
-        root.add("graphs", arr);
-
-        return GSON.toJson(root);
-    }
-
-    @Nonnull
-    public static String encodePlanDebug(Plan plan) {
-        final JsonObject root = GSON.toJsonTree(plan, Plan.class)
-            .getAsJsonObject();
-
-        final JsonArray arr = new JsonArray();
-        for (final Graph graph : plan.getGraphs()) arr.add(graphToJson(graph));
-        root.add("graphs", arr);
+        final JsonArray graphsArray = new JsonArray();
+        for (final Graph graph : plan.getGraphs())
+            graphsArray.add(debug ? graphToJson(graph) : new JsonPrimitive(encodeGraph(graph)));
+        root.add("graphs", graphsArray);
 
         return GSON.toJson(root);
     }
@@ -147,40 +149,6 @@ public final class Serializer {
             .getAsJsonArray("graphs")) graphs.add(decodeGraph(elem.getAsString()));
 
         return plan;
-    }
-
-    /**
-     * Every section, not just the folded ones: a section this save has never heard of has to be
-     * distinguishable from one the user deliberately left open, or adding a section would silently
-     * unfold it for everyone who had already saved.
-     */
-    private static JsonObject foldsToJson(final Set<SummarySection> folded) {
-        final JsonObject folds = new JsonObject();
-        for (final SummarySection section : SummarySection.values()) {
-            folds.addProperty(section.name(), folded.contains(section));
-        }
-        return folds;
-    }
-
-    /**
-     * Reads section by section over whatever {@code folded} already holds rather than replacing it:
-     * an unmentioned section is one the save predates, and it keeps the fold a fresh chart gives it.
-     */
-    private static void foldsFromJson(final JsonObject folds, final Set<SummarySection> folded) {
-        for (final var fold : folds.entrySet()) {
-            final SummarySection section;
-            try {
-                section = SummarySection.valueOf(fold.getKey());
-            } catch (final IllegalArgumentException ignored) {
-                continue; // a section this build has dropped
-            }
-            if (fold.getValue()
-                .getAsBoolean()) {
-                folded.add(section);
-            } else {
-                folded.remove(section);
-            }
-        }
     }
 
     /**
@@ -238,18 +206,6 @@ public final class Serializer {
 
         root.add("balanceMode", GSON.toJsonTree(graph.getBalanceMode()));
 
-        root.addProperty("opsMode", graph.isOpsMode());
-
-        // The chosen answer travels as the ports it opens, never as gate indices: those are rebuilt
-        // from scratch on every solve and mean nothing across a save.
-        root.add(
-            "excessChoices",
-            GSON.toJsonTree(
-                graph.getExcessChoice()
-                    .gateAnchors()));
-
-        root.add("sectionFolds", foldsToJson(graph.collapsedSummarySections));
-
         root.addProperty("zoom", graph.getZoom());
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
@@ -284,19 +240,6 @@ public final class Serializer {
         final Graph graph = new Graph(getSafeString(root.get("name"), ""));
 
         graph.setBalanceMode(getSafe(root.get("balanceMode"), BalanceMode.class, BalanceMode.AUTO));
-
-        graph.setOpsMode(getSafeBoolean(root.get("opsMode"), false));
-
-        // Read independently of everything else, like the per-node targets: an old save has no such
-        // key, and a corrupt one costs the user a preference rather than the chart.
-        graph.setExcessChoice(
-            ChoiceKey.of(
-                getSafe(root.getAsJsonArray("excessChoices"), new TypeToken<List<PortRef>>() {}.getType(), List.of())));
-
-        // todo rework summary and remove this
-        try {
-            foldsFromJson(root.getAsJsonObject("sectionFolds"), graph.collapsedSummarySections);
-        } catch (Exception ignored) {}
 
         graph.setZoom(getSafeFloat(root.get("zoom"), 1));
         graph.setPanX(getSafeFloat(root.get("panX"), 0));

@@ -40,6 +40,7 @@ import com.sbancuz.plannh.client.UIBlurEffect;
 import com.sbancuz.plannh.data.flowchart.Edge2;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
@@ -58,7 +59,9 @@ import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import codechicken.lib.config.ConfigTag;
 import codechicken.nei.NEIClientConfig;
+import codechicken.nei.recipe.GuiRecipeTab;
 import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -111,10 +114,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      */
     private static final int CHIP_DROP = 3;
     private static final float CHIP_TEXT_SCALE = 0.5f;
-    /**
-     * Below this zoom the labels are unreadable, so the chips are only clutter.
-     */
-    private static final float CHIP_MIN_ZOOM = 0.45f;
 
     private static final int GROUP_FIT_PAD = 12;
     private static final float ZOOM_STEP = 0.15f;
@@ -484,20 +483,96 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void updateNodeGroupMembership(final Node node) {
-        /*
-         * for (final Group group : graph.getGroups()) {
-         * if (group.collapsed) continue;
-         * final boolean inside = node.x >= group.x && node.x < group.x + group.width
-         * && node.y >= group.y
-         * && node.y < group.y + group.height;
-         * final boolean contained = group.nodeIds.contains(node.id);
-         * if (inside && !contained) {
-         * group.nodeIds.add(node.id);
-         * } else if (!inside && contained) {
-         * group.nodeIds.remove(node.id);
-         * }
-         * }
-         */
+        // TODO redo
+        for (final Group group : graph.groups.values()) {
+            if (group.isCollapsed()) continue;
+            final boolean inside = isInside(group, node);
+            final boolean contained = group.getNodeIds()
+                .contains(node.id);
+            if (inside && !contained) {
+                if (group instanceof final MachineGroup machineGroup) {
+                    joinsMachineGroup(machineGroup, node);
+                    continue;
+                }
+                group.getNodeIds()
+                    .add(node.id);
+            } else if (!inside && contained) {
+                group.getNodeIds()
+                    .remove(node.id);
+            }
+        }
+    }
+
+    /**
+     * Takes a node into a machine group under the group's settings. One machine cannot be at two
+     * tiers at once, so a joining node runs the way the group already runs.
+     */
+    private boolean joinsMachineGroup(final MachineGroup group, final Node node) {
+        final Node member = memberOf(group);
+        if (member != null) {
+            if (!handlerOf(member).equals(handlerOf(node))) return false;
+            node.machineConfig.copySettingsFrom(member.machineConfig);
+        }
+        group.getNodeIds()
+            .add(node.id);
+        return true;
+    }
+
+    /**
+     * Whether a machine group would turn this node away. The group is one machine, so every member
+     * has to be the same one: identity is the NEI recipe handler rather than the machine's display
+     * name, which a player can rewrite. The first node in sets what the machine is; a node running
+     * anything else does not belong in the frame, which is why a drag that would drop it there is
+     * sent back rather than quietly leaving it inside a group it is not part of.
+     */
+    public boolean refusesNode(final Node node) {
+        for (final Group group : graph.groups.values()) {
+            if (!(group instanceof final MachineGroup machineGroup) || group.isCollapsed()) continue;
+            if (!isInside(group, node) || group.getNodeIds()
+                .contains(node.id)) continue;
+            final Node member = memberOf(machineGroup);
+            if (member != null && !handlerOf(member).equals(handlerOf(node))) return true;
+        }
+        return false;
+    }
+
+    /** Any node already in the group, which is what the group's one machine is; null while empty. */
+    @Nullable
+    private Node memberOf(final MachineGroup group) {
+        for (final UUID memberId : group.getNodeIds()) {
+            final Node member = graph.nodes.get(memberId);
+            if (member != null) return member;
+        }
+        return null;
+    }
+
+    private static boolean isInside(final Group group, final Node node) {
+        return node.x >= group.getX() && node.x < group.getX() + group.getWidth()
+            && node.y >= group.getY()
+            && node.y < group.getY() + group.getHeight();
+    }
+
+    /**
+     * The NEI handler a node's recipe came from, as its registered handler name. Read off the
+     * handler rather than off {@code RecipeId}, whose getter for the same string is spelled
+     * differently across NEI versions, so this holds for the version the mod builds against and the
+     * one the pack ships. The empty string when the handler is gone, which groups a chart's
+     * unresolvable nodes together and is as good an answer as any.
+     */
+    private static String handlerOf(final Node node) {
+        if (node.recipeId == null) return "";
+        final IRecipeHandler handler = RecipeHandlerRef.of(node.recipeId).handler;
+        if (handler == null) return "";
+        return GuiRecipeTab.getHandlerInfo(handler)
+            .getHandlerName();
+    }
+
+    private boolean isNodeInCollapsedGroup(final UUID nodeId) {
+        for (final Group group : graph.getGroups().values()) {
+            if (group.isCollapsed() && group.getNodeIds()
+                .contains(nodeId)) return true;
+        }
+        return false;
     }
 
     public void rebuildNoteWidgets() {
@@ -686,7 +761,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
      * solve and never stored: they are not {@link Node}s and take no part in layout or routing.
      */
     private void drawExternalChips() {
-        if (graph.getZoom() < CHIP_MIN_ZOOM) return;
         for (final BalanceView.Boundary flow : graph.boundary()) {
             drawChip(flow);
         }
@@ -1062,6 +1136,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void addGroup(int x, int y) {
+        addGroup(x, y, new Group());
+    }
+
+    /** A group whose recipes share one machine; see {@link MachineGroup}. */
+    public void addMachineGroup(int x, int y) {
+        addGroup(x, y, new MachineGroup());
+    }
+
+    private void addGroup(final int x, final int y, final Group group) {
         PlanAPI.recordEdit(graph, () -> {
             Group group = new Group();
             group.setX(x);

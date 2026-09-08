@@ -9,7 +9,6 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import com.sbancuz.plannh.api.PlanAPI;
-import com.sbancuz.plannh.data.flowchart.Summary.SummaryMode;
 import com.sbancuz.plannh.data.serialization.Serializer;
 
 import lombok.Getter;
@@ -19,29 +18,17 @@ import lombok.Setter;
 @Setter
 public class Plan {
 
-    private static final int DEFAULT_SUMMARY_X = 210;
-    private static final int DEFAULT_SUMMARY_Y = 46;
-
     @Nullable
     private static Plan INSTANCE;
 
     private transient final List<Graph> graphs = new ArrayList<>();
     private int activeIndex = 0;
-    private int summaryX = DEFAULT_SUMMARY_X;
-    private int summaryY = DEFAULT_SUMMARY_Y;
-    private boolean summaryCollapsed = false;
-    private SummaryMode summaryMode = SummaryMode.CYCLES;
-    private boolean snapToGrid;
+
+    @Getter
+    @Setter
+    private Summary summary = new Summary();
 
     private Plan() {}
-
-    /** A fresh empty plan for tests that need a multi-slot canvas without touching the save file. */
-    public static Plan createEmpty() {
-        final Plan plan = new Plan();
-        plan.getGraphs()
-            .add(new Graph("Slot 1"));
-        return plan;
-    }
 
     public static Plan getInstance() {
         if (INSTANCE == null) {
@@ -69,7 +56,10 @@ public class Plan {
                 return Serializer.decodePlan(data);
             }
         } catch (final Exception ignored) {}
-        return createEmpty();
+        final Plan plan = new Plan();
+        plan.getGraphs()
+            .add(new Graph());
+        return plan;
     }
 
     public static void unloadPlan() {

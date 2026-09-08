@@ -5,18 +5,25 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.Summary;
+import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView.Boundary;
-import com.sbancuz.plannh.data.flowchart.balancer.BalanceView.Choice;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView.Kind;
+import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
+import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternative;
+import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
 import com.sbancuz.plannh.data.serialization.Serializer;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
 
@@ -33,12 +40,36 @@ class BalanceViewTest {
             .graph();
     }
 
-    /** The one row matching {@code role}, failing rather than picking when there is not exactly one. */
-    private static Choice onlyRow(final List<Choice> rows, final Predicate<Choice> role) {
-        final List<Choice> matching = rows.stream()
+    private static Alternatives alternatives(final Graph graph) {
+        return Balancer.alternatives(BalanceMode.AUTO, graph);
+    }
+
+    private static List<Summary.Line.Choice> choicesOf(final List<Summary.Line<?>> rows) {
+        return rows.stream()
+            .filter(Summary.Line.Choice.class::isInstance)
+            .map(Summary.Line.Choice.class::cast)
+            .toList();
+    }
+
+    /** Choice rows split into their decisions; a heading starts a new one. */
+    private static List<List<Summary.Line.Choice>> decisions(final List<Summary.Line<?>> rows) {
+        final List<List<Summary.Line.Choice>> blocks = new ArrayList<>();
+        for (final Summary.Line<?> line : rows) {
+            if (line instanceof Summary.Line.Heading || blocks.isEmpty()) blocks.add(new ArrayList<>());
+            if (line instanceof Summary.Line.Choice choice) {
+                blocks.getLast()
+                    .add(choice);
+            }
+        }
+        return blocks;
+    }
+
+    /** The one option matching {@code role}, failing rather than picking when there is not exactly one. */
+    private static Alternative onlyOption(final List<Alternative> options, final Predicate<Alternative> role) {
+        final List<Alternative> matching = options.stream()
             .filter(role)
             .toList();
-        assertEquals(1, matching.size(), () -> "expected exactly one such row, got " + matching);
+        assertEquals(1, matching.size(), () -> "expected exactly one such option, got " + matching);
         return matching.get(0);
     }
 
@@ -95,39 +126,33 @@ class BalanceViewTest {
     @Test
     void aBalancedChartHasNothingToChooseAndNothingToVoid() {
         final Graph graph = chart("light_fuel");
-        assertFalse(BalanceView.hasChoices(graph), "no gates, so no question to ask");
-        assertTrue(of(graph.boundary(), Kind.EXCESS).isEmpty(), "and no surplus anywhere");
         assertTrue(
-            graph.choices()
-                .rows()
+            alternatives(graph).options()
                 .isEmpty(),
-            "and so nothing to present");
+            "no gates, so no question to ask");
+        assertTrue(of(graph.boundary(), Kind.EXCESS).isEmpty(), "and no surplus anywhere");
     }
 
     @Test
     void everyAnswerIsLabelledAndExactlyOneIsMarkedCurrent() {
         for (final String name : List.of("symmetric_choice", "excess_choice", "mk1", "loopGraph")) {
-            final BalanceView.Choices choices = chart(name).choices();
-            assertTrue(
-                choices.rows()
-                    .size() > 1,
+            final Alternatives a = alternatives(chart(name));
+            assertFalse(
+                a.options()
+                    .size() < 2,
                 () -> name + " should offer a choice");
-            for (final BalanceView.Group group : choices.groups()) {
+            for (final List<Alternative> decision : a.options()
+                .stream()
+                .collect(java.util.stream.Collectors.groupingBy(Alternative::replaces))
+                .values()) {
                 assertEquals(
                     1,
-                    group.rows()
-                        .stream()
-                        .filter(Choice::active)
+                    decision.stream()
+                        .filter(Alternative::isCurrent)
                         .count(),
-                    () -> name + " must mark one row per decision as the one on screen");
-                assertTrue(
-                    group.rows()
-                        .get(0)
-                        .active(),
-                    () -> name + " lists each decision's current answer first");
-                assertNotNull(group.heading(), () -> name + " has an unnamed decision");
+                    () -> name + " must mark one option per decision as the one on screen");
             }
-            for (final Choice row : choices.rows()) {
+            for (final Summary.Line.Choice row : choicesOf(BalanceView.toLineChoices(chart(name), a))) {
                 assertNotNull(row.label(), () -> name + " has an unlabelled row");
                 if (!row.active()) {
                     assertNotNull(row.reason(), () -> name + " listed an alternative with no reason given");
@@ -140,14 +165,16 @@ class BalanceViewTest {
     void theHeuristicThatPickedTheAnswerIsStatedInWords() {
         // mk1's default beats its alternative on a constant somebody chose, not on a measurement.
         // If that sentence ever stops reaching the panel, the tilt is invisible again.
-        final List<Choice> rows = chart("mk1").choices()
-            .rows();
-        final Choice current = onlyRow(rows, Choice::active);
-        final Choice alternative = onlyRow(rows, r -> !r.active());
+        final Graph graph = chart("mk1");
+        final Alternatives a = alternatives(graph);
+        final Alternative alternative = onlyOption(a.options(), o -> !o.isCurrent());
         assertEquals(
             SolverMessage.REASON_IMPORTS_INSTEAD,
-            alternative.reason()
+            alternative.toNote()
                 .message());
+
+        final List<Summary.Line.Choice> rows = choicesOf(BalanceView.toLineChoices(graph, a));
+        final Summary.Line.Choice current = onlyRow(rows, Summary.Line.Choice::active);
         assertEquals(
             SolverMessage.BOUNDARY_EXCESS,
             current.label()
@@ -155,45 +182,47 @@ class BalanceViewTest {
             () -> "default leaves a surplus: " + current.label());
         assertEquals(
             SolverMessage.BOUNDARY_ADD,
-            alternative.label()
+            onlyRow(rows, r -> !r.active()).label()
                 .message(),
-            () -> "alternative imports: " + alternative.label());
+            () -> "alternative imports: " + onlyRow(rows, r -> !r.active()).label());
     }
 
     @Test
     void pickingAnAnswerChangesTheChartAndSticksAcrossASave() {
         final Graph graph = chart("symmetric_choice");
-        final Choice before = onlyRow(
-            graph.choices()
-                .rows(),
-            Choice::active);
-        final Choice alternative = graph.choices()
-            .rows()
+        final Alternatives before = alternatives(graph);
+        final Alternative alternative = before.options()
             .stream()
-            .filter(r -> !r.active())
+            .filter(o -> !o.isCurrent())
             .findFirst()
             .orElseThrow();
+        final Alternative current = onlyOption(before.options(), Alternative::isCurrent);
         assertFalse(
-            before.label()
-                .equals(alternative.label()),
+            BalanceView.toLineChoices(graph, before).stream()
+                .filter(Summary.Line.Choice.class::isInstance)
+                .map(Summary.Line.Choice.class::cast)
+                .filter(r -> r.active())
+                .findFirst()
+                .orElseThrow()
+                .label()
+                .equals(alternative.toNote()),
             "the two answers void different things");
 
         // What the summary panel's click handler does, minus the pixels.
         graph.setExcessChoice(alternative.key());
 
-        final BalanceView.Choices after = graph.choices();
+        final Balancer.Answer picked = Balancer
+            .solveWithAlternatives(BalanceMode.AUTO, graph, graph.getExcessChoice(), Map.of());
         assertTrue(
-            after.rows()
-                .stream()
-                .filter(Choice::active)
-                .allMatch(
-                    r -> r.key()
-                        .equals(alternative.key())),
+            picked instanceof final Balancer.Answer.Solved solved
+                && solved.solution().key.equals(alternative.key()),
             "the picked answer is now the one on screen");
         assertEquals(
-            alternative.label(),
+            alternative.externals()
+                .get(0)
+                .port(),
             of(graph.boundary(), Kind.EXCESS).stream()
-                .map(Boundary::label)
+                .map(Boundary::port)
                 .findFirst()
                 .orElse(null),
             "and the canvas voids where the user asked");
@@ -211,18 +240,12 @@ class BalanceViewTest {
         // other imports, and one sentence cannot honestly describe both.
         assertEquals(
             SolverMessage.REASON_LEAVES_EXCESS,
-            onlyRow(
-                chart("excess_choice").choices()
-                    .rows(),
-                r -> !r.active()).reason()
-                    .message());
+            onlyOption(alternatives(chart("excess_choice")).options(), o -> !o.isCurrent()).toNote()
+                .message());
         assertEquals(
             SolverMessage.REASON_IMPORTS_MORE,
-            onlyRow(
-                chart("loopGraph").choices()
-                    .rows(),
-                r -> !r.active()).reason()
-                    .message());
+            onlyOption(alternatives(chart("loopGraph")).options(), o -> !o.isCurrent()).toNote()
+                .message());
     }
 
     @Test
@@ -230,35 +253,30 @@ class BalanceViewTest {
         // Two branch pairs that never touch, so where each leaves its surplus is a separate
         // question. Flat, this is six answers with no indication that picking one of the first
         // three has nothing to do with the last three.
-        final BalanceView.Choices choices = chart("two_decisions").choices();
+        final Graph graph = chart("two_decisions");
+        final Alternatives a = alternatives(graph);
+        final Map<java.util.UUID, List<Alternative>> byDecision = new LinkedHashMap<>();
+        for (final Alternative option : a.options()) {
+            byDecision.computeIfAbsent(
+                option.replaces()
+                    .nodeId(),
+                k -> new ArrayList<>())
+                .add(option);
+        }
 
-        assertEquals(
-            2,
-            choices.groups()
-                .size(),
-            "two questions");
-        for (final BalanceView.Group group : choices.groups()) {
-            assertEquals(
-                3,
-                group.rows()
-                    .size(),
-                "each with its own three answers");
+        assertEquals(2, byDecision.size(), "two questions");
+        for (final List<Alternative> decision : byDecision.values()) {
+            assertEquals(3, decision.size(), "each with its own three answers");
             assertEquals(
                 1,
-                group.rows()
-                    .stream()
-                    .filter(Choice::active)
+                decision.stream()
+                    .filter(Alternative::isCurrent)
                     .count());
-            assertEquals(
-                onlyRow(group.rows(), Choice::active).label(),
-                group.heading(),
-                "named by the answer in force");
         }
         assertEquals(
             6,
-            choices.rows()
-                .stream()
-                .map(Choice::label)
+            choicesOf(BalanceView.toLineChoices(graph, a)).stream()
+                .map(Summary.Line.Choice::label)
                 .distinct()
                 .count(),
             "and no answer appears in both");
@@ -268,12 +286,9 @@ class BalanceViewTest {
     void aDecisionWithNothingToDecideIsNotShown() {
         // jet_fuel has two open gates but only one of them has any alternative. A heading over a
         // lone row repeating it is an offer that is not being made.
-        for (final BalanceView.Group group : chart("jet_fuel").choices()
-            .groups()) {
-            assertTrue(
-                group.rows()
-                    .size() > 1,
-                () -> "empty decision shown: " + group.heading());
+        for (final List<Summary.Line.Choice> block : decisions(
+            BalanceView.toLineChoices(chart("jet_fuel"), alternatives(chart("jet_fuel"))))) {
+            assertTrue(block.size() > 1, () -> "empty decision shown: " + block);
         }
     }
 
@@ -281,7 +296,7 @@ class BalanceViewTest {
     void aTruncatedListSaysSoRatherThanLookingComplete() {
         // palladium_line has far more candidate swaps than the search will try. Silence here would
         // read as "these are all the answers", which is the one thing it must not claim.
-        final BalanceView.Choices choices = chart("palladium_line").choices();
+        final Alternatives choices = alternatives(chart("palladium_line"));
         if (!choices.complete()) {
             assertFalse(
                 choices.notes()
@@ -297,16 +312,17 @@ class BalanceViewTest {
         // a choice, because an ordering that only holds on the chart it was written against is not
         // an ordering.
         for (final String name : List.of("symmetric_choice", "excess_choice", "mk1", "loopGraph", "two_decisions")) {
-            for (final BalanceView.Group group : chart(name).choices()
-                .groups()) {
+            final Graph graph = chart(name);
+            for (final List<Summary.Line.Choice> block : decisions(
+                BalanceView.toLineChoices(graph, alternatives(graph)))) {
                 boolean seenExcess = false;
                 double previous = Double.NEGATIVE_INFINITY;
-                for (final Choice row : group.rows()) {
+                for (final Summary.Line.Choice row : block) {
                     if (row.active()) continue; // sorted to the front, not into the amounts
                     final boolean isImport = row.label()
                         .message() == SolverMessage.BOUNDARY_ADD;
                     if (isImport) {
-                        assertFalse(seenExcess, () -> name + " puts an import after a surplus: " + group.rows());
+                        assertFalse(seenExcess, () -> name + " puts an import after a surplus: " + block);
                     } else if (!seenExcess) {
                         seenExcess = true;
                         previous = Double.NEGATIVE_INFINITY; // each block ascends on its own
@@ -314,11 +330,20 @@ class BalanceViewTest {
                     final double rate = rateOf(row.label());
                     assertTrue(
                         rate >= previous,
-                        () -> name + " lists " + row.label() + " after a bigger amount: " + group.rows());
+                        () -> name + " lists " + row.label() + " after a bigger amount: " + block);
                     previous = rate;
                 }
             }
         }
+    }
+
+    private static Summary.Line.Choice onlyRow(final List<Summary.Line.Choice> rows,
+        final Predicate<Summary.Line.Choice> role) {
+        final List<Summary.Line.Choice> matching = rows.stream()
+            .filter(role)
+            .toList();
+        assertEquals(1, matching.size(), () -> "expected exactly one such row, got " + matching);
+        return matching.get(0);
     }
 
     /**

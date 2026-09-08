@@ -29,6 +29,8 @@ import lombok.Setter;
 @Getter
 public class Node extends GraphData {
 
+    public static final String TYPE = "node";
+
     // cant be final because of transient deserialization resulting in null
     private transient List<Port<?>> inputs;
     private transient List<Port<?>> outputs;
@@ -198,7 +200,7 @@ public class Node extends GraphData {
 
     @Override
     public String getType() {
-        return "node";
+        return TYPE;
     }
 
     @Override

@@ -497,7 +497,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
          * ? (float) nb.totalDurationTicks() / GuiHelper.TICKS_PER_SECOND
          * : node.getRecipeDuration() > 0 ? (float) node.getRecipeDuration() / GuiHelper.TICKS_PER_SECOND : 1f;
          * final double ops = nb != null ? nb.operations() : 1;
-         * final int durPerOp = nb != null ? nb.durationPerOp() : node.getDurationTicks();
+         * final int durPerOp = nb != null ? nb.durationPerOp() : node.getRecipeDuration();
          * final StringBuilder opsLine = new StringBuilder();
          * // No balance (unpinned Auto): show the recipe duration only - no count, and below, no
          * // throughput rows. An unpinned chart is wiring, not a solved plan; per-machine rates
@@ -510,14 +510,14 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
          * if (!opsLine.isEmpty()) opsLine.append("  ");
          * opsLine.append(durPerOp)
          * .append("t (")
-         * .append(String.format("%.2f", (float) durPerOp / GuiHelper.TICKS_PER_SECOND))
+         * .append(String.format(Locale.ROOT, "%.2f", (float) durPerOp / GuiHelper.TICKS_PER_SECOND))
          * .append("s)");
          * }
          * GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
          * y += LINE_H;
          * if (ops <= 0) return;
-         * y = drawPortList(x, y, node.getInputs(), nb, sec, false);
-         * drawPortList(x, y, node.getOutputs(), nb, sec, true);
+         * y = drawPortList(x, y, node.inputs, nb, sec, false);
+         * drawPortList(x, y, node.outputs, nb, sec, true);
          */
     }
 
@@ -635,6 +635,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 doubleClickPending = false;
                 openNeiRecipe();
                 return true;
+            }
+            // A machine group is one machine, so a node running another recipe handler has no place
+            // in it. There is nowhere to say so - the canvas has no message popup - so the drag
+            // simply does not take: the node goes back where it was picked up from.
+            if (dragging) {
+                node.setX(nodeStartX);
+                node.setY(nodeStartY);
+                syncTransform(
+                    canvas.getGraph()
+                        .getZoom(),
+                    canvas.getGraph()
+                        .getPanX(),
+                    canvas.getGraph()
+                        .getPanY());
             }
             dragging = false;
             canvas.recheckMembershipAndFit();
@@ -891,7 +905,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
     private void onConfigChanged() {
         canvas.getGraph()
-            .markDirty();
+            .bumpVersion();
         resizeForZoom(
             canvas.getGraph()
                 .getZoom());

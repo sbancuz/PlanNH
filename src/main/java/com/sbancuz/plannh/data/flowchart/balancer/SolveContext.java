@@ -35,7 +35,6 @@ public final class SolveContext {
      * it is about to build.
      */
     public Budget budget;
-    public final boolean opsMode;
     public final boolean anyPin;
     /** The instrumentation hook for this run; {@link Profiler#disabled()} unless a test attaches one. */
     public final Profiler profiler;
@@ -73,17 +72,16 @@ public final class SolveContext {
     /** Stage notes produced by the pass currently running (cleared on every pass). */
     public final List<Note> stageNotes = new ArrayList<>();
 
-    SolveContext(final Graph graph, final Heuristics heuristics, final Budget budget, final boolean opsMode,
+    SolveContext(final Graph graph, final Heuristics heuristics, final Budget budget,
         final Map<UUID, Double> extraExtentPins, final Set<Pin> pins) {
-        this(graph, heuristics, budget, opsMode, extraExtentPins, pins, Profiler.disabled());
+        this(graph, heuristics, budget, extraExtentPins, pins, Profiler.disabled());
     }
 
-    SolveContext(final Graph graph, final Heuristics heuristics, final Budget budget, final boolean opsMode,
+    SolveContext(final Graph graph, final Heuristics heuristics, final Budget budget,
         final Map<UUID, Double> extraExtentPins, final Set<Pin> pins, final Profiler profiler) {
         this.model = new ModelData(graph, heuristics);
         this.heuristics = heuristics;
         this.budget = budget;
-        this.opsMode = opsMode;
         this.pins = Set.copyOf(pins);
         this.profiler = profiler;
 
