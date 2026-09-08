@@ -29,7 +29,7 @@ public class MachineGroup extends Group {
 
     public MachineGroup() {
         // GraphData names a fresh chart element after its type, which spells this one "Machine_group".
-        setHeader("Machine Group");
+        header = "Machine Group";
     }
 
     @Override

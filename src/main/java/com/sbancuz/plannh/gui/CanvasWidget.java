@@ -59,9 +59,7 @@ import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import codechicken.lib.config.ConfigTag;
 import codechicken.nei.NEIClientConfig;
-import codechicken.nei.recipe.GuiRecipeTab;
 import codechicken.nei.recipe.IRecipeHandler;
-import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -275,7 +273,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         restored.setPanY(graph.getPanY());
         restored.setSnapToGrid(graph.isSnapToGrid());
         restored.setBalanceMode(graph.getBalanceMode());
-        restored.setOpsMode(graph.isOpsMode());
         restored.setUndoHistory(graph.getUndoHistory());
         final Plan plan = Plan.getInstance();
         plan.getGraphs()
@@ -288,7 +285,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     // The node config panel is immediate-mode drawing, so it cannot host a text widget; the
     // editor is a screen-level menu (same pattern as the context menu) that this widget opens
     // and positions, with the value bridged through the two methods below.
-
+    // TODO rework
     public boolean isTargetEditorOpen() {
         return targetEditNode != null;
     }
@@ -335,11 +332,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             else node.getTargetOutputRates()
                 .put(out, rate);
         });
-        graph.markDirty();
+        graph.bumpVersion();
         PlanAPI.save();
         closeTargetEditor();
     }
 
+    // todo redo
     public void recheckMembershipAndFit() {
         /*
          * for (final Node node : graph.getNodes()) {
@@ -349,6 +347,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
          */
     }
 
+    // todo redo
     public void autoLayoutNodes() {
         if (graph.getNodes()
             .isEmpty()) return;
@@ -483,96 +482,25 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void updateNodeGroupMembership(final Node node) {
-        // TODO redo
-        for (final Group group : graph.groups.values()) {
-            if (group.isCollapsed()) continue;
-            final boolean inside = isInside(group, node);
-            final boolean contained = group.getNodeIds()
-                .contains(node.id);
-            if (inside && !contained) {
-                if (group instanceof final MachineGroup machineGroup) {
-                    joinsMachineGroup(machineGroup, node);
-                    continue;
-                }
-                group.getNodeIds()
-                    .add(node.id);
-            } else if (!inside && contained) {
-                group.getNodeIds()
-                    .remove(node.id);
-            }
-        }
-    }
-
-    /**
-     * Takes a node into a machine group under the group's settings. One machine cannot be at two
-     * tiers at once, so a joining node runs the way the group already runs.
-     */
-    private boolean joinsMachineGroup(final MachineGroup group, final Node node) {
-        final Node member = memberOf(group);
-        if (member != null) {
-            if (!handlerOf(member).equals(handlerOf(node))) return false;
-            node.machineConfig.copySettingsFrom(member.machineConfig);
-        }
-        group.getNodeIds()
-            .add(node.id);
-        return true;
-    }
-
-    /**
-     * Whether a machine group would turn this node away. The group is one machine, so every member
-     * has to be the same one: identity is the NEI recipe handler rather than the machine's display
-     * name, which a player can rewrite. The first node in sets what the machine is; a node running
-     * anything else does not belong in the frame, which is why a drag that would drop it there is
-     * sent back rather than quietly leaving it inside a group it is not part of.
-     */
-    public boolean refusesNode(final Node node) {
-        for (final Group group : graph.groups.values()) {
-            if (!(group instanceof final MachineGroup machineGroup) || group.isCollapsed()) continue;
-            if (!isInside(group, node) || group.getNodeIds()
-                .contains(node.id)) continue;
-            final Node member = memberOf(machineGroup);
-            if (member != null && !handlerOf(member).equals(handlerOf(node))) return true;
-        }
-        return false;
-    }
-
-    /** Any node already in the group, which is what the group's one machine is; null while empty. */
-    @Nullable
-    private Node memberOf(final MachineGroup group) {
-        for (final UUID memberId : group.getNodeIds()) {
-            final Node member = graph.nodes.get(memberId);
-            if (member != null) return member;
-        }
-        return null;
-    }
-
-    private static boolean isInside(final Group group, final Node node) {
-        return node.x >= group.getX() && node.x < group.getX() + group.getWidth()
-            && node.y >= group.getY()
-            && node.y < group.getY() + group.getHeight();
-    }
-
-    /**
-     * The NEI handler a node's recipe came from, as its registered handler name. Read off the
-     * handler rather than off {@code RecipeId}, whose getter for the same string is spelled
-     * differently across NEI versions, so this holds for the version the mod builds against and the
-     * one the pack ships. The empty string when the handler is gone, which groups a chart's
-     * unresolvable nodes together and is as good an answer as any.
-     */
-    private static String handlerOf(final Node node) {
-        if (node.recipeId == null) return "";
-        final IRecipeHandler handler = RecipeHandlerRef.of(node.recipeId).handler;
-        if (handler == null) return "";
-        return GuiRecipeTab.getHandlerInfo(handler)
-            .getHandlerName();
-    }
-
-    private boolean isNodeInCollapsedGroup(final UUID nodeId) {
-        for (final Group group : graph.getGroups().values()) {
-            if (group.isCollapsed() && group.getNodeIds()
-                .contains(nodeId)) return true;
-        }
-        return false;
+        /*
+         * for (final Group group : graph.groups.values()) {
+         * if (group.isCollapsed()) continue;
+         * final boolean inside = isInside(group, node);
+         * final boolean contained = group.getNodeIds()
+         * .contains(node.id);
+         * if (inside && !contained) {
+         * if (group instanceof final MachineGroup machineGroup) {
+         * joinsMachineGroup(machineGroup, node);
+         * continue;
+         * }
+         * group.getNodeIds()
+         * .add(node.id);
+         * } else if (!inside && contained) {
+         * group.getNodeIds()
+         * .remove(node.id);
+         * }
+         * }
+         */
     }
 
     public void rebuildNoteWidgets() {
@@ -582,7 +510,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public void rebuildGroupWidgets() {
         for (final Group group : graph.getGroups()
-            .values()) child(new GroupWidget(this, group));
+            .values()) child(GroupWidget.of(this, group));
     }
 
     public boolean isOutputPortHit(final int worldMx, final int worldMy) {
@@ -1146,13 +1074,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private void addGroup(final int x, final int y, final Group group) {
         PlanAPI.recordEdit(graph, () -> {
-            Group group = new Group();
             group.setX(x);
             group.setY(y);
 
             graph.getGroups()
                 .put(group.getId(), group);
-            child(new GroupWidget(this, group));
+            child(GroupWidget.of(this, group));
         });
 
         menuOpen = false;

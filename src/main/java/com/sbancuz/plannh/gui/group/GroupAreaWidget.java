@@ -17,10 +17,10 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
 
     // private static final int GROUP_PADDING = 10;
 
-    private final GroupWidget parent;
+    private final GroupWidget<?> parent;
     private final Group data;
 
-    public GroupAreaWidget(GroupWidget parent) {
+    public GroupAreaWidget(GroupWidget<?> parent) {
         this.parent = parent;
         data = parent.getData();
         configureCoverChildren();
@@ -109,5 +109,10 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
             disableCoverChildren();
             size(Math.max(data.getWidth(), getMinDragWidth()), Math.max(data.getHeight(), getMinDragHeight()));
         }
+    }
+
+    @Override
+    protected void onChildRemove(IWidget child) {
+        if (child instanceof FlowchartWidget<?, ?>flowchartWidget) parent.leaveGroup(flowchartWidget);
     }
 }
