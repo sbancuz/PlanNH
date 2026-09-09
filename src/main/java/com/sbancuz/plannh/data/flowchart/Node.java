@@ -16,6 +16,7 @@ import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.properties.ResourceProperty;
 import com.sbancuz.plannh.data.provider.DefaultProvider;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
@@ -121,7 +122,7 @@ public class Node extends GraphData {
     @SuppressWarnings("unchecked")
     private void setConfiguration(int index, ItemStack itemStack) {
         Port<?> port = inputs.get(index);
-        RecipeProperty<?> type = port.getType();
+        ResourceProperty<?> type = port.getType();
         if (type == RecipePropertyAPI.ITEM) ((Port<ItemStack>) port).setValue(itemStack.copy());
 
         if (type == RecipePropertyAPI.FLUID && Compat.GREGTECH.isLoaded) ((Port<FluidStack>) port).setValue(

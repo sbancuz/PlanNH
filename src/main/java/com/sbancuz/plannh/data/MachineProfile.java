@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 
@@ -85,9 +86,8 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
     }
 
     @Nonnull
-    public List<SettingDef<?>> visibleSettings(final RecipeContext ctx, final Map<String, Object> machineSettings) {
+    public Stream<SettingDef<?>> visibleSettings(final RecipeContext ctx, final Map<String, Object> machineSettings) {
         return settings.stream()
-            .filter(def -> def.isVisible(ctx, machineSettings))
-            .toList();
+            .filter(def -> def.isVisible(ctx, machineSettings));
     }
 }

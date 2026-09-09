@@ -33,8 +33,8 @@ public class RecipeProperty<T> {
         return displayFormatter.apply(value);
     }
 
-    public static <B> RecipePropertyBuilder<B, ?, ?> builder(final String key, final B defaultValue) {
-        return RecipeProperty.<B>emptyBuilder()
+    public static <T> RecipePropertyBuilder<T, ?, ?> builder(final String key, final T defaultValue) {
+        return RecipeProperty.<T>emptyBuilder()
             .key(key)
             .defaultValue(defaultValue);
     }

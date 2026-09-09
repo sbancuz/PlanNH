@@ -66,9 +66,9 @@ public class MachineConfig {
         return v instanceof final Boolean b && b;
     }
 
-    public String getString(final String key) {
+    public <E extends Enum<E>> E getEnum(final String key, Class<E> type) {
         final Object v = settings.get(key);
-        return v instanceof final String s ? s : "";
+        return type.isInstance(v) ? type.cast(v) : null;
     }
 
     public void setInt(final String key, final int value) {
@@ -79,7 +79,7 @@ public class MachineConfig {
         settings.put(key, value);
     }
 
-    public void setString(final String key, final String value) {
+    public void setEnum(final String key, final Enum<?> value) {
         settings.put(key, value);
     }
 

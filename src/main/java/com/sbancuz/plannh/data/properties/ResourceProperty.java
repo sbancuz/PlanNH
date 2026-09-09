@@ -63,8 +63,8 @@ public class ResourceProperty<T> extends SummaryProperty<T> {
         return colorProvider.applyAsInt(value);
     }
 
-    public static <B> ResourcePropertyBuilder<B, ?, ?> builder(final String key, final B defaultValue) {
-        return ResourceProperty.<B>emptyBuilder()
+    public static <T> ResourcePropertyBuilder<T, ?, ?> builder(final String key, final T defaultValue) {
+        return ResourceProperty.<T>emptyBuilder()
             .key(key)
             .defaultValue(defaultValue);
     }

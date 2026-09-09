@@ -26,7 +26,6 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
-import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
@@ -684,17 +683,17 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final MachineProfile profile = c.getProfile();
         final StringBuilder sb = new StringBuilder();
 
-        for (final SettingDef<?> def : profile
-            .visibleSettings(new RecipeContext(node.getProperties()), c.getSettings())) {
-            final Object val = c.getSettings()
-                .get(def.getKey());
-            if (val == null) continue;
-            if (val.equals(def.getDefaultValue())) continue;
-            final String badge = def.badge(val, c);
-            if (badge == null) continue;
-            sb.append(badge)
-                .append(' ');
-        }
+        // for (final SettingDef<?> def : profile
+        // .visibleSettings(new RecipeContext(node.getProperties()), c.getSettings())) {
+        // final Object val = c.getSettings()
+        // .get(def.getKey());
+        // if (val == null) continue;
+        // if (val.equals(def.getDefaultValue())) continue;
+        // final String badge = def.badge(val, c);
+        // if (badge == null) continue;
+        // sb.append(badge)
+        // .append(' ');
+        // }
 
         if (!sb.isEmpty()) sb.setLength(sb.length() - 1);
         return sb.toString();
@@ -736,10 +735,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         }));
         y += LINE_H;
 
-        for (final SettingDef<?> def : profile
-            .visibleSettings(new RecipeContext(node.getProperties()), c.getSettings())) {
-            y = drawSetting(x, y, def, c);
-        }
+        // for (final SettingDef<?> def : profile
+        // .visibleSettings(new RecipeContext(node.getProperties()), c.getSettings())) {
+        // y = drawSetting(x, y, def, c);
+        // }
 
         // One row per output: pin the rate the chart should produce. The row opens a text
         // editor; rates are typed, not stepped.
@@ -851,17 +850,18 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     private int configRowsHeight() {
-        int h = (node.getMachineConfig()
-            .getProfile()
-            .visibleSettings(
-                new RecipeContext(node.getProperties()),
-                node.getMachineConfig()
-                    .getSettings())
-            .size() + 2
-            + targetableOutputs().size()) * LINE_H;
-        if (node.getAvailableExtractors()
-            .size() > 1) h += LINE_H;
-        return h;
+        // int h = (node.getMachineConfig()
+        // .getProfile()
+        // .visibleSettings(
+        // new RecipeContext(node.getProperties()),
+        // node.getMachineConfig()
+        // .getSettings())
+        // .size() + 2
+        // + targetableOutputs().size()) * LINE_H;
+        // if (node.getAvailableExtractors()
+        // .size() > 1) h += LINE_H;
+        // return h;
+        return 0;
     }
 
     /** Output indices that get a target row: the same ports the throughput list shows. */

@@ -1,6 +1,5 @@
 package com.sbancuz.plannh.data.setting;
 
-import java.util.List;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nonnull;
@@ -54,16 +53,11 @@ public enum Settings {
     CATALYST_ACCEL_CARD("catalyst_accel_card", 0, 0, 5, (v, _) -> v > 0 ? "☆" + v : null),
 
     // ── enum-type settings ──
-    VOLTAGE("voltage", "OFF", List
-        .of("OFF", "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV", "UXV", "MAX"),
-        (v, c) -> {
-            if ("OFF".equals(v)) return null;
-            return c.getBoolean(PERFECT_OC.key()) ? v + "P" : v;
-        }),
-    BURNABLE_OVERRIDE("burnable_override", "OFF", List.of("OFF", "IN", "OUT"), (_, _) -> null),
-
-    //
-    ;
+    VOLTAGE("voltage", Voltage.OFF, Voltage.class, (v, c) -> {
+        if (v == Voltage.OFF) return null;
+        return c.getBoolean(PERFECT_OC.key()) ? v + "P" : v.toString();
+    }),
+    BURNABLE_OVERRIDE("burnable_override", Burnable.OFF, Burnable.class, (_, _) -> null);
 
     private final SettingDef<?> def;
 
@@ -80,9 +74,9 @@ public enum Settings {
         this.def = new BooleanSettingDef(key, defaultValue, badgeFn);
     }
 
-    Settings(final String key, final String defaultValue, final List<String> options,
-        final BiFunction<String, MachineConfig, String> badgeFn) {
-        this.def = new StringSettingDef(key, defaultValue, options, badgeFn);
+    <E extends Enum<E>> Settings(final String key, final E defaultValue, final Class<E> type,
+        final BiFunction<E, MachineConfig, String> badgeFn) {
+        this.def = new EnumSettingDef<>(key, defaultValue, type, badgeFn);
     }
 
     @Nonnull
@@ -93,5 +87,30 @@ public enum Settings {
     @Nonnull
     public String key() {
         return def.getKey();
+    }
+
+    public enum Voltage {
+        OFF,
+        ULV,
+        LV,
+        MV,
+        HV,
+        EV,
+        IV,
+        LuV,
+        ZPM,
+        UV,
+        UHV,
+        UEV,
+        UIV,
+        UMV,
+        UXV,
+        MAX;
+    }
+
+    public enum Burnable {
+        OFF,
+        IN,
+        OUT;
     }
 }

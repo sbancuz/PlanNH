@@ -8,6 +8,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.util.StatCollector;
 
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 
@@ -16,12 +17,12 @@ import lombok.Getter;
 @Getter
 public abstract class SettingDef<T> {
 
-    private final String key;
-    private final String label;
-    private final T defaultValue;
+    protected final String key;
+    protected final String label;
+    protected final T defaultValue;
     @Nullable
-    private final BiFunction<T, MachineConfig, String> badgeFn;
-    private BiPredicate<RecipeContext, Map<String, Object>> visibility;
+    protected final BiFunction<T, MachineConfig, String> badgeFn;
+    protected BiPredicate<RecipeContext, Map<String, Object>> visibility;
 
     protected SettingDef(final String key, final T defaultValue,
         @Nullable final BiFunction<T, MachineConfig, String> badgeFn,
@@ -48,4 +49,6 @@ public abstract class SettingDef<T> {
         this.visibility = visibility;
         return this;
     }
+
+    public abstract IWidget settingsWidget(MachineConfig config);
 }

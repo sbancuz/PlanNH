@@ -6,6 +6,10 @@ import java.util.function.BiPredicate;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.api.widget.IWidget;
+import com.cleanroommc.modularui.value.BoolValue;
+import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 
@@ -20,5 +24,13 @@ public class BooleanSettingDef extends SettingDef<Boolean> {
     public BooleanSettingDef(String key, Boolean defaultValue,
         @Nullable BiFunction<Boolean, MachineConfig, String> badgeFn) {
         this(key, defaultValue, badgeFn, (_, _) -> true);
+    }
+
+    @Override
+    public IWidget settingsWidget(MachineConfig config) {
+        return new ToggleButton()
+            .value(new BoolValue.Dynamic(() -> config.getBoolean(key), val -> config.setBoolean(key, val)))
+            .overlay(false, IKey.str("[ ]"))
+            .overlay(true, IKey.str("[✓]"));
     }
 }
