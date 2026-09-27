@@ -4,9 +4,13 @@ import java.util.Map;
 import java.util.function.Predicate;
 import java.util.function.ToIntBiFunction;
 
+import javax.annotation.Nonnull;
+
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.data.machine.MachineVariant;
+import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 public final class Effects {
@@ -65,6 +69,28 @@ public final class Effects {
             final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
             final int d = dur instanceof final Number n ? n.intValue() : 0;
             return new EffectResult(d, 0, 1);
+        };
+    }
+
+    /**
+     * Lets the machine a node is set to supply the numbers, and falls back to {@code otherwise} when
+     * none is selected or the one that is cannot answer. The single place a machine's own arithmetic
+     * enters a chart, so a provider joins it by implementing {@link MachineVariant#run} rather than
+     * by writing a step of its own.
+     *
+     * @param declines recipes the machine must not be asked about, because the recipe itself carries
+     *                 something no machine can report - a parallel count driven by an input item
+     *                 count, say, which a preset would silently replace with the structure's
+     */
+    @Nonnull
+    public static EffectStep machineDriven(final Predicate<RecipeContext> declines, final EffectStep otherwise) {
+        return (current, s, ctx) -> {
+            if (!declines.test(ctx)) {
+                final MachineVariant machine = MachineVariants.selected(ctx, s);
+                final EffectResult driven = machine == null ? null : machine.run(ctx, s, current);
+                if (driven != null) return driven;
+            }
+            return otherwise.apply(current, s, ctx);
         };
     }
 

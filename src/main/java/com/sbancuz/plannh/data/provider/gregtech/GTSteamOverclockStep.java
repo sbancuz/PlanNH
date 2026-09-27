@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.effect.steps;
+package com.sbancuz.plannh.data.provider.gregtech;
 
 import static com.sbancuz.plannh.data.provider.GTProvider.EU_PER_TICK;
 import static com.sbancuz.plannh.data.provider.GTProvider.TOTAL_EU;
