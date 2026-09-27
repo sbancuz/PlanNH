@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.provider.gregtech.probe.StructureWriter;
@@ -80,15 +82,19 @@ class GTStructureCoverageTest {
     @Test
     void theScanActuallyReachedGregTech() {
         assertTrue(
-            multiblockCount() > 100,
-            "only " + multiblockCount() + " multiblocks found; the jar scan is not reaching GregTech");
-    }
-
-    private static int multiblockCount() {
-        return multiblocks().size();
+            multiblocks().size() > 100,
+            () -> "only " + multiblocks().size() + " multiblocks found; the jar scan is not reaching GregTech");
     }
 
     private static List<Class<?>> multiblocks() {
+        if (multiblocks == null) multiblocks = scanMultiblocks();
+        return multiblocks;
+    }
+
+    @Nullable
+    private static List<Class<?>> multiblocks;
+
+    private static List<Class<?>> scanMultiblocks() {
         final List<Class<?>> found = new ArrayList<>();
         final File jar = jar();
         if (jar == null) return found;

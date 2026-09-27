@@ -12,41 +12,21 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * <h2>Read this file skeptically.</h2>
- *
- * Every row here is a number PlanNH asserts about a machine <b>against</b> what that machine reports
- * about itself. The probe in {@code provider.gregtech.probe} asks each GregTech multiblock to compute
- * its own overclock parameters, and for all but a handful of machines it gets an answer that matches
- * the installed GregTech exactly. These are the handful.
+ * The only numbers PlanNH asserts about a machine against what the machine reports about itself, for
+ * the handful the probe cannot read or reads wrongly. Each row states which, and being named here is
+ * what takes the machine off the probe - {@code GTMachineIndex.sourceOf} reads the row instead.
  *
  * <p>
- * A row belongs here only for one of two reasons, and the reason is stated on it:
- *
- * <ol>
- * <li>The probe cannot get an answer at all. The machine has no {@code ProcessingLogic} to read, or it
- * reaches for world state that a probe clone does not have.
- * <li>The probe gets an answer and the answer is wrong. This means the machine derives the value
- * inside {@code checkMachine}, which walks the blocks of a built structure and therefore cannot run.
- * </ol>
- *
- * <p>
- * <b>If a chart looks wrong for one of these machines, suspect this file first.</b> Nothing here is
- * checked against GregTech at runtime. Each row was read by hand from GT5-Unofficial at tag
- * <b>5.09.52.613</b> and will not notice when GregTech changes. That is exactly the failure the probe
- * exists to remove, and these rows are where it could not.
- *
- * <p>
- * Being named here is also what takes a machine off the probe: {@code GTMachineIndex.presetFor} reads
- * the row instead. The probe is still asked, so the disagreement log still covers these machines - one
- * listed here disagreeing is expected and its reason is printed with it, one not listed here
- * disagreeing is news.
+ * Read by hand from GT5-Unofficial at tag <b>5.09.52.613</b>, so nothing here notices a GregTech
+ * change; {@code GTImplementationDigestTest} fails when one of these classes moves. If a chart looks
+ * wrong for one of these machines, suspect this file first.
  */
 public final class GTMachineOverrides {
 
     private GTMachineOverrides() {}
 
-    /** Why a row is here, printed beside any disagreement the probe reports. */
-    private record Override(GTMachinePreset preset, String reason) {}
+    /** A row and why it is here. Handed out whole so a caller reads both from the same walk. */
+    public record Override(GTMachinePreset preset, String reason) {}
 
     private static final Map<String, Override> BY_CLASS = new HashMap<>();
 
@@ -87,13 +67,9 @@ public final class GTMachineOverrides {
                 .settings(GT_COIL));
     }
 
-    /**
-     * A subclass inherits its parent's row, and with it the parent's reason for not being read from
-     * GregTech - so the walk is here rather than at each caller, and the preset and the reason can
-     * never come from different rows.
-     */
+    /** A subclass inherits its parent's row, and with it the parent's reason for not being read. */
     @Nullable
-    private static Override find(@Nonnull final Class<?> mteClass) {
+    public static Override find(@Nonnull final Class<?> mteClass) {
         for (Class<?> c = mteClass; c != null; c = c.getSuperclass()) {
             final Override found = BY_CLASS.get(c.getName());
             if (found != null) return found;

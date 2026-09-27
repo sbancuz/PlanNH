@@ -32,22 +32,18 @@ import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
 
 /**
  * Writes the structure a player would have built into the instance fields the machine reads. The
- * other half of the probe, {@link OverclockInternals}, goes the other way: it reads GregTech's
+ * other half of the probe, {@link ProbeSubject}, goes the other way: it reads GregTech's
  * arithmetic back out once this has posed the question.
  *
  * <p>
- * A machine's own {@code checkMachine} scans the blocks around it and reduces them to a handful of
- * fields - a coil level, a pipe casing tier - which its processing logic then does arithmetic on. The
- * probe cannot run that scan without a world, but it does not need to: the fields are the whole
- * interface between the structure and the arithmetic, so writing them directly asks the machine the
- * same question a built one would answer.
+ * {@code checkMachine} reduces the blocks around a machine to a handful of fields, and those fields
+ * are the whole interface between the structure and the arithmetic - so writing them directly asks
+ * the same question a built machine would answer, without a world to scan.
  *
  * <p>
- * What that costs is a way to recognise the fields. Type is enough for the two that carry a GregTech
- * type of their own, and covers every name GT uses for a coil - {@code coilLevel}, {@code heatLevel},
- * {@code mCoilLevel}, {@code coilHeat}, {@code mHeatingCapacity} - without naming any of them. The
- * rest are plain ints, so they need {@link #BY_NAME}. That list is shared across all machines rather
- * than written per machine, and it holds names, never formulas.
+ * Fields are recognised by type where GregTech gives them one of its own, which covers every name it
+ * uses for a coil; the rest are plain ints and need {@link #BY_NAME}. That list holds names, never
+ * formulas.
  */
 public final class StructureWriter {
 
@@ -166,7 +162,7 @@ public final class StructureWriter {
      * Writes the state onto the machine. A field that refuses the write is skipped rather than
      * abandoning the rest: a machine reading four settings should still answer for the three that took.
      */
-    void apply(@Nonnull final MTEMultiBlockBase machine, @Nonnull final StructureState state) {
+    public void apply(@Nonnull final MTEMultiBlockBase machine, @Nonnull final StructureState state) {
         for (final Write write : writes) {
             try {
                 set(write, machine, state);

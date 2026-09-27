@@ -33,9 +33,7 @@
  *
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
-// The version GTMachinePresets was read against. Main and test have to move together, or the tests
-// would validate the preset table against a GregTech the mod does not compile against.
-def gt5uVersion = "5.09.52.613"
+def gt5uVersion = "5.09.54.187-overclock-read-api+6d6ccb0c5a-dirty"
 
 dependencies {
     api("com.github.GTNewHorizons:NotEnoughItems:2.8.104-GTNH:dev")

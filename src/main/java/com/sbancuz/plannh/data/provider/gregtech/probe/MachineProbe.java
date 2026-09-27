@@ -25,16 +25,13 @@ import gregtech.api.util.GTRecipe;
  * {@link GTMachinePreset}.
  *
  * <p>
- * The point is that the arithmetic stays in GregTech. A machine's parallel count, speed, EU discount,
- * overclock factors and heat behaviour are read off the {@code OverclockCalculator} its own processing
- * logic builds, so a pack running a GregTech that PlanNH was never compiled against still gets that
- * version's numbers instead of a transcription of an older one. Singleblocks need none of this: they
- * publish an {@code OverclockDescriber} and {@code GTPresetApplier} calls it directly.
+ * The arithmetic stays in GregTech: every value is read off the {@code OverclockCalculator} the
+ * machine's own processing logic builds, so a pack gets its own GregTech's numbers. Singleblocks need
+ * none of this - they publish an {@code OverclockDescriber} and {@code GTPresetApplier} calls it.
  *
  * <p>
- * Numbers come back as functions of a {@link StructureState}: {@link StructureWriter} writes the coil
- * and casing tiers a player would have built into the fields the machine reads, so a machine is asked
- * again for every structure rather than answered once.
+ * Numbers come back as functions of a {@link StructureState}, because {@link StructureWriter} writes
+ * a structure in before each read.
  */
 public final class MachineProbe {
 
@@ -51,7 +48,7 @@ public final class MachineProbe {
     /** What {@code OverclockCalculator} starts at, so reading it back means the machine set nothing. */
     private static final int DEFAULT_TIER_SKIPS = 1;
 
-    /** GregTech computes its modifiers in float and the preset table in double, so the last bits differ. */
+    /** GregTech computes its modifiers in float and a hand-written row in double, so the last bits differ. */
     private static final double SAME_NUMBER = 1e-6;
 
     /**
@@ -76,7 +73,6 @@ public final class MachineProbe {
      */
     @Nullable
     public static GTMachinePreset probe(@Nonnull final IMetaTileEntity prototype) {
-        if (OverclockInternals.RESOLVED == null) return null;
         final Class<?> machineClass = prototype.getClass();
         if (UNPROBEABLE.containsKey(machineClass)) return null;
 
@@ -185,9 +181,10 @@ public final class MachineProbe {
     private static final int MAX_DENOMINATOR = 64;
 
     /**
-     * Two significant digits where that is exact, and the fraction where it is not - GregTech writes
-     * these as ratios, so 1/3 says what 0.33 hides. Locale-independent, because the file is read on
-     * whatever machine generated it.
+     * The shortest exact rendering: a whole number, two significant digits, or the fraction GregTech
+     * wrote the ratio as. Anything that fits none of those prints in full rather than rounded - the
+     * cell is what decides whether a hand review still stands, so a value it rounds away is a change
+     * nobody is told about. Locale-independent, because the file is read wherever it was generated.
      */
     @Nonnull
     private static String num(final double value) {
@@ -202,7 +199,8 @@ public final class MachineProbe {
             final double scaled = value * d;
             if (Math.abs(scaled - Math.rint(scaled)) < 1e-9) return (long) Math.rint(scaled) + "/" + d;
         }
-        return rounded.stripTrailingZeros()
+        return BigDecimal.valueOf(value)
+            .stripTrailingZeros()
             .toPlainString();
     }
 

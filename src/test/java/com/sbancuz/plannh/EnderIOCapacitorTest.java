@@ -19,8 +19,7 @@ import crazypants.enderio.power.Capacitors;
 
 /**
  * How long an EnderIO recipe takes is its energy divided by the capacitor's extract rate, and nothing
- * else. PlanNH used to divide by a flat 80 RF/t, which is no capacitor's rate at all, so every
- * duration it reported was wrong by somewhere between a quarter and twenty-four times.
+ * else.
  */
 class EnderIOCapacitorTest {
 
@@ -91,27 +90,10 @@ class EnderIOCapacitorTest {
         assertTrue(totemic < basic, "the strongest capacitor must not be the slowest");
     }
 
-    /**
-     * The rate a node draws is the capacitor's own, not the flat 80 RF/t this replaced - a number that
-     * matched no capacitor EnderIO ships.
-     */
+    /** The rate a node draws is the capacitor's own. */
     @Test
     void thePowerDrawIsTheCapacitorsOwnRate() {
         assertEquals(EnderIOCapacitors.rfPerTick(2), EnderIOProfile.rfPerTick(costing(10_000), atCapacitor(2)));
-    }
-
-    /**
-     * The constant this replaced was 80 RF/t, cited to a class that has no such field. Asserted
-     * against EnderIO rather than against a copy of its numbers, so the day a capacitor really does
-     * run at 80 this says so instead of quietly agreeing with an old mistake.
-     */
-    @Test
-    void noCapacitorEverRanAtTheOldFlatRate() {
-        for (int tier = 0; tier <= EnderIOCapacitors.highestTier(); tier++) {
-            assertTrue(
-                EnderIOCapacitors.rfPerTick(tier) != 80,
-                "tier " + tier + " runs at 80 RF/t after all, so the old constant was not wrong");
-        }
     }
 
     /** A node that has chosen nothing plans at the strongest capacitor, the way a fresh chart does. */

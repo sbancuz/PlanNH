@@ -17,10 +17,7 @@ import com.sbancuz.plannh.data.provider.gregtech.StructureState;
  * every structure row a player sees was decided here.
  *
  * <p>
- * A settings row used to appear because somebody wrote the setting down next to the machine. That put
- * rows on nodes that ignore them - the Ore Washing Plant offers a mode its recipe logic never looks
- * at - and it left the setting off machines nobody got around to. Asking the machine instead means a
- * row appears only when moving it moves a number the chart would show.
+ * A row appears only when moving the setting moves a number the chart would show.
  *
  * <p>
  * Two readings are compared whole, because {@link ProbeReading} is a record. Any difference in

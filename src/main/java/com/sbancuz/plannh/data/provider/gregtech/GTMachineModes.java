@@ -13,26 +13,14 @@ import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
 import gregtech.api.recipe.RecipeMap;
 
 /**
- * How many modes a machine has, and which recipe implies which.
+ * How many modes a machine has, and which recipe implies which. Several multiblocks are two machines
+ * behind one controller; where GregTech makes {@code getRecipeMap()} a function of the mode, the mode
+ * is a function of the recipe, so it is derived rather than asked - picking tower mode for a
+ * distillery recipe would model a machine that cannot run it, and nothing would say so.
  *
  * <p>
- * Several multiblocks are two machines behind one controller, and the mode selects which - the
- * Advanced Distillation Tower is a distillery or a tower, the Ore Washing Plant an ore washer or a
- * simple washer. GregTech expresses that as {@code getRecipeMap()} returning a different map per
- * mode, so for those the mode is a function of the recipe. A node already knows which recipemap its
- * recipe came from, and asking the user on top of that offers one right answer and several wrong
- * ones - picking tower mode for a distillery recipe models a machine that cannot run the recipe at
- * all, and nothing says so. So the mapping is inverted here and the mode is looked up.
- *
- * <p>
- * The count is separate from that, and is needed even when the mapping is ambiguous: it is what
- * bounds the row a machine still has to ask for, and what bounds the sweep the sensitivity scan
- * makes. GregTech stores it nowhere - {@code nextMachineMode} is the authority, and its own javadoc
- * tells a machine author to override it "if you have more than 2 modes" - so it is the length of the
- * cycle that method describes.
- *
- * <p>
- * This reads only public GregTech API, so it works whether or not the machine probe is switched on.
+ * The count is needed even where the mapping is ambiguous, to bound both the row and the sensitivity
+ * sweep. GregTech stores it nowhere, so it is the length of the cycle {@code nextMachineMode} walks.
  */
 public final class GTMachineModes {
 

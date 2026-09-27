@@ -56,8 +56,10 @@ public final class GTMachineIndex {
     /** Appended to a singleblock's name in the picker. Translated, since the name it follows is. */
     private static final String SINGLEBLOCK_SUFFIX = "plannh.machine.singleblock_suffix";
 
-    /** Where {@link MachineEntry#preset} was taken from, recorded so nothing has to work it out again. */
+    /** What drives a machine's overclock, decided once here so nothing has to work it out again. */
     public enum NumberSource {
+        /** GregTech's own OverclockDescriber, which outranks any preset. */
+        DESCRIBER,
         /** The machine's own answer, read off the installed GregTech. */
         PROBE,
         /** A hand-written row that supersedes the probe, because the probe is wrong here. */
@@ -71,15 +73,15 @@ public final class GTMachineIndex {
     /**
      * @param id            {@code MetaTileEntity.getLocalNameKey()} - the value charts persist. Not
      *                      the meta id, which GT reassigns between versions, nor the localized name,
-     *                      which is locale-dependent. Deliberately not getMetaName() either: that is
-     *                      declared on the tile entity, not on the prototypes this walks, so it does
-     *                      not identify them and several machines collided onto one entry.
+     *                      which is locale-dependent. Not getMetaName() either: that is declared on
+     *                      the tile entity, not on the prototypes this walks, so it does not identify
+     *                      them.
      * @param tieredByBuild true for a multiblock, whose energy hatch is a choice; false for a
      *                      singleblock, whose tier is the block a player placed.
      * @param describer     GT's own overclock behaviour for this machine, present on singleblocks and
      *                      a handful of multis. When set it is authoritative and no preset is needed.
      * @param preset        structure-derived parameters for multiblocks; null when uncovered.
-     * @param numberSource  which of the two answers {@code preset} is, for whoever has to review it.
+     * @param numberSource  what drives this machine's overclock, for whoever has to review it.
      * @param modes         how many modes the machine has, and which recipemap selects which.
      */
     public record MachineEntry(String id, String displayName, boolean tieredByBuild, int voltageTier, int amperage,
@@ -141,6 +143,10 @@ public final class GTMachineIndex {
         }
     };
 
+    /**
+     * The index itself. Null until the first ask and replaced wholesale by {@link #reset()}, because
+     * what it mirrors is GregTech's own static registry: one per client, fixed once mods have loaded.
+     */
     @Nullable
     private static Map<String, List<MachineEntry>> byRecipeMap;
     private static Map<String, MachineEntry> byId = Map.of();
@@ -319,8 +325,7 @@ public final class GTMachineIndex {
         final Comparator<MachineEntry> best = Comparator.comparingInt(MachineEntry::catalystPriority)
             .reversed()
             // A machine PlanNH has no numbers for goes last: it can only be modelled generically, so
-            // it is never the better default. Without this it sorted first, because scale() has
-            // nothing to report for it and zero reads as "simplest".
+            // it is never the better default.
             .thenComparing(GTMachineIndex::isUncovered)
             .thenComparing(MachineEntry::tieredByBuild)
             .thenComparingInt(MachineEntry::voltageTier)
@@ -357,11 +362,15 @@ public final class GTMachineIndex {
         final OverclockDescriber describer = mte instanceof final IOverclockDescriptionProvider provider
             ? provider.getOverclockDescriber()
             : null;
-        final GTMachinePreset fromTable = GTMachineOverrides.preset(mte.getClass());
+        final GTMachineOverrides.Override override = GTMachineOverrides.find(mte.getClass());
+        final GTMachinePreset fromTable = override == null ? null : override.preset();
         final GTMachinePreset probed = MachineProbe.probe(mte);
         MachineProbe.reportDisagreement(mte.getClass(), fromTable, probed);
-        final NumberSource numberSource = sourceOf(mte.getClass(), probed, fromTable);
-        final GTMachinePreset preset = numberSource == NumberSource.PROBE ? probed : fromTable;
+        // The preset follows probe-vs-row whether or not a describer exists: a describer machine still
+        // has its recipe override read off the preset.
+        final NumberSource presetSource = sourceOf(override, probed, fromTable);
+        final GTMachinePreset preset = presetSource == NumberSource.PROBE ? probed : fromTable;
+        final NumberSource numberSource = describer != null ? NumberSource.DESCRIBER : presetSource;
         if (preset == null && describer == null && tieredByBuild) {
             uncovered.add(mte.getClass().getName());
         }
@@ -378,8 +387,7 @@ public final class GTMachineIndex {
             numberSource,
             GTMachineModes.of(mte));
 
-        // Two machines sharing an id would silently render as one another in the picker, which is
-        // exactly what getMetaName() did here.
+        // Two machines sharing an id would silently render as one another in the picker.
         final MachineEntry clash = ids.putIfAbsent(entry.id(), entry);
         if (clash != null && clash != entry) {
             PlanNH.LOG.warn("PlanNH: GT machines {} and {} share the id {}", clash.displayName(), entry.displayName(),
@@ -392,14 +400,13 @@ public final class GTMachineIndex {
     }
 
     /**
-     * Which numbers a chart reads, and the only place that is decided. GregTech's own answer wins
-     * wherever it can be read, so a pack running a GregTech PlanNH was never compiled against gets that
-     * version's numbers - except for the machines {@link GTMachineOverrides} names, where the answer
-     * has been shown to be wrong and a hand-written row stands in.
+     * Which preset a chart reads. GregTech's own answer wins wherever it can be read, so a pack running
+     * a GregTech PlanNH was never compiled against gets that version's numbers - except for the machines
+     * {@link GTMachineOverrides} names, where it has been shown to be wrong and a row stands in.
      */
-    private static NumberSource sourceOf(final Class<?> machineClass, @Nullable final GTMachinePreset probed,
-        @Nullable final GTMachinePreset fromTable) {
-        if (GTMachineOverrides.reason(machineClass) != null) return NumberSource.OVERRIDE;
+    private static NumberSource sourceOf(@Nullable final GTMachineOverrides.Override override,
+        @Nullable final GTMachinePreset probed, @Nullable final GTMachinePreset fromTable) {
+        if (override != null) return NumberSource.OVERRIDE;
         if (probed != null) return NumberSource.PROBE;
         return fromTable != null ? NumberSource.HAND_WRITTEN_FALLBACK : NumberSource.NONE;
     }

@@ -154,7 +154,7 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
 
     /**
      * Settings.VOLTAGE's option list is GTValues.VN, so the tier table is GT's to define. The
-     * closed form 8*4^tier that this used to compute is wrong at the top end: V[14] is
+     * closed form 8*4^tier is wrong at the top end: V[14] is
      * Integer.MAX_VALUE - 7, not 2147483648.
      */
     public static long tierNameToVoltage(@Nullable final String name) {

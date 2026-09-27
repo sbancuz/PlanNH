@@ -18,17 +18,13 @@ import gregtech.api.enums.ItemList;
  * carry their own parameter tables.
  *
  * <p>
- * Everything GregTech exposes is read from GregTech, so a pack running a different GT version gets
- * that version's numbers rather than the ones a PlanNH release was written against. The rest is
- * declared here because GT keeps it in instance methods on registered blocks or in private
- * registries filled at mod init, neither of which a class can read.
+ * Everything GregTech exposes is read from GregTech; the rest is declared here because GT keeps it in
+ * instance methods on registered blocks or in private registries filled at mod init.
  *
  * <p>
- * Addon classes are named by string for the same reason {@link GTMachineOverrides} keys are: an addon
- * that is not installed then costs nothing instead of throwing NoClassDefFoundError. A table that
- * cannot be read comes back null and drops its machine out of the preset table, which surfaces as
- * the uncovered-multiblock warning - louder than quietly reporting numbers from a version nobody is
- * running.
+ * Addon classes are named by string, so an addon that is not installed costs nothing instead of
+ * throwing NoClassDefFoundError. A table that cannot be read comes back null and drops its machine,
+ * surfacing as the uncovered-multiblock warning rather than as numbers from a version nobody runs.
  */
 public final class GTStructureTiers {
 
@@ -170,7 +166,7 @@ public final class GTStructureTiers {
         final double[] parallel = enumField(owner, "parallelLimit");
         final double[] ocSpeed = enumField(owner, "OCSpeedFactor");
         final double[] ocEut = enumField(owner, "OCPowerFactor");
-        final double[] eu = enumField(owner, "amperagePerParallel");
+        final double[] eu = enumField(owner, "euModifier");
         if (speed == null || parallel == null || ocSpeed == null || ocEut == null || eu == null) return null;
         // GT stores how many times faster the electrode is; the preset wants a duration multiplier.
         final double[] durations = new double[speed.length];

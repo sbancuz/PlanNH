@@ -12,7 +12,7 @@ import gregtech.api.enums.HeatingCoilLevel;
 
 /**
  * The electrode and sawblade tables are read out of GregTech's own enums by field name, so a rename
- * upstream turns them null and silently drops two machines from the preset table. These tests make
+ * upstream turns them null and silently drops two machines from the overrides. These tests make
  * that loud, and check the shape of what was read: a field name that still resolves but now means
  * something else would otherwise be indistinguishable from a correct read.
  */

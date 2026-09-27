@@ -5,6 +5,7 @@ import static org.lwjgl.opengl.GL11.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntConsumer;
 
@@ -35,6 +36,9 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.machine.MachineVariant;
+import com.sbancuz.plannh.data.machine.MachineVariants;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NodeLookupContext;
@@ -736,19 +740,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
     /** The machine name when the node has one to offer, otherwise the recipe's own name. */
     private String titleText() {
-        final SettingDef<?> def = node.machineConfig.getProfile()
-            .setting(Settings.MACHINE.key());
-        if (def == null) return recipeName;
-        final List<String> options = def.options(recipeContext());
-        if (options.isEmpty()) return recipeName;
-        final String stored = node.machineConfig.getString(def.key);
-        return def.display(options.contains(stored) ? stored : def.defaultOption(recipeContext()));
+        final MachineVariant machine = MachineVariants.selected(recipeContext(), node.machineConfig.settings);
+        return machine == null ? recipeName : machine.label();
     }
 
     private boolean hasMachineChoice() {
-        final SettingDef<?> def = node.machineConfig.getProfile()
-            .setting(Settings.MACHINE.key());
-        return def != null && def.options(recipeContext())
+        return MachineVariants.candidates(recipeContext())
             .size() > 1;
     }
 
@@ -763,14 +760,34 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final List<String> options = def.options(recipeContext());
         if (options.isEmpty()) return "";
         final String stored = node.machineConfig.getString(def.key);
-        return options.contains(stored) ? stored : def.defaultOption(recipeContext());
+        return options.contains(stored) ? stored : def.defaultOption(recipeContext(), options);
     }
+
+    /**
+     * Held against the identity of the map it wraps. Sizing and drawing one node asks for this a dozen
+     * times a frame, and a fresh wrapper each time is an allocation per ask.
+     */
+    @Nullable
+    private Map<RecipeProperty<?>, Object> contextProperties;
+    @Nullable
+    private RecipeContext context;
 
     private RecipeContext recipeContext() {
-        return new RecipeContext(node.properties);
+        if (node.properties != contextProperties) {
+            contextProperties = node.properties;
+            context = new RecipeContext(node.properties);
+        }
+        return context;
     }
 
-    /** The rows this node renders; a setting the profile hides must not badge or size the panel. */
+    /**
+     * The rows this node renders; a setting the profile hides must not badge or size the panel.
+     *
+     * <p>
+     * FIXME sizing and drawing one node ask for this six times a frame, and each ask runs every
+     * visibility predicate the profile has. Memoizing it needs an invalidation signal this widget does
+     * not have: the settings map is edited through several paths, not all of which bump the graph.
+     */
     private List<SettingDef<?>> visibleSettings() {
         final MachineConfig c = node.machineConfig;
         return c.getProfile()
@@ -816,9 +833,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
         // Advanced is drawn last, below the targets: it is a mode switch for the whole panel rather
         // than another machine setting, and reading it among them invites it being read as one.
+        // Guarded like every other GTSettings reference here: touching that class classloads GregTech,
+        // which a pack need not have.
+        final String advancedKey = Compat.GREGTECH.isLoaded ? GTSettings.ADVANCED : null;
         SettingDef<?> advanced = null;
         for (final SettingDef<?> def : visibleSettings()) {
-            if (GTSettings.ADVANCED.equals(def.key)) {
+            if (def.key.equals(advancedKey)) {
                 advanced = def;
                 continue;
             }

@@ -79,7 +79,9 @@ class GTOverrideTest {
             .buildFromPreset(preset(), state(), GTValues.V[6], 1024, GTValues.V[5], 1, 0);
         GTPresetApplier.applyOverrides(noSkips, Map.of(Settings.MAX_TIER_SKIPS.key(), 0));
 
-        assertTrue(!noSkips.getAllowedTierSkip(), "a stored 0 must mean no skipping, not 'unset'");
+        assertTrue(
+            noSkips.getRecipeEUt() > noSkips.getMaxAllowedRecipeEUt(),
+            "a stored 0 must mean no skipping, not 'unset'");
     }
 
     /** A stored discount equal to the nominal default is still a choice and must be applied. */

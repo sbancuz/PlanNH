@@ -262,8 +262,7 @@ public class SettingDef<T> {
 
     /**
      * What the row shows and the maths uses: the stored override, or the machine's own value.
-     * Presence is the whole test - a stored zero is a deliberate zero, which is exactly what the
-     * sentinel this replaced could not say.
+     * Presence is the whole test: a stored zero is a deliberate zero.
      */
     public int effectiveInt(final RecipeContext ctx, final Map<String, Object> settings) {
         if (settings.containsKey(key) || autoValueFn == null) return MachineProfile.getInt(settings, key, 0);
@@ -303,7 +302,12 @@ public class SettingDef<T> {
      */
     @Nonnull
     public String defaultOption(final RecipeContext ctx) {
-        final List<String> choices = options(ctx);
+        return defaultOption(ctx, options(ctx));
+    }
+
+    /** For a caller that already built the list; {@code options} rebuilds it on every call. */
+    @Nonnull
+    public String defaultOption(final RecipeContext ctx, final List<String> choices) {
         if (defaultFn != null) {
             final String preferred = defaultFn.apply(ctx);
             if (choices.contains(preferred)) return preferred;

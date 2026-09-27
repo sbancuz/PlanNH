@@ -1,10 +1,8 @@
 package com.sbancuz.plannh.data.provider.gregtech.probe;
 
-import java.lang.reflect.Method;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -45,7 +43,6 @@ final class ProbeSubject {
 
     private final MTEMultiBlockBase machine;
     private final ProcessingLogic logic;
-    private final Method createCalculator;
     private final StructureWriter structure;
     private final Map<StructureState, ProbeReading> readings = new HashMap<>();
 
@@ -53,10 +50,9 @@ final class ProbeSubject {
     @Nullable
     private GTRecipe cachedFor;
 
-    private ProbeSubject(final MTEMultiBlockBase machine, final ProcessingLogic logic, final Method createCalculator) {
+    private ProbeSubject(final MTEMultiBlockBase machine, final ProcessingLogic logic) {
         this.machine = machine;
         this.logic = logic;
-        this.createCalculator = createCalculator;
         this.structure = StructureWriter.forClass(machine.getClass());
     }
 
@@ -78,15 +74,14 @@ final class ProbeSubject {
     /** Null for anything without processing logic to read: singleblocks, and the machines that hand-roll checkProcessing. */
     @Nullable
     static ProbeSubject of(@Nonnull final IMetaTileEntity prototype) {
-        final OverclockInternals fields = OverclockInternals.RESOLVED;
-        if (fields == null || !(prototype instanceof MTEMultiBlockBase)) return null;
+        if (!(prototype instanceof MTEMultiBlockBase)) return null;
         try {
             final IMetaTileEntity clone = prototype.newMetaEntity(null);
             if (!(clone instanceof final MTEMultiBlockBase multi)) return null;
-            final Object logic = fields.machineLogic.get(multi);
-            if (!(logic instanceof final ProcessingLogic processing)) return null;
-            return new ProbeSubject(multi, processing, OverclockInternals.overclockCalculatorOf(processing));
-        } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
+            final ProcessingLogic logic = multi.getProcessingLogic();
+            if (logic == null) return null;
+            return new ProbeSubject(multi, logic);
+        } catch (final RuntimeException | LinkageError e) {
             PlanNH.LOG.debug("PlanNH: cannot clone {} for probing", prototype.getClass(), e);
             return null;
         }
@@ -117,8 +112,6 @@ final class ProbeSubject {
 
     @Nullable
     private ProbeReading measure(final StructureState state, final GTRecipe recipe) {
-        final OverclockInternals fields = OverclockInternals.RESOLVED;
-        if (fields == null) return null;
         try {
             structure.apply(machine, state);
             // Voltage is not a field the machine holds; it counts it off its energy hatches, so a
@@ -127,45 +120,28 @@ final class ProbeSubject {
                 PlanNH.LOG.debug("PlanNH: {} would not take a probe energy hatch", machine.getClass());
                 return null;
             }
-            fields.setupProcessingLogic.invoke(machine, logic);
-            resolveSuppliers(fields);
-            final OverclockCalculator calculator = (OverclockCalculator) createCalculator.invoke(logic, recipe);
+            final OverclockCalculator calculator = machine.createOverclockCalculatorForInspection(recipe);
+            if (calculator == null) return null;
             return new ProbeReading(
-                fields.maxParallel.getInt(logic),
-                fields.calcDurationModifier.getDouble(calculator),
-                fields.calcEutModifier.getDouble(calculator),
-                fields.calcEutIncreasePerOC.getDouble(calculator),
-                fields.calcDurationDecreasePerOC.getDouble(calculator),
-                fields.calcMaxTierSkip.getInt(calculator),
-                fields.calcHeatOC.getBoolean(calculator),
-                fields.calcHeatDiscount.getBoolean(calculator),
-                fields.calcMachineHeat.getInt(calculator),
-                fields.calcRecipeHeat.getInt(calculator),
-                fields.calcRecipeEUt.getLong(calculator),
-                fields.calcDuration.getInt(calculator),
-                fields.calcNoOverclock.getBoolean(calculator),
-                fields.calcLaserOC.getBoolean(calculator));
-        } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
+                logic.getResolvedMaxParallel(),
+                calculator.getDurationModifier(),
+                calculator.getEUtDiscount(),
+                calculator.getEUtIncreasePerOC(),
+                calculator.getDurationDecreasePerOC(),
+                calculator.getMaxTierSkips(),
+                calculator.isHeatOC(),
+                calculator.isHeatDiscount(),
+                calculator.getMachineHeat(),
+                calculator.getRecipeHeat(),
+                calculator.getRecipeEUt(),
+                calculator.getRecipeDuration(),
+                calculator.isNoOverclock(),
+                calculator.isLaserOC());
+        } catch (final RuntimeException | LinkageError e) {
             // Some machines reach for world state from setupProcessingLogic - the Circuit Assembly
             // Line dereferences its imprint - and a world-less clone has none.
             PlanNH.LOG.debug("PlanNH: {} declined to be probed", machine.getClass(), e);
             return null;
         }
-    }
-
-    /**
-     * ProcessingLogic resolves its three suppliers in {@code process()}, which needs inventories, so
-     * the probe does that step itself. Without it every machine that scales with its structure reads
-     * as whatever the constructor happened to set.
-     */
-    private void resolveSuppliers(final OverclockInternals fields) throws ReflectiveOperationException {
-        final Object parallel = fields.maxParallelSupplier.get(logic);
-        if (parallel != null) fields.maxParallel.setInt(logic, (Integer) ((Supplier<?>) parallel).get());
-
-        final Object eu = fields.euModSupplier.get(logic);
-        if (eu != null) fields.euModifier.setDouble(logic, (Double) ((Supplier<?>) eu).get());
-
-        final Object speed = fields.speedBoostSupplier.get(logic);
-        if (speed != null) fields.speedBoost.setDouble(logic, (Double) ((Supplier<?>) speed).get());
     }
 }
