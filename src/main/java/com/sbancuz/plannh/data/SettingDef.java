@@ -38,6 +38,9 @@ public class SettingDef<T> {
     private final BiPredicate<RecipeContext, Map<String, Object>> visibility;
     @Nullable
     private final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn;
+    /** A floor the machine sets, for rows whose range belongs to the selected machine. */
+    @Nullable
+    private final ToIntBiFunction<RecipeContext, Map<String, Object>> minFn;
     /** A ceiling the machine sets, for rows whose maximum is not also their automatic value. */
     @Nullable
     private final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn;
@@ -50,16 +53,17 @@ public class SettingDef<T> {
     private final Integer neutral;
 
     @Builder(toBuilder = true, access = AccessLevel.PRIVATE)
-    private SettingDef(final String key, final Class<T> type, final T defaultValue, final int minInt, final int maxInt,
-        @Nullable final Function<RecipeContext, List<String>> optionsFn,
+    private SettingDef(final String key, @Nullable final String label, final Class<T> type, final T defaultValue,
+        final int minInt, final int maxInt, @Nullable final Function<RecipeContext, List<String>> optionsFn,
         @Nullable final Function<RecipeContext, String> defaultFn, @Nullable final UnaryOperator<String> displayFn,
         @Nullable final BiFunction<T, MachineConfig, String> badgeFn,
         @Nullable final BiPredicate<RecipeContext, Map<String, Object>> visibility,
         @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
+        @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> minFn,
         @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn, @Nullable final Integer neutral) {
         this.neutral = neutral;
         this.key = key;
-        this.label = StatCollector.translateToLocal("plannh.settings." + key);
+        this.label = label != null ? label : StatCollector.translateToLocal("plannh.settings." + key);
         this.type = type;
         this.defaultValue = defaultValue;
         this.minInt = minInt;
@@ -70,6 +74,7 @@ public class SettingDef<T> {
         this.badgeFn = badgeFn;
         this.visibility = visibility == null ? ALWAYS : visibility;
         this.autoValueFn = autoValueFn;
+        this.minFn = minFn;
         this.maxFn = maxFn;
     }
 
@@ -262,8 +267,7 @@ public class SettingDef<T> {
 
     /**
      * What the row shows and the maths uses: the stored override, or the machine's own value.
-     * Presence is the whole test - a stored zero is a deliberate zero, which is exactly what the
-     * sentinel this replaced could not say.
+     * Presence is the whole test: a stored zero is a deliberate zero.
      */
     public int effectiveInt(final RecipeContext ctx, final Map<String, Object> settings) {
         if (settings.containsKey(key) || autoValueFn == null) return MachineProfile.getInt(settings, key, 0);
@@ -282,7 +286,11 @@ public class SettingDef<T> {
      * be one.
      */
     public int effectiveMax(final RecipeContext ctx, final Map<String, Object> settings) {
-        return maxFn == null ? maxInt : Math.max(minInt, maxFn.applyAsInt(ctx, settings));
+        return maxFn == null ? maxInt : Math.max(effectiveMin(ctx, settings), maxFn.applyAsInt(ctx, settings));
+    }
+
+    public int effectiveMin(final RecipeContext ctx, final Map<String, Object> settings) {
+        return minFn == null ? minInt : minFn.applyAsInt(ctx, settings);
     }
 
     public boolean hasOptions() {
@@ -303,7 +311,12 @@ public class SettingDef<T> {
      */
     @Nonnull
     public String defaultOption(final RecipeContext ctx) {
-        final List<String> choices = options(ctx);
+        return defaultOption(ctx, options(ctx));
+    }
+
+    /** For a caller that already built the list; {@code options} rebuilds it on every call. */
+    @Nonnull
+    public String defaultOption(final RecipeContext ctx, final List<String> choices) {
         if (defaultFn != null) {
             final String preferred = defaultFn.apply(ctx);
             if (choices.contains(preferred)) return preferred;
@@ -347,6 +360,20 @@ public class SettingDef<T> {
     @Nonnull
     public SettingDef<T> withDefault(final Function<RecipeContext, String> defaultOption) {
         return toBuilder().defaultFn(defaultOption)
+            .build();
+    }
+
+    /**
+     * A copy named and bounded by something other than PlanNH: a GregTech structure row takes both from
+     * the machine that declares it.
+     */
+    @Nonnull
+    public SettingDef<T> withLabelAndRange(final String newLabel,
+        final ToIntBiFunction<RecipeContext, Map<String, Object>> newMinFn,
+        final ToIntBiFunction<RecipeContext, Map<String, Object>> newMaxFn) {
+        return toBuilder().label(newLabel)
+            .minFn(newMinFn)
+            .maxFn(newMaxFn)
             .build();
     }
 

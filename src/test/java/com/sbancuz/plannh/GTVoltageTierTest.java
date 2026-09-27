@@ -31,14 +31,10 @@ class GTVoltageTierTest {
         }
     }
 
-    /**
-     * The old closed form 8*4^tier agreed with GTValues everywhere except the top tier, where GT
-     * caps at Integer.MAX_VALUE - 7 rather than 2147483648.
-     */
+    /** MAX is capped rather than following the tier progression, so it has to come from GTValues. */
     @Test
-    void maxTierIsGTsCappedValueNotTheClosedForm() {
+    void maxTierIsGTsCappedValue() {
         assertEquals(Integer.MAX_VALUE - 7, GTOverclockStep.tierNameToVoltage("MAX"));
-        assertEquals(2147483648L, 8L * (long) Math.pow(4, 14), "the closed form this replaced");
     }
 
     @ParameterizedTest

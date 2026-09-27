@@ -82,7 +82,7 @@ class GTSettingsLangTest {
 
     @Test
     void theKeysAreActuallyBeingFound() throws Exception {
-        assertTrue(declaredSettingKeys().size() >= 10, "reflection found no setting keys, so the test proves nothing");
+        assertTrue(declaredSettingKeys().size() >= 5, "reflection found no setting keys, so the test proves nothing");
         assertTrue(langKeys().contains("plannh.settings.machines"), "lang file parsed but looks wrong");
     }
 }

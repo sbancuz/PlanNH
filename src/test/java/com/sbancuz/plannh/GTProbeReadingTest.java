@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.EnumSet;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +24,7 @@ import com.sbancuz.plannh.data.provider.gregtech.probe.ProbeReading;
  */
 class GTProbeReadingTest {
 
-    private static final StructureState ANY = new StructureState(1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    private static final StructureState ANY = StructureState.of(1, 0);
 
     private static final EnumSet<Settings> NO_SETTINGS = EnumSet.noneOf(Settings.class);
 
@@ -48,7 +49,7 @@ class GTProbeReadingTest {
 
     @Test
     void aPassthroughReadingClaimsNoHeatAndNoRecipeOverride() {
-        final GTMachinePreset preset = MachineProbe.toPreset(passthrough(), s -> passthrough(), NO_SETTINGS);
+        final GTMachinePreset preset = MachineProbe.toPreset(passthrough(), s -> passthrough(), NO_SETTINGS, Map.of());
 
         assertFalse(preset.usesHeat());
         assertEquals(GTMachinePreset.RECIPE_HEAT_FROM_RECIPE, preset.recipeHeatOverride());
@@ -76,7 +77,7 @@ class GTProbeReadingTest {
             MachineProbe.SENTINEL_DURATION,
             false,
             false);
-        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS);
+        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS, Map.of());
 
         assertEquals(
             48,
@@ -114,7 +115,7 @@ class GTProbeReadingTest {
             MachineProbe.SENTINEL_DURATION,
             false,
             false);
-        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS);
+        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS, Map.of());
 
         assertTrue(preset.heatOC());
         assertTrue(preset.usesHeat());
@@ -144,7 +145,7 @@ class GTProbeReadingTest {
             MachineProbe.SENTINEL_DURATION,
             false,
             false);
-        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS);
+        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS, Map.of());
 
         assertFalse(preset.heatOC());
         assertTrue(preset.usesHeat());
@@ -175,7 +176,7 @@ class GTProbeReadingTest {
 
         assertEquals(
             0,
-            MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS)
+            MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS, Map.of())
                 .maxTierSkips());
     }
 
@@ -196,7 +197,7 @@ class GTProbeReadingTest {
             MachineProbe.SENTINEL_DURATION,
             false,
             false);
-        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS);
+        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS, Map.of());
 
         assertTrue(preset.unlimitedTierSkips());
         assertNotEquals(Integer.MAX_VALUE, preset.maxTierSkips());
@@ -219,7 +220,7 @@ class GTProbeReadingTest {
             128,
             false,
             false);
-        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS);
+        final GTMachinePreset preset = MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS, Map.of());
 
         assertEquals(new GTMachinePreset.RecipeOverride(4, 128), preset.recipeOverride());
     }
@@ -245,7 +246,7 @@ class GTProbeReadingTest {
 
         assertEquals(
             1,
-            MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS)
+            MachineProbe.toPreset(reading, s -> reading, NO_SETTINGS, Map.of())
                 .maxParallel()
                 .applyAsInt(ANY));
     }

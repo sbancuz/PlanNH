@@ -17,9 +17,8 @@ import com.sbancuz.plannh.data.Settings;
  * Which machines can run a node's recipe, across whichever mods are installed.
  *
  * <p>
- * PlanNH used to answer this twice. A node cycles between the providers that claim its recipe, and
- * GregTech had a picker of its own for the machines inside one provider - two controls, two things to
- * persist, one question. This is the half that generalizes: a mod says which machines it offers for a
+ * One control, one thing to persist: a node cycles between the machines that claim its recipe,
+ * whichever provider they came from. This is the half that generalizes: a mod says which machines it offers for a
  * recipe, and gets the picker row, the per-machine settings rows and the persistence without writing
  * any of them.
  *

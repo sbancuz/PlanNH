@@ -15,6 +15,7 @@ import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.enums.HeatingCoilLevel;
+import gregtech.api.util.tooltip.TooltipTier;
 
 /**
  * The coil row stores a HeatingCoilLevel name but the preset formulas take GT's coil <em>tier</em>,
@@ -49,7 +50,7 @@ class GTStructureSettingsTest {
         assertEquals(
             2,
             GTSettings.resolve(EMPTY, settings, 5)
-                .coilTier());
+                .tier(TooltipTier.COIL, -2));
         assertEquals(3601, HeatingCoilLevel.HV.getHeat());
     }
 
@@ -58,11 +59,10 @@ class GTStructureSettingsTest {
     void unsetSettingsDefaultToTheBestStructure() {
         final StructureState state = GTSettings.resolve(EMPTY, Map.of(), 5);
 
-        assertEquals(GTStructureTiers.MAX_COIL_TIER, state.coilTier());
-        assertEquals(GTStructureTiers.MAX_SOLENOID_TIER, state.solenoidTier());
-        assertEquals(GTStructureTiers.MAX_ITEM_PIPE_TIER, state.itemPipeTier());
-        assertEquals(GTStructureTiers.MAX_PIPE_CASING_TIER, state.pipeCasingTier());
-        assertEquals(GTStructureTiers.MAX_WIDTH, state.width());
+        assertEquals(GTStructureTiers.MAX_COIL_TIER, state.tier(TooltipTier.COIL, -2));
+        assertEquals(GTStructureTiers.MAX_PIPE_CASING_TIER, state.tier(TooltipTier.PIPE_CASING, -2));
+        // Anything else is left out, which the probe reads as the machine's own maximum.
+        assertEquals(-2, state.tier(TooltipTier.SOLENOID, -2));
         assertEquals(5, state.voltageTier());
     }
 
@@ -101,7 +101,7 @@ class GTStructureSettingsTest {
     void anUnknownCoilNameDoesNotMasqueradeAsTierZero() {
         final StructureState state = GTSettings.resolve(EMPTY, Map.of(GTSettings.COIL, "NOT_A_COIL"), 5);
 
-        assertNotEquals(0, state.coilTier());
-        assertEquals(-1, state.coilTier());
+        assertNotEquals(0, state.tier(TooltipTier.COIL, -2));
+        assertEquals(-1, state.tier(TooltipTier.COIL, -2));
     }
 }

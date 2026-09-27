@@ -1,6 +1,9 @@
 package com.sbancuz.plannh.data.provider.gregtech;
 
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.function.ToDoubleFunction;
 import java.util.function.ToIntFunction;
 
@@ -8,6 +11,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.data.Settings;
+
+import gregtech.api.util.tooltip.TooltipTier;
 
 /**
  * What one GregTech machine does to a recipe, in the terms
@@ -26,7 +31,8 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
     ToDoubleFunction<StructureState> euModifier, ToIntFunction<StructureState> maxParallel,
     ToDoubleFunction<StructureState> eutIncreasePerOC, ToDoubleFunction<StructureState> durationDecreasePerOC,
     ToIntFunction<StructureState> machineHeat, boolean heatOC, boolean heatDiscount, int recipeHeatOverride,
-    int maxTierSkips, boolean unlimitedTierSkips, @Nullable RecipeOverride recipeOverride, EnumSet<Settings> settings) {
+    int maxTierSkips, boolean unlimitedTierSkips, @Nullable RecipeOverride recipeOverride, EnumSet<Settings> settings,
+    Map<TooltipTier, GTSettings.TierRange> structure) {
 
     /** A machine that ignores the recipe's own cost, like the Multi Smelter's fixed 4 EU/t over 128t. */
     public record RecipeOverride(int eut, int duration) {}
@@ -61,6 +67,7 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
         @Nullable
         private RecipeOverride recipeOverride;
         private final EnumSet<Settings> settings = EnumSet.noneOf(Settings.class);
+        private final EnumMap<TooltipTier, GTSettings.TierRange> structure = new EnumMap<>(TooltipTier.class);
 
         private Builder() {}
 
@@ -166,6 +173,12 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
             return this;
         }
 
+        /** A structure parameter the machine reads, over the range its structure allows. */
+        public Builder structure(final TooltipTier kind, final int min, final int max) {
+            structure.put(kind, new GTSettings.TierRange(min, max));
+            return this;
+        }
+
         @Nonnull
         public GTMachinePreset build() {
             return new GTMachinePreset(
@@ -181,7 +194,8 @@ public record GTMachinePreset(ToDoubleFunction<StructureState> durationModifier,
                 maxTierSkips,
                 unlimitedTierSkips,
                 recipeOverride,
-                EnumSet.copyOf(settings));
+                EnumSet.copyOf(settings),
+                Collections.unmodifiableMap(new EnumMap<>(structure)));
         }
     }
 }

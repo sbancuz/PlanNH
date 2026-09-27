@@ -7,18 +7,18 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
 import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
-import gregtech.api.enums.HeatingCoilLevel;
+import gregtech.api.util.tooltip.TooltipTier;
 
 /**
  * The override rows are hand-copied from one pinned GT version, so they cannot be checked by
@@ -28,7 +28,7 @@ import gregtech.api.enums.HeatingCoilLevel;
 class GTMachinePresetTest {
 
     private static StructureState state(final int voltageTier, final int coilTier) {
-        return new StructureState(voltageTier, coilTier, 4, 4, 2, 0, 0, 1, 0, 0);
+        return new StructureState(voltageTier, 0, Map.of(TooltipTier.COIL, coilTier));
     }
 
     static List<String> presetKeys() {
@@ -54,48 +54,18 @@ class GTMachinePresetTest {
 
     @Test
     void lookupWalksSuperclasses() throws ClassNotFoundException {
-        final Class<?> ebf = Class.forName(
-            "gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace",
-            false,
-            getClass().getClassLoader());
+        final Class<?> furnace = Class
+            .forName("gregtech.common.tileentities.machines.multi.MTEMultiFurnace", false, getClass().getClassLoader());
 
-        assertNotNull(GTMachineOverrides.preset(ebf));
-        assertTrue(
-            GTMachineOverrides.preset(ebf)
-                .usesHeat());
+        assertNotNull(GTMachineOverrides.preset(furnace));
+        assertNotNull(
+            GTMachineOverrides.preset(furnace)
+                .recipeOverride());
     }
 
     @Test
     void anUnknownMachineHasNoPreset() {
         assertEquals(null, GTMachineOverrides.preset(String.class));
-    }
-
-    /**
-     * The EBF's machine heat is the coil plus 100K per voltage tier above MV. Getting the
-     * HeatingCoilLevel tier offset wrong (getTier() is ordinal - 2) silently shifts every heat
-     * overclock by two coil steps.
-     */
-    @Test
-    void blastFurnaceHeatMatchesCoilPlusVoltageBonus() throws ClassNotFoundException {
-        final GTMachinePreset ebf = GTMachineOverrides.preset(
-            Class.forName(
-                "gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace",
-                false,
-                getClass().getClassLoader()));
-
-        // Cupronickel is tier 0 and 1801K; at MV (tier 2) the voltage bonus is exactly zero.
-        assertEquals(
-            1801,
-            HeatingCoilLevel.getFromTier((byte) 0)
-                .getHeat());
-        assertEquals(
-            1801,
-            ebf.machineHeat()
-                .applyAsInt(state(2, 0)));
-        assertEquals(
-            1801 + 300,
-            ebf.machineHeat()
-                .applyAsInt(state(5, 0)));
     }
 
     /** More coil is never worse: faster or equal, and never more EU per tick. */
@@ -105,8 +75,8 @@ class GTMachinePresetTest {
         final GTMachinePreset preset = GTMachineOverrides
             .preset(Class.forName(className, false, getClass().getClassLoader()));
         assertNotNull(preset);
-        if (!preset.settings()
-            .contains(Settings.GT_COIL)) return;
+        if (!preset.structure()
+            .containsKey(TooltipTier.COIL)) return;
 
         for (int coil = 0; coil < GTStructureTiers.MAX_COIL_TIER; coil++) {
             final StructureState low = state(5, coil);

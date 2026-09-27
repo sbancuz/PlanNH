@@ -4,17 +4,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
 import com.sbancuz.plannh.data.provider.gregtech.GTPresetApplier;
+import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.enums.GTValues;
-import gregtech.api.enums.HeatingCoilLevel;
-import gregtech.api.util.GTUtility;
 import gregtech.api.util.OverclockCalculator;
+import gregtech.api.util.tooltip.TooltipTier;
 
 /**
  * Checks that a preset configures {@link OverclockCalculator} the way a hand-written GregTech call
@@ -24,7 +26,6 @@ import gregtech.api.util.OverclockCalculator;
  */
 class GTPresetApplierTest {
 
-    private static final String EBF = "gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace";
     private static final String MULTI_SMELTER = "gregtech.common.tileentities.machines.multi.MTEMultiFurnace";
 
     private static GTMachinePreset preset(final String className) throws ClassNotFoundException {
@@ -34,8 +35,17 @@ class GTPresetApplierTest {
         return found;
     }
 
+    /** The EBF's arithmetic, which GregTech now hands the probe: coil heat plus 100K per tier over MV. */
+    private static GTMachinePreset ebfShaped() {
+        return GTMachinePreset.builder()
+            .heatOC(s -> GTStructureTiers.coilHeat(s.tier(TooltipTier.COIL, 0)) + 100 * (s.voltageTier() - 2))
+            .heatDiscount()
+            .structure(TooltipTier.COIL, 0, GTStructureTiers.MAX_COIL_TIER)
+            .build();
+    }
+
     private static StructureState state(final int voltageTier, final int coilTier) {
-        return new StructureState(voltageTier, coilTier, 4, 4, 2, 0, 0, 1, 0, 0);
+        return new StructureState(voltageTier, 0, Map.of(TooltipTier.COIL, coilTier));
     }
 
     /**
@@ -47,8 +57,10 @@ class GTPresetApplierTest {
         final int coilTier = 8;
         final int voltageTier = 5;
         final int recipeHeat = 1800;
-        final int machineHeat = (int) HeatingCoilLevel.getFromTier((byte) coilTier)
-            .getHeat() + 100 * (voltageTier - 2);
+        // Read off the preset, not recomputed here: a copy of the formula would move with it and the
+        // comparison below would hold however wrong the row was. What is under test is the wiring.
+        final int machineHeat = ebfShaped().machineHeat()
+            .applyAsInt(state(voltageTier, coilTier));
 
         final OverclockCalculator expected = new OverclockCalculator().setRecipeEUt(GTValues.VP[1])
             .setEUt(GTValues.V[voltageTier])
@@ -64,7 +76,7 @@ class GTPresetApplierTest {
 
         final OverclockCalculator actual = GTPresetApplier
             .buildFromPreset(
-                preset(EBF),
+                ebfShaped(),
                 state(voltageTier, coilTier),
                 GTValues.VP[1],
                 1024,
@@ -80,18 +92,24 @@ class GTPresetApplierTest {
         assertTrue(actual.getDuration() < 1024, "heat overclocks should have applied at all");
     }
 
-    /** The heat discount is 0.95 per 900K of headroom; wiring euModifier to it instead would compound. */
+    /** The discount must be GregTech's own, not a second implementation wired into euModifier. */
     @Test
     void blastFurnaceHeatDiscountIsGregTechs() throws ClassNotFoundException {
         final int coilTier = 8;
-        final int machineHeat = (int) HeatingCoilLevel.getFromTier((byte) coilTier)
-            .getHeat() + 100 * (5 - 2);
-        final int discounts = (machineHeat - 1800) / 900;
+        final int machineHeat = ebfShaped().machineHeat()
+            .applyAsInt(state(5, coilTier));
+
+        final OverclockCalculator expected = new OverclockCalculator().setRecipeEUt(GTValues.VP[1])
+            .setEUt(GTValues.V[5])
+            .setDuration(1024)
+            .setHeatDiscount(true)
+            .setRecipeHeat(1800)
+            .setMachineHeat(machineHeat);
 
         final OverclockCalculator calc = GTPresetApplier
-            .buildFromPreset(preset(EBF), state(5, coilTier), GTValues.VP[1], 1024, GTValues.V[5], 1, 1800);
+            .buildFromPreset(ebfShaped(), state(5, coilTier), GTValues.VP[1], 1024, GTValues.V[5], 1, 1800);
 
-        assertEquals(GTUtility.powInt(0.95, discounts), calc.calculateHeatDiscountMultiplier(), 1e-9);
+        assertEquals(expected.calculateHeatDiscountMultiplier(), calc.calculateHeatDiscountMultiplier(), 1e-9);
     }
 
     /** Perfect overclock is 4x duration per 4x EU, not GT's default 2x per 4x. */
@@ -137,8 +155,10 @@ class GTPresetApplierTest {
             .setEUt(GTValues.V[5])
             .setDuration(1024);
 
-        assertTrue(forge.getAllowedTierSkip(), "an unlimited-skip preset lifts the limit");
-        assertTrue(!defaultLimit.getAllowedTierSkip(), "GT's default of one skip does not reach four tiers");
+        assertTrue(forge.getRecipeEUt() <= forge.getMaxAllowedRecipeEUt(), "an unlimited-skip preset lifts the limit");
+        assertTrue(
+            defaultLimit.getRecipeEUt() > defaultLimit.getMaxAllowedRecipeEUt(),
+            "GT's default of one skip does not reach four tiers");
     }
 
     /**
@@ -160,8 +180,12 @@ class GTPresetApplierTest {
             .setEUt(GTValues.V[5])
             .setDuration(1024);
 
-        assertTrue(!noSkips.getAllowedTierSkip(), "an EV recipe must not run in an IV machine");
-        assertTrue(defaultLimit.getAllowedTierSkip(), "GT's default would have allowed it");
+        assertTrue(
+            noSkips.getRecipeEUt() > noSkips.getMaxAllowedRecipeEUt(),
+            "an EV recipe must not run in an IV machine");
+        assertTrue(
+            defaultLimit.getRecipeEUt() <= defaultLimit.getMaxAllowedRecipeEUt(),
+            "GT's default would have allowed it");
     }
 
     /** The Multi Smelter ignores the recipe's own cost entirely: always 4 EU/t over 128 ticks. */

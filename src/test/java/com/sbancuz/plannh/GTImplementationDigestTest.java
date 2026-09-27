@@ -1,5 +1,6 @@
 package com.sbancuz.plannh;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -61,6 +62,8 @@ class GTImplementationDigestTest {
             assertNotNull(in, EXPECTED + " is missing; it is the record of which GregTech was verified");
             expected.load(in);
         }
+
+        assertFalse(watched().isEmpty(), "no machine is watched, so this test cannot fail for a real reason");
 
         final Map<String, String> actual = new LinkedHashMap<>();
         for (final String className : watched()) {

@@ -14,27 +14,26 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
-import com.sbancuz.plannh.data.provider.gregtech.GTStructureTiers;
+import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.util.GTRecipe;
+import gregtech.api.util.tooltip.TooltipTier;
 
 /**
  * Asks a GregTech multiblock what it would do with a recipe, and turns the answer into a
  * {@link GTMachinePreset}.
  *
  * <p>
- * The point is that the arithmetic stays in GregTech. A machine's parallel count, speed, EU discount,
- * overclock factors and heat behaviour are read off the {@code OverclockCalculator} its own processing
- * logic builds, so a pack running a GregTech that PlanNH was never compiled against still gets that
- * version's numbers instead of a transcription of an older one. Singleblocks need none of this: they
- * publish an {@code OverclockDescriber} and {@code GTPresetApplier} calls it directly.
+ * The arithmetic stays in GregTech: every value is read off the {@code OverclockCalculator} the
+ * machine's own processing logic builds, so a pack gets its own GregTech's numbers. Singleblocks need
+ * none of this - they publish an {@code OverclockDescriber} and {@code GTPresetApplier} calls it.
  *
  * <p>
- * Numbers come back as functions of a {@link StructureState}: {@link StructureWriter} writes the coil
- * and casing tiers a player would have built into the fields the machine reads, so a machine is asked
- * again for every structure rather than answered once.
+ * Numbers come back as functions of a {@link StructureState}: the probe sets the structure
+ * parameters GregTech declares for the machine to what a player would have built, so a machine is
+ * asked again for every structure rather than answered once.
  */
 public final class MachineProbe {
 
@@ -51,7 +50,7 @@ public final class MachineProbe {
     /** What {@code OverclockCalculator} starts at, so reading it back means the machine set nothing. */
     private static final int DEFAULT_TIER_SKIPS = 1;
 
-    /** GregTech computes its modifiers in float and the preset table in double, so the last bits differ. */
+    /** GregTech computes its modifiers in float and a hand-written row in double, so the last bits differ. */
     private static final double SAME_NUMBER = 1e-6;
 
     /**
@@ -76,7 +75,6 @@ public final class MachineProbe {
      */
     @Nullable
     public static GTMachinePreset probe(@Nonnull final IMetaTileEntity prototype) {
-        if (OverclockInternals.RESOLVED == null) return null;
         final Class<?> machineClass = prototype.getClass();
         if (UNPROBEABLE.containsKey(machineClass)) return null;
 
@@ -185,9 +183,10 @@ public final class MachineProbe {
     private static final int MAX_DENOMINATOR = 64;
 
     /**
-     * Two significant digits where that is exact, and the fraction where it is not - GregTech writes
-     * these as ratios, so 1/3 says what 0.33 hides. Locale-independent, because the file is read on
-     * whatever machine generated it.
+     * The shortest exact rendering: a whole number, two significant digits, or the fraction GregTech
+     * wrote the ratio as. Anything that fits none of those prints in full rather than rounded - the
+     * cell is what decides whether a hand review still stands, so a value it rounds away is a change
+     * nobody is told about. Locale-independent, because the file is read wherever it was generated.
      */
     @Nonnull
     private static String num(final double value) {
@@ -202,7 +201,8 @@ public final class MachineProbe {
             final double scaled = value * d;
             if (Math.abs(scaled - Math.rint(scaled)) < 1e-9) return (long) Math.rint(scaled) + "/" + d;
         }
-        return rounded.stripTrailingZeros()
+        return BigDecimal.valueOf(value)
+            .stripTrailingZeros()
             .toPlainString();
     }
 
@@ -237,24 +237,14 @@ public final class MachineProbe {
     }
 
     /**
-     * The structure the probe reads a machine's flags at: every setting at the best available, matching
-     * what {@code GTSettings.resolve} hands an untouched node. Whether a machine overclocks on heat or
-     * rewrites its recipe cost is structural rather than tiered, so the voltage here is only the
-     * lowest real one.
+     * The structure the probe reads a machine's flags at: every structure parameter at its maximum,
+     * matching what {@code GTSettings.resolve} hands an untouched node. Whether a machine overclocks on
+     * heat or rewrites its recipe cost is structural rather than tiered, so the voltage here is only
+     * the lowest real one.
      */
     @Nonnull
     private static StructureState reference() {
-        return new StructureState(
-            1,
-            GTStructureTiers.MAX_COIL_TIER,
-            GTStructureTiers.MAX_SOLENOID_TIER,
-            GTStructureTiers.MAX_ITEM_PIPE_TIER,
-            GTStructureTiers.MAX_PIPE_CASING_TIER,
-            GTStructureTiers.MAX_SAWBLADE_TIER,
-            0,
-            2,
-            GTStructureTiers.MAX_WIDTH,
-            0);
+        return StructureState.of(1, 0);
     }
 
     @Nullable
@@ -274,9 +264,28 @@ public final class MachineProbe {
             final ProbeReading at = subject.read(state, recipe);
             return at != null && at.isRunnable() ? at : reference;
         };
-        final EnumSet<Settings> settings = SensitivityScan
-            .scan(reference(), subject.reachableSettings(), subject.modeCount(), readings);
-        return toPreset(reference, readings, settings);
+        final EnumSet<Settings> settings = subject.reachableSettings();
+        if (settings.contains(Settings.GT_MODE) && !modeMatters(subject.modeCount(), readings)) {
+            settings.remove(Settings.GT_MODE);
+        }
+        return toPreset(reference, readings, settings, subject.declared());
+    }
+
+    /**
+     * Whether switching mode moves a number a chart shows. GregTech says which machines have modes, not
+     * whether a mode changes anything: four machines switch recipemaps with identical numbers, and a
+     * row for those would do nothing.
+     */
+    private static boolean modeMatters(final int modeCount, final Function<StructureState, ProbeReading> readings) {
+        final ProbeReading first = readings.apply(reference());
+        for (int mode = 1; mode < modeCount; mode++) {
+            final ProbeReading other = readings.apply(reference().withMode(mode));
+            if (first != null && other != null
+                && !first.asShown()
+                    .equals(other.asShown()))
+                return true;
+        }
+        return false;
     }
 
     /**
@@ -286,7 +295,8 @@ public final class MachineProbe {
      */
     @Nonnull
     public static GTMachinePreset toPreset(@Nonnull final ProbeReading reference,
-        @Nonnull final Function<StructureState, ProbeReading> readings, @Nonnull final EnumSet<Settings> settings) {
+        @Nonnull final Function<StructureState, ProbeReading> readings, @Nonnull final EnumSet<Settings> settings,
+        @Nonnull final Map<TooltipTier, GTSettings.TierRange> structure) {
         final GTMachinePreset.Builder preset = GTMachinePreset.builder()
             .parallel(
                 s -> Math.max(
@@ -305,6 +315,7 @@ public final class MachineProbe {
                 s -> readings.apply(s)
                     .eutIncreasePerOC())
             .settings(settings.toArray(new Settings[0]));
+        structure.forEach((kind, range) -> preset.structure(kind, range.min(), range.max()));
 
         // GregTech sets a machine heat even where it never overclocks on one, so record it either way
         // and let the flags decide whether the applier hands it to the calculator.

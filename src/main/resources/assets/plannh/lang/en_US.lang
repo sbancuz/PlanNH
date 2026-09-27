@@ -14,13 +14,7 @@ plannh.settings.machine=Machine
 ## Settings - GT machine and structure
 plannh.settings.gt_advanced=Advanced
 plannh.settings.gt_coil=Coil
-plannh.settings.gt_solenoid=Solenoid
-plannh.settings.gt_item_pipe=Item Pipe
 plannh.settings.gt_pipe_casing=Pipe Casing
-plannh.settings.gt_sawblade=Sawblade
-plannh.settings.gt_electrode=Electrode
-plannh.settings.gt_structure_tier=Struct. Tier
-plannh.settings.gt_width=Width
 plannh.settings.gt_mode=Mode
 
 ## Settings - GT

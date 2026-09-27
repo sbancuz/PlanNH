@@ -1,7 +1,9 @@
 package com.sbancuz.plannh.data.provider.gregtech;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
@@ -9,6 +11,8 @@ import java.util.function.ToIntBiFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import net.minecraft.util.StatCollector;
 
 import com.sbancuz.plannh.data.ChartMinimums;
 import com.sbancuz.plannh.data.MachineProfile;
@@ -22,6 +26,7 @@ import com.sbancuz.plannh.data.provider.GTProvider;
 import gregtech.api.enums.GTValues;
 import gregtech.api.enums.HeatingCoilLevel;
 import gregtech.api.util.GTUtility;
+import gregtech.api.util.tooltip.TooltipTier;
 
 /**
  * Settings that only exist for GregTech nodes, kept out of {@link com.sbancuz.plannh.data.Settings}
@@ -46,13 +51,7 @@ public final class GTSettings {
     // the key a node stores cannot drift apart. Sourcing them from a method call also keeps them out
     // of the constant pool, which is what makes a single edit here reach every call site.
     public static final String COIL = Settings.GT_COIL.key();
-    public static final String SOLENOID = Settings.GT_SOLENOID.key();
-    public static final String ITEM_PIPE = Settings.GT_ITEM_PIPE.key();
     public static final String PIPE_CASING = Settings.GT_PIPE_CASING.key();
-    public static final String SAWBLADE = Settings.GT_SAWBLADE.key();
-    public static final String ELECTRODE = Settings.GT_ELECTRODE.key();
-    public static final String STRUCTURE_TIER = Settings.GT_STRUCTURE_TIER.key();
-    public static final String WIDTH = Settings.GT_WIDTH.key();
     public static final String MODE = Settings.GT_MODE.key();
 
     /** Sixteen 4A hatches is past anything GregTech builds, and the row is a plan rather than a limit. */
@@ -426,13 +425,6 @@ public final class GTSettings {
         return tierName;
     }
 
-    public static final SettingDef<Integer> SOLENOID_DEF = SettingDef.intDef(
-        SOLENOID,
-        GTStructureTiers.MAX_SOLENOID_TIER,
-        GTStructureTiers.MIN_SOLENOID_TIER,
-        GTStructureTiers.MAX_SOLENOID_TIER);
-    public static final SettingDef<Integer> ITEM_PIPE_DEF = SettingDef
-        .intDef(ITEM_PIPE, GTStructureTiers.MAX_ITEM_PIPE_TIER, 1, GTStructureTiers.MAX_ITEM_PIPE_TIER);
     /**
      * Stores GregTech's tier number, which is what the machines read, and shows the casing it means.
      * An untouched row follows the chart, so it is an automatic row rather than one with a fixed
@@ -447,13 +439,6 @@ public final class GTSettings {
             (ctx, s) -> defaultPipeCasingTier(),
             null)
         .withDisplay(tier -> GTStructureTiers.pipeCasingName(Integer.parseInt(tier)));
-    public static final SettingDef<Integer> SAWBLADE_DEF = SettingDef
-        .intDef(SAWBLADE, GTStructureTiers.MAX_SAWBLADE_TIER, 0, GTStructureTiers.MAX_SAWBLADE_TIER);
-    public static final SettingDef<Integer> ELECTRODE_DEF = SettingDef
-        .intDef(ELECTRODE, 0, 0, GTStructureTiers.MAX_ELECTRODE_TIER);
-    public static final SettingDef<Integer> STRUCTURE_TIER_DEF = SettingDef.intDef(STRUCTURE_TIER, 2, 0, 2);
-    public static final SettingDef<Integer> WIDTH_DEF = SettingDef
-        .intDef(WIDTH, GTStructureTiers.MAX_WIDTH, 0, GTStructureTiers.MAX_WIDTH);
     /**
      * How many modes a machine has is the machine's business, not a constant: GregTech ships three-mode
      * multiblocks, and a fixed ceiling of one would leave the third unreachable.
@@ -470,41 +455,38 @@ public final class GTSettings {
     /** What a structure setting can be set to, both ends included. */
     public record TierRange(int min, int max) {}
 
-    /**
-     * The row a structure setting is edited through. The single place that says which def belongs to
-     * which setting, so a profile listing the rows and a scan sweeping their ranges cannot disagree
-     * about what a setting is.
-     */
+    /** The key a structure parameter of this kind is stored under. */
     @Nonnull
-    public static SettingDef<?> settingDef(final Settings setting) {
-        return switch (setting) {
-            case GT_COIL -> COIL_DEF;
-            case GT_SOLENOID -> SOLENOID_DEF;
-            case GT_ITEM_PIPE -> ITEM_PIPE_DEF;
-            case GT_PIPE_CASING -> PIPE_CASING_DEF;
-            case GT_SAWBLADE -> SAWBLADE_DEF;
-            case GT_ELECTRODE -> ELECTRODE_DEF;
-            case GT_STRUCTURE_TIER -> STRUCTURE_TIER_DEF;
-            case GT_WIDTH -> WIDTH_DEF;
-            case GT_MODE -> MODE_DEF;
-            default -> throw new IllegalArgumentException(setting + " is not a structure setting");
-        };
+    public static String structureKey(final TooltipTier kind) {
+        return "gt_" + kind.name()
+            .toLowerCase(Locale.ROOT);
     }
 
     /**
-     * The range a setting offers, read off the row that offers it. Anything that varies a setting - the
-     * probe's sensitivity scan - then covers exactly what the player can reach, and one edit to a row
-     * moves both.
+     * The row a structure parameter is edited through: labelled with GregTech's own name for the kind
+     * and bounded by the range the selected machine declares. Coil and pipe casing keep their own rows,
+     * which show the block a player places rather than a number.
      */
     @Nonnull
-    public static TierRange settingRange(final Settings setting) {
-        // The coil row stores a name rather than a number, so its range is the name list.
-        if (setting == Settings.GT_COIL) return new TierRange(0, COIL_NAMES.size() - 1);
-        // A sweep over modes takes its count from the machine, not from a range; the mode row's own
-        // ceiling is a function of the selected machine and so cannot answer without one.
-        if (setting == Settings.GT_MODE) return new TierRange(0, 1);
-        final SettingDef<?> def = settingDef(setting);
-        return new TierRange(def.minInt, def.maxInt);
+    public static SettingDef<?> structureDef(final TooltipTier kind) {
+        if (kind == TooltipTier.COIL) return COIL_DEF;
+        if (kind == TooltipTier.PIPE_CASING) return PIPE_CASING_DEF;
+        final ToIntBiFunction<RecipeContext, Map<String, Object>> max = (ctx, s) -> declaredRange(ctx, s, kind).max();
+        return SettingDef.autoIntDef(structureKey(kind), 0, 0, max, null)
+            .withLabelAndRange(
+                StatCollector.translateToLocal(kind.key),
+                (ctx, s) -> declaredRange(ctx, s, kind).min(),
+                max);
+    }
+
+    @Nonnull
+    private static TierRange declaredRange(final RecipeContext ctx, final Map<String, Object> settings,
+        final TooltipTier kind) {
+        final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
+        final TierRange range = entry == null ? null
+            : entry.structure()
+                .get(kind);
+        return range == null ? new TierRange(0, 0) : range;
     }
 
     /**
@@ -524,17 +506,18 @@ public final class GTSettings {
     @Nonnull
     public static StructureState resolve(final RecipeContext ctx, final Map<String, Object> settings,
         final int voltageTier, final int mode) {
-        return new StructureState(
-            voltageTier,
-            COIL_NAMES.indexOf(MachineProfile.getString(settings, COIL, COIL_NAMES.get(defaultCoilTier(ctx)))),
-            MachineProfile.getInt(settings, SOLENOID, GTStructureTiers.MAX_SOLENOID_TIER),
-            MachineProfile.getInt(settings, ITEM_PIPE, GTStructureTiers.MAX_ITEM_PIPE_TIER),
-            MachineProfile.getInt(settings, PIPE_CASING, defaultPipeCasingTier()),
-            MachineProfile.getInt(settings, SAWBLADE, GTStructureTiers.MAX_SAWBLADE_TIER),
-            MachineProfile.getInt(settings, ELECTRODE, 0),
-            MachineProfile.getInt(settings, STRUCTURE_TIER, 2),
-            MachineProfile.getInt(settings, WIDTH, GTStructureTiers.MAX_WIDTH),
-            mode);
+        final Map<TooltipTier, Integer> structure = new EnumMap<>(TooltipTier.class);
+        structure.put(
+            TooltipTier.COIL,
+            COIL_NAMES.indexOf(MachineProfile.getString(settings, COIL, COIL_NAMES.get(defaultCoilTier(ctx)))));
+        structure.put(TooltipTier.PIPE_CASING, MachineProfile.getInt(settings, PIPE_CASING, defaultPipeCasingTier()));
+        for (final TooltipTier kind : TooltipTier.values()) {
+            final String key = structureKey(kind);
+            if (kind != TooltipTier.COIL && kind != TooltipTier.PIPE_CASING && settings.containsKey(key)) {
+                structure.put(kind, MachineProfile.getInt(settings, key, 0));
+            }
+        }
+        return new StructureState(voltageTier, mode, structure);
     }
 
     /**
@@ -566,6 +549,17 @@ public final class GTSettings {
                 if (entry != null && entry.modeFor(ctx.getOrDefault(GTProvider.RECIPE_MAP, null)) >= 0) return false;
             }
             return machineReadsIt.test(ctx, settings);
+        };
+    }
+
+    /** Shows a structure row only when the machine the node selected declares that parameter. */
+    @Nonnull
+    public static BiPredicate<RecipeContext, Map<String, Object>> usesStructure(final TooltipTier kind) {
+        return (ctx, settings) -> {
+            if (isAdvanced(settings)) return false;
+            final GTMachineIndex.MachineEntry entry = GTMachineIndex.selected(ctx, settings);
+            return entry != null && entry.structure()
+                .containsKey(kind);
         };
     }
 

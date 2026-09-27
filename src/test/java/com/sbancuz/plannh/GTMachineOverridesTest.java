@@ -6,12 +6,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
+
+import gregtech.api.util.tooltip.TooltipTier;
 
 /**
  * The override file is the only place PlanNH still asserts a number against the machine that owns it,
@@ -20,7 +24,6 @@ import com.sbancuz.plannh.data.provider.gregtech.StructureState;
  */
 class GTMachineOverridesTest {
 
-    private static final String EBF = "gregtech.common.tileentities.machines.multi.MTEElectricBlastFurnace";
     private static final String MULTI_FURNACE = "gregtech.common.tileentities.machines.multi.MTEMultiFurnace";
 
     private static Class<?> uninitialised(final String className) {
@@ -32,7 +35,7 @@ class GTMachineOverridesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { EBF, MULTI_FURNACE, "bartworks.common.tileentities.multis.MTECircuitAssemblyLine" })
+    @ValueSource(strings = { MULTI_FURNACE, "bartworks.common.tileentities.multis.MTECircuitAssemblyLine" })
     void everyOverrideNamesAMachineAndSaysWhy(final String className) {
 
         final String reason = GTMachineOverrides.reason(uninitialised(className));
@@ -50,18 +53,20 @@ class GTMachineOverridesTest {
     /** An overridden machine resolves to its own row, including through a superclass walk. */
     @Test
     void anOverrideWinsTheLookup() {
-        final var ebf = GTMachineOverrides.preset(uninitialised(EBF));
-        assertNotNull(ebf);
+        final var furnace = GTMachineOverrides.preset(uninitialised(MULTI_FURNACE));
+        assertNotNull(furnace);
 
-        // The voltage term is the reason the EBF is overridden at all, so it is what proves the win.
-        final StructureState mv = new StructureState(2, 0, 4, 4, 2, 0, 0, 1, 0, 0);
-        final StructureState hv = new StructureState(3, 0, 4, 4, 2, 0, 0, 1, 0, 0);
+        // The coil-derived parallel is the Multi Smelter's own arithmetic, so it is what proves the win.
+        final StructureState cupronickel = new StructureState(2, 0, Map.of(TooltipTier.COIL, 0));
+        final StructureState kanthal = new StructureState(2, 0, Map.of(TooltipTier.COIL, 1));
         assertEquals(
-            100,
-            ebf.machineHeat()
-                .applyAsInt(hv)
-                - ebf.machineHeat()
-                    .applyAsInt(mv),
-            "the EBF override exists to add 100K per voltage tier");
+            8,
+            furnace.maxParallel()
+                .applyAsInt(cupronickel));
+        assertEquals(
+            16,
+            furnace.maxParallel()
+                .applyAsInt(kanthal),
+            "the parallel doubles per coil tier");
     }
 }

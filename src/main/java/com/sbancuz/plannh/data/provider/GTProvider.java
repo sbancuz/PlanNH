@@ -28,7 +28,6 @@ import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex;
 import com.sbancuz.plannh.data.provider.gregtech.GTOverclockStep;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
-import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
@@ -42,6 +41,7 @@ import gregtech.api.recipe.maps.LargeBoilerFuelBackend;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.GTRecipeConstants;
 import gregtech.api.util.recipe.Sievert;
+import gregtech.api.util.tooltip.TooltipTier;
 import gregtech.common.items.ItemFluidDisplay;
 import gregtech.nei.GTNEIDefaultHandler;
 import gregtech.nei.GTNEIDefaultHandler.CachedDefaultRecipe;
@@ -152,13 +152,14 @@ public class GTProvider implements PropertyProvider {
             GTSettings.PARALLELS_DEF.withVisibility(
                 GTSettings.parallelsEditable()
                     .and((ctx, s) -> !isEoH(ctx))));
-        // Every structure setting is the same row with a different def: offered when the selected machine
-        // reads it, absent otherwise. Listing them one by one only invited the two lists to diverge.
-        for (final Settings setting : StructureState.STRUCTURE_SETTINGS) {
+        // One row per kind of structure parameter GregTech knows, offered when the selected machine
+        // declares it. The kinds are GregTech's list, so a kind GregTech adds needs nothing here.
+        for (final TooltipTier kind : TooltipTier.values()) {
             b.setting(
-                GTSettings.settingDef(setting)
-                    .withVisibility(GTSettings.usesSetting(setting)));
+                GTSettings.structureDef(kind)
+                    .withVisibility(GTSettings.usesStructure(kind)));
         }
+        b.setting(GTSettings.MODE_DEF.withVisibility(GTSettings.usesSetting(Settings.GT_MODE)));
         b.setting(
             Settings.CATALYST_ASTRAL_ARRAYS.def()
                 .withVisibility((ctx, s) -> isEoH(ctx)));

@@ -54,18 +54,13 @@ public enum Settings {
     // Only the key is declared. The provider attaches the def, so no mod's voltage names, coil names
     // or tier ceilings are written down here; see GTSettings and GTProvider.machineDriven. The GT_
     // prefix follows GT_MULTIBLOCK above, and is honest: a coil is a GregTech idea, and the next mod's
-    // tier setting will not be a coil. Structure settings are declared in the order a machine table lists
-    // them, because an EnumSet of them iterates in declaration order.
+    // tier setting will not be a coil. GregTech's other structure rows are keyed by the kind a machine
+    // declares, not by a constant here; coil and pipe casing are named because a chart can set a floor
+    // for them.
     MACHINE("machine"),
     VOLTAGE("voltage"),
     GT_COIL("gt_coil"),
-    GT_SOLENOID("gt_solenoid"),
-    GT_ITEM_PIPE("gt_item_pipe"),
     GT_PIPE_CASING("gt_pipe_casing"),
-    GT_SAWBLADE("gt_sawblade"),
-    GT_ELECTRODE("gt_electrode"),
-    GT_STRUCTURE_TIER("gt_structure_tier"),
-    GT_WIDTH("gt_width"),
     GT_MODE("gt_mode"),
     EIO_CAPACITOR("eio_capacitor"),
 

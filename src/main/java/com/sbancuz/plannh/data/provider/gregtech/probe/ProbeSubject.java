@@ -1,10 +1,9 @@
 package com.sbancuz.plannh.data.provider.gregtech.probe;
 
-import java.lang.reflect.Method;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -12,13 +11,16 @@ import javax.annotation.Nullable;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineModes;
+import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.logic.ProcessingLogic;
 import gregtech.api.metatileentity.implementations.MTEMultiBlockBase;
+import gregtech.api.structure.StructureParameter;
 import gregtech.api.util.GTRecipe;
 import gregtech.api.util.OverclockCalculator;
+import gregtech.api.util.tooltip.TooltipTier;
 
 /**
  * One machine, cloned out of GregTech's prototype registry, kept around to be asked what it would do
@@ -45,25 +47,34 @@ final class ProbeSubject {
 
     private final MTEMultiBlockBase machine;
     private final ProcessingLogic logic;
-    private final Method createCalculator;
-    private final StructureWriter structure;
+    private final Map<TooltipTier, StructureParameter> parameters = new EnumMap<>(TooltipTier.class);
     private final Map<StructureState, ProbeReading> readings = new HashMap<>();
 
     /** The recipe every cached reading answers for. */
     @Nullable
     private GTRecipe cachedFor;
 
-    private ProbeSubject(final MTEMultiBlockBase machine, final ProcessingLogic logic, final Method createCalculator) {
+    private ProbeSubject(final MTEMultiBlockBase machine, final ProcessingLogic logic) {
         this.machine = machine;
         this.logic = logic;
-        this.createCalculator = createCalculator;
-        this.structure = StructureWriter.forClass(machine.getClass());
+        for (final StructureParameter parameter : machine.getStructureParametersForInspection()) {
+            parameters.put(parameter.kind, parameter);
+        }
     }
 
-    /** The settings this machine stores at all - not yet whether any of them changes a number. */
+    /** The structure parameters GregTech declares for this machine, with the range each can take. */
+    @Nonnull
+    Map<TooltipTier, GTSettings.TierRange> declared() {
+        final Map<TooltipTier, GTSettings.TierRange> ranges = new EnumMap<>(TooltipTier.class);
+        parameters
+            .forEach((kind, parameter) -> ranges.put(kind, new GTSettings.TierRange(parameter.min, parameter.max)));
+        return ranges;
+    }
+
+    /** The mode row, where the machine has modes - not yet whether they change a number. */
     @Nonnull
     EnumSet<Settings> reachableSettings() {
-        return structure.reachableSettings();
+        return machine.supportsMachineModeSwitch() ? EnumSet.of(Settings.GT_MODE) : EnumSet.noneOf(Settings.class);
     }
 
     /**
@@ -78,15 +89,14 @@ final class ProbeSubject {
     /** Null for anything without processing logic to read: singleblocks, and the machines that hand-roll checkProcessing. */
     @Nullable
     static ProbeSubject of(@Nonnull final IMetaTileEntity prototype) {
-        final OverclockInternals fields = OverclockInternals.RESOLVED;
-        if (fields == null || !(prototype instanceof MTEMultiBlockBase)) return null;
+        if (!(prototype instanceof MTEMultiBlockBase)) return null;
         try {
             final IMetaTileEntity clone = prototype.newMetaEntity(null);
             if (!(clone instanceof final MTEMultiBlockBase multi)) return null;
-            final Object logic = fields.machineLogic.get(multi);
-            if (!(logic instanceof final ProcessingLogic processing)) return null;
-            return new ProbeSubject(multi, processing, OverclockInternals.overclockCalculatorOf(processing));
-        } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
+            final ProcessingLogic logic = multi.getProcessingLogic();
+            if (logic == null) return null;
+            return new ProbeSubject(multi, logic);
+        } catch (final RuntimeException | LinkageError e) {
             PlanNH.LOG.debug("PlanNH: cannot clone {} for probing", prototype.getClass(), e);
             return null;
         }
@@ -117,55 +127,41 @@ final class ProbeSubject {
 
     @Nullable
     private ProbeReading measure(final StructureState state, final GTRecipe recipe) {
-        final OverclockInternals fields = OverclockInternals.RESOLVED;
-        if (fields == null) return null;
         try {
-            structure.apply(machine, state);
             // Voltage is not a field the machine holds; it counts it off its energy hatches, so a
-            // machine that scales per tier answers for tier zero until it has one.
+            // machine that scales per tier answers for tier zero until it has one. Attached before the
+            // structure because a parameter may derive a value from it, as the EBF's heat does.
             if (!FakeEnergyHatch.attach(machine, state.voltageTier())) {
                 PlanNH.LOG.debug("PlanNH: {} would not take a probe energy hatch", machine.getClass());
                 return null;
             }
-            fields.setupProcessingLogic.invoke(machine, logic);
-            resolveSuppliers(fields);
-            final OverclockCalculator calculator = (OverclockCalculator) createCalculator.invoke(logic, recipe);
+            machine.machineMode = state.mode();
+            for (final StructureParameter parameter : parameters.values()) {
+                final int value = state.tier(parameter.kind, parameter.max);
+                parameter.set(Math.max(parameter.min, Math.min(parameter.max, value)));
+            }
+            final OverclockCalculator calculator = machine.createOverclockCalculatorForInspection(recipe);
+            if (calculator == null) return null;
             return new ProbeReading(
-                fields.maxParallel.getInt(logic),
-                fields.calcDurationModifier.getDouble(calculator),
-                fields.calcEutModifier.getDouble(calculator),
-                fields.calcEutIncreasePerOC.getDouble(calculator),
-                fields.calcDurationDecreasePerOC.getDouble(calculator),
-                fields.calcMaxTierSkip.getInt(calculator),
-                fields.calcHeatOC.getBoolean(calculator),
-                fields.calcHeatDiscount.getBoolean(calculator),
-                fields.calcMachineHeat.getInt(calculator),
-                fields.calcRecipeHeat.getInt(calculator),
-                fields.calcRecipeEUt.getLong(calculator),
-                fields.calcDuration.getInt(calculator),
-                fields.calcNoOverclock.getBoolean(calculator),
-                fields.calcLaserOC.getBoolean(calculator));
-        } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
+                logic.getResolvedMaxParallel(),
+                calculator.getDurationModifier(),
+                calculator.getEUtDiscount(),
+                calculator.getEUtIncreasePerOC(),
+                calculator.getDurationDecreasePerOC(),
+                calculator.getMaxTierSkips(),
+                calculator.isHeatOC(),
+                calculator.isHeatDiscount(),
+                calculator.getMachineHeat(),
+                calculator.getRecipeHeat(),
+                calculator.getRecipeEUt(),
+                calculator.getRecipeDuration(),
+                calculator.isNoOverclock(),
+                calculator.isLaserOC());
+        } catch (final RuntimeException | LinkageError e) {
             // Some machines reach for world state from setupProcessingLogic - the Circuit Assembly
             // Line dereferences its imprint - and a world-less clone has none.
             PlanNH.LOG.debug("PlanNH: {} declined to be probed", machine.getClass(), e);
             return null;
         }
-    }
-
-    /**
-     * ProcessingLogic resolves its three suppliers in {@code process()}, which needs inventories, so
-     * the probe does that step itself. Without it every machine that scales with its structure reads
-     * as whatever the constructor happened to set.
-     */
-    private void resolveSuppliers(final OverclockInternals fields) throws ReflectiveOperationException {
-        final Object parallel = fields.maxParallelSupplier.get(logic);
-        if (parallel != null) fields.maxParallel.setInt(logic, (Integer) ((Supplier<?>) parallel).get());
-
-        final Object eu = fields.euModSupplier.get(logic);
-        if (eu != null) fields.euModifier.setDouble(logic, (Double) ((Supplier<?>) eu).get());
-
-        final Object speed = fields.speedBoostSupplier.get(logic);
-        if (speed != null) fields.speedBoost.setDouble(logic, (Double) ((Supplier<?>) speed).get());
     }
 }

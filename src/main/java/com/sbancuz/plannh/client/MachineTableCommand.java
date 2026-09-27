@@ -6,9 +6,9 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -29,6 +29,7 @@ import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.provider.GTProvider;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex;
+import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex.NumberSource;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineOverrides;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachinePreset;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
@@ -54,21 +55,25 @@ public class MachineTableCommand extends CommandBase {
     private static final Set<String> ON_EVERY_MACHINE = Set
         .of(Settings.VOLTAGE.key(), Settings.MACHINES.key(), Settings.AMP.key(), GTSettings.ADVANCED);
 
-    /** What a chart reads for this machine, in the order GTPresetApplier and GTMachineIndex pick. */
-    private enum Source {
+    /** The heading and blurb a section gets. Display prose, so it lives here rather than on the enum. */
+    private record Section(String heading, String explanation) {}
 
-        DESCRIBER("Uses the machine's own OverclockDescriber, which GregTech hands over as public API."),
-        PROBE("Uses GT machine's actual OC function."),
-        OVERRIDE("Hand-written overrides due to wrong probe numbers."),
-        HAND_WRITTEN_FALLBACK("Hand-written overrides due to probe being unable to read the machine."),
-        UNMODELLED("Nothing answers, so the node plans as a plain single-speed machine.");
-
-        private final String explanation;
-
-        Source(final String explanation) {
-            this.explanation = explanation;
-        }
-    }
+    private static final Map<NumberSource, Section> SECTIONS = new EnumMap<>(
+        Map.of(
+            NumberSource.DESCRIBER,
+            new Section(
+                "describer",
+                "Uses the machine's own OverclockDescriber, which GregTech hands over as public API."),
+            NumberSource.PROBE,
+            new Section("probe", "Uses GT machine's actual OC function."),
+            NumberSource.OVERRIDE,
+            new Section("override", "Hand-written overrides due to wrong probe numbers."),
+            NumberSource.HAND_WRITTEN_FALLBACK,
+            new Section(
+                "hand written fallback",
+                "Hand-written overrides due to probe being unable to read the machine."),
+            NumberSource.NONE,
+            new Section("unmodelled", "Nothing answers, so the node plans as a plain single-speed machine.")));
 
     @Override
     public String getCommandName() {
@@ -106,8 +111,8 @@ public class MachineTableCommand extends CommandBase {
     }
 
     private static int write(final PrintWriter writer, final ReviewTicks carried) {
-        final Map<Source, List<Row>> bySource = new LinkedHashMap<>();
-        for (final Source source : Source.values()) {
+        final Map<NumberSource, List<Row>> bySource = new LinkedHashMap<>();
+        for (final NumberSource source : NumberSource.values()) {
             bySource.put(source, new ArrayList<>());
         }
 
@@ -122,7 +127,7 @@ public class MachineTableCommand extends CommandBase {
         writer.println();
         writeSections(writer);
         writeLegend(writer);
-        for (final Map.Entry<Source, List<Row>> section : bySource.entrySet()) {
+        for (final Map.Entry<NumberSource, List<Row>> section : bySource.entrySet()) {
             writeSection(writer, section.getKey(), section.getValue(), carried);
         }
         return total;
@@ -162,14 +167,12 @@ public class MachineTableCommand extends CommandBase {
         writer.println();
     }
 
-    private static void writeSection(final PrintWriter writer, final Source source, final List<Row> rows,
+    private static void writeSection(final PrintWriter writer, final NumberSource source, final List<Row> rows,
         final ReviewTicks carried) {
-        writer.println(
-            "## " + source.name()
-                .toLowerCase(Locale.ROOT)
-                .replace('_', ' ') + " (" + rows.size() + ")");
+        final Section section = SECTIONS.get(source);
+        writer.println("## " + section.heading() + " (" + rows.size() + ")");
         writer.println();
-        writer.println(source.explanation);
+        writer.println(section.explanation());
         writer.println();
         if (rows.isEmpty()) return;
 
@@ -204,7 +207,7 @@ public class MachineTableCommand extends CommandBase {
         writer.println();
     }
 
-    private record Row(Source source, String machine, String numbers, String probe, String settings, String rows,
+    private record Row(NumberSource source, String machine, String numbers, String probe, String settings, String rows,
         String modes, String override, String className, String recipeMaps) {}
 
     private static List<Row> collect() {
@@ -221,10 +224,11 @@ public class MachineTableCommand extends CommandBase {
     }
 
     private static Row row(final IMetaTileEntity mte, final RecipeMapWorkable workable) {
-        final GTMachinePreset table = GTMachineOverrides.preset(mte.getClass());
+        final GTMachineOverrides.Override override = GTMachineOverrides.find(mte.getClass());
+        final GTMachinePreset table = override == null ? null : override.preset();
         final GTMachinePreset probed = MachineProbe.probe(mte);
         final GTMachineIndex.MachineEntry entry = GTMachineIndex.byId(mte.getLocalNameKey());
-        final String reason = GTMachineOverrides.reason(mte.getClass());
+        final String reason = override == null ? null : override.reason();
 
         return new Row(
             source(entry),
@@ -279,9 +283,10 @@ public class MachineTableCommand extends CommandBase {
     }
 
     private static String settingNames(@Nullable final GTMachinePreset preset) {
-        if (preset == null || preset.settings()
-            .isEmpty()) return "";
+        if (preset == null) return "";
         final List<String> names = new ArrayList<>();
+        preset.structure()
+            .forEach((kind, range) -> names.add(kind.name() + " " + range.min() + "-" + range.max()));
         preset.settings()
             .forEach(setting -> names.add(setting.name()));
         return String.join(", ", names);
@@ -310,19 +315,9 @@ public class MachineTableCommand extends CommandBase {
         return String.join(", ", names);
     }
 
-    /**
-     * The heading a machine is listed under. Reads the index's own answer rather than working the rule
-     * out a second time; the only judgement here is that a describer outranks whatever preset it holds.
-     */
-    private static Source source(@Nullable final GTMachineIndex.MachineEntry entry) {
-        if (entry == null) return Source.UNMODELLED;
-        if (entry.describer() != null) return Source.DESCRIBER;
-        return switch (entry.numberSource()) {
-            case PROBE -> Source.PROBE;
-            case OVERRIDE -> Source.OVERRIDE;
-            case HAND_WRITTEN_FALLBACK -> Source.HAND_WRITTEN_FALLBACK;
-            case NONE -> Source.UNMODELLED;
-        };
+    /** A machine GregTech registers but the index skipped has no numbers either. */
+    private static NumberSource source(@Nullable final GTMachineIndex.MachineEntry entry) {
+        return entry == null ? NumberSource.NONE : entry.numberSource();
     }
 
     /**

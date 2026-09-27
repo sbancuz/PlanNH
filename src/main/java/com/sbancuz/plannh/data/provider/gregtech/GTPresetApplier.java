@@ -19,7 +19,7 @@ import gregtech.api.util.OverclockCalculator;
 /**
  * Turns "this node is a Maceration Stack with HSS-G coils at IV" into a configured
  * {@link OverclockCalculator}. GregTech's implementation of {@link MachineVariant#run}, so the three
- * sources of truth - GT's own describer, the preset table, and hand-entered settings - are chosen
+ * sources of truth - GT's own describer, the probed or overridden preset, and hand-entered settings - are chosen
  * between once rather than at each call site.
  *
  * <p>

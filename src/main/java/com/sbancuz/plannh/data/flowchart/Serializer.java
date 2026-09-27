@@ -464,7 +464,7 @@ public final class Serializer {
 
         // Walk what the node actually stores, not what its profile declares: the map is sparse, so
         // a key being there is already the statement "the user chose this". Iterating the defs
-        // instead used to silently drop any stored key the current profile no longer lists.
+        // instead drops any stored key the current profile no longer lists.
         final JsonObject settingsObj = new JsonObject();
         for (final Map.Entry<String, Object> entry : cfg.settings.entrySet()) {
             // The machine count has its own slot and is rewritten by the solver every frame.
