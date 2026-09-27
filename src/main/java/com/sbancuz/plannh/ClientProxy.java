@@ -9,6 +9,8 @@ import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.cleanroommc.modularui.screen.ModularContainer;
+import com.sbancuz.offscreen.api.OffscreenAPI;
+import com.sbancuz.offscreen.window.Window;
 import com.sbancuz.plannh.client.ChatHandler;
 import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
@@ -30,6 +32,13 @@ public class ClientProxy extends CommonProxy {
         Keyboard.KEY_F8,
         "key.categories.neiflowchart");
 
+    private static final KeyBinding toggleSecondScreenKey = new KeyBinding(
+        "key.neiflowchart.secondscreen",
+        Keyboard.KEY_F7,
+        "key.categories.neiflowchart");
+
+    private static Window secondScreenWindow;
+
     @Override
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
@@ -43,6 +52,7 @@ public class ClientProxy extends CommonProxy {
         Compat.init();
 
         ClientRegistry.registerKeyBinding(openFlowchartKey);
+        ClientRegistry.registerKeyBinding(toggleSecondScreenKey);
 
         final WorldHandler handler = new WorldHandler();
         MinecraftForge.EVENT_BUS.register(handler);
@@ -71,6 +81,15 @@ public class ClientProxy extends CommonProxy {
             final FlowchartScreen screen = FlowchartScreen.create();
             Minecraft.getMinecraft()
                 .displayGuiScreen(new GuiContainerWrapper(container, screen));
+        }
+        if (toggleSecondScreenKey.isPressed()) {
+            if (OffscreenAPI.isOpen(secondScreenWindow)) {
+                OffscreenAPI.close(secondScreenWindow);
+                secondScreenWindow = null;
+            } else {
+                secondScreenWindow = OffscreenAPI.open(FlowchartScreen::create);
+                OffscreenAPI.setTitle(secondScreenWindow, "PlanNH Planner");
+            }
         }
     }
 }

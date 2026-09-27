@@ -58,7 +58,7 @@ public final class PlanAPI {
         final ItemStack stack = createShareStack();
         stack.getTagCompound()
             .setString(PLANNH_DATA_KEY, encoded);
-        NEIClientUtils.sendChatItemLink(stack);
+        NEIClientUtils.sendChatItemLink(stack.getTagCompound());
     }
 
     /** Copies the serialised graph to the system clipboard. */

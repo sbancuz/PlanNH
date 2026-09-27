@@ -113,6 +113,9 @@ plannh.share.copy_to_clipboard=Plan exported to clipboard
 plannh.share.copy_from_clipboard=Plan imported from clipboard
 
 ## GUI
+key.neiflowchart.open=Open flowchart
+key.neiflowchart.secondscreen=Toggle second screen
+
 ## GUI - Groups
 plannh.gui.group.add_machine_group=Add Machine Group
 plannh.gui.group.machine_badge=[M]
