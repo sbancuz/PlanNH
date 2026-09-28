@@ -382,15 +382,35 @@ class GroundTruthTest {
     }
 
     @Test
-    void platline230_atMostTwoGates() {
-        // The sink/source pair on one machine balances it with two gates, so a third means a gate
-        // certificate the LP never confirmed.
-        // FIXME: one gate (a source alone) is feasible; big-M sized from the filter's scale cuts it off.
+    void platline230_oneHydrogenSource() {
+        // One gate suffices: the ammonia LCR imports all 3000 L/craft of its hydrogen. The other
+        // answer feeds it from the sodium LCR instead, which takes a sodium source and a NaOH sink.
         final LoadedChart chart = GtnhFlowLoader.load("230_platline");
         final SolutionView s = solve(chart);
 
         assertAllMachinesRun(chart, s);
-        assertTrue(s.openGates <= 2, "at most 2 externals, got " + s.openGates);
+        assertEquals(1, s.openGates, "exactly one gated external");
+        assertEquals(1, s.gatedSources.size(), "the gate is a source");
+        final External source = s.gatedSources.get(0);
+        final Node ammonia = chart.machine(27);
+        assertEquals(
+            ammonia.id,
+            source.port()
+                .nodeId(),
+            "source sits on the ammonia LCR");
+        assertEquals(
+            1,
+            source.port()
+                .portIndex(),
+            "on its hydrogen input");
+        assertTrue(
+            source.port()
+                .input());
+        assertEquals(
+            3000.0 * s.extentsPerSecond.get(ammonia.id),
+            source.ratePerSecond(),
+            EPS * source.ratePerSecond(),
+            "imports the whole hydrogen demand");
     }
 
     @Test
