@@ -53,8 +53,7 @@ public final class PlannhColors {
         TEXT_DIM     = C.rgb("text_dim",     "0x888888"),
         TEXT_FAINT   = C.rgb("text_faint",   "0x666666"),
         TEXT_DARK    = C.rgb("text_dark",    "0x444444"),
-        TEXT_NOTE    = C.rgb("text_note",    "0x555555"),
-        TEXT_BADGE   = C.rgb("text_badge",   "0xAAFFFF");
+        TEXT_NOTE    = C.rgb("text_note",    "0x555555");
 
     // ── Summary Panel ──
     public static final ColorResource

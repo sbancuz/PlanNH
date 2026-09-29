@@ -104,6 +104,14 @@ public class Graph {
         nodes.remove(id);
         edges.values()
             .removeIf(e -> e.sourceNodeId.equals(id) || e.targetNodeId.equals(id));
+        // edges2 is the live wiring; an edge left pointing at a node that is gone comes back as an
+        // arrow on the next rebuild, attached to nothing.
+        edges2.values()
+            .removeIf(
+                e -> e.getSourceNodeId()
+                    .equals(id)
+                    || e.getTargetNodeId()
+                        .equals(id));
         bumpVersion();
     }
 

@@ -62,32 +62,6 @@ public final class Summary extends GraphData {
     }
 
     /**
-     * The time unit per-second rates are spelled in. {@code secondsPerUnit} rescales a rate that
-     * is stored per second; the lang keys cover the button's short form and the row suffix.
-     */
-    public enum RateUnit {
-
-        SECONDS("second", 1),
-        MINUTES("minute", 60),
-        HOURS("hour", 60 * 60),
-        DAYS("day", 60 * 60 * 24);
-
-        public static final RateUnit[] VALUES = RateUnit.values();
-
-        public final String langKey;
-        public final double secondsPerUnit;
-
-        RateUnit(final String name, final double secondsPerUnit) {
-            this.langKey = "plannh.summary.rate." + name;
-            this.secondsPerUnit = secondsPerUnit;
-        }
-
-        public String suffixKey() {
-            return langKey + ".suffix";
-        }
-    }
-
-    /**
      * One row the panel can draw. Minecraft-free: only {@link #displayName()} ever localizes, so
      * recompute() (which sorts the amount-bearing {@link Measure} rows headlessly) never touches a
      * formatter.
@@ -202,7 +176,7 @@ public final class Summary extends GraphData {
     @Getter
     private Mode mode = Mode.CYCLES;
     @Getter
-    private RateUnit rateUnit = RateUnit.SECONDS;
+    private GuiHelper.RateUnit rateUnit = GuiHelper.RateUnit.SECONDS;
     private int[] sectionOrder = defaultSectionOrder();
 
     /**
@@ -251,7 +225,7 @@ public final class Summary extends GraphData {
         settingsVersion++;
     }
 
-    public void setRateUnit(final RateUnit rateUnit) {
+    public void setRateUnit(final GuiHelper.RateUnit rateUnit) {
         this.rateUnit = rateUnit;
         settingsVersion++;
     }
@@ -347,7 +321,7 @@ public final class Summary extends GraphData {
         final Map<LineKey, Float> inputs = new HashMap<>();
         final Map<LineKey, Float> properties = new HashMap<>();
 
-        final int cycleTicks = cycleTicks(balance, graph);
+        final int cycleTicks = balance.totalDurationTicks();
 
         // Accumulate scaled flows per resource across all ports, connected and unconnected alike.
         for (final Node node : graph.getNodes()
@@ -383,18 +357,6 @@ public final class Summary extends GraphData {
 
         atVersion = graph.getVersion();
         return this;
-    }
-
-    /** The longest recipe on the chart, so one cycle of every machine aligns; 20 ticks when none ran. */
-    private static int cycleTicks(final BalanceResult balance, final Graph graph) {
-        int maxTicks = 0;
-        for (final Node node : graph.getNodes()
-            .values()) {
-            final var nb = balance.nodeBalances()
-                .get(node.id);
-            if (nb != null) maxTicks = Math.max(maxTicks, nb.durationPerOp());
-        }
-        return Math.max(maxTicks, 20);
     }
 
     /** Fold each port's effective flow into {@code into}, scaled to one chart cycle. */

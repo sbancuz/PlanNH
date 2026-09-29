@@ -35,8 +35,8 @@ public final class WitchingGadgetsProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("wg", "Witching Gadgets")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())

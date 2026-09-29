@@ -50,8 +50,8 @@ public class HarvestCraftProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder(PROFILE_ID, "HarvestCraft")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())

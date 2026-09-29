@@ -56,24 +56,24 @@ public final class AE2Provider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("ae2:quartz_grinder", "Quartz Grinder")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
-                .setting(Settings.DURATION_TICKS.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
+                .setting(Settings.DURATION_TICKS)
                 .effect(DefaultProvider::noopEffect)
                 .build());
 
         MachineProfileRegistry.register(
             MachineProfile.builder("ae2:inscriber", "Inscriber")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
-                .setting(Settings.CATALYST_ACCEL_CARD.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
+                .setting(Settings.CATALYST_ACCEL_CARD)
                 .effect(Effects.durationFromFormula((ctx, s) -> {
-                    final int cards = (int) s.getOrDefault(Settings.CATALYST_ACCEL_CARD.key(), 0);
+                    final int cards = s.get(Settings.CATALYST_ACCEL_CARD);
                     final int speedFactor = TileInscriber.BASE_SPEED + cards;
                     return Math.max(1, (TileInscriber.MAX_PROCESSING_TIME + speedFactor - 1) / speedFactor);
                 })
                     .withCostPerT(CoFHCompat.RF_PER_T, (current, s, ctx) -> {
-                        final int cards = (int) s.getOrDefault(Settings.CATALYST_ACCEL_CARD.key(), 0);
+                        final int cards = s.get(Settings.CATALYST_ACCEL_CARD);
                         final int speedFactor = TileInscriber.BASE_SPEED + cards;
                         return (long) TileInscriber.BASE_POWER_PER_TICK * speedFactor;
                     })
@@ -83,20 +83,18 @@ public final class AE2Provider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("ae2:molecular_assembler", "Molecular Assembler")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
-                .setting(Settings.CATALYST_ACCEL_CARD.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
+                .setting(Settings.CATALYST_ACCEL_CARD)
                 .effect(Effects.durationFromFormula((ctx, s) -> {
-                    final int cards = Math.min(
-                        (int) s.getOrDefault(Settings.CATALYST_ACCEL_CARD.key(), 0),
-                        TileMolecularAssembler.SPEED.length - 1);
+                    final int cards = Math
+                        .min(s.get(Settings.CATALYST_ACCEL_CARD), TileMolecularAssembler.SPEED.length - 1);
                     final int speed = TileMolecularAssembler.SPEED[cards];
                     return Math.max(1, (TileMolecularAssembler.MAX_PROCESSING_TIME + speed - 1) / speed);
                 })
                     .andThen((current, s, ctx) -> {
-                        final int cards = Math.min(
-                            (int) s.getOrDefault(Settings.CATALYST_ACCEL_CARD.key(), 0),
-                            TileMolecularAssembler.SPEED.length - 1);
+                        final int cards = Math
+                            .min(s.get(Settings.CATALYST_ACCEL_CARD), TileMolecularAssembler.SPEED.length - 1);
                         final int speed = TileMolecularAssembler.SPEED[cards];
                         final double tax = TileMolecularAssembler.ACCELERATION_TAX[cards];
                         current.energyPerT(Math.round(speed * tax));

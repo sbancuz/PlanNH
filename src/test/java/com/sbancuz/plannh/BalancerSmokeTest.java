@@ -17,6 +17,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
+import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
 
@@ -85,14 +86,14 @@ class BalancerSmokeTest {
         final Node lcr = chart.machine(1);
         assertFalse(lcr.isMachineCountFixed());
         lcr.getMachineConfig()
-            .setMachineCount(3);
+            .set(Settings.MACHINES, 3);
 
         final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.AUTO);
 
         assertEquals(
             3,
             lcr.getMachineConfig()
-                .getMachineCount(),
+                .get(Settings.MACHINES),
             "configured count must survive viewing");
         assertEquals(
             8.0 / 15.0,

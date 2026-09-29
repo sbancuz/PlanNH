@@ -7,7 +7,7 @@ public class FlowchartFlow extends Flow implements IFlowchartDraggable {
 
     private final FlowchartWidget<?, ?> parent;
 
-    protected FlowchartFlow(GuiAxis axis, FlowchartWidget<?, ?> parent) {
+    public FlowchartFlow(GuiAxis axis, FlowchartWidget<?, ?> parent) {
         super(axis);
         this.parent = parent;
     }

@@ -47,6 +47,9 @@ public class Node extends GraphData {
     @Setter
     private boolean machineCountFixed;
 
+    @Setter
+    private transient boolean settingsOpen = true;
+
     /**
      * Target production rates by output port index, in ingredient units per second. A target is
      * a pin: AUTO holds the machine's extent so the targeted output hits the rate exactly, and
@@ -211,5 +214,20 @@ public class Node extends GraphData {
             || recipeId == null
             || machineConfig == null
             || targetOutputRates == null;
+    }
+
+    // TODO: Find a better way to make the tests work
+    public Node(final UUID id, String name, final int x, final int y) {
+        super(id);
+        this.x = x;
+        this.y = y;
+        this.machineConfig = new MachineConfig();
+        recipeId = null;
+        machineName = name;
+        properties = new HashMap<>();
+        inputs = new ArrayList<>();
+        outputs = new ArrayList<>();
+        extractor = DefaultProvider.INSTANCE;
+        availableExtractors = List.of(DefaultProvider.INSTANCE);
     }
 }

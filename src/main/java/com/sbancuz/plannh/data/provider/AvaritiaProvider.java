@@ -33,11 +33,11 @@ public final class AvaritiaProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("avaritia:neutronium_compressor", "Neutronium Compressor")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.INPUTS_PER_TICK.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.INPUTS_PER_TICK)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
-                    Effects.durationFromTotal(COMPRESSION_COST, Settings.INPUTS_PER_TICK.key(), 1)
+                    Effects.durationFromTotal(COMPRESSION_COST, Settings.INPUTS_PER_TICK)
                         .amortizeCost(COMPRESSION_COST)
                         .applyParallelism())
                 .build());

@@ -25,8 +25,8 @@ public final class ProjectBlueProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("projectblue:basic", "Project Blue")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())

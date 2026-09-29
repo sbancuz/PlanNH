@@ -44,11 +44,11 @@ public class GTSteamProvider implements PropertyProvider {
         "gtpp.recipe.simplewasher");
 
     private static final MachineProfile STEAM_PROFILE = MachineProfile.builder("gregtech:steam", "GT Steam")
-        .setting(Settings.SPEED.def())
-        .setting(Settings.PARALLELS.def())
-        .setting(Settings.MACHINES.def())
-        .setting(Settings.STEAM_EUT_DISCOUNT.def())
-        .setting(Settings.STEAM_DURATION_MODIFIER.def())
+        .setting(Settings.SPEED)
+        .setting(Settings.PARALLELS)
+        .setting(Settings.MACHINES)
+        .setting(Settings.STEAM_EUT_DISCOUNT)
+        .setting(Settings.STEAM_DURATION_MODIFIER)
         .effect(
             Effects.durationFromHandler()
                 .andThen(GTSteamOverclockStep.create())

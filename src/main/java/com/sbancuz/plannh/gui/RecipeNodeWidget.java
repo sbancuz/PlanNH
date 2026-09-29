@@ -327,10 +327,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
          * 1.0f,
          * PlannhColors.textOn(titleCol),
          * false);
-         * if (node.getMachineConfig().hasAnyBoost()) {
-         * GuiDraw.drawText(buildConfigBadge(), LEFT_CONTENT_X, TITLE_TEXT_Y, 1.0f, PlannhColors.TEXT_BADGE.getColor(),
-         * false);
-         * }
          * final Group grp = canvas.getGroupForNode(node.getId());
          * if (grp != null) {
          * final int gc = groupColor(grp);
@@ -492,8 +488,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
          * final int x = LEFT_CONTENT_X;
          * int y = CONTENT_TOP + neiWidget.h + THROUGHPUT_GAP;
          * final Balancer.NodeBalance nb = getNodeBalance();
-         * final float sec = nb != null && nb.totalDurationTicks() > 0
-         * ? (float) nb.totalDurationTicks() / GuiHelper.TICKS_PER_SECOND
+         * final float sec = nb != null && nb.durationPerOp() > 0
+         * ? (float) nb.durationPerOp() / GuiHelper.TICKS_PER_SECOND
          * : node.getRecipeDuration() > 0 ? (float) node.getRecipeDuration() / GuiHelper.TICKS_PER_SECOND : 1f;
          * final double ops = nb != null ? nb.operations() : 1;
          * final int durPerOp = nb != null ? nb.durationPerOp() : node.getRecipeDuration();
@@ -676,27 +672,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 canvas.getGraph()
                     .getPanY());
         }
-    }
-
-    private String buildConfigBadge() {
-        final MachineConfig c = node.getMachineConfig();
-        final MachineProfile profile = c.getProfile();
-        final StringBuilder sb = new StringBuilder();
-
-        // for (final SettingDef<?> def : profile
-        // .visibleSettings(new RecipeContext(node.getProperties()), c.getSettings())) {
-        // final Object val = c.getSettings()
-        // .get(def.getKey());
-        // if (val == null) continue;
-        // if (val.equals(def.getDefaultValue())) continue;
-        // final String badge = def.badge(val, c);
-        // if (badge == null) continue;
-        // sb.append(badge)
-        // .append(' ');
-        // }
-
-        if (!sb.isEmpty()) sb.setLength(sb.length() - 1);
-        return sb.toString();
     }
 
     private void drawConfigContent() {

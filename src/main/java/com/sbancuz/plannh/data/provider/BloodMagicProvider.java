@@ -69,11 +69,11 @@ public final class BloodMagicProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("bloodmagic:altar", "Blood Altar")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.LP_PER_TICK.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.LP_PER_TICK)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
-                    Effects.durationFromTotal(LP_AMOUNT, Settings.LP_PER_TICK.key(), 20)
+                    Effects.durationFromTotal(LP_AMOUNT, Settings.LP_PER_TICK)
                         .amortizeCost(LP_AMOUNT)
                         .applyParallelism())
                 .build());

@@ -35,6 +35,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
+import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
 import codechicken.nei.LayoutManager;
@@ -305,7 +306,7 @@ public class FlowchartScreen extends ModularScreen {
             .child(canvas);
 
         panel.child(mainColumn);
-        // panel.child(new SummaryWidget(canvas));
+        panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
         panel.child(targetEditor);
 

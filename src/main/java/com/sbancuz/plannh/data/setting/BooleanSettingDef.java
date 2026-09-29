@@ -1,36 +1,33 @@
 package com.sbancuz.plannh.data.setting;
 
-import java.util.Map;
-import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
-
-import org.jetbrains.annotations.Nullable;
-
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.RecipeContext;
+import com.sbancuz.plannh.gui.common.TooltipStyle;
 
 public class BooleanSettingDef extends SettingDef<Boolean> {
 
-    protected BooleanSettingDef(String key, Boolean defaultValue,
-        @Nullable BiFunction<Boolean, MachineConfig, String> badgeFn,
-        BiPredicate<RecipeContext, Map<String, Object>> visibility) {
-        super(key, defaultValue, badgeFn, visibility);
-    }
-
-    public BooleanSettingDef(String key, Boolean defaultValue,
-        @Nullable BiFunction<Boolean, MachineConfig, String> badgeFn) {
-        this(key, defaultValue, badgeFn, (_, _) -> true);
+    public BooleanSettingDef(String key, Boolean defaultValue) {
+        super(key, defaultValue);
     }
 
     @Override
-    public IWidget settingsWidget(MachineConfig config) {
+    public String tooltip(final Boolean value) {
+        return Boolean.TRUE.equals(value) ? TooltipStyle.flag(getLabel()) : null;
+    }
+
+    @Override
+    public IWidget settingsWidget(final MachineConfig config, final SettingEdit edit) {
         return new ToggleButton()
-            .value(new BoolValue.Dynamic(() -> config.getBoolean(key), val -> config.setBoolean(key, val)))
+            .value(new BoolValue.Dynamic(() -> config.get(this), val -> edit.apply(() -> config.set(this, val))))
             .overlay(false, IKey.str("[ ]"))
             .overlay(true, IKey.str("[✓]"));
+    }
+
+    @Override
+    protected Class<?> valueType() {
+        return Boolean.class;
     }
 }

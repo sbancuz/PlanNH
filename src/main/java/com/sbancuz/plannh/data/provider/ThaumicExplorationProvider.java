@@ -26,8 +26,8 @@ public final class ThaumicExplorationProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("tx:replicator", "Thaumic Replicator")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())

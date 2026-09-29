@@ -15,6 +15,7 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Enumerator;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.Settings;
 
 /**
  * The single entry point of the balancer package. Every {@link BalanceMode} is a {@link Chain}:
@@ -241,7 +242,7 @@ public final class Balancer {
             counts.put(
                 node.getId(),
                 (double) node.getMachineConfig()
-                    .getMachineCount());
+                    .get(Settings.MACHINES));
         }
         return counts;
     }
@@ -298,7 +299,7 @@ public final class Balancer {
                 effIns.put(i, total);
             }
 
-            nodeBalances.put(node.getId(), new NodeBalance(count, durPerOp, totalEnergy, durPerOp, effOuts, effIns));
+            nodeBalances.put(node.getId(), new NodeBalance(count, totalEnergy, durPerOp, effOuts, effIns));
 
             for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties().entrySet()) {
                 if (entry.getValue() instanceof final Number num) {
@@ -314,7 +315,7 @@ public final class Balancer {
     }
 
     /** One machine's share of a solved balance, for the node widget and the machine-count panel. */
-    public record NodeBalance(double operations, int totalDurationTicks, long totalEnergy, int durationPerOp,
+    public record NodeBalance(double operations, long totalEnergy, int durationPerOp,
         Map<Integer, Float> effectiveOutputs, Map<Integer, Float> effectiveInputs) {}
 
 }

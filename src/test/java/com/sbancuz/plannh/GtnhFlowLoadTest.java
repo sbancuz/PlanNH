@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
 import com.sbancuz.plannh.harness.TestIngredients;
@@ -94,7 +95,7 @@ class GtnhFlowLoadTest {
         assertEquals(
             1,
             dt.getMachineConfig()
-                .getMachineCount());
+                .get(Settings.MACHINES));
     }
 
     @Test

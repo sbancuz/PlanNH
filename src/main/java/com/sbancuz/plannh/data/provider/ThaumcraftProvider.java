@@ -72,18 +72,18 @@ public class ThaumcraftProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:arcane", "Arcane Workbench")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.VIS_PER_TICK.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.VIS_PER_TICK)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
-                    Effects.durationFromTotal(TOTAL_VIS, Settings.VIS_PER_TICK.key(), 1)
+                    Effects.durationFromTotal(TOTAL_VIS, Settings.VIS_PER_TICK)
                         .amortizeCost(TOTAL_VIS)
                         .applyParallelism())
                 .build());
         MachineProfileRegistry.register(
             MachineProfile.builder("thaumcraft:infusion", "Infusion Altar")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(Effects.durationFromFormula((ctx, s) -> {
                     final int tv = ctx.getOrDefault(TOTAL_VIS, 0);
                     final int nc = ctx.getOrDefault(NUM_COMPONENTS, 0);

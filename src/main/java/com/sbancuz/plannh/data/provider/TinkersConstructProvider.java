@@ -42,8 +42,8 @@ public final class TinkersConstructProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("tconstruct:basic", "Tinkers' Construct")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())

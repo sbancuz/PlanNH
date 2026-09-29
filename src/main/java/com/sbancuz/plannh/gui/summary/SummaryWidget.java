@@ -21,6 +21,7 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.FlowchartList;
+import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
@@ -127,9 +128,9 @@ public class SummaryWidget extends ParentWidget<SummaryWidget> implements IDragg
             .tooltipStatic(
                 t -> t.addLine(IKey.lang("plannh.summary.rate.title"))
                     .addLine(IKey.lang("plannh.summary.mode.switch_hint")))
-            .value(new EnumValue.Dynamic<>(Summary.RateUnit.class, summary::getRateUnit, summary::setRateUnit))
+            .value(new EnumValue.Dynamic<>(GuiHelper.RateUnit.class, summary::getRateUnit, summary::setRateUnit))
             .setEnabledIf(_ -> summary.getMode() == Summary.Mode.THROUGHPUT);
-        for (final Summary.RateUnit unit : Summary.RateUnit.VALUES) {
+        for (final GuiHelper.RateUnit unit : GuiHelper.RateUnit.VALUES) {
             toggle.stateOverlay(unit, IKey.lang(unit.langKey));
         }
         return toggle;
