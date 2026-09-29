@@ -14,6 +14,7 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.provider.DefaultProvider;
 
+import codechicken.nei.recipe.GuiRecipeTab;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.RecipeHandlerRef;
@@ -148,6 +149,14 @@ public class Node {
             if (p.canCraft(handler, recipeIndex)) return p;
         }
         return availableExtractors.getFirst();
+    }
+
+    public String handlerName() {
+        if (recipeId == null) return "";
+        final IRecipeHandler handler = RecipeHandlerRef.of(recipeId).handler;
+        if (handler == null) return "";
+        return GuiRecipeTab.getHandlerInfo(handler)
+            .getHandlerName();
     }
 
     public int getRecipeDuration() {

@@ -54,9 +54,6 @@ import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import codechicken.lib.config.ConfigTag;
 import codechicken.nei.NEIClientConfig;
-import codechicken.nei.recipe.GuiRecipeTab;
-import codechicken.nei.recipe.IRecipeHandler;
-import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable, IViewport, IDraggable {
@@ -517,7 +514,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean joinsMachineGroup(final MachineGroup group, final Node node) {
         final Node member = memberOf(group);
         if (member != null) {
-            if (!handlerOf(member).equals(handlerOf(node))) return false;
+            if (!member.handlerName()
+                .equals(node.handlerName())) return false;
             node.machineConfig.copySettingsFrom(member.machineConfig);
         }
         group.getNodeIds()
@@ -538,7 +536,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (!isInside(group, node) || group.getNodeIds()
                 .contains(node.id)) continue;
             final Node member = memberOf(machineGroup);
-            if (member != null && !handlerOf(member).equals(handlerOf(node))) return true;
+            if (member != null && !member.handlerName()
+                .equals(node.handlerName())) return true;
         }
         return false;
     }
@@ -557,21 +556,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         return node.x >= group.getX() && node.x < group.getX() + group.getWidth()
             && node.y >= group.getY()
             && node.y < group.getY() + group.getHeight();
-    }
-
-    /**
-     * The NEI handler a node's recipe came from, as its registered handler name. Read off the
-     * handler rather than off {@code RecipeId}, whose getter for the same string is spelled
-     * differently across NEI versions, so this holds for the version the mod builds against and the
-     * one the pack ships. The empty string when the handler is gone, which groups a chart's
-     * unresolvable nodes together and is as good an answer as any.
-     */
-    private static String handlerOf(final Node node) {
-        if (node.recipeId == null) return "";
-        final IRecipeHandler handler = RecipeHandlerRef.of(node.recipeId).handler;
-        if (handler == null) return "";
-        return GuiRecipeTab.getHandlerInfo(handler)
-            .getHandlerName();
     }
 
     public void rebuildNodeWidgets() {

@@ -11,6 +11,9 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import com.sbancuz.plannh.data.channels.ChannelProblem;
+import com.sbancuz.plannh.data.channels.ChannelReport;
+import com.sbancuz.plannh.data.channels.ChannelSolver;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
@@ -39,6 +42,7 @@ public final class Summary extends GraphData {
         CHOICES("plannh.summary.title.choices"),
         PROPERTIES("plannh.summary.title.properties"),
         MACHINE_COUNTS("plannh.summary.title.machine_counts"),
+        CHANNELS("plannh.summary.title.channels"),
         MESSAGES("plannh.summary.title.messages"),
         HELP("plannh.summary.title.help");
 
@@ -93,7 +97,7 @@ public final class Summary extends GraphData {
      * recompute() (which sorts the amount-bearing {@link Measure} rows headlessly) never touches a
      * formatter.
      */
-    public sealed interface Line<T> permits Line.Measure,Line.Message,Line.Text,Line.Choice,Line.Heading,Line.Totals {
+    public sealed interface Line<T> permits Line.Measure,Line.Message,Line.Text,Line.Choice,Line.Heading,Line.Totals,Line.ChannelControls,Line.ChannelMachine,Line.ChannelLayout,Line.ChannelFindings {
 
         /** Localized display text; the GUI is the only caller. */
         String displayName();
@@ -168,7 +172,45 @@ public final class Summary extends GraphData {
                 return ""; // the GUI renders this row itself; displayName is never shown
             }
         }
+
+        record ChannelControls() implements Line<Object> {
+
+            @Override
+            public String displayName() {
+                return "";
+            }
+        }
+
+        record ChannelMachine(String machine, @Nullable String group, int capacity, ChannelSolver.Mode mode,
+            int channels, int machines, ChannelSolver.Parts parts, int dedicated, boolean channelsMinimal,
+            boolean blocksMinimal) implements Line<Object> {
+
+            @Override
+            public String displayName() {
+                return group != null ? group : machine;
+            }
+        }
+
+        record ChannelLayout(int index, int of, ChannelSolver.Mode mode, List<String> catalysts,
+            List<ChannelReport.Dye> dyes, ChannelSolver.Parts parts, List<String> recipes) implements Line<Object> {
+
+            @Override
+            public String displayName() {
+                return String.join(", ", catalysts);
+            }
+        }
+
+        record ChannelFindings(ChannelReport.Kind kind, List<ChannelNote> notes) implements Line<Object> {
+
+            @Override
+            public String displayName() {
+                return kind + " " + notes.size();
+            }
+        }
     }
+
+    public record ChannelNote(@Nullable String victim, String culprit, String needs, boolean plan, String scale,
+        long eut, double timeRatio) {}
 
     /**
      * One {@link Line} per section, in the order the panel reads them. recompute() rebuilds the
@@ -205,6 +247,16 @@ public final class Summary extends GraphData {
     @Getter
     private RateUnit rateUnit = RateUnit.SECONDS;
     private int[] sectionOrder = defaultSectionOrder();
+
+    private boolean channelsEnabled = false;
+    private boolean channelPriority = false;
+    private ChannelProblem.Feed channelFeed = ChannelProblem.Feed.PASSIVE;
+
+    @Nullable
+    transient private ChannelReport channelReport = null;
+    transient private long channelsAt = -1;
+    transient private Graph channelsGraph = null;
+    transient private ChannelProblem.Feed channelsFeedAt = null;
 
     /**
      * Bumped by every settings change; part of the derived-cache key so a toggle
@@ -256,6 +308,21 @@ public final class Summary extends GraphData {
         settingsVersion++;
     }
 
+    public void setChannelsEnabled(final boolean enabled) {
+        this.channelsEnabled = enabled;
+        settingsVersion++;
+    }
+
+    public void setChannelPriority(final boolean priority) {
+        this.channelPriority = priority;
+        settingsVersion++;
+    }
+
+    public void setChannelFeed(final ChannelProblem.Feed feed) {
+        this.channelFeed = feed;
+        settingsVersion++;
+    }
+
     public void setSectionOrder(final int[] sectionOrder) {
         this.sectionOrder = sectionOrder;
         settingsVersion++;
@@ -304,6 +371,11 @@ public final class Summary extends GraphData {
     /** The graph version this cache was derived from; moves with every choice click. */
     public long calculatedAt() {
         return atVersion;
+    }
+
+    /** The {@code settingsVersion} the current rows were derived under. */
+    public long calculatedSettings() {
+        return atSettings;
     }
 
     /** The {@link Mode} the current rows were derived for; the panel pings it to reload. */
@@ -383,6 +455,7 @@ public final class Summary extends GraphData {
         setLines(Section.MACHINE_COUNTS, machineLines);
         setLines(Section.CHOICES, choiceLines(graph));
         setLines(Section.MESSAGES, messageLines());
+        setLines(Section.CHANNELS, channelLines(graph));
 
         atVersion = graph.version();
         return this;
@@ -488,6 +561,100 @@ public final class Summary extends GraphData {
         choicesComplete = alternatives.complete();
         choiceNotes = alternatives.notes();
         return solved.auto().openGates > 0 ? BalanceView.toLineChoices(graph, alternatives) : List.of();
+    }
+
+    private List<Line<?>> channelLines(final Graph graph) {
+        final ChannelReport.Analyzer analyzer = ChannelReport.analyzer();
+        if (analyzer == null) return List.of();
+        final List<Line<?>> out = new ArrayList<>();
+        out.add(new Line.ChannelControls());
+        if (!channelsEnabled) {
+            channelReport = null;
+            out.add(new Line.Text("plannh.summary.channels.off"));
+            return out;
+        }
+        if (channelReport == null || channelsGraph != graph
+            || channelsAt != graph.version()
+            || channelsFeedAt != channelFeed) {
+            channelReport = analyzer.analyze(graph, channelFeed);
+            channelsGraph = graph;
+            channelsAt = graph.version();
+            channelsFeedAt = channelFeed;
+        }
+        if (channelReport.machines()
+            .isEmpty()) {
+            out.add(new Line.Text("plannh.summary.channels.nothing"));
+            return out;
+        }
+
+        final List<ChannelReport.Dye> dyes = channelReport.dyes();
+        for (final ChannelReport.MachineReport m : channelReport.machines()) {
+            final ChannelSolver.Solution s = m.solution(channelPriority);
+            final ChannelSolver.Mode layout = s.mode();
+            out.add(
+                new Line.ChannelMachine(
+                    m.machine(),
+                    m.group(),
+                    m.capacity(),
+                    layout,
+                    s.channels()
+                        .size(),
+                    s.machines(),
+                    s.total(),
+                    m.dedicated(),
+                    s.channelsMinimal(),
+                    s.blocksMinimal()));
+            for (int c = 0; c < s.channels()
+                .size(); c++) {
+                final ChannelSolver.Channel ch = s.channels()
+                    .get(c);
+                final List<String> catalysts = new ArrayList<>();
+                final List<ChannelReport.Dye> channelDyes = new ArrayList<>();
+                for (int i = 0; i < ch.checkOrder()
+                    .size(); i++) {
+                    catalysts.add(
+                        m.catalystsName(
+                            ch.checkOrder()
+                                .get(i)));
+                    channelDyes.add(dyes.get((layout == ChannelSolver.Mode.COLOR ? i : c) % dyes.size()));
+                }
+                final List<String> recipes = new ArrayList<>();
+                for (final int r : ch.members()) recipes.add(
+                    m.recipes()
+                        .get(r)
+                        .label());
+                out.add(
+                    new Line.ChannelLayout(
+                        c + 1,
+                        s.channels()
+                            .size(),
+                        layout,
+                        catalysts,
+                        channelDyes,
+                        ch.parts(),
+                        recipes));
+            }
+            for (final ChannelReport.Kind kind : ChannelReport.Kind.values()) {
+                final List<ChannelNote> notes = new ArrayList<>();
+                for (final ChannelReport.Finding f : m.findings()) {
+                    if (f.kind() != kind) continue;
+                    notes.add(
+                        new ChannelNote(
+                            f.victim() < 0 ? null
+                                : m.recipes()
+                                    .get(f.victim())
+                                    .label(),
+                            f.culprit(),
+                            m.needsName(f.needs()),
+                            f.plan(),
+                            f.scale(),
+                            f.eut(),
+                            f.timeRatio()));
+                }
+                if (!notes.isEmpty()) out.add(new Line.ChannelFindings(kind, List.copyOf(notes)));
+            }
+        }
+        return out;
     }
 
     /** Everything the solver had to say, at every severity, in solver order. */

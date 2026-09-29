@@ -26,6 +26,7 @@ class SummaryBody extends SummaryFlow {
     private final Summary data;
     private final Summary.Section section;
     private long rowsBuiltAt = Long.MIN_VALUE;
+    private long rowsSettings = Long.MIN_VALUE;
     private Summary.Mode rowsMode = null;
     private Summary.RateUnit rowsUnit = Summary.RateUnit.SECONDS;
 
@@ -47,8 +48,11 @@ class SummaryBody extends SummaryFlow {
         super.onUpdate();
         final Summary.Mode mode = data.computedMode();
         final Summary.RateUnit unit = data.getRateUnit();
-        if (rowsBuiltAt != data.calculatedAt() || rowsMode != mode || rowsUnit != unit) {
+        if (rowsBuiltAt != data.calculatedAt() || rowsSettings != data.calculatedSettings()
+            || rowsMode != mode
+            || rowsUnit != unit) {
             rowsBuiltAt = data.calculatedAt();
+            rowsSettings = data.calculatedSettings();
             rowsMode = mode;
             rowsUnit = unit;
             rebuildRows(null);
@@ -79,6 +83,10 @@ class SummaryBody extends SummaryFlow {
                 PlannhColors.SUMMARY_TEXT_MUTED.getColor());
             case Line.Choice choice -> new ChoiceRow(choice);
             case Line.Totals totals -> new TotalsRow(totals, rowsMode);
+            case Line.ChannelControls _ -> new ChannelControlsRow(data);
+            case Line.ChannelMachine machine -> new ChannelMachineRow(machine);
+            case Line.ChannelLayout layout -> new ChannelLayoutRow(layout);
+            case Line.ChannelFindings findings -> new ChannelFindingsRow(findings);
         };
     }
 
