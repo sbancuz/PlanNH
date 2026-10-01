@@ -50,10 +50,12 @@ import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
+import com.sbancuz.plannh.gui.layout.ChartLayouter;
+import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
+import com.sbancuz.plannh.gui.layout.LayoutStrategy;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.node.PortWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
-import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
@@ -119,13 +121,48 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final float ZOOM_MAX = 5.0f;
 
     // Orthogonal arrow routing (world-space units).
-    private static final int ROUTE_CELL = 6;
-    private static final int ROUTE_MARGIN = 12;
+    /** Arrow-router granularity and node clearance, in world units. Both are the router's to define. */
+    public static final int ROUTE_CELL = 6;
+    public static final int ROUTE_MARGIN = 12;
     private static final ArrowRouter ARROW_ROUTER = new ArrowRouter(ROUTE_CELL, ROUTE_MARGIN);
+
+    /**
+     * The narrowest gap between two columns of machines the arrow router can still turn in.
+     *
+     * <p>
+     * Asked of the router rather than restated, because these are its numbers. Auto-layout needs the
+     * figure to size its inter-column spacing, and an earlier attempt transcribed the answer into the layout
+     * settings as 24 - commented as "twice the margin plus one cell", which is 30 - and then never called
+     * the check from anywhere in production.
+     */
+    public static int requiredRouteCorridor() {
+        return ARROW_ROUTER.requiredCorridor();
+    }
+
+    /**
+     * Arranges the chart. Constructed with the engine so nothing here names a concrete implementation.
+     */
+    @Getter
+    private final ChartLayouter layouter;
 
     @NotNull
     @Getter
     private Graph graph;
+
+    /**
+     * Never written to.
+     *
+     * <p>
+     * The dead half of the layout input. Auto-layout used to read this map, found it empty, and did
+     * nothing — which is why the button has never worked. The live half is {@link #nodeWidgets2}, which
+     * {@code NodeWidget} registers itself into whether or not it is filed inside a group, and which is a
+     * strict superset of {@code Graph.getNodes()}. Layout now reads the model and asks widgets only how
+     * big things are.
+     *
+     * <p>
+     * Still here because a handful of {@code // todo redo} stubs below iterate it. Delete the map with
+     * the stubs.
+     */
     private final Map<UUID, RecipeNodeWidget> nodeWidgets = new HashMap<>();
     @Getter
     private final Map<UUID, NodeWidget> nodeWidgets2 = new HashMap<>();
@@ -166,6 +203,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean needsReroute = true;
 
     public CanvasWidget(Menu<?> menu, ModularPanel panel) {
+        this(menu, panel, new ElkLayoutStrategy());
+    }
+
+    /**
+     * @param strategy the layout engine. Injected here rather than hard-wired inside {@link
+     *                 ChartLayouter} because that is the one thing which varies: the layouter needs this
+     *                 canvas and the canvas would otherwise need the layouter, and passing the engine in
+     *                 is what breaks that cycle without giving up the seam. Nothing in this class names a
+     *                 concrete implementation
+     */
+    public CanvasWidget(Menu<?> menu, ModularPanel panel, final LayoutStrategy strategy) {
+        this.layouter = new ChartLayouter(this, strategy);
         this.graph = Plan.getActiveGraph();
         this.panel = panel;
 
@@ -347,73 +396,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
          */
     }
 
-    // todo redo
-    public void autoLayoutNodes() {
-        if (graph.getNodes()
-            .isEmpty()) return;
-
-        // The widgets ARE the layout input (they implement LayoutNode); measure them first
-        // because MUI2 culls off-viewport widgets and unmeasured nodes report stub sizes.
-        int anchorX = Integer.MAX_VALUE;
-        int anchorY = Integer.MAX_VALUE;
-        for (final Node node : graph.getNodes()
-            .values()) {
-            final RecipeNodeWidget widget = nodeWidgets.get(node.getId());
-            if (widget != null) widget.ensureRecipeHandler();
-            anchorX = Math.min(anchorX, node.getX());
-            anchorY = Math.min(anchorY, node.getY());
-        }
-
-        // ELK reports bad option/graph combinations by throwing, and its node placement recurses
-        // per path, so a pathological chart can exhaust the stack. Both would otherwise leave a
-        // mouse handler and crash the client with the chart unsaved; the chart is worth more than
-        // the layout, so log and keep the current positions.
-        final Map<UUID, int[]> positions;
-        try {
-            positions = AutoLayout.layout(
-                nodeWidgets.values(),
-                graph.getEdges()
-                    .values(),
-                chipMargins());
-        } catch (final RuntimeException | StackOverflowError e) {
-            PlanNH.LOG.error("Auto-layout failed; node positions left unchanged", e);
-            return;
-        }
-        if (positions.isEmpty()) return;
-
-        // Anchor the new layout's top-left where the chart's top-left used to be.
-        int layoutMinX = Integer.MAX_VALUE;
-        int layoutMinY = Integer.MAX_VALUE;
-        for (final int[] pos : positions.values()) {
-            layoutMinX = Math.min(layoutMinX, pos[0]);
-            layoutMinY = Math.min(layoutMinY, pos[1]);
-        }
-        final int offsetX = anchorX - layoutMinX;
-        final int offsetY = anchorY - layoutMinY;
-
-        // Bracketed only from here: a layout that threw or produced nothing left the chart alone,
-        // and an undo entry for a no-op move would make the button look like it did something.
-        PlanAPI.recordEdit(graph, () -> {
-            for (final Node node : graph.getNodes()
-                .values()) {
-                final int[] pos = positions.get(node.getId());
-                if (pos == null) continue;
-                node.setX(pos[0] + offsetX);
-                node.setY(pos[1] + offsetY);
-            }
-            applyNodePositions();
-        });
-    }
-
-    private void applyNodePositions() {
-        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
-            widget.pos(
-                widget.getNode()
-                    .getX(),
-                widget.getNode()
-                    .getY());
-        }
-        recheckMembershipAndFit();
+    public void autoLayout() {
+        layouter.autoLayout();
     }
 
     @Nullable
@@ -484,20 +468,19 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private void updateNodeGroupMembership(final Node node) {
         /*
          * for (final Group group : graph.groups.values()) {
-         * if (group.isCollapsed()) continue;
          * final boolean inside = isInside(group, node);
-         * final boolean contained = group.getNodeIds()
-         * .contains(node.id);
+         * final boolean contained = group.getChildren()
+         * .containsKey(node.getId());
          * if (inside && !contained) {
          * if (group instanceof final MachineGroup machineGroup) {
          * joinsMachineGroup(machineGroup, node);
          * continue;
          * }
-         * group.getNodeIds()
-         * .add(node.id);
+         * group.getChildren()
+         * .put(node.getId(), node);
          * } else if (!inside && contained) {
-         * group.getNodeIds()
-         * .remove(node.id);
+         * group.getChildren()
+         * .remove(node.getId());
          * }
          * }
          */

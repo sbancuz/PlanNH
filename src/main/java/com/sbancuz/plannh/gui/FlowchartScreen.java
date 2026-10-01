@@ -35,6 +35,7 @@ import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
+import com.sbancuz.plannh.gui.layout.ElkLayoutStrategy;
 import com.sbancuz.plannh.gui.summary.SummaryWidget;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
 
@@ -79,7 +80,7 @@ public class FlowchartScreen extends ModularScreen {
 
         Menu<?> contextMenu = new Menu<>();
 
-        CanvasWidget canvas = new CanvasWidget(contextMenu, panel);
+        CanvasWidget canvas = new CanvasWidget(contextMenu, panel, new ElkLayoutStrategy());
 
         // Target-rate editor: one numeric field in a floating menu. numbersDouble gives the MUI2
         // math parser, so "2k" and "1/3" work; committing (enter or clicking away) closes it.
@@ -228,7 +229,7 @@ public class FlowchartScreen extends ModularScreen {
                             new ButtonWidget<>().overlay(IKey.str("AL"))
                                 .addTooltipLine("Auto layout")
                                 .onMousePressed(_ -> {
-                                    canvas.autoLayoutNodes();
+                                    canvas.autoLayout();
                                     return true;
                                 }))
                         .child(

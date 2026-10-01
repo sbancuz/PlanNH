@@ -7,6 +7,8 @@ import java.util.Set;
 
 import net.minecraftforge.common.config.Configuration;
 
+import com.sbancuz.plannh.gui.layout.LayoutSettings;
+
 public final class Config {
 
     /** Dev diagnostic: log a headless repro of every arrow-routing recompute. */
@@ -78,6 +80,67 @@ public final class Config {
         return Math.clamp(solverEffortPercent, SOLVER_EFFORT_MIN, SOLVER_EFFORT_MAX);
     }
 
+    // --- Auto-layout -----------------------------------------------------------------------
+    //
+    // Three knobs, and three is a considered number rather than a stopping point. A user has a real
+    // reason to change these: node spacing changes how tight a column is, layer spacing changes whether
+    // the chart fits on one screen, and thoroughness trades pause time against untangling. An earlier
+    // attempt also exposed cycle breaking, node placement and flow direction, and its own post-mortem
+    // records that those "move the corpus measurably and a small chart not at all" - which is a report of
+    // "the config did nothing" being accurate. Those live as constants in the strategy now, with their
+    // measurements beside them, and promoting one is a field plus a getInt.
+
+    /** Clear space between two machines in the same column. */
+    public static int layoutNodeSpacing = 20;
+
+    /**
+     * Clear space between two columns. This is the arrow router's corridor and the single most
+     * consequential number here: the router needs {@code 2 * ROUTE_MARGIN + ROUTE_CELL} units of it to
+     * turn in, and {@link #layoutSettings(int, int)} clamps up to that.
+     */
+    public static int layoutLayerSpacing = 70;
+
+    /**
+     * How many crossing-minimisation sweeps the engine attempts, keeping the best. Higher is slower
+     * and marginally cleaner; the layout runs while the chart is on screen, so a big chart will pause.
+     */
+    public static int layoutThoroughness = 30;
+
+    public static final int LAYOUT_NODE_SPACING_MIN = 10;
+    public static final int LAYOUT_NODE_SPACING_MAX = 80;
+    public static final int LAYOUT_LAYER_SPACING_MIN = 40;
+    public static final int LAYOUT_LAYER_SPACING_MAX = 200;
+    public static final int LAYOUT_THOROUGHNESS_MIN = 1;
+    public static final int LAYOUT_THOROUGHNESS_MAX = 30;
+
+    /**
+     * The settings the engine reads, clamped the same way {@link #solverEffort()} is.
+     *
+     * @param corridorFloor  the minimum inter-column gap the arrow router needs to turn in. Passed in
+     *                       rather than duplicated here, because the router owns those numbers and a
+     *                       hand-transcribed copy of them was once wrong by six units and never called
+     * @param groupMinWidth  the narrowest a group's content area may be drawn
+     * @param groupMinHeight the shortest, likewise
+     */
+    public static LayoutSettings layoutSettings(final int corridorFloor, final int groupMinWidth,
+        final int groupMinHeight) {
+
+        final int layerSpacing = Math.clamp(layoutLayerSpacing, LAYOUT_LAYER_SPACING_MIN, LAYOUT_LAYER_SPACING_MAX);
+        if (layerSpacing < corridorFloor) {
+            PlanNH.LOG.info(
+                "Auto-layout layer spacing {} is below the {} the arrow router needs to turn in; using {}",
+                layerSpacing,
+                corridorFloor,
+                corridorFloor);
+        }
+        return new LayoutSettings(
+            Math.clamp(layoutNodeSpacing, LAYOUT_NODE_SPACING_MIN, LAYOUT_NODE_SPACING_MAX),
+            Math.max(layerSpacing, corridorFloor),
+            Math.clamp(layoutThoroughness, LAYOUT_THOROUGHNESS_MIN, LAYOUT_THOROUGHNESS_MAX),
+            groupMinWidth,
+            groupMinHeight);
+    }
+
     public static void synchronizeConfiguration(final File configFile) {
         final Configuration configuration = new Configuration(configFile);
 
@@ -115,6 +178,35 @@ public final class Config {
             "How long AUTO balancing may spend looking for a better answer, as a percentage of the"
                 + " default. Lower gives up sooner on big charts; higher makes them balance better"
                 + " and the GUI pause longer, because the solve runs while the screen draws.");
+
+        layoutNodeSpacing = configuration.getInt(
+            "layoutNodeSpacing",
+            "layout",
+            layoutNodeSpacing,
+            LAYOUT_NODE_SPACING_MIN,
+            LAYOUT_NODE_SPACING_MAX,
+            "Clear space between two machines in the same column when auto-layout arranges a chart."
+                + " Lower packs a column tighter, which usually means a wider chart as arrows have"
+                + " further to travel.");
+
+        layoutLayerSpacing = configuration.getInt(
+            "layoutLayerSpacing",
+            "layout",
+            layoutLayerSpacing,
+            LAYOUT_LAYER_SPACING_MIN,
+            LAYOUT_LAYER_SPACING_MAX,
+            "Clear space between two columns when auto-layout arranges a chart. This gap is also the"
+                + " corridor the arrows route down, so it is raised automatically if it would leave the"
+                + " router no room to turn.");
+
+        layoutThoroughness = configuration.getInt(
+            "layoutThoroughness",
+            "layout",
+            layoutThoroughness,
+            LAYOUT_THOROUGHNESS_MIN,
+            LAYOUT_THOROUGHNESS_MAX,
+            "How hard auto-layout works to untangle arrow crossings, from 1 to 30. Higher is slower,"
+                + " and the layout runs while the chart is on screen, so a big chart will pause.");
 
         if (configuration.hasChanged()) {
             configuration.save();

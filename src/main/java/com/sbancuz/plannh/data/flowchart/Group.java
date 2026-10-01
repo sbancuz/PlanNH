@@ -24,7 +24,6 @@ public class Group extends GraphData {
     private int width = GROUP_MIN_W;
     private int height = GROUP_MIN_H;
     private int color = getRandomColor();
-    private boolean collapsed;
     private boolean coverChildren;
     /**
      * Sorted for the same reason the graph's own maps are, and for one more: Gson builds a
