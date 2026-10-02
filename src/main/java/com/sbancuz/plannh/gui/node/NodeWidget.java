@@ -26,31 +26,6 @@ import com.sbancuz.plannh.gui.edge.ArrowWidget;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import lombok.Getter;
 
-/**
- * A machine on the canvas.
- *
- * <p>
- * <b>Geometry contract.</b> Auto-layout reads this widget's box, so three things about it are load
- * bearing and worth writing down rather than rediscovering:
- *
- * <ul>
- * <li><b>Size comes from {@code getArea()},</b> and only after a MUI2 layout pass has resolved
- * {@code coverChildren()} ({@code :49}). There is no {@code worldWidth}/{@code worldHeight}, and a
- * machine's height moves when the settings list opens or the throughput line rebuilds — so a box read
- * during a click handler may be one or two frames stale. MUI2 also culls off-viewport widgets, and
- * {@code SettingsList} deliberately does not cap its height on the first frame, so a legitimate
- * machine can report a zero box. Callers need a fallback.</li>
- * <li><b>Pins are recipe-driven, not indexed.</b> A {@code PortWidget} positions itself at
- * {@code pos(stack.relx + 1, stack.rely - 1 + yShift)} relative to {@code RecipeAreaWidget}
- * ({@code PortWidget:98}), where {@code yShift} comes from the GTNEI handler. <b>Pin Y is not a
- * function of port index</b> — it is wherever the ingredient sits in NEI's grid. The formula the
- * deleted {@code RecipeNodeWidget} used, {@code (i + 1) * 18 + 10}, describes a widget that no longer
- * exists.</li>
- * <li><b>The port index is a pair.</b> {@code PortWidget.getIndex()} is an {@code IntIntPair} of
- * {@code (portIndex, stackIndex)}: one logical port can carry several stacks, each its own pin. The
- * arrow router keys on the whole pair, so one relation's two ends can be any stack of any port.</li>
- * </ul>
- */
 public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
     private static final String SETTINGS_LANG = "plannh.gui.node.settings";
