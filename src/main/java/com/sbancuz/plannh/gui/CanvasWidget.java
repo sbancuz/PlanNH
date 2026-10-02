@@ -39,6 +39,7 @@ import com.sbancuz.plannh.client.ScreenEffect;
 import com.sbancuz.plannh.client.UIBlurEffect;
 import com.sbancuz.plannh.data.flowchart.Edge2;
 import com.sbancuz.plannh.data.flowchart.Graph;
+import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -245,39 +246,84 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     /**
-     * Positions an auto-wired node beside its lookup origin: producers left, consumers right,
-     * in the first free slot down the column.
+     * Positions an auto-wired node beside its lookup origin: producers left, consumers right.
+     * Searches outward in a grid pattern from the ideal position to find the closest non-overlapping spot.
      */
     public void placeBesideOrigin(final Node added, final Node origin, final boolean addedFeedsOrigin) {
-        final RecipeNodeWidget originWidget = nodeWidgets.get(origin.getId());
-        final int originW = originWidget != null ? originWidget.worldWidth() : NODE_W_ESTIMATE;
-        final int originH = originWidget != null ? originWidget.worldHeight() : NODE_H_ESTIMATE;
+        final NodeWidget originWidget = nodeWidgets2.get(origin.getId());
+        if (originWidget == null) return;
+
+        final int originW = originWidget.getArea().width;
         final int baseX = Math.round(
             addedFeedsOrigin ? origin.getX() - originW - AUTO_PLACE_GAP_X : origin.getX() + originW + AUTO_PLACE_GAP_X);
         final int baseY = Math.round(origin.getY());
-        int x;
-        int y;
-        int slot = 0;
-        do {
-            final int stagger = slot * AUTO_PLACE_STAGGER;
-            x = addedFeedsOrigin ? baseX - stagger : baseX + stagger;
-            y = baseY + slot * (originH + AUTO_PLACE_GAP_Y) + (slot + 1) * (PortGeometry.SPACING / 2);
-            slot++;
-        } while (overlapsAnyNode(x, y, originW, originH));
-        added.setX(x);
-        added.setY(y);
+
+        final int[] spot = findFreeSpot(baseX, baseY, NODE_W_ESTIMATE, NODE_H_ESTIMATE);
+        added.setX(spot[0]);
+        added.setY(spot[1]);
     }
 
     private boolean overlapsAnyNode(final int x, final int y, final int w, final int h) {
-        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
-            final Node n = widget.getNode();
-            if (x < n.getX() + widget.worldWidth() && n.getX() < x + w
-                && y < n.getY() + widget.worldHeight()
+        for (final FlowchartWidget<?, ?> widget : flowchartWidgets.values()) {
+            final GraphData n = widget.getData();
+            final int nw = widget.getArea().width;
+            final int nh = widget.getArea().height;
+
+            if (x < n.getX() + nw && n.getX() < x + w
+                && y < n.getY() + nh
                 && n.getY() < y + h) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Finds a non-overlapping position near the given point, searching outward in a grid pattern.
+     * Checks positions at increasing distances, preferring spots closer to the ideal location.
+     */
+    private int[] findFreeSpot(final int x, final int y, final int w, final int h) {
+        if (!overlapsAnyNode(x, y, w, h)) return new int[] { x, y };
+        final int step = GRID_SIZE;
+        for (int ring = 1; ring <= 15; ring++) {
+            for (int ox = -ring; ox <= ring; ox++) {
+                for (int oy = -ring; oy <= ring; oy++) {
+                    if (Math.max(Math.abs(ox), Math.abs(oy)) != ring) continue;
+                    final int cx = x + ox * step;
+                    final int cy = y + oy * step;
+                    if (!overlapsAnyNode(cx, cy, w, h)) return new int[] { cx, cy };
+                }
+            }
+        }
+        return new int[] { x, y };
+    }
+
+    /**
+     * Called by a FlowchartWidget after its size changes (e.g. settings opened).
+     * Checks if the resized widget now overlaps any neighbor, and if so, pushes the neighbor away.
+     */
+    public void resolveOverlapsFrom(final FlowchartWidget<?, ?> source) {
+        final GraphData srcData = source.getData();
+        final int srcW = source.getArea().width;
+        final int srcH =  source.getArea().height;
+
+        for (final FlowchartWidget<?, ?> other : flowchartWidgets.values()) {
+            if (other == source) continue;
+            final GraphData dstData = other.getData();
+            final int dstW = other.getArea().width;
+            final int dstH = other.getArea().height;
+
+            if (srcData.getX() < dstData.getX() + dstW && dstData.getX() < srcData.getX() + srcW
+                && srcData.getY() < dstData.getY() + dstH && dstData.getY() < srcData.getY() + srcH) {
+                final int[] spot = findFreeSpot(dstData.getX(), dstData.getY(), dstW, dstH);
+
+                PlanAPI.recordEdit(graph, () -> {
+                    dstData.setX(spot[0]);
+                    dstData.setY(spot[1]);
+                    other.reposition();
+                });
+            }
+        }
     }
 
     public void setGraph(final Graph newGraph) {
@@ -1071,8 +1117,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public void addNode(int x, int y, IRecipeHandler handler, int recipeIndex) {
         PlanAPI.recordEdit(graph, () -> {
             Node node = new Node(handler, recipeIndex);
-            node.setX(x);
-            node.setY(y);
+
+            if (neiTransferSource != null) {
+                final PortWidget portWidget = neiTransferSource;
+                final Node origin = portWidget.getNode();
+                final boolean addedFeedsOrigin = !portWidget.getPortType()
+                    .isEdgeSource();
+                placeBesideOrigin(node, origin, addedFeedsOrigin);
+            } else {
+                final int[] spot = findFreeSpot(x, y, NODE_W_ESTIMATE, NODE_H_ESTIMATE);
+                node.setX(spot[0]);
+                node.setY(spot[1]);
+            }
 
             graph.getNodes()
                 .put(node.getId(), node);

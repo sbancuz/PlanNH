@@ -143,5 +143,4 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     public PortWidget getPortWidget(IntIntPair index, boolean isInput) {
         return getPortWidgets(isInput).get(index);
     }
-
 }
