@@ -19,7 +19,6 @@ import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.ColorPickerDialog;
-import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.api.PlanAPI;
@@ -117,15 +116,7 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
                         else colorPicker.closePanel();
                         return true;
                     })
-                    .addTooltipLine("Open Color Picker"))
-            .child(
-                new CycleButtonWidget().stateCount(2)
-                    .stateOverlay(true, IKey.str("^"))
-                    .stateOverlay(false, IKey.str("V"))
-                    .value(new BoolValue.Dynamic(data::isCollapsed, val -> {
-                        PlanAPI.recordEdit(canvas.getGraph(), () -> data.setCollapsed(val));
-                        scheduleResize();
-                    })));
+                    .addTooltipLine("Open Color Picker"));
     }
 
     @Override
@@ -206,6 +197,10 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
             .orElseThrow()
             .getTransformationMatrix()
             .unTransformY(context.getAbsMouseX(), context.getAbsMouseY());
+    }
+
+    public int contentAreaOffset() {
+        return areaWidget.getArea().y - getArea().y;
     }
 
     @Override

@@ -36,6 +36,7 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
     private int dragStartMouseX, dragStartMouseY;
     private int dragOffsetX, dragOffsetY;
     private int dragStartX, dragStartY;
+    private int lastWidth = -1, lastHeight = -1;
     @Getter
     @Setter
     private SortedMap<UUID, ? super D> dataContainer;
@@ -143,9 +144,23 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
 
     protected abstract SortedMap<UUID, ? super D> getDefaultContainer();
 
-    protected void reposition() {
+    public void reposition() {
         pos(data.getX(), data.getY());
         canvas.needsReroute();
+    }
+
+    @Override
+    public void postResize() {
+        super.postResize();
+        final Area area = getArea();
+        final int w = area.w();
+        final int h = area.h();
+        // I really don't know, this gets called when changing position for some reason so guard that :(
+        if (w != lastWidth || h != lastHeight) {
+            lastWidth = w;
+            lastHeight = h;
+            canvas.resolveOverlapsFrom(this);
+        }
     }
 
     private void adjustGroupMembership() {
