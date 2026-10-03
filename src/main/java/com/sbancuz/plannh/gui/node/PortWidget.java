@@ -30,7 +30,7 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.flowchart.Edge2;
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.gui.CanvasWidget;
@@ -279,8 +279,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     }
 
     public static void addArrow(CanvasWidget canvas, PortWidget source, PortWidget target) {
-        SortedMap<UUID, Edge2> edges = canvas.getGraph()
-            .getEdges2();
+        SortedMap<UUID, Edge> edges = canvas.getGraph()
+            .getEdges();
 
         if (target.notConfigured() && target.configurable()) target.setPermutationToStack(source.stack.item);
 
@@ -300,8 +300,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                     .get(edge.getId())
                     .removeFromGraph());
 
-        Edge2 edge = new Edge2(source, target);
-        edges.put(edge.getId(), edge);
+        Edge edge = new Edge(source, target);
+        canvas.getGraph()
+            .addEdge(edge);
 
         ArrowWidget arrow = new ArrowWidget(canvas, edge);
         canvas.child(arrow);

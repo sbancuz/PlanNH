@@ -174,7 +174,7 @@ class GtnhFlowLoadTest {
         for (final Edge edge : chart.graph()
             .getEdges()
             .values()) {
-            parent.put(find(parent, edge.sourceNodeId), find(parent, edge.targetNodeId));
+            parent.put(find(parent, edge.getSourceNodeId()), find(parent, edge.getTargetNodeId()));
         }
         final Set<UUID> roots = new HashSet<>();
         for (final UUID id : parent.keySet()) {

@@ -22,6 +22,8 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
+import it.unimi.dsi.fastutil.ints.IntIntMutablePair;
+
 /**
  * Loads gtnh-flow style YAML charts into PlanNH {@link Graph}s.
  *
@@ -175,8 +177,8 @@ public final class GtnhFlowLoader {
                             edgeId(name, edgeIndex++),
                             machines.get(src[0]).getId(),
                             machines.get(dst[0]).getId(),
-                            src[1],
-                            dst[1]));
+                            new IntIntMutablePair(src[1], 0),
+                            new IntIntMutablePair(dst[1], 0)));
                 }
             }
         }
@@ -204,12 +206,15 @@ public final class GtnhFlowLoader {
             .getEdges()
             .values()
             .stream()
-            .filter(e -> e.targetNodeId.equals(machine.getId()) && e.targetInputIndex == inputIndex)
-            .map(e -> e.id)
+            .filter(
+                e -> e.getTargetNodeId()
+                    .equals(machine.getId()) && e.getTargetInputItemIndex() == inputIndex)
+            .map(Edge::getId)
             .toList();
         ids.forEach(
             id -> chart.graph()
-                .removeEdge(id));
+                .getEdges()
+                .remove(id));
         return ids.size();
     }
 

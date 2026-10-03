@@ -86,8 +86,8 @@ public final class BalanceView {
         final Set<PortRef> wired = new HashSet<>();
         for (final Edge edge : graph.getEdges()
             .values()) {
-            wired.add(new PortRef(edge.sourceNodeId, edge.sourceOutputIndex, false));
-            wired.add(new PortRef(edge.targetNodeId, edge.targetInputIndex, true));
+            wired.add(new PortRef(edge.getSourceNodeId(), edge.getSourceOutputItemIndex(), false));
+            wired.add(new PortRef(edge.getTargetNodeId(), edge.getTargetInputItemIndex(), true));
         }
         final List<Boundary> out = new ArrayList<>();
         for (final Node node : graph.getNodes()
