@@ -65,7 +65,7 @@ public class Node {
 
         this.availableExtractors = extractorsFor(handler, recipeIndex);
         this.extractorIndex = 0;
-        // First, because extractorsFor has already put the providers that claim this recipe in front.
+        // extractorsFor() has already dropped the providers that can't craft this recipe
         this.extractor = availableExtractors.isEmpty() ? DefaultProvider.INSTANCE : availableExtractors.getFirst();
 
         final String pid = this.extractor.getProfileId(handler, recipeIndex);
@@ -135,14 +135,13 @@ public class Node {
     }
 
     /**
-     * The providers offered for this recipe. Extractors register against a NEI handler class, so every
-     * GregTech recipe is offered every GregTech provider - including the steam one, which would let a
-     * player switch a Large Chemical Reactor onto steam. {@code canCraft} is the provider's own answer
-     * about this recipe, so it decides what is offered rather than only which is picked first.
+     * The providers a node can switch to for this recipe. Extractors register against a NEI handler class, so every
+     * GregTech provider matches every GregTech recipe, including the steam one. Using {@code canCraft} only to pick the
+     * first provider would let a player switch a Large Chemical Reactor onto steam.
      *
      * <p>
-     * A recipe no provider claims keeps the unfiltered list: something has to extract it, and a wrong
-     * provider reads better than a node with no properties at all.
+     * A recipe no provider can craft gets the unfiltered list: something has to extract it, and a wrong provider is
+     * better than a node with no properties.
      */
     private static List<PropertyProvider> extractorsFor(final IRecipeHandler handler, final int recipeIndex) {
         final List<PropertyProvider> all = RecipePropertyAPI.getExtractors(handler.getClass());

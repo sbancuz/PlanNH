@@ -15,13 +15,12 @@ import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 /**
- * EnderIO's machines, as the shared picker sees them.
+ * EnderIO's machines, registered with the shared picker.
  *
  * <p>
- * Every EnderIO recipe belongs to exactly one machine - the recipe registry is keyed by machine name -
- * so no node ever has a choice to make here, and the picker offers one option. It is still worth
- * registering: the node then names the machine the recipe actually runs in rather than saying
- * "EnderIO", and the capacitor row appears only on the machines a capacitor drives.
+ * EnderIO's recipe registry is keyed by machine name, so every EnderIO recipe belongs to one machine and
+ * the picker has one option. Registering still matters: the node prints the machine the recipe runs in,
+ * not "EnderIO", and the capacitor row appears only on capacitor-driven machines.
  */
 public enum EnderIOMachines implements MachineVariant {
 
@@ -30,7 +29,7 @@ public enum EnderIOMachines implements MachineVariant {
     VAT("enderio:vat", "tile.blockVat.name", true),
     SLICE_AND_SPLICE("enderio:slice_and_splice", "tile.blockSliceAndSplice.name", true),
     SOUL_BINDER("enderio:soul_binder", "tile.blockSoulBinder.name", true),
-    /** Runs on experience levels rather than a capacitor, so it has no tier to choose. */
+    /** Runs on experience levels, not a capacitor, so it has no tier row. */
     ENCHANTER("enderio:enchanter", "tile.blockEnchanter.name", false);
 
     private final String id;
@@ -38,11 +37,10 @@ public enum EnderIOMachines implements MachineVariant {
     private final Set<Settings> settings;
 
     /**
-     * @param id      what a chart persists. PlanNH's own, because EnderIO keys its recipe registry by
-     *                machine name rather than by block, and a chart has to survive a block being
-     *                renamed
-     * @param nameKey EnderIO's own unlocalized block name, so the picker reads the machine the way
-     *                the player's game does in whichever of the sixteen languages EnderIO ships
+     * @param id      the id stored in the chart. A PlanNH id, because EnderIO's recipe registry is keyed
+     *                by machine name, not by block, and a chart has to survive a block rename
+     * @param nameKey EnderIO's unlocalized block name, so the picker prints the machine name in the
+     *                player's language
      */
     EnderIOMachines(final String id, final String nameKey, final boolean capacitorDriven) {
         this.id = id;
@@ -69,8 +67,8 @@ public enum EnderIOMachines implements MachineVariant {
     }
 
     /**
-     * Which EnderIO machine this recipe runs in. The recipe's own cached type is what says so, and
-     * only the provider reading the recipe can see that, so it publishes the answer here.
+     * The EnderIO machine this recipe runs in. The provider sets it from the recipe's cached type,
+     * which only the provider has access to.
      */
     public static final RecipeProperty<EnderIOMachines> MACHINE = RecipeProperty
         .<EnderIOMachines>builder("enderio.machine", null)
@@ -85,8 +83,7 @@ public enum EnderIOMachines implements MachineVariant {
     }
 
     /**
-     * Which machine a node's recipe came from, published by the provider while it reads the recipe -
-     * the recipe's own cached type is what says so, and only the provider can see that.
+     * Returns the machine the provider stored in {@link #MACHINE} while reading the node's recipe.
      */
     public static final MachineVariants.Source SOURCE = new MachineVariants.Source() {
 

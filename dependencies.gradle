@@ -33,9 +33,7 @@
  *
  * For more details, see https://docs.gradle.org/8.0.1/userguide/java_library_plugin.html#sec:java_library_configurations_graph
  */
-// The version GTMachinePresets was read against. Main and test have to move together, or the tests
-// would validate the preset table against a GregTech the mod does not compile against.
-def gt5uVersion = "5.09.52.613"
+def gt5uVersion = "5.09.54.189-gt-interface-rewrite-poc.16+6095b4a9e2-dirty"
 
 dependencies {
     api("com.github.GTNewHorizons:NotEnoughItems:2.8.104-GTNH:dev")
@@ -112,6 +110,8 @@ dependencies {
     testImplementation('org.junit.jupiter:junit-jupiter:5.10.2')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.10.2')
     testImplementation('org.yaml:snakeyaml:2.2')
+    // GTRecipe's constructor needs the game loaded, so tests stand one in
+    testImplementation('org.mockito:mockito-core:5.24.0')
 
     // The overclock tests call GT's own OverclockCalculator; classloading it pulls in GTUtility,
     // whose static init reaches joml and fastutil. Both are already on the compile classpath (via

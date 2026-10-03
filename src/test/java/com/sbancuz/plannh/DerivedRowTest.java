@@ -12,8 +12,8 @@ import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 /**
- * The derived rows exist to show that minimisation worked, so a row saying the machine did nothing is
- * worse than no row: it is the noise the minimisation was supposed to remove.
+ * Derived rows draw what minimisation changed, so a row whose value means the machine did nothing
+ * is noise and is suppressed.
  */
 class DerivedRowTest {
 
@@ -28,7 +28,7 @@ class DerivedRowTest {
         assertFalse(discount.isNeutral(90), "an actual discount must still be reported");
     }
 
-    /** GregTech's own default when a machine never asked is one, not the zero the field declares. */
+    /** GregTech's default for a machine that never sets it is 1, not the field's declared 0. */
     @Test
     void theNeutralIsTheMachinesNotTheFields() {
         final SettingDef<Integer> skips = SettingDef
@@ -38,7 +38,7 @@ class DerivedRowTest {
         assertFalse(skips.isNeutral(0), "a machine that forbids skipping said something");
     }
 
-    /** A row with no declared neutral reports every value, rather than guessing one. */
+    /** A row without a declared neutral suppresses no value. */
     @Test
     void anUndeclaredNeutralNeverSuppresses() {
         final SettingDef<Integer> plain = SettingDef.autoIntDef("amp", 1, 64, (ctx, s) -> 1, null);

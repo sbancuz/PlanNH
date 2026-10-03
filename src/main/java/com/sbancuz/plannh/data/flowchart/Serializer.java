@@ -218,8 +218,8 @@ public final class Serializer {
         root.addProperty("panX", graph.getPanX());
         root.addProperty("panY", graph.getPanY());
         root.addProperty("name", graph.getName());
-        // Keyed by setting, so a chart records floors for whichever settings the installed mods offer.
-        // Only what was set is written: absence is the unset state.
+        // Keyed by setting, so a floor can be stored for any setting an installed mod adds.
+        // Only set floors are written. A missing key means unset.
         if (!graph.getMinimums()
             .isEmpty()) {
             root.add("minimums", GSON.toJsonTree(graph.getMinimums(), MINIMUMS));
@@ -239,9 +239,9 @@ public final class Serializer {
             }
             obj.addProperty("handlerRecipeIndex", node.handlerRecipeIndex);
             obj.addProperty("extractorIndex", node.getExtractorIndex());
-            // Only a pinned node has a count worth keeping; the rest follow the solver on reload. The
-            // marker is written too, because there is no schema version and a bare machineCount cannot
-            // otherwise be told from the one older charts wrote on every node whether pinned or not.
+            // Only a pinned node's count is saved. The rest follow the solver on reload. The marker is written
+            // too: without a schema version, a bare machineCount looks like the one written on every node in
+            // older charts, pinned or not.
             if (node.machineConfig.isMachineCountPinned()) {
                 obj.addProperty("machineCount", node.machineConfig.getMachineCount());
                 obj.addProperty("machineCountPinned", true);
@@ -311,8 +311,8 @@ public final class Serializer {
         graph.setPanY(
             root.get("panY")
                 .getAsFloat());
-        // Through setMinimum rather than into the map, because a floor changes what every untouched
-        // node runs at and the graph has to come back dirty enough to re-solve.
+        // Writing into getMinimums() directly would skip the version bump. A floor changes what every
+        // untouched node runs at, so the loaded graph has to re-solve.
         if (root.has("minimums")) {
             final SortedMap<String, Integer> stored = GSON.fromJson(root.get("minimums"), MINIMUMS);
             stored.forEach(graph::setMinimum);
@@ -341,9 +341,9 @@ public final class Serializer {
             node.initExtractor();
             node.refresh();
 
-            // Older charts stored a count on every node and marked the deliberate ones with
-            // machineCountFixed; only those stay pinned, and the rest are dropped so the node follows
-            // the solver, which is what an unmarked count always meant.
+            // Older charts stored a count on every node and marked user-set ones with machineCountFixed.
+            // Only those stay pinned. An unmarked count is dropped so the node follows the solver, as it
+            // did in those charts.
             final boolean pinned = obj.has("machineCountPinned") ? obj.get("machineCountPinned")
                 .getAsBoolean()
                 : obj.has("machineCountFixed") && obj.get("machineCountFixed")
@@ -462,12 +462,11 @@ public final class Serializer {
             obj.addProperty("profile", cfg.profileId);
         }
 
-        // Walk what the node actually stores, not what its profile declares: the map is sparse, so
-        // a key being there is already the statement "the user chose this". Iterating the defs
-        // instead used to silently drop any stored key the current profile no longer lists.
+        // Iterating the profile's defs would drop any stored key missing from the current profile. The
+        // map is sparse, so every key in it is a user choice.
         final JsonObject settingsObj = new JsonObject();
         for (final Map.Entry<String, Object> entry : cfg.settings.entrySet()) {
-            // The machine count has its own slot and is rewritten by the solver every frame.
+            // machine count is saved as the node's machineCount, and only when pinned
             if (Settings.MACHINES.key()
                 .equals(entry.getKey())) continue;
             final Object val = entry.getValue();

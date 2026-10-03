@@ -77,8 +77,8 @@ class BalancerSmokeTest {
 
     /**
      * AUTO must never write solved counts back into the node configs: viewing a chart is not editing
-     * it. Since storing a count is now what pins a node, a write-back would also silently pin every
-     * node in the chart, so the two halves of that rule are one assertion.
+     * it. Storing a count pins a node, so a write-back would also pin every node in the chart. The two halves of that
+     * rule are one assertion.
      */
     @Test
     void autoModeDoesNotWriteSolvedCountsBack() {
@@ -93,7 +93,7 @@ class BalancerSmokeTest {
             "solving pinned a node the user never touched, freezing it at the solved count");
     }
 
-    /** A pinned count is a constraint the solve must respect and must not overwrite. */
+    /** A pinned count is a solve constraint and is never overwritten by the solve. */
     @Test
     void aPinnedCountSurvivesViewing() {
         final LoadedChart chart = GtnhFlowLoader.load("loopGraph");
@@ -106,7 +106,7 @@ class BalancerSmokeTest {
         assertEquals(3, lcr.machineConfig.getMachineCount(), "configured count must survive viewing");
     }
 
-    /** AUTO reports the exact fractional machine count, so displayed numbers reconcile by hand. */
+    /** AUTO returns the unrounded fractional machine count, so displayed numbers reconcile by hand. */
     @Test
     void autoModeReportsExactFractionalCounts() {
         final LoadedChart chart = GtnhFlowLoader.load("loopGraph");

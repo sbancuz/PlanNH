@@ -1226,8 +1226,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         // Close context menu on any click
         menuOpen = false;
-        // The picker's own buttons are panel children and consume their click before this runs, so
-        // dismissing here only catches clicks that landed outside it.
+        // Picker buttons are panel children and consume their click before this runs, so this closes
+        // the picker only on clicks outside it.
         closeMachinePicker();
 
         if (mouseButton == 0) {
@@ -1364,9 +1364,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         // menuOpen = false;
 
         float delta = direction == UpOrDown.UP ? ZOOM_STEP : -ZOOM_STEP;
-        // Stock LWJGL 2, which the dev client and vanilla installs run, reports the wheel as the
-        // platform delta of +-120 per notch. lwjgl3ify, which every modern GTNH pack runs, reports
-        // notch counts directly. The same scroll therefore arrives 120 times larger on one of them.
+        // Stock LWJGL 2 (dev client, vanilla installs) returns the platform delta of +-120 per wheel
+        // notch. lwjgl3ify, in every modern GTNH pack, returns notch counts. The same scroll is 120
+        // times larger on LWJGL 2.
         final int magnitude = Math.abs(amount);
         delta *= Math.max(1, magnitude >= 120 ? magnitude / 120 : magnitude);
         final float oldZoom = graph.getZoom();
@@ -1458,10 +1458,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     /**
-     * Everything a node displays comes from the cached balance, which only re-solves when the graph
-     * is marked dirty, and a config change can also add or remove rows and so change the node's
-     * height. Both effects live here so a new way to edit a node cannot silently skip one - the
-     * machine picker did exactly that, leaving nodes showing the previous machine's numbers.
+     * A node draws from the cached balance, which re-solves only when the graph is marked dirty. A config change can
+     * also add or remove rows and so change the node's height. An edit path that skips this leaves the node drawing the
+     * previous numbers.
      */
     public void onNodeConfigChanged(final Node node) {
         graph.markDirty();
@@ -1472,9 +1471,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     // ── Machine picker ──
-    // A node's machine is chosen from its title bar. The list has to live on the panel rather than
-    // on this widget: the canvas is an IViewport, so anything parented to it is drawn through the
-    // pan/zoom transform and a popup would follow the chart around.
+    // A node's machine is chosen from its title bar. The list is parented to the panel: the canvas is
+    // an IViewport, so a popup parented to it is drawn through the pan/zoom transform and moves with
+    // the chart.
 
     public void setMachinePicker(final Menu<?> menu, final ListWidget<IWidget, ?> list) {
         this.machinePickerMenu = menu;
@@ -1489,7 +1488,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         machinePickerNode = null;
     }
 
-    /** Rebuilds the list for this node, since the choices depend on which recipe it holds. */
+    /** Rebuilds the list for this node, since the choices depend on its recipe. */
     public void openMachinePicker(final Node node) {
         if (machinePickerMenu == null || machinePickerList == null) return;
         final MachineConfig config = node.machineConfig;

@@ -142,7 +142,7 @@ public final class GtnhFlowLoader {
 
             if (entry.containsKey("number")) {
                 final int count = (int) asDouble(entry.get("number"), 1.0);
-                // Storing the count is what pins it now; there is no separate flag.
+                // setMachineCount() also pins the node
                 node.machineConfig.setMachineCount(count);
                 pins.add(new Pin("number", machineIndex, node.machineName, null, count, -1));
             }

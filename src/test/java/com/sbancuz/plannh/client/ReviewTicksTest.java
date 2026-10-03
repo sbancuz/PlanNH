@@ -7,9 +7,9 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * The review column is the one thing in the machine table a regeneration cannot rebuild, so what
- * survives an overwrite and what does not is the contract worth pinning. The key is the machine's
- * numbers: identical numbers mean nothing a reviewer looked at has moved, whatever GregTech did.
+ * The review column is the only part of the machine table a regeneration can't rebuild, so these tests pin what
+ * survives an overwrite. The key is the machine's numbers: identical numbers mean nothing a reviewer looked at has
+ * moved, whatever GregTech did.
  */
 class ReviewTicksTest {
 
@@ -27,7 +27,7 @@ class ReviewTicksTest {
         assertEquals("✅", ticks.forMachine("Industrial Centrifuge", "par=8 dur=1/2"));
     }
 
-    /** The whole point of the fingerprint: GregTech moved, so nobody has reviewed what it does now. */
+    /** Changed numbers mean GregTech moved, so the old tick is void. */
     @Test
     void aTickIsVoidedWhenTheImplementationMoves() {
         final ReviewTicks ticks = of(HEADER, SEPARATOR, "| ✅ | Industrial Centrifuge | par=8 dur=1/2 | agrees |");
@@ -42,7 +42,7 @@ class ReviewTicksTest {
         assertEquals(ReviewTicks.UNCHECKED, ticks.forMachine("Large Chemical Reactor", "par=8 dur=1/2"));
     }
 
-    /** Whatever mark the reviewer used is theirs; the column is not a fixed vocabulary. */
+    /** Any mark the reviewer used is returned verbatim. The column has no fixed vocabulary. */
     @Test
     void anyMarkTheReviewerUsedIsCarriedBackVerbatim() {
         final ReviewTicks ticks = of(HEADER, SEPARATOR, "| checked 2026-09-07 | Pyrolyse Oven | par=1 | agrees |");
@@ -50,7 +50,7 @@ class ReviewTicksTest {
         assertEquals("checked 2026-09-07", ticks.forMachine("Pyrolyse Oven", "par=1"));
     }
 
-    /** A header row has a data row's shape, so it has to be recognised rather than fallen through. */
+    /** A header row has a data row's shape, so it is matched by its heading and skipped. */
     @Test
     void onlyDataRowsAreRead() {
         final ReviewTicks ticks = of(

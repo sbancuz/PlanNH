@@ -36,9 +36,6 @@ public enum Settings {
     INPUTS_PER_TICK("inputs_per_tick", 1, 1, 10000),
     LP_PER_TICK("lp_per_tick", 20, 1, 100000),
 
-    STEAM_EUT_DISCOUNT("steam_eut_discount", 100, 1, 10000, (v, c) -> "\u2622" + v + "%"),
-    STEAM_DURATION_MODIFIER("steam_duration_modifier", 100, 1, 10000, (v, c) -> "\u23F1" + v + "%"),
-
     // ── bool settings ──
     PERFECT_OC("perfect_oc", false, (v, c) -> v ? "P" : null),
     HEAT_OC("heat_oc", true, (v, c) -> v ? "H" : null),
@@ -47,25 +44,18 @@ public enum Settings {
     UNLIMITED_SKIPS("unlimited_skips", false, (v, c) -> v ? "\u221ET" : null),
     NO_OVERCLOCK("no_overclock", false, (v, c) -> v ? "NO" : null),
     GT_MULTIBLOCK("gt_multiblock", false, (v, c) -> v ? "M" : null),
-    CATALYST_ASTRAL_ARRAYS("catalyst_astral_arrays", 0, 0, 8637, (v, c) -> v > 0 ? "\u2606" + v : null),
     CATALYST_ACCEL_CARD("catalyst_accel_card", 0, 0, 5, (v, c) -> v > 0 ? "\u2606" + v : null),
 
     // ── settings the mod that owns the machine defines ──
     // Only the key is declared. The provider attaches the def, so no mod's voltage names, coil names
-    // or tier ceilings are written down here; see GTSettings and GTProvider.machineDriven. The GT_
-    // prefix follows GT_MULTIBLOCK above, and is honest: a coil is a GregTech idea, and the next mod's
-    // tier setting will not be a coil. Structure settings are declared in the order a machine table lists
-    // them, because an EnumSet of them iterates in declaration order.
+    // or tier ceilings appear here. See GTSettings and GTProvider.machineDriven. The GT_ prefix follows
+    // GT_MULTIBLOCK above: a coil is a GregTech concept, and another mod's tier setting won't be a coil.
+    // GregTech's other structure rows are keyed by each machine's structure kind, not by a constant
+    // here. Coil and pipe casing get constants because a chart can set a floor for them.
     MACHINE("machine"),
     VOLTAGE("voltage"),
     GT_COIL("gt_coil"),
-    GT_SOLENOID("gt_solenoid"),
-    GT_ITEM_PIPE("gt_item_pipe"),
     GT_PIPE_CASING("gt_pipe_casing"),
-    GT_SAWBLADE("gt_sawblade"),
-    GT_ELECTRODE("gt_electrode"),
-    GT_STRUCTURE_TIER("gt_structure_tier"),
-    GT_WIDTH("gt_width"),
     GT_MODE("gt_mode"),
     EIO_CAPACITOR("eio_capacitor"),
 
@@ -77,7 +67,7 @@ public enum Settings {
 
     private final SettingDef<?> def;
 
-    /** A setting the owning mod defines; see {@link SettingDef#providedDef}. */
+    /** A setting the owning mod defines. See {@link SettingDef#providedDef}. */
     Settings(final String key) {
         this.def = SettingDef.providedDef(key);
     }

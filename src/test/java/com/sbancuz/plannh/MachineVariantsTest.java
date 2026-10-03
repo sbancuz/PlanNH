@@ -24,9 +24,9 @@ import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 /**
- * The machine picker without GregTech. Everything here is a made-up mod, which is the point: the
- * layer earns its place only if a provider can offer machines, get the picker row and get per-machine
- * settings rows without PlanNH knowing anything about it.
+ * The machine picker without GregTech. Every machine here is from a made-up mod: the layer is only
+ * worth having if a provider can register machines and get the picker row and per-machine settings rows
+ * with no PlanNH code specific to that mod.
  */
 class MachineVariantsTest {
 
@@ -43,7 +43,7 @@ class MachineVariantsTest {
         Set.of(Settings.GT_COIL),
         "Fancy Grinder (big)");
 
-    /** Answers for one recipe kind and nothing else, the way a real provider recognises its own. */
+    /** Returns candidates for one recipe kind only, like a real provider. */
     private record FakeSource(String kind, List<Fake> offered) implements MachineVariants.Source {
 
         @Override
@@ -90,7 +90,7 @@ class MachineVariantsTest {
         assertNull(MachineVariants.selected(recipeOf("smelting"), Map.of()));
     }
 
-    /** Nothing stored is the normal state, so the first candidate has to be a usable answer on its own. */
+    /** Nothing stored is the normal state, so the first candidate must be usable as the selection. */
     @Test
     void anUnsetNodeUsesTheBestCandidateAndStoresNothing() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
@@ -107,7 +107,7 @@ class MachineVariantsTest {
         assertSame(FANCY, MachineVariants.selected(recipeOf("grinding"), chose("mod:fancy")));
     }
 
-    /** A pack that dropped the mod must not silently become a different machine with different numbers. */
+    /** In a pack without the mod, a stored id must not resolve to a different machine with other numbers. */
     @Test
     void aMachineThePackNoLongerHasResolvesToNothing() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
@@ -115,7 +115,7 @@ class MachineVariantsTest {
         assertNull(MachineVariants.selected(recipeOf("grinding"), chose("mod:removed")));
     }
 
-    /** The rows a node offers are the selected machine's, which is the whole point of registering settings. */
+    /** The rows a node draws are the selected machine's, the purpose of registering settings per machine. */
     @Test
     void settingRowsFollowTheSelectedMachine() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
@@ -129,7 +129,7 @@ class MachineVariantsTest {
                 .test(ctx, chose("mod:fancy")));
     }
 
-    /** The row stores an id and shows a label, so a save stays stable while the row reads as a name. */
+    /** The row stores an id and draws a label, so a save stays stable when the label changes. */
     @Test
     void thePickerOffersIdsAndShowsLabels() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE, FANCY)));
@@ -145,8 +145,8 @@ class MachineVariantsTest {
     }
 
     /**
-     * A node's recipe came from one mod's recipe list, so the first source that recognises it is the
-     * answer. Merging would mean offering machines that cannot run the recipe.
+     * A node's recipe comes from one mod's recipe list, so the first source with candidates wins.
+     * Merging would offer machines that can't run the recipe.
      */
     @Test
     void onlyTheProviderThatRecognisesTheRecipeAnswers() {
@@ -156,7 +156,7 @@ class MachineVariantsTest {
         assertEquals(List.of(FANCY), MachineVariants.candidates(recipeOf("grinding")));
     }
 
-    /** Registration is per-pass; a stale source would offer machines from a mod that just went away. */
+    /** Registration is per pass. A stale source would offer machines from a mod that is not loaded. */
     @Test
     void resetDropsEverySource() {
         MachineVariants.register(new FakeSource("grinding", List.of(SIMPLE)));

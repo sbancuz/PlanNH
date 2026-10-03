@@ -11,36 +11,34 @@ import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.effect.EffectResult;
 
 /**
- * One machine a recipe could be run in.
+ * One machine a recipe can run in.
  *
  * <p>
- * An interface rather than a record because the provider that owns a machine already has an object
- * describing it, holding far more than a picker needs - GregTech's carries an overclock describer, a
- * parameter preset and a mode table. Copying those into a shared record would make the copy a second
- * authority on what the machine is, and would cost a lookup back to the original every time anything
- * wanted the parts the copy dropped.
+ * An interface, not a record: the owning provider already has an object per machine with far more than a
+ * picker needs (GregTech's has an overclock describer, a parameter preset and a mode table). A shared record
+ * would be a second copy of that object, and every dropped field would cost a lookup back to the original.
  */
 public interface MachineVariant {
 
     /**
-     * What a chart persists. Must be stable across game versions and independent of locale, because a
-     * chart saved today has to resolve to the same machine on a pack updated tomorrow.
+     * The id stored in the chart. Must be stable across game versions and locales, so a saved chart
+     * resolves to the same machine after a pack update.
      */
     @Nonnull
     String id();
 
-    /** The machine's own name, as the recipe list titles it. */
+    /** The machine's name, as it appears in the recipe list's title. */
     @Nonnull
     String displayName();
 
-    /** The settings this machine reads, which are exactly the rows a node offers for it. */
+    /** The settings this machine reads, which are the rows a node draws for it. */
     @Nonnull
     Set<Settings> settings();
 
     /**
-     * What the picker shows. Defaults to the machine's name; a provider overrides it where the name
-     * alone is ambiguous, and the two are kept apart because the name is also matched against the
-     * recipe list's tab title.
+     * Picker label. Defaults to the machine's name. A provider overrides it where the name alone is
+     * ambiguous. The two are separate because the name is also matched against the recipe list's tab
+     * title.
      */
     @Nonnull
     default String label() {
@@ -48,28 +46,27 @@ public interface MachineVariant {
     }
 
     /**
-     * Whether the machine's throughput comes from what a player builds around it - an energy hatch, a
-     * capacitor - rather than from the block itself. A machine that fixes its own has nothing to ask,
-     * so the rows that would let a player choose are hidden and the machine's own number is used.
+     * Whether the machine's throughput comes from parts a player builds around it, such as an energy
+     * hatch or a capacitor, not from the block. When false, the rows for those parts are hidden and the
+     * machine's fixed number is used.
      *
      * <p>
-     * True by default, which is also what an unrecognised machine reads as: the rows this gates are
-     * the ones a built machine has, and offering them on a machine that turns out to fix its own is
-     * recoverable where withholding them is not.
+     * True by default, also for an unrecognised machine: these rows belong to a built machine, and
+     * showing them on a machine with a fixed number is recoverable where hiding them is not.
      */
     default boolean tieredByBuild() {
         return true;
     }
 
     /**
-     * What the machine makes of the recipe: how long it takes, what it draws, and how many copies run
-     * at once. {@code recipe} is the recipe as the list states it, before any machine touched it.
+     * The machine's numbers for the recipe: duration, draw, and how many copies run at once.
+     * {@code recipe} is the recipe as listed, before any machine modified it.
      *
      * <p>
-     * This is the whole of "the machine supplies the numbers", so a provider gets that behaviour by
-     * implementing this rather than by writing an effect step of its own. Null means the machine
-     * cannot answer - it has no parameters for this recipe, or the recipe carries something no
-     * machine can report - and leaves the node on its own settings rows.
+     * A provider makes its machine supply the numbers by implementing this, not by writing an effect
+     * step. Null when the machine has no numbers for this recipe, which leaves the node on its settings
+     * rows. A machine that won't run the recipe returns {@link EffectResult#rejectedBecause}, and the
+     * reason appears on the node.
      */
     @Nullable
     default EffectResult run(final RecipeContext ctx, final Map<String, Object> settings, final EffectResult recipe) {

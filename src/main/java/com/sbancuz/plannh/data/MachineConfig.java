@@ -14,11 +14,10 @@ import com.sbancuz.plannh.data.properties.RecipeProperty;
  * A node's machine settings.
  *
  * <p>
- * {@link #settings} is <b>sparse</b>: a key is present only if the user deliberately chose that
- * value. Absence means "derive it" - from the machine, or from the setting's declared default - so
- * {@code containsKey} answers "did the user choose this?" without sentinel values. Seeding every
- * default here is what forced the old sentinels (0 meaning auto, or a value equal to the default
- * meaning untouched), each of which eventually said the wrong thing.
+ * {@link #settings} is <b>sparse</b>: a key is present only if the user chose that value. Absence means
+ * "derive it" from the machine or from the setting's declared default, so {@code containsKey} returns
+ * whether the user chose it. Seeding defaults here would need sentinels (0 for auto, a value equal to the
+ * default for untouched), and a sentinel can't be told apart from a user who picks that value.
  */
 public class MachineConfig {
 
@@ -30,7 +29,7 @@ public class MachineConfig {
 
     private final Node parentRef;
 
-    /** Key lookup for the current profile; rebuilt when the node's profile changes. */
+    /** Key lookup for the current profile, rebuilt when the node's profile changes. */
     @Nullable
     private Map<String, SettingDef<?>> defsByKey;
     @Nullable
@@ -58,7 +57,7 @@ public class MachineConfig {
 
     /**
      * The declared default for a key, used when nothing is stored. Cached because the settings rows
-     * and the node title look defs up every frame and a profile carries around thirty of them.
+     * and the node title look defs up every frame, and a profile has around thirty.
      */
     @Nullable
     private SettingDef<?> def(final String key) {
@@ -112,8 +111,8 @@ public class MachineConfig {
     }
 
     /**
-     * Hands a setting back to the machine. Absence is a real state that the steppers cannot reach on
-     * their own, so without this a row nudged and returned to its old number stays pinned there.
+     * Unpins a setting so the machine's value applies again. The steppers can't reach absence, so
+     * without this a row stepped away and back stays pinned at that number.
      */
     public void clear(final String key) {
         settings.remove(key);
@@ -121,10 +120,9 @@ public class MachineConfig {
     }
 
     /**
-     * Drops everything the previous machine implied. A different machine has different coils, a
-     * different parallel ceiling and different overclock rules, so carrying values across produces
-     * numbers the new machine cannot actually reach. Voltage survives because it describes the power
-     * supplied to the node rather than the machine itself.
+     * Drops every setting except voltage. Another machine has different coils, parallel ceiling and
+     * overclock rules, so carried-over values give numbers the new machine can't reach. Voltage is kept
+     * because it is the power supplied to the node, not a property of the machine.
      */
     public void resetForNewMachine() {
         settings.keySet()
@@ -143,7 +141,7 @@ public class MachineConfig {
             final double factor = 100.0 / tickMod;
             final int newDuration = Math.max(1, (int) Math.round(result.durationTicks() * factor));
             final long newEnergyPerT = Math.round(result.energyPerT() / factor);
-            result = new EffectResult(newDuration, newEnergyPerT, result.throughputFactor());
+            result = result.withTiming(newDuration, newEnergyPerT);
         }
         return result;
     }
@@ -157,24 +155,22 @@ public class MachineConfig {
         final Object count = settings.get(Settings.MACHINES.key());
         settings.clear();
         settings.putAll(other.settings);
-        // Absence is a state: an unpinned node must not inherit the other's pin.
+        // absence is a state: an unpinned node must not inherit the other's pin
         if (count != null) settings.put(Settings.MACHINES.key(), count);
         else settings.remove(Settings.MACHINES.key());
     }
 
     /**
-     * How many machines this node stands for, one when it has not been pinned. Pinning is the presence
-     * of the key: a node that never had a count typed into it follows whatever the solver works out,
-     * so it must not contribute a multiplier of its own.
+     * The machine count of this node, 1 when not pinned. A pin is the presence of the key. An unpinned
+     * node follows the solver's count, so it must not add a multiplier.
      */
     public int getMachineCount() {
-        // Hard default rather than the profile's: a profile need not declare the setting, and a
-        // count of zero would silently void the node.
+        // hard default, not the profile's: the setting may be absent from it, and a zero count voids the node
         final Object v = settings.get(Settings.MACHINES.key());
         return v instanceof final Number n ? Math.max(1, n.intValue()) : 1;
     }
 
-    /** Whether a count was typed in. The solver treats a pinned node as a constraint, not a variable. */
+    /** Whether a count was typed in. A pinned node's count is a constraint for the solver, not a variable. */
     public boolean isMachineCountPinned() {
         return settings.containsKey(Settings.MACHINES.key());
     }

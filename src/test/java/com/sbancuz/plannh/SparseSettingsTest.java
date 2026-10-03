@@ -14,9 +14,9 @@ import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
 
 /**
- * The settings map holds only what the user chose. Two things follow that nothing else pins: an
- * untouched node writes no config at all, and merely solving a chart must not look like editing it -
- * the balancer writes its solved machine count back into every node on every solve.
+ * The settings map stores only what the user chose. Two consequences no other test pins: an untouched
+ * node writes no config, and solving a chart must not look like an edit. The balancer writes its solved
+ * machine count back into every node on every solve.
  */
 class SparseSettingsTest {
 
@@ -25,12 +25,12 @@ class SparseSettingsTest {
         final GtnhFlowLoader.LoadedChart chart = GtnhFlowLoader.load("mk1");
 
         for (final Node node : chart.machines()) {
-            if (node.machineConfig.isMachineCountPinned()) continue; // a chart pin, deliberately stored
+            if (node.machineConfig.isMachineCountPinned()) continue; // pinned in the chart, so it has stored config
             assertFalse(node.machineConfig.hasStoredSettings(), node.machineName + " stores config it was never given");
         }
     }
 
-    /** An untouched node stores no count at all: presence of the key is what pins it to the solver. */
+    /** An untouched node stores no count. Key presence is the pin, so an absent key leaves it to the solver. */
     @Test
     void anUntouchedNodeHasNoMachineCount() {
         final GtnhFlowLoader.LoadedChart chart = GtnhFlowLoader.load("mk1");
@@ -45,8 +45,8 @@ class SparseSettingsTest {
 
     /**
      * Solving writes the machine count back into every node. If that counted as stored config, every
-     * chart would gain a config block on every node just from being looked at, and undo would see a
-     * diff where the user did nothing.
+     * chart would gain a config block on every node just from being opened, and the undo history would
+     * store a diff where the user did nothing.
      */
     @Test
     void solvingAChartDoesNotChangeWhatItSerializesTo() {
@@ -58,8 +58,8 @@ class SparseSettingsTest {
         graph.balance();
         final String afterSolve = Serializer.encode(graph);
 
-        // Balance mode itself is chart state and is expected to differ; re-encode under the same
-        // mode to isolate what the solve wrote into the nodes.
+        // Balance mode is chart state, so beforeSolve differs from afterSolve. A second solve under the
+        // same mode isolates what the solve wrote into the nodes.
         graph.balance();
         assertEquals(afterSolve, Serializer.encode(graph), "a second solve changed the chart");
         assertFalse(beforeSolve.isEmpty());

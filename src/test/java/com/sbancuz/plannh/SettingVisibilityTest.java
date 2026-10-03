@@ -19,9 +19,9 @@ import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 /**
- * The machine picker hides every row the selected machine does not use, so a profile may carry far
- * more settings than it renders. These pin the filter itself; what each GT profile chooses to gate
- * is covered by the preset tests.
+ * The machine picker hides every row the selected machine does not use, so a profile may define far
+ * more settings than it renders. These tests pin the filter. Which rows each GT profile gates is covered
+ * by the preset tests.
  */
 class SettingVisibilityTest {
 
@@ -74,8 +74,8 @@ class SettingVisibilityTest {
     }
 
     /**
-     * Settings.X.def() hands out one shared instance per enum constant, so a profile conditioning a
-     * setting must not condition it for every other profile too.
+     * Settings.X.def() returns one shared instance per enum constant, so gating a setting in one profile
+     * must not gate it in every other profile.
      */
     @Test
     void withVisibilityCopiesRatherThanMutatingTheSharedDef() {

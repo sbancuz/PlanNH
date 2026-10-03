@@ -112,8 +112,8 @@ public class EnderIOProvider implements PropertyProvider {
     }
 
     /**
-     * The recipe's energy, and nothing about how long it takes. A duration written down here would be
-     * a duration at one capacitor, and the node would keep reporting it after the row moved.
+     * Writes the recipe's energy and no duration. A duration here would be fixed at one capacitor, and
+     * the node would print it after the capacitor row changed.
      */
     private static void applyEnergy(final Map<RecipeProperty<?>, Object> props, final EnderIOMachines machine,
         final int energy) {
