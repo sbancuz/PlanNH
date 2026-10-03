@@ -23,7 +23,6 @@ public class Graph {
      */
     private final SortedMap<UUID, Node> nodes = new TreeMap<>();
     private final SortedMap<UUID, Edge> edges = new TreeMap<>();
-    private final SortedMap<UUID, Edge2> edges2 = new TreeMap<>();
     private final SortedMap<UUID, Note> notes = new TreeMap<>();
     private final SortedMap<UUID, Group> groups = new TreeMap<>();
 
@@ -102,11 +101,8 @@ public class Graph {
 
     public void removeNode(final UUID id) {
         nodes.remove(id);
+
         edges.values()
-            .removeIf(e -> e.sourceNodeId.equals(id) || e.targetNodeId.equals(id));
-        // edges2 is the live wiring; an edge left pointing at a node that is gone comes back as an
-        // arrow on the next rebuild, attached to nothing.
-        edges2.values()
             .removeIf(
                 e -> e.getSourceNodeId()
                     .equals(id)
@@ -143,14 +139,9 @@ public class Graph {
     }
 
     public void addEdge(final Edge edge) {
-        // A source-port/target-port pair carries at most one edge: re-wiring it replaces the
-        // existing edge instead of stacking a duplicate.
         edges.values()
-            .removeIf(
-                e -> e.sourceNodeId.equals(edge.sourceNodeId) && e.sourceOutputIndex == edge.sourceOutputIndex
-                    && e.targetNodeId.equals(edge.targetNodeId)
-                    && e.targetInputIndex == edge.targetInputIndex);
-        edges.put(edge.id, edge);
+            .removeIf(e -> e.sameConnection(edge));
+        edges.put(edge.getId(), edge);
         bumpVersion();
     }
 

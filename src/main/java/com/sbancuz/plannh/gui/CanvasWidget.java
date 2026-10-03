@@ -37,7 +37,7 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.client.ScreenEffect;
 import com.sbancuz.plannh.client.UIBlurEffect;
-import com.sbancuz.plannh.data.flowchart.Edge2;
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
@@ -269,9 +269,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final int nw = widget.getArea().width;
             final int nh = widget.getArea().height;
 
-            if (x < n.getX() + nw && n.getX() < x + w
-                && y < n.getY() + nh
-                && n.getY() < y + h) {
+            if (x < n.getX() + nw && n.getX() < x + w && y < n.getY() + nh && n.getY() < y + h) {
                 return true;
             }
         }
@@ -305,7 +303,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public void resolveOverlapsFrom(final FlowchartWidget<?, ?> source) {
         final GraphData srcData = source.getData();
         final int srcW = source.getArea().width;
-        final int srcH =  source.getArea().height;
+        final int srcH = source.getArea().height;
 
         for (final FlowchartWidget<?, ?> other : flowchartWidgets.values()) {
             if (other == source) continue;
@@ -314,7 +312,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final int dstH = other.getArea().height;
 
             if (srcData.getX() < dstData.getX() + dstW && dstData.getX() < srcData.getX() + srcW
-                && srcData.getY() < dstData.getY() + dstH && dstData.getY() < srcData.getY() + srcH) {
+                && srcData.getY() < dstData.getY() + dstH
+                && dstData.getY() < srcData.getY() + srcH) {
                 final int[] spot = findFreeSpot(dstData.getX(), dstData.getY(), dstW, dstH);
 
                 PlanAPI.recordEdit(graph, () -> {
@@ -564,7 +563,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public void rebuildArrowWidgets() {
         arrowWidgets.clear();
-        for (final Edge2 edge : graph.getEdges2()
+        for (final Edge edge : graph.getEdges()
             .values()) {
             child(new ArrowWidget(this, edge));
         }
@@ -874,7 +873,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             .toList();
 
         final List<ArrowRouter.Request> requests = new ArrayList<>();
-        for (final Edge2 edge : graph.getEdges2()
+        for (final Edge edge : graph.getEdges()
             .values()) {
             final NodeWidget src = nodeWidgets2.get(edge.getSourceNodeId());
             final NodeWidget dst = nodeWidgets2.get(edge.getTargetNodeId());

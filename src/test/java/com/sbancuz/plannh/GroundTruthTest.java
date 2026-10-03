@@ -486,12 +486,13 @@ class GroundTruthTest {
         for (final Edge edge : chart.graph()
             .getEdges()
             .values()) {
-            if (!edge.targetNodeId.equals(machine.getId())) continue;
+            if (!edge.getTargetNodeId()
+                .equals(machine.getId())) continue;
             if (!TestIngredients.nameOf(
                 machine.getInputs()
-                    .get(edge.targetInputIndex))
+                    .get(edge.getTargetInputItemIndex()))
                 .equals(ingredient)) continue;
-            rate += s.edgeFlowsPerSecond.getOrDefault(edge.id, 0.0);
+            rate += s.edgeFlowsPerSecond.getOrDefault(edge.getId(), 0.0);
         }
         return rate;
     }
@@ -518,8 +519,12 @@ class GroundTruthTest {
             .getEdges()
             .values()
             .stream()
-            .filter(e -> e.sourceNodeId.equals(stranded.getId()) || e.targetNodeId.equals(stranded.getId()))
-            .map(e -> e.id)
+            .filter(
+                e -> e.getSourceNodeId()
+                    .equals(stranded.getId())
+                    || e.getTargetNodeId()
+                        .equals(stranded.getId()))
+            .map(Edge::getId)
             .toList()
             .forEach(
                 id -> chart.graph()
@@ -595,7 +600,10 @@ class GroundTruthTest {
             .values()
             .iterator()
             .next();
-        stale.targetInputIndex = 99;
+
+        // NOTE: This only works because in the loader we use a mutable pair object
+        stale.getTargetInputIndex()
+            .first(99);
 
         final Answer result = solveWith(chart.graph());
 
@@ -639,10 +647,12 @@ class GroundTruthTest {
                     for (final Edge edge : chart.graph()
                         .getEdges()
                         .values()) {
-                        final boolean hit = input ? edge.targetNodeId.equals(node.getId()) && edge.targetInputIndex == i
-                            : edge.sourceNodeId.equals(node.getId()) && edge.sourceOutputIndex == i;
+                        final boolean hit = input ? edge.getTargetNodeId()
+                            .equals(node.getId()) && edge.getTargetInputItemIndex() == i
+                            : edge.getSourceNodeId()
+                                .equals(node.getId()) && edge.getSourceOutputItemIndex() == i;
                         if (hit) {
-                            edges += s.edgeFlowsPerSecond.getOrDefault(edge.id, 0.0);
+                            edges += s.edgeFlowsPerSecond.getOrDefault(edge.getId(), 0.0);
                         }
                     }
                     final double edgeRate = edges;
