@@ -47,7 +47,7 @@ public class FlowchartScreen extends ModularScreen {
     private static final int LEFT_MARGIN = 5;
     private static final int RIGHT_MARGIN = 15;
     private static final int TOP_MARGIN = 30;
-    /** Where the button row ends, and so the highest a panel it opens may sit. */
+    /** Bottom of the button row, and the highest a panel opened from it may sit. */
     private static final int TOOLBAR_BOTTOM = TOP_MARGIN + 20;
     private static final int BOTTOM_MARGIN = 30;
 
@@ -79,7 +79,7 @@ public class FlowchartScreen extends ModularScreen {
 
         canvas = new CanvasWidget(contextMenu, panel);
 
-        // The structure every node in this chart opens on. One panel rather than three rows per node.
+        // the structure every node in this chart opens on
         final MinimumsMenu minimums = new MinimumsMenu();
 
         // Target-rate editor: one numeric field in a floating menu. numbersDouble gives the MUI2
@@ -117,8 +117,7 @@ public class FlowchartScreen extends ModularScreen {
             .child(targetField);
         canvas.setTargetEditorMenu(targetEditor);
 
-        // Machine picker: the choices depend on which recipe the node holds, so the canvas refills
-        // this list each time it opens rather than the children being fixed here.
+        // machine picker: choices depend on the node's recipe, so the canvas refills this list on each open
         final Menu<?> machinePicker = new Menu<>();
         final ListWidget<IWidget, ?> machineList = new ListWidget<>().coverChildrenHeight()
             .width(140);
@@ -398,8 +397,8 @@ public class FlowchartScreen extends ModularScreen {
     }
 
     /**
-     * The name box holds its own text once it has been drawn, so switching charts under it leaves
-     * the previous name on screen. Push the new one in whenever the active chart changes.
+     * The name field stores its text once drawn, so switching charts leaves the previous name on screen unless it is
+     * set here.
      */
     private static void refreshGraph(final CanvasWidget canvas, final TextFieldWidget nameField) {
         refreshGraph(canvas);

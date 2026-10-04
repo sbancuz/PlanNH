@@ -13,13 +13,12 @@ import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 
 /**
- * A chart saved before the machine picker existed has its overclock numbers tuned by hand. Honouring
- * a preset instead would silently change what it says, so such a node opens in advanced mode and
- * keeps computing exactly as it did.
+ * A chart saved before the machine picker has its overclock numbers tuned by hand. Applying a preset
+ * would change its numbers, so such a node opens in advanced mode and computes the same numbers.
  *
  * <p>
- * The settings map is sparse, so what it holds after loading is precisely what the save carried -
- * nothing seeds defaults into it - and the hook can read it directly.
+ * The settings map is sparse, so after loading it contains only the saved keys. No defaults are
+ * seeded into it, and the hook reads it directly.
  */
 class GTLegacyNodeMigrationTest {
 
@@ -47,9 +46,19 @@ class GTLegacyNodeMigrationTest {
         assertTrue(GTSettings.isAdvanced(s));
     }
 
+    @Test
+    void aPerfectOverclockFlagBecomesTheDurationFactor() {
+        final Map<String, Object> s = loaded("perfect_oc", true, Settings.DURATION_DECREASE_PER_OC.key(), 200);
+        GTSettings.migrateLegacyNode(s);
+
+        assertFalse(s.containsKey("perfect_oc"));
+        assertEquals(400, s.get(Settings.DURATION_DECREASE_PER_OC.key()));
+        assertTrue(GTSettings.isAdvanced(s));
+    }
+
     /**
-     * Voltage and machine count stay user-owned in both modes, so a chart whose only customisation
-     * was "run it at IV, four of them" gets the compact UI rather than being pinned to the old rows.
+     * Voltage and machine count are user-set in both modes, so a chart that only set "IV, four
+     * machines" gets the compact UI, not the advanced rows.
      */
     @Test
     void voltageAndMachineCountAloneDoNotForceAdvancedMode() {
@@ -70,7 +79,7 @@ class GTLegacyNodeMigrationTest {
         assertTrue(s.isEmpty(), "migration must not write into a node that carried nothing");
     }
 
-    /** Migration is one-way and idempotent: a node that already chose stays as it chose. */
+    /** Migration is one-way and idempotent: a node with a machine already picked is left unchanged. */
     @Test
     void aNodeThatAlreadyPickedAMachineIsLeftAlone() {
         final Map<String, Object> s = loaded(

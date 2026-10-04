@@ -60,8 +60,8 @@ public class ClientProxy extends CommonProxy {
             .bus()
             .register(this);
 
-        // Building the GT machine index clones and probes every multiblock. Scheduled here rather than
-        // paid for by the first frame a GT node's settings panel draws.
+        // Building the GT machine index reads every multiblock's spec and tooltip.
+        // Built here, so the first frame that draws a GT node's settings doesn't stall.
         if (Compat.GREGTECH.isLoaded) Minecraft.getMinecraft()
             .func_152344_a(GTMachineIndex::warmup);
 

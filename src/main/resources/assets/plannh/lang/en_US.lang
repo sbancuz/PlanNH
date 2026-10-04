@@ -14,13 +14,7 @@ plannh.settings.machine=Machine
 ## Settings - GT machine and structure
 plannh.settings.gt_advanced=Advanced
 plannh.settings.gt_coil=Coil
-plannh.settings.gt_solenoid=Solenoid
-plannh.settings.gt_item_pipe=Item Pipe
 plannh.settings.gt_pipe_casing=Pipe Casing
-plannh.settings.gt_sawblade=Sawblade
-plannh.settings.gt_electrode=Electrode
-plannh.settings.gt_structure_tier=Struct. Tier
-plannh.settings.gt_width=Width
 plannh.settings.gt_mode=Mode
 
 ## Settings - GT
@@ -39,13 +33,11 @@ plannh.settings.max_overclocks=Max OC
 plannh.settings.max_regular_oc=Max Reg OC
 plannh.settings.max_tier_skips=Max Skips
 plannh.settings.fuel_efficiency=Fuel Eff.%
-plannh.settings.perfect_oc=Perfect OC
 plannh.settings.heat_oc=Heat OC
 plannh.settings.heat_discount=Heat Disc.
 plannh.settings.laser_oc=Laser OC
 plannh.settings.unlimited_skips=Unl. Skips
 plannh.settings.no_overclock=No OC
-plannh.settings.catalyst_astral_arrays=Astral Arrays
 plannh.settings.catalyst_accel_card=Accel. Card
 
 ## Settings - Botania
@@ -169,6 +161,11 @@ plannh.solver.under_supply=Returned a port that under-supplies: residual %s
 plannh.solver.gate_count_not_certified=Gate count %d is minimal but not certified optimal (exact search over budget)
 ## Names
 plannh.machine.singleblock_suffix= (single)
+plannh.machine.no_spec_suffix= (no ProcessingSpec interface)
+plannh.gt.output_odds=%s%% success, %s%% yield
+plannh.gt.startup_eu=Start-up: %s EU
+plannh.gt.eu_per_run=Per run: %s EU
+plannh.gt.eu_generated=Gives per run: %s EU
 plannh.solver.pin_extent=extent pin
 plannh.solver.pin_target=target rate
 plannh.solver.pin_count=fixed machine count

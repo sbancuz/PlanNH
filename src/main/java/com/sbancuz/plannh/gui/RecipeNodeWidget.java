@@ -5,6 +5,7 @@ import static org.lwjgl.opengl.GL11.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntConsumer;
 
@@ -35,6 +36,9 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.machine.MachineVariant;
+import com.sbancuz.plannh.data.machine.MachineVariants;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
 import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NodeLookupContext;
@@ -115,7 +119,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     private static final int BOOL_CLICK_W = 120;
     private static final int CLICK_H = 10;
     private static final int SETTING_DEC_X = 80;
-    /** Breathing room between a setting's text and the [-]/[+] steppers that follow it. */
+    /** Gap between a setting's text and its [-]/[+] steppers. */
     private static final int SETTING_LABEL_GAP = 4;
     private static final int SETTING_BTN_W = 22;
     private static final int SETTING_INC_X = SETTING_DEC_X + SETTING_BTN_W;
@@ -163,8 +167,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     private long zoneHoldStart, zoneLastRepeat;
 
     /**
-     * @param resetKey the setting this zone edits, or null when the zone is not a setting row.
-     *                 Right-clicking a zone that has one returns that setting to the machine.
+     * @param resetKey The setting this zone edits, or null when the zone is not a setting row. Right-clicking a zone
+     *                 with one clears that setting, so the machine's value applies.
      */
     private record ClickZone(int ux1, int uy1, int ux2, int uy2, @Nullable Runnable action, boolean repeat,
         @Nullable String resetKey) {
@@ -347,9 +351,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 cw - TITLE_BAR_RMARGIN,
                 TITLE_UL_H,
                 PlannhColors.NODE_TITLE_LINE.getColor());
-            // The title names the machine the node is modelled as, since that is what its numbers
-            // come from, and clicking it picks a different one. Colour still keys on the recipe so a
-            // node does not change hue when its machine does.
+            // The title is the node's machine, since its numbers come from that machine. Clicking the
+            // title opens the machine picker. Colour keys on the recipe, so a node's hue stays the same
+            // when its machine changes.
             final String title = titleText();
             final int titleW = Minecraft.getMinecraft().fontRenderer.getStringWidth(title);
             GuiDraw.drawText(
@@ -360,8 +364,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
                 PlannhColors.textOn(titleCol),
                 false);
 
-            // Ask the badge itself rather than "is anything stored": a node whose only stored key
-            // is its machine has plenty stored and nothing to badge.
+            // checking hasStoredSettings() would badge a node whose only stored key is its machine
             final String badge = buildConfigBadge();
             if (!badge.isEmpty()) {
                 GuiDraw.drawText(badge, LEFT_CONTENT_X, TITLE_TEXT_Y, 1.0f, PlannhColors.TEXT_BADGE.getColor(), false);
@@ -555,6 +558,28 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         }
         GuiDraw.drawText(opsLine.toString(), x, y, 1.0f, PlannhColors.ACCENT_BLUE.getColor(), false);
         y += LINE_H;
+        if (nb != null && nb.rejection() != null) {
+            GuiDraw.drawText(
+                Minecraft.getMinecraft().fontRenderer.trimStringToWidth(nb.rejection(), neiWidget.w),
+                x,
+                y,
+                1.0f,
+                PlannhColors.ACCENT_RED_X.getColor(),
+                false);
+            y += LINE_H;
+        }
+        if (nb != null) {
+            for (final String detail : nb.details()) {
+                GuiDraw.drawText(
+                    Minecraft.getMinecraft().fontRenderer.trimStringToWidth(detail, neiWidget.w),
+                    x,
+                    y,
+                    1.0f,
+                    PlannhColors.TEXT_MUTED.getColor(),
+                    false);
+                y += LINE_H;
+            }
+        }
         if (ops <= 0) return;
 
         y = drawPortList(x, y, node.inputs, nb, sec, false);
@@ -605,8 +630,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
     @Override
     public @Nonnull Result onMousePressed(final int mouseButton) {
-        // Right-click on a settings row hands that setting back to the machine. Nothing else in the
-        // panel can reach that state, so a row nudged and put back would otherwise stay overridden.
+        // Right-click on a settings row clears that setting, so the machine's value applies. It is the
+        // only way back to unset: a row stepped away and back stays overridden.
         if (mouseButton == 1 && configOpen) {
             final int mx = getContext().getMouseX();
             final int my = getContext().getMouseY();
@@ -628,7 +653,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
             if (neiWidget != null) {
                 final int cw = neiWidget.w + NEI_PAD_W;
-                // Left of the gear along the title bar: pick which machine runs this recipe.
+                // title bar left of the gear: opens the machine picker
                 if (mx >= CONTENT_INSET && mx < cw - GEAR_HIT_LEFT_OFF
                     && my >= CONTENT_INSET
                     && my < CONTENT_INSET + TITLE_BAR_H
@@ -734,27 +759,20 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         }
     }
 
-    /** The machine name when the node has one to offer, otherwise the recipe's own name. */
+    /** The selected machine's name, or the recipe name when no machine is selected. */
     private String titleText() {
-        final SettingDef<?> def = node.machineConfig.getProfile()
-            .setting(Settings.MACHINE.key());
-        if (def == null) return recipeName;
-        final List<String> options = def.options(recipeContext());
-        if (options.isEmpty()) return recipeName;
-        final String stored = node.machineConfig.getString(def.key);
-        return def.display(options.contains(stored) ? stored : def.defaultOption(recipeContext()));
+        final MachineVariant machine = MachineVariants.selected(recipeContext(), node.machineConfig.settings);
+        return machine == null ? recipeName : machine.label();
     }
 
     private boolean hasMachineChoice() {
-        final SettingDef<?> def = node.machineConfig.getProfile()
-            .setting(Settings.MACHINE.key());
-        return def != null && def.options(recipeContext())
+        return MachineVariants.candidates(recipeContext())
             .size() > 1;
     }
 
     /**
-     * The tier the collapsed node runs at. Reading the stored key directly showed nothing for every
-     * node that never picked one, which under a sparse map is most of them.
+     * The tier the collapsed node runs at. Reading only the stored key would print nothing for a node with no stored
+     * tier, which under a sparse map is most nodes.
      */
     private String collapsedVoltageTier() {
         final SettingDef<?> def = node.machineConfig.getProfile()
@@ -763,14 +781,34 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final List<String> options = def.options(recipeContext());
         if (options.isEmpty()) return "";
         final String stored = node.machineConfig.getString(def.key);
-        return options.contains(stored) ? stored : def.defaultOption(recipeContext());
+        return options.contains(stored) ? stored : def.defaultOption(recipeContext(), options);
     }
+
+    /**
+     * Cached against the identity of the wrapped map. Sizing and drawing one node calls recipeContext() about a dozen
+     * times a frame, and a fresh wrapper would allocate on every call.
+     */
+    @Nullable
+    private Map<RecipeProperty<?>, Object> contextProperties;
+    @Nullable
+    private RecipeContext context;
 
     private RecipeContext recipeContext() {
-        return new RecipeContext(node.properties);
+        if (node.properties != contextProperties) {
+            contextProperties = node.properties;
+            context = new RecipeContext(node.properties);
+        }
+        return context;
     }
 
-    /** The rows this node renders; a setting the profile hides must not badge or size the panel. */
+    /**
+     * The rows this node draws. A setting hidden by the profile must not add a badge or size the panel.
+     *
+     * <p>
+     * FIXME sizing and drawing one node call this six times a frame, and each call runs every visibility predicate in
+     * the profile. Memoizing it requires an invalidation signal, and this widget has none: the settings map is edited
+     * through several paths, not all of which bump the graph.
+     */
     private List<SettingDef<?>> visibleSettings() {
         final MachineConfig c = node.machineConfig;
         return c.getProfile()
@@ -782,8 +820,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final StringBuilder sb = new StringBuilder();
 
         for (final SettingDef<?> def : visibleSettings()) {
-            // Presence is the choice now, so a value deliberately set back to the declared default
-            // still counts - it is the machine's value being overridden, not an untouched row.
+            // a stored key is a user choice, so a value set back to the declared default still badges
             final Object val = c.settings.get(def.key);
             if (val == null) continue;
             final String badge = def.badge(val, c);
@@ -814,11 +851,13 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         final MachineConfig c = node.machineConfig;
         int y = y0;
 
-        // Advanced is drawn last, below the targets: it is a mode switch for the whole panel rather
-        // than another machine setting, and reading it among them invites it being read as one.
+        // Advanced is drawn last, below the targets: it switches the whole panel's mode and is not a
+        // machine setting. Among the settings it would read as one. Guarded like every GTSettings
+        // reference here: touching that class loads GregTech, which a pack may not have.
+        final String advancedKey = Compat.GREGTECH.isLoaded ? GTSettings.ADVANCED : null;
         SettingDef<?> advanced = null;
         for (final SettingDef<?> def : visibleSettings()) {
-            if (GTSettings.ADVANCED.equals(def.key)) {
+            if (def.key.equals(advancedKey)) {
                 advanced = def;
                 continue;
             }
@@ -887,15 +926,15 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     /**
-     * Draws a row and tags every zone it produced with the setting it edits, so a right-click
-     * anywhere on the row resets it. Tagging here rather than at each {@code configZones.add} keeps
-     * the three row shapes - stepper, checkbox, list - from each having to know about resetting.
+     * Draws a row and tags every zone it added with the setting it edits, so right-clicking anywhere on the row resets
+     * the setting. Tagging at each {@code configZones.add} would put reset logic into all three row shapes (stepper,
+     * checkbox, list).
      */
     private int drawSetting(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
         final int firstZone = configZones.size();
         final int next = drawSettingRow(x, y, def, c);
-        // Spans the whole row, so the reset reaches the label and not only whichever controls the row
-        // happened to draw. Added after them, because the click search takes the first zone it hits.
+        // Spans the whole row, so a right-click on the label also resets. Added last, because the click
+        // search takes the first zone that contains the click.
         configZones.add(ClickZone.resetOnly(x, y, x + CONFIG_ROW_W, y + CLICK_H));
         for (int i = firstZone; i < configZones.size(); i++) {
             configZones.set(
@@ -907,17 +946,13 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     /**
-     * The values the machine settled without being asked, shown read-only above the targets.
-     *
-     * <p>
-     * These are the advanced rows, which a minimised node hides. Hiding them entirely leaves the user
-     * no way to tell a machine that needed no configuring from one PlanNH failed to configure, so the
-     * ones the machine actually decided are shown greyed - they are not editable here, because editing
-     * them is what the Advanced toggle is for.
+     * The auto values the user left unset, drawn read-only and greyed above the targets. These are the advanced rows,
+     * hidden on a minimised node. Without them the user can't tell a machine that required no configuring from one
+     * PlanNH failed to configure. They are edited through the Advanced toggle.
      */
     private int drawDerivedRows(final int x, int y, final MachineConfig c) {
-        // Guarded, not because a non-GregTech node could be advanced - it has no such key - but
-        // because reaching GTSettings at all classloads GregTech, which a pack need not have.
+        // A non-GregTech node has no advanced key, but the guard is still required: touching GTSettings
+        // loads GregTech, which a pack may not have.
         if (Compat.GREGTECH.isLoaded && GTSettings.isAdvanced(c.settings)) return y;
         for (final SettingDef<?> def : c.getProfile()
             .settings()) {
@@ -930,10 +965,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     /**
-     * What an untouched advanced row would read, or null when it says nothing. A row says nothing when
-     * the user is already editing it, when the machine left it at the value the setting was declared
-     * with, or when the setting's own badge declines to describe it - which is how a flag that is off
-     * stays quiet without this needing to know which flags exist.
+     * The text an untouched advanced row prints, or null for no row. Null when the setting is set or already visible,
+     * when its value is neutral, or when its badge() returns null. A null badge is how an off flag is hidden without
+     * this method listing which flags exist.
      */
     @Nullable
     private String derivedValue(final SettingDef<?> def, final MachineConfig c) {
@@ -948,12 +982,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
 
         final int value = def.effectiveInt(recipeContext(), c.settings);
         if (def.isNeutral(value)) return null;
-        // Perfect overclocking is 4/4 by definition, so its two factors restate the flag above them.
-        if (perfectOC(c) && (Settings.EUT_INCREASE_PER_OC.key()
-            .equals(def.key)
-            || Settings.DURATION_DECREASE_PER_OC.key()
-                .equals(def.key)))
-            return null;
         return def.badge(value, c) == null ? null : intRowValue(def, value);
     }
 
@@ -968,56 +996,44 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         return rows;
     }
 
-    private boolean perfectOC(final MachineConfig c) {
-        final SettingDef<?> def = c.getProfile()
-            .setting(Settings.PERFECT_OC.key());
-        return def != null && def.effectiveBool(recipeContext(), c.settings);
-    }
-
     private static boolean machineCountRow(final SettingDef<?> def) {
         return Settings.MACHINES.key()
             .equals(def.key);
     }
 
     /**
-     * What the machine-count row shows. An unpinned node follows the solve, so it displays the count
-     * the solver settled on rather than a stored one - typing into the row is what pins it, and there
-     * is no separate toggle to get out of step with. The solve is read here rather than through the
-     * setting's own auto value because only the widget can reach it: a SettingDef sees the recipe and
-     * the settings map, never the node or its graph.
-     *
-     * <p>
-     * The count comes back fractional, and stays fractional: the row prints the same number the
-     * throughput line above it does, so a node running 1.37 operations does not read as two machines.
-     * Rounding is what the steppers do, and they round in the direction they were clicked.
+     * The machine-count row's value. An unpinned node follows the solve, so the row prints the solver's count. Typing
+     * into the row pins it. A SettingDef auto value can't supply this: it gets only the recipe and the settings map,
+     * never the node or its graph. The count stays fractional to match the throughput line, so a node running 1.37
+     * operations does not read as two machines. The steppers round in the direction clicked.
      */
     private double solvedMachineCount(final MachineConfig c) {
         if (c.isMachineCountPinned()) return c.getMachineCount();
         final Balancer.NodeBalance nb = getNodeBalance();
-        // Not floored at one. A node running 0.8 of an operation is a node the chart wants less than
-        // a full machine of, and saying "1" hides that it is the one holding the rest of the chart
-        // back. Stepping up from it still lands on a whole machine.
+        // Not floored at one. A node at 0.8 operations is under one full machine, and printing "1" would
+        // hide that the rest of the chart is held back by this node. Stepping up from it lands on a whole
+        // machine.
         return nb == null ? 1 : nb.operations();
     }
 
     private int drawSettingRow(final int x, final int y, final SettingDef<?> def, final MachineConfig c) {
         if (def.type == Integer.class) {
-            // An auto setting shows what the machine actually does rather than the 0 that means
-            // "ask the machine", and cannot be stepped past what that machine allows.
+            // An auto row prints the machine's effective value, since a stored 0 means "ask the machine".
+            // It can't be stepped past the machine's limit.
             final double shown = machineCountRow(def) ? solvedMachineCount(c)
                 : def.isAuto() ? def.effectiveInt(recipeContext(), c.settings) : c.getInt(def.key);
-            // Always asked for: a row can have a machine-set ceiling without being an auto row, and
-            // effectiveMax falls back to the declared maximum when it has neither.
+            // Called for every row: a row can have a machine-set ceiling without being auto, and
+            // effectiveMax() falls back to the declared maximum otherwise.
             final int max = def.effectiveMax(recipeContext(), c.settings);
-            // Presence is provenance everywhere else in the settings map, so it colours the row too:
-            // green means the user typed this, muted means it follows the machine or the solve.
+            // A stored key is a user choice, so the row is green. Muted means the value follows the
+            // machine or the solve.
             final boolean chosen = c.settings.containsKey(def.key);
             return drawConfigIntField(
                 x,
                 y,
                 def.label + " " + intRowValue(def, shown),
                 shown,
-                def.minInt,
+                def.effectiveMin(recipeContext(), c.settings),
                 max,
                 chosen,
                 v -> {
@@ -1043,11 +1059,10 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
             final List<String> options = def.options(recipeContext());
             if (options.isEmpty()) return y;
 
-            // Presence is provenance here as everywhere else, so the map is read directly: a setting
-            // that declares a fallback would otherwise make an untouched row read as a chosen one.
-            // Nothing stored resolves to what the setting says an unset row means, so a node that
-            // accepts the obvious choice serializes nothing. A stored value the list no longer offers
-            // is a machine the pack removed: show it flagged rather than rewriting the user's chart.
+            // The map is read directly: getString() returns the declared default, which would make an
+            // untouched row look chosen. An unset row prints defaultOption(), so a node on the default
+            // serializes nothing. A stored value missing from the list is a machine the pack removed.
+            // It is flagged and left as stored, so the user's chart is not rewritten.
             final boolean chosen = c.settings.containsKey(def.key);
             final String stored = chosen ? c.getString(def.key) : "";
             final int cur = options.indexOf(stored);
@@ -1079,12 +1094,12 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         return y + LINE_H;
     }
 
-    /** Steps an enum row. An unset or unknown value lands on the first option, never off the end. */
+    /** Steps an enum row, clamped at both ends of the list. An unknown stored value steps from the first option. */
     private void cycleOption(final SettingDef<?> def, final MachineConfig c, final int step) {
         final List<String> options = def.options(recipeContext());
         if (options.isEmpty()) return;
-        // Stepping starts from whatever the row displays. Treating unset as "no index" instead made
-        // the first click rewrite the value already on screen.
+        // Stepping starts from the value the row prints. Treating unset as "no index" would make the
+        // first click rewrite the value already on screen.
         final String current = c.settings.containsKey(def.key) ? c.getString(def.key)
             : def.defaultOption(recipeContext());
         final int shown = Math.max(0, options.indexOf(current));
@@ -1115,9 +1130,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     /**
-     * What an integer row prints for its value: the setting's own rendering of the number, so a tier
-     * can read as the block it stands for. A fractional value is the solve showing through, and no
-     * setting renders one, so it is formatted the way the throughput line formats it.
+     * An integer row's printed value, through the setting's display() so a tier can print as its block. A fractional
+     * value comes from the solve and no setting renders one, so it is formatted like the throughput line.
      */
     @Nonnull
     private static String intRowValue(final SettingDef<?> def, final double value) {
@@ -1126,9 +1140,8 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
     }
 
     /**
-     * A stepper row. The value is a double because the machine count follows a fractional solve; the
-     * steppers land on the whole numbers on either side of it, which is a plain -1 and +1 for every
-     * row that already held one.
+     * A stepper row. The value is a double because the machine count follows a fractional solve. The steppers land on
+     * the whole numbers either side of it, which for a whole value is -1 and +1.
      */
     private int drawConfigIntField(final int x, final int y, final String text, final double value, final int min,
         final int max, final boolean chosen, final IntConsumer setter) {

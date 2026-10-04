@@ -8,13 +8,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Reaching a member another mod did not make public.
+ * Reflective access to members another mod did not make public.
  *
  * <p>
- * PlanNH models machines it does not own, and the numbers it needs are often held in a field or a
- * method the mod never meant to publish. Every such reach is one of the three shapes here, so they
- * are written once - what differs between callers is only what they do when the reach fails, and
- * that stays at the call site: some can carry on without the value, and some must not.
+ * PlanNH models machines from other mods, and the numbers it reads often sit in private fields or
+ * methods. The three access shapes are written once here. Callers differ only in how they handle a
+ * failed lookup, and that handling stays at the call site: some can continue without the value, and
+ * some must not.
  */
 public final class Reflect {
 
@@ -48,11 +48,10 @@ public final class Reflect {
     }
 
     /**
-     * The nearest declaration of a method walking up from {@code from}, or null when nothing on the
-     * way declares it. Which class declares a method is itself the answer to several questions here -
-     * a machine that declares {@code supportsMachineModeSwitch} is saying it really has modes - so the
-     * walk stops before {@code until}, letting a caller exclude the base class that declares it for
-     * everyone.
+     * The nearest declaration of a method walking up from {@code from}, or null when no class on the
+     * way declares it. Callers read the declaring class as a signal: a machine that declares
+     * {@code supportsMachineModeSwitch} has modes. So the walk stops before {@code until}, which lets a
+     * caller exclude the base class that declares it for every machine.
      *
      * @param until the class to stop before, or null to walk to the top
      */
@@ -63,13 +62,13 @@ public final class Reflect {
             try {
                 return accessible(c.getDeclaredMethod(name, argumentTypes));
             } catch (final NoSuchMethodException keepWalking) {
-                // The declaration is further up, or there is none at all.
+                // declaration is further up, or absent
             }
         }
         return null;
     }
 
-    /** Opens a member a caller found for itself, by walking a class rather than by naming it. */
+    /** Makes a member accessible. Public for callers that find a member by walking a class themselves. */
     @Nonnull
     public static <T extends AccessibleObject> T accessible(@Nonnull final T member) {
         AccessibleObject.setAccessible(new AccessibleObject[] { member }, true);

@@ -17,10 +17,9 @@ import codechicken.nei.NEIClientConfig;
 
 /**
  * @param onLoad runs once on a chart loaded from disk, before anything reads it. A profile whose
- *               meaning has changed uses this to bring old settings forward; charts saved by an
- *               older PlanNH otherwise keep their keys but get the new interpretation, which
- *               silently changes their numbers. The settings map it receives is exactly what the
- *               save carried, since nothing seeds defaults into it.
+ *               meaning has changed uses this to migrate old settings. Without it, the keys of a chart
+ *               saved by an older PlanNH are read under the new meaning, which changes its numbers. The
+ *               map it receives is the saved settings, with no defaults seeded.
  */
 public record MachineProfile(String id, String displayName, List<SettingDef<?>> settings, EffectComputer effectComputer,
     Consumer<Map<String, Object>> onLoad) {
@@ -102,8 +101,8 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
     }
 
     /**
-     * The rows a node actually renders. Serialization deliberately walks the node's own settings
-     * map instead, so a hidden value still round-trips.
+     * The rows a node renders. Serialization walks the node's settings map, not this list, so a hidden
+     * value still round-trips.
      */
     @Nonnull
     public List<SettingDef<?>> visibleSettings(final RecipeContext ctx, final Map<String, Object> machineSettings) {
@@ -112,7 +111,7 @@ public record MachineProfile(String id, String displayName, List<SettingDef<?>> 
             .toList();
     }
 
-    /** The def behind a key, for controls that live outside the settings panel. */
+    /** The def behind a key, for controls outside the settings panel. */
     @Nullable
     public SettingDef<?> setting(final String key) {
         for (final SettingDef<?> def : settings) {

@@ -28,7 +28,7 @@ public class SettingDef<T> {
     public final int maxInt;
     @Nullable
     private final Function<RecipeContext, List<String>> optionsFn;
-    /** What an unset enum row resolves to; the first option when the setting does not say. */
+    /** The value of an unset enum row. Null means the first option. */
     @Nullable
     private final Function<RecipeContext, String> defaultFn;
     @Nullable
@@ -38,28 +38,32 @@ public class SettingDef<T> {
     private final BiPredicate<RecipeContext, Map<String, Object>> visibility;
     @Nullable
     private final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn;
+    /** A floor the machine sets, for rows whose range belongs to the selected machine. */
+    @Nullable
+    private final ToIntBiFunction<RecipeContext, Map<String, Object>> minFn;
     /** A ceiling the machine sets, for rows whose maximum is not also their automatic value. */
     @Nullable
     private final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn;
     /**
-     * The value that means the machine did nothing here, in this row's own units. Declared rather than
-     * inferred from {@link #defaultValue}, which for an auto row is the unset marker, or from the
-     * {@code Settings} constant a provider borrowed the key from, whose scale can differ.
+     * The value that means the machine did nothing here, in this row's units. Passed explicitly, not
+     * inferred from {@link #defaultValue} (the unset marker for an auto row) or from the {@code Settings}
+     * constant a provider borrowed the key from (whose scale can differ).
      */
     @Nullable
     private final Integer neutral;
 
     @Builder(toBuilder = true, access = AccessLevel.PRIVATE)
-    private SettingDef(final String key, final Class<T> type, final T defaultValue, final int minInt, final int maxInt,
-        @Nullable final Function<RecipeContext, List<String>> optionsFn,
+    private SettingDef(final String key, @Nullable final String label, final Class<T> type, final T defaultValue,
+        final int minInt, final int maxInt, @Nullable final Function<RecipeContext, List<String>> optionsFn,
         @Nullable final Function<RecipeContext, String> defaultFn, @Nullable final UnaryOperator<String> displayFn,
         @Nullable final BiFunction<T, MachineConfig, String> badgeFn,
         @Nullable final BiPredicate<RecipeContext, Map<String, Object>> visibility,
         @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
+        @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> minFn,
         @Nullable final ToIntBiFunction<RecipeContext, Map<String, Object>> maxFn, @Nullable final Integer neutral) {
         this.neutral = neutral;
         this.key = key;
-        this.label = StatCollector.translateToLocal("plannh.settings." + key);
+        this.label = label != null ? label : StatCollector.translateToLocal("plannh.settings." + key);
         this.type = type;
         this.defaultValue = defaultValue;
         this.minInt = minInt;
@@ -70,10 +74,11 @@ public class SettingDef<T> {
         this.badgeFn = badgeFn;
         this.visibility = visibility == null ? ALWAYS : visibility;
         this.autoValueFn = autoValueFn;
+        this.minFn = minFn;
         this.maxFn = maxFn;
     }
 
-    /** Whether this row is reporting that the machine did nothing, in its own units. */
+    /** Whether {@code value} means the machine did nothing, in this row's units. */
     public boolean isNeutral(final int value) {
         return neutral != null && neutral == value;
     }
@@ -84,9 +89,9 @@ public class SettingDef<T> {
     }
 
     /**
-     * An integer row whose ceiling the selected machine decides. Distinct from {@link #autoIntDef}:
-     * there the machine's number is also what an untouched row shows, here the row still starts at its
-     * own default and only the top of the range moves.
+     * An integer row whose ceiling comes from the selected machine. Unlike {@link #autoIntDef}, an
+     * untouched row starts at {@code def}, not at the machine's number, and only the top of the range
+     * moves.
      */
     @Nonnull
     public static SettingDef<Integer> intDef(final String key, final int def, final int min,
@@ -126,8 +131,8 @@ public class SettingDef<T> {
     }
 
     /**
-     * A fixed list of choices. An empty list is a setting with nothing to offer, and stays without an
-     * options function at all, so {@link #hasOptions} can answer without a recipe to evaluate against.
+     * A fixed list of choices. An empty list leaves {@code optionsFn} null, so {@link #hasOptions}
+     * works without a recipe.
      */
     @Nonnull
     public static SettingDef<String> enumDef(final String key, final String def, final List<String> options,
@@ -142,15 +147,14 @@ public class SettingDef<T> {
     }
 
     /**
-     * A setting whose choices belong to the mod that owns the machine. PlanNH names the key; the
-     * provider attaches the real def when it builds its profile, the way {@code GTProvider} does for
-     * the voltage and coil rows.
+     * A setting whose choices come from the mod that owns the machine. PlanNH sets only the key. The
+     * provider attaches the real def when it builds its profile, as {@code GTProvider} does for the
+     * voltage and coil rows.
      *
      * <p>
-     * Nothing is declared about the domain, deliberately. A placeholder range or option list would be
-     * a second authority on what the mod allows, and it would be wrong the day the mod added a tier -
-     * which is the whole failure this indirection exists to prevent. Until a provider supplies a def,
-     * {@link #hasOptions} answers false and the row offers nothing.
+     * No range or options are set here. A placeholder would be a second source for what the mod allows,
+     * and would go wrong when the mod adds a tier, the failure this indirection exists to prevent. Until
+     * a provider supplies a def, {@link #hasOptions} returns false and the row has no choices.
      */
     @Nonnull
     public static SettingDef<String> providedDef(final String key) {
@@ -162,16 +166,16 @@ public class SettingDef<T> {
     }
 
     /**
-     * An enum whose choices depend on the recipe - the machine picker, whose options are the GT
-     * machines that can run this node's recipemap. {@code optionsFn} is stored, never called, at
-     * construction: the profile is a static singleton built before any node exists.
+     * An enum whose choices depend on the recipe, such as the machine picker, whose options are the
+     * machines that can run this node's recipe. {@code optionsFn} is stored, not called, at construction:
+     * the profile is a static singleton built before any node exists.
      *
      * <p>
-     * The list must come back best-choice-first. The widget treats index 0 as the value an unset
-     * setting resolves to, which is what lets a node auto-select with nothing serialized.
+     * The list must be ordered best choice first. The widget uses index 0 as the value of an unset
+     * setting, so a node auto-selects with nothing serialized.
      *
-     * @param displayFn maps a stored id to what the row shows, so the saved value can stay stable
-     *                  and locale-independent while the row reads as a machine name.
+     * @param displayFn maps a stored id to the label the row draws, so the saved value stays stable and
+     *                  locale-independent while the row prints a machine name.
      */
     @Nonnull
     public static SettingDef<String> dynamicEnumDef(final String key, final String def,
@@ -188,10 +192,10 @@ public class SettingDef<T> {
     }
 
     /**
-     * A setting whose useful value comes from the machine rather than from a fixed default - the
-     * parallel count, the overclock factors, the coil heat. Nothing stored means "whatever the
-     * machine does", so the row shows a real number and the node never freezes a value that goes
-     * stale when its machine or structure changes.
+     * A setting whose value comes from the machine, not a fixed default: the parallel count, the
+     * overclock factors, the coil heat. Nothing stored means "whatever the machine does", so the row
+     * draws a real number and the node stores no value that goes stale when its machine or structure
+     * changes.
      */
     @Nonnull
     public static SettingDef<Integer> autoIntDef(final String key, final int min, final int max,
@@ -200,7 +204,7 @@ public class SettingDef<T> {
         return autoIntDef(key, min, max, null, autoValueFn, badgeFn);
     }
 
-    /** As above, declaring the value that means this machine did nothing. */
+    /** As above, with {@code neutral} as the value that means the machine did nothing. */
     @Nonnull
     public static SettingDef<Integer> autoIntDef(final String key, final int min, final int max,
         @Nullable final Integer neutral, final ToIntBiFunction<RecipeContext, Map<String, Object>> autoValueFn,
@@ -218,9 +222,9 @@ public class SettingDef<T> {
     }
 
     /**
-     * An auto row the machine also caps, for the one case where what it does and the most it can do
-     * are the same number. Everywhere else the automatic value is a starting point and capping the row
-     * at it would leave the row unable to move up from what it already shows.
+     * An auto row the machine also caps, for a setting whose automatic value is also its maximum.
+     * Elsewhere the automatic value is a starting point, and capping the row there would stop it from
+     * stepping above its starting value.
      */
     @Nonnull
     public static SettingDef<Integer> autoIntDefCapped(final String key, final int min, final int max,
@@ -240,8 +244,8 @@ public class SettingDef<T> {
     }
 
     /**
-     * The boolean form. Shares {@code autoValueFn} rather than adding a parallel field: a flag is
-     * just an int the caller reads as zero or not.
+     * The boolean form. Reuses {@code autoValueFn}, not a separate boolean field: a flag is an int read
+     * as zero or nonzero.
      */
     @Nonnull
     public static SettingDef<Boolean> autoBoolDef(final String key,
@@ -261,9 +265,8 @@ public class SettingDef<T> {
     }
 
     /**
-     * What the row shows and the maths uses: the stored override, or the machine's own value.
-     * Presence is the whole test - a stored zero is a deliberate zero, which is exactly what the
-     * sentinel this replaced could not say.
+     * The value the row draws and the maths uses: the stored override, or the machine's value. Only key
+     * presence counts: a stored zero is a user-chosen zero.
      */
     public int effectiveInt(final RecipeContext ctx, final Map<String, Object> settings) {
         if (settings.containsKey(key) || autoValueFn == null) return MachineProfile.getInt(settings, key, 0);
@@ -276,34 +279,42 @@ public class SettingDef<T> {
     }
 
     /**
-     * Stepping up stops at what the machine can actually do, where the machine has a say. Only a row
-     * given a {@code maxFn} has one: an automatic value is what the machine <em>does</em>, which is a
-     * ceiling for a parallel count and a starting point for everything else, so it is not assumed to
-     * be one.
+     * Stepping up stops at the machine's maximum, where one exists. Only a row with a {@code maxFn} has
+     * one. The automatic value is the machine's working value: for a parallel count also the ceiling,
+     * for everything else a starting point, so it is not used as a maximum.
      */
     public int effectiveMax(final RecipeContext ctx, final Map<String, Object> settings) {
-        return maxFn == null ? maxInt : Math.max(minInt, maxFn.applyAsInt(ctx, settings));
+        return maxFn == null ? maxInt : Math.max(effectiveMin(ctx, settings), maxFn.applyAsInt(ctx, settings));
+    }
+
+    public int effectiveMin(final RecipeContext ctx, final Map<String, Object> settings) {
+        return minFn == null ? minInt : minFn.applyAsInt(ctx, settings);
     }
 
     public boolean hasOptions() {
         return optionsFn != null;
     }
 
-    /** The choices valid for this recipe. Empty means the row has nothing to offer and is skipped. */
+    /** The choices valid for this recipe. Empty means the row is skipped. */
     @Nonnull
     public List<String> options(final RecipeContext ctx) {
         return optionsFn == null ? List.of() : optionsFn.apply(ctx);
     }
 
     /**
-     * What an unset enum row means. Nothing stored is the normal state - the sparse settings map keeps
-     * only what the user chose - so this is the value the row draws and the maths reads, and it must be
-     * one answer rather than one per call site. Falls back to the first option, which is why an options
-     * list comes back best-choice-first.
+     * The value of an unset enum row. Nothing stored is the normal state, since the sparse settings map
+     * stores only what the user chose. So the row draws this value and the maths reads it, and it must be
+     * computed here, not per call site. Falls back to the first option, which is why an options list must
+     * be ordered best choice first.
      */
     @Nonnull
     public String defaultOption(final RecipeContext ctx) {
-        final List<String> choices = options(ctx);
+        return defaultOption(ctx, options(ctx));
+    }
+
+    /** For a caller that already built the list. {@code options} rebuilds it on every call. */
+    @Nonnull
+    public String defaultOption(final RecipeContext ctx, final List<String> choices) {
         if (defaultFn != null) {
             final String preferred = defaultFn.apply(ctx);
             if (choices.contains(preferred)) return preferred;
@@ -311,7 +322,7 @@ public class SettingDef<T> {
         return choices.isEmpty() ? "" : choices.getFirst();
     }
 
-    /** What the row renders for a stored value; identity unless the setting maps ids to names. */
+    /** The label the row draws for a stored value. Identity unless the setting maps ids to names. */
     @Nonnull
     public String display(final String value) {
         return displayFn == null ? value : displayFn.apply(value);
@@ -329,9 +340,9 @@ public class SettingDef<T> {
     }
 
     /**
-     * Renders the row's value as something other than the number it stores - a pipe casing tier as the
-     * casing a player places. The stored value stays a plain integer, which is what the tier is to
-     * every machine that reads it; only the row reads as the build step.
+     * Renders the row's value as something other than the stored number, such as a pipe casing tier as
+     * the casing a player places. The stored value stays a plain integer, since every machine reads the
+     * tier as that integer. Only the row prints the build step.
      */
     @Nonnull
     public SettingDef<T> withDisplay(final UnaryOperator<String> display) {
@@ -340,9 +351,9 @@ public class SettingDef<T> {
     }
 
     /**
-     * Chooses what an unset row resolves to, for a setting whose sensible starting value depends on
-     * the chart rather than on the setting - the coil a chart plans with. Nothing is stored until the
-     * user edits the row, so this moves with the chart instead of freezing into every node.
+     * Sets the value of an unset row, for a setting whose starting value depends on the chart, such as
+     * the coil a chart is planned with. Nothing is stored until the user edits the row, so this follows
+     * the chart and is not copied into every node.
      */
     @Nonnull
     public SettingDef<T> withDefault(final Function<RecipeContext, String> defaultOption) {
@@ -351,8 +362,22 @@ public class SettingDef<T> {
     }
 
     /**
-     * Returns a copy, so the shared singleton handed out by {@link Settings#def} stays unconditioned
-     * and one profile's gating cannot leak into another's.
+     * A copy with a label and range from outside PlanNH: a GregTech structure row takes both from its
+     * machine.
+     */
+    @Nonnull
+    public SettingDef<T> withLabelAndRange(final String newLabel,
+        final ToIntBiFunction<RecipeContext, Map<String, Object>> newMinFn,
+        final ToIntBiFunction<RecipeContext, Map<String, Object>> newMaxFn) {
+        return toBuilder().label(newLabel)
+            .minFn(newMinFn)
+            .maxFn(newMaxFn)
+            .build();
+    }
+
+    /**
+     * Returns a copy, so the shared singleton from {@link Settings#def} stays ungated and one profile's
+     * gating can't leak into another's.
      */
     @Nonnull
     public SettingDef<T> withVisibility(final BiPredicate<RecipeContext, Map<String, Object>> condition) {

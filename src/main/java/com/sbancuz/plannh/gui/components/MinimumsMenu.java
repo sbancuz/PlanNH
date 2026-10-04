@@ -14,23 +14,20 @@ import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
- * The structure the active chart plans with: the settings a node opens on when the user has said nothing
- * about it.
+ * The active chart's floors: the settings an untouched node opens on.
  *
  * <p>
- * One panel for the whole chart rather than a row on every node. A chart describes a factory at one
- * point in a world's progression, so the coils it can build is a fact about the chart; asking it of
- * each node is asking the same question fifty times. A node that differs still says so on its own row,
- * and a recipe that needs more than the chart offers raises its own node without being asked.
+ * A chart is a factory at one point in a world's progression, so which coils it can build is set once per chart. A
+ * floor can still be overridden on a node's row, and a node whose recipe requires more than the floor is raised.
  *
  * <p>
- * The rows come from {@link ChartMinimums}, which the installed providers fill. This class names no
- * mod: GregTech is a compile-only dependency, and reaching for a coil here would make the whole
- * flowchart screen fail to open on a pack without it.
+ * The rows come from {@link ChartMinimums}, which the installed providers fill. No mod is named in this class:
+ * GregTech is a compile-only dependency, so a GregTech reference here would make the flowchart screen fail to open on
+ * a pack without it.
  */
 public final class MinimumsMenu {
 
-    /** Wide enough for the longest coil GregTech ships, so no row wraps onto a second line. */
+    /** Wide enough for the longest GregTech coil name, so no row wraps. */
     private static final int LABEL_W = 118;
     private static final int STEP_W = 12;
     private static final int ROW_H = 12;
@@ -40,9 +37,8 @@ public final class MinimumsMenu {
     private final Menu<?> menu;
 
     /**
-     * Holds its own visibility, so the toolbar button that toggles it is the only state there is. The
-     * other floating panels keep theirs on the canvas because the canvas is what opens them; nothing
-     * opens this one but the button.
+     * Visibility is stored here, since only the toolbar button opens this menu. The canvas opens the other floating
+     * panels, so their visibility is stored there.
      */
     public MinimumsMenu() {
         final Flow rows = Flow.column()
@@ -51,10 +47,9 @@ public final class MinimumsMenu {
         for (final ChartMinimums.Minimum minimum : ChartMinimums.all()) {
             rows.child(row(minimum));
         }
-        // The fill goes on the row stack rather than on the menu around it, because the menu sizes
-        // itself from its child and paints the theme's own background behind it either way. Its own
-        // colour rather than the theme's: this floats over the chart, and a background the canvas
-        // shows through leaves the rows unreadable over a dense one.
+        // A fill on the menu has no effect: the menu sizes itself from its child and draws the theme
+        // background behind it either way. The theme background is see-through, so the rows would be
+        // unreadable over a dense chart.
         rows.padding(PADDING)
             .background(
                 new Rectangle().color(PlannhColors.CONTEXT_BG.getColor()),
@@ -66,16 +61,15 @@ public final class MinimumsMenu {
             .child(rows);
     }
 
-    /** The widget to hang off the screen's panel; never off the canvas, which pans and zooms. */
+    /** The widget to parent to the screen's panel. Parented to the canvas, it would pan and zoom with the chart. */
     @Nonnull
     public Menu<?> widget() {
         return menu;
     }
 
     /**
-     * @param below the screen row the toolbar ends at. The panel opens there rather than under the
-     *              cursor, because a click near the top of the button would otherwise put the panel
-     *              over the buttons themselves, and both become unreadable.
+     * @param below The screen row the toolbar ends at. Opening at the cursor would put the panel over the
+     *              buttons after a click near the top of one, leaving both unreadable.
      */
     public void toggle(final int screenX, final int below) {
         open = !open;
@@ -88,10 +82,9 @@ public final class MinimumsMenu {
             .coverChildren()
             .childPadding(2)
             .child(stepper("-", minimum, -1))
-            // Coloured on the widget, not on the key: TextWidget draws the key's text through its own
-            // renderer and falls back to the theme's colour, which is the dark grey a light panel
-            // wants and is unreadable on the dark one this panel draws. A colour set on the key never
-            // reaches the renderer.
+            // Coloured on the widget: TextWidget draws the key's text through its renderer, and a colour
+            // set on the key never reaches it. The fallback theme colour is dark grey, unreadable on this
+            // panel's dark background.
             .child(
                 IKey.dynamicKey(
                     () -> IKey.str(

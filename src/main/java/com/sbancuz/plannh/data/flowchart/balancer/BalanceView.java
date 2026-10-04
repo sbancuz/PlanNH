@@ -109,7 +109,7 @@ public final class BalanceView {
             final Port<?> port = ports.get(i);
             if (wired.contains(new PortRef(node.id, i, input))) continue;
             final double qty = Math.max(0, port.getAmount()) * port.getChance()
-                * (input ? cfg.inputMultiplier(i) : cfg.outputMultiplier(i))
+                * (input ? cfg.inputMultiplier(i) : cfg.outputMultiplier(i) * eff.outputFactor())
                 * tf;
             if (qty <= 0) continue;
             final double rate = count * qty * GuiHelper.TICKS_PER_SECOND / (double) durTicks;

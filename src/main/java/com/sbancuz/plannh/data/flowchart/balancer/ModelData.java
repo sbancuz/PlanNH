@@ -58,7 +58,10 @@ public final class ModelData {
             this.outQty = new double[node.outputs.size()];
             for (int i = 0; i < outQty.length; i++) {
                 final var s = node.outputs.get(i);
-                outQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.outputMultiplier(i) * tf;
+                outQty[i] = Math.max(0, s.getAmount()) * s.getChance()
+                    * cfg.outputMultiplier(i)
+                    * eff.outputFactor()
+                    * tf;
             }
             this.targetExtent = targetExtent(node, outQty);
             this.fixedExtent = node.machineConfig.isMachineCountPinned()

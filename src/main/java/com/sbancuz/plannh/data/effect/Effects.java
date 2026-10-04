@@ -73,24 +73,17 @@ public final class Effects {
     }
 
     /**
-     * Lets the machine a node is set to supply the numbers, and falls back to {@code otherwise} when
-     * none is selected or the one that is cannot answer. The single place a machine's own arithmetic
-     * enters a chart, so a provider joins it by implementing {@link MachineVariant#run} rather than
-     * by writing a step of its own.
-     *
-     * @param declines recipes the machine must not be asked about, because the recipe itself carries
-     *                 something no machine can report - a parallel count driven by an input item
-     *                 count, say, which a preset would silently replace with the structure's
+     * Takes the numbers from the node's selected machine. Passes the recipe's numbers through when no
+     * machine is selected or its {@link MachineVariant#run} returns null. This is the only step where a
+     * machine's arithmetic enters a chart, so providers hook in through {@link MachineVariant#run}, not
+     * through a new effect step.
      */
     @Nonnull
-    public static EffectStep machineDriven(final Predicate<RecipeContext> declines, final EffectStep otherwise) {
+    public static EffectStep machineDriven() {
         return (current, s, ctx) -> {
-            if (!declines.test(ctx)) {
-                final MachineVariant machine = MachineVariants.selected(ctx, s);
-                final EffectResult driven = machine == null ? null : machine.run(ctx, s, current);
-                if (driven != null) return driven;
-            }
-            return otherwise.apply(current, s, ctx);
+            final MachineVariant machine = MachineVariants.selected(ctx, s);
+            final EffectResult driven = machine == null ? null : machine.run(ctx, s, current);
+            return driven != null ? driven : current;
         };
     }
 

@@ -17,8 +17,8 @@ import com.sbancuz.plannh.data.Settings;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
 /**
- * The machine picker's choices depend on the node's recipe, so its option list cannot be baked at
- * construction the way a tier list can. These pin the two shapes coexisting.
+ * The machine picker's choices depend on the node's recipe, so its option list can't be fixed at
+ * construction like a tier list. These tests pin both shapes side by side.
  */
 class SettingOptionsTest {
 
@@ -32,10 +32,10 @@ class SettingOptionsTest {
     }
 
     /**
-     * The shared vocabulary must not carry another mod's tier names. Settings.VOLTAGE once held a
-     * transcribed copy of GTValues.VN, which nothing rendered and which would have gone quietly wrong
-     * the day GregTech added a tier; the coil, solenoid and casing rows are the same shape. Whether a
-     * provider has attached a def is a different question - this only asserts that none is baked in.
+     * Shared settings must not contain another mod's tier names. A copy of GTValues.VN in
+     * Settings.VOLTAGE would go wrong when GregTech adds a tier, and the same applies to the coil,
+     * solenoid and casing rows. This test asserts only that no options are baked in, not whether a
+     * provider attached a def.
      */
     @Test
     void theSharedVocabularyBakesInNoModsChoices() {
@@ -75,7 +75,7 @@ class SettingOptionsTest {
                 .isEmpty());
     }
 
-    /** The saved value stays a stable id; only the rendered row goes through the display mapping. */
+    /** The saved value stays a stable id. Only the rendered row goes through the display mapping. */
     @Test
     void displayMapsIdsToNamesWithoutChangingTheStoredValue() {
         final SettingDef<String> machine = SettingDef.dynamicEnumDef(
@@ -102,7 +102,7 @@ class SettingOptionsTest {
                 .isEmpty());
     }
 
-    /** withVisibility rebuilds the def, so it has to carry the option source across. */
+    /** withVisibility rebuilds the def, so it must copy the option source across. */
     @Test
     void gatingADynamicEnumKeepsItsOptions() {
         final SettingDef<String> machine = SettingDef

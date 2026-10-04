@@ -15,11 +15,11 @@ import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.machine.MachineVariants;
 
 /**
- * What an EnderIO node computes, kept apart from the provider that reads the recipes.
+ * The EnderIO node model, separate from the provider that reads the recipes.
  *
  * <p>
- * The provider has to name NEI's handler classes, and loading those reaches LWJGL; this holds only
- * the model, so the arithmetic can be tested against EnderIO's own numbers without a display.
+ * The provider references NEI's handler classes, and loading those loads LWJGL. This class has only
+ * the model, so its arithmetic can be tested against EnderIO's numbers without a display.
  */
 public final class EnderIOProfile {
 
@@ -28,9 +28,9 @@ public final class EnderIOProfile {
     public static final String ID = "enderio";
 
     /**
-     * The capacitor the machine is built with, which is the only thing that decides how fast it runs:
-     * a task advances by {@code getPowerUsePerTick} each tick, and that is the capacitor's own extract
-     * rate. An untouched row follows the chart, so one chart-wide choice covers every EnderIO node.
+     * The capacitor the machine is built with, which alone sets its speed: a task advances by
+     * {@code getPowerUsePerTick} each tick, which is the capacitor's extract rate. An untouched row
+     * follows the chart's floor, so one chart-wide choice applies to every EnderIO node.
      */
     public static final SettingDef<Integer> CAPACITOR_DEF = SettingDef
         .autoIntDef(
@@ -42,17 +42,17 @@ public final class EnderIOProfile {
         .withDisplay(tier -> EnderIOCapacitors.label(Integer.parseInt(tier)));
 
     /**
-     * Duration and power draw, both a function of the capacitor. Held apart from the profile so it can
-     * be exercised without one: building a profile reaches NEI's config for the burnable-override row,
-     * and NEI reaches LWJGL, neither of which a headless check of this arithmetic should need.
+     * Duration and power draw, both from the capacitor. A field separate from the profile so tests can
+     * run it headless: building a profile loads NEI's config for the burnable-override row, and NEI
+     * loads LWJGL.
      */
     public static final EffectComputer EFFECT = Effects.durationFromFormula(EnderIOProfile::durationTicks)
         .withCostPerT(CoFHCompat.RF_PER_T, (current, s, ctx) -> energy(ctx) == 0 ? 0L : (long) rfPerTick(ctx, s))
         .applyParallelism();
 
     /**
-     * Built on demand rather than held in a field, because a profile reads NEI's config as it is
-     * assembled and this class is loaded long before a screen exists.
+     * Built per call, not stored in a field: a profile reads NEI's config while it is built, and this
+     * class loads long before a screen exists.
      */
     @Nonnull
     public static MachineProfile profile() {
@@ -61,15 +61,14 @@ public final class EnderIOProfile {
             .setting(Settings.MACHINES.def())
             .setting(Settings.TICK_MODIFIER.def())
             .setting(CAPACITOR_DEF.withVisibility(MachineVariants.usesSetting(Settings.EIO_CAPACITOR)))
-            // A recipe carries the energy it needs, not how long it takes; how long is the capacitor's
-            // business. Reading a duration off the recipe list would freeze whichever capacitor
-            // happened to be assumed when the node was made. The total is left as the recipe stated it
-            // - it is the one number here that a capacitor does not change.
+            // A recipe stores its energy, not its duration. Duration depends on the capacitor. Reading
+            // a duration off the recipe list would fix it at the capacitor in use when the node was made.
+            // The total energy is taken from the recipe unchanged, since a capacitor does not change it.
             .effect(EFFECT)
             .build();
     }
 
-    /** The floor every EnderIO node opens at, so the capacitor is chosen once for a whole chart. */
+    /** Registers the capacitor as a chart floor, so it is chosen once per chart. */
     public static void registerChartMinimum() {
         ChartMinimums.register(
             ChartMinimums.Minimum.strongest(
@@ -81,23 +80,23 @@ public final class EnderIOProfile {
     }
 
     /**
-     * How long the recipe takes: its energy divided by what the capacitor puts in each tick, which is
-     * the whole of EnderIO's timing model. Named rather than left inline in the effect chain so it can
-     * be checked directly - running the chain touches RecipePropertyAPI, whose static initializer
-     * builds a FluidStack and so needs a game that has registered its fluids.
+     * The recipe's energy divided by the capacitor's RF/t, which is all of EnderIO's timing model. A
+     * named method, not inline in the effect chain, so tests can call it: running the chain loads
+     * RecipePropertyAPI, whose static initializer builds a FluidStack and so requires a game with
+     * registered fluids.
      */
     public static int durationTicks(@Nonnull final RecipeContext ctx, final Map<String, Object> settings) {
         return (int) (energy(ctx) / rfPerTick(ctx, settings));
     }
 
-    /** How much energy reaches a recipe each tick, given the capacitor this node is planning with. */
+    /** The RF/t the node's capacitor supplies to a recipe. */
     public static int rfPerTick(@Nonnull final RecipeContext ctx, final Map<String, Object> settings) {
         return EnderIOCapacitors.rfPerTick(CAPACITOR_DEF.effectiveInt(ctx, settings));
     }
 
     /**
-     * What the recipe costs in total. Zero for the Enchanter, which spends experience levels rather
-     * than power, and which must therefore not be quoted an RF rate it never draws.
+     * The recipe's total energy. Zero for the Enchanter, which spends experience levels, so its RF/t is
+     * set to 0 as well.
      */
     private static long energy(@Nonnull final RecipeContext ctx) {
         final Object total = ctx.properties()

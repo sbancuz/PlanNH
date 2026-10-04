@@ -49,23 +49,20 @@ public class Graph {
     @Getter
     private BalanceMode balanceMode = BalanceMode.AUTO;
 
-    /** Nothing is set for this key, so a node opens on the best the game offers. */
+    /** No floor is set for this key, so a node opens on the best available value. */
     public static final int NO_MINIMUM = -1;
 
     /**
-     * The structure this chart assumes it can build, keyed by setting. A chart describes a factory at
-     * one point in a world's progression, so the coil a node opens on belongs to the chart rather than
-     * to each node; setting it once is what keeps a node's own settings down to what makes that node
-     * different.
+     * The structure available to this chart's factory, keyed by setting. A chart is a factory at one point in a world's
+     * progression, so the starting coil is set once per chart and a node's settings store only what differs.
      *
      * <p>
-     * A starting value, not a ceiling. A recipe that needs more raises its own node, and a row the
-     * user edits keeps what it was given.
+     * A starting value, not a ceiling. A node whose recipe requires more is raised to that, and a value the user edits
+     * on a node stays as edited.
      *
      * <p>
-     * Keyed rather than one field per setting, because which settings a chart has a floor for is the
-     * installed mods' business, not this package's - naming them here would put GregTech in a class
-     * that has to stay loadable without it. Sorted so a save writes them in a stable order.
+     * With one field per setting, GregTech settings would be named in a class that has to stay loadable without
+     * GregTech, so the keys come from the installed mods. Sorted so a save writes them in a stable order.
      */
     private final SortedMap<String, Integer> minimums = new TreeMap<>();
 
@@ -134,7 +131,7 @@ public class Graph {
         bumpVersion();
     }
 
-    /** What this chart plans at for one setting, or {@link #NO_MINIMUM} when it has not said. */
+    /** The floor for one setting, or {@link #NO_MINIMUM} when none is set. */
     public int getMinimum(final String settingKey) {
         return minimums.getOrDefault(settingKey, NO_MINIMUM);
     }
@@ -148,7 +145,7 @@ public class Graph {
         bumpVersion();
     }
 
-    /** The stored floors, for the serializer. Sorted, so a save is reproducible. */
+    /** The stored floors, for the serializer. */
     @Nonnull
     public SortedMap<String, Integer> getMinimums() {
         return minimums;

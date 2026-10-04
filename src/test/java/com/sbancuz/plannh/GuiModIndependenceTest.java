@@ -15,18 +15,15 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
- * GregTech has been a compile-only dependency since the no-gt-harddep change, so a screen that names
- * a GregTech class fails to open on a pack without it - and PlanNH's own screen is the one thing every
- * pack sees. This is a source check rather than a runtime one because the failure is a
- * {@code NoClassDefFoundError} raised by classloading, which no headless test can provoke while the
- * jar is on the test classpath.
+ * GregTech is a compile-only dependency, so a screen class referencing a GregTech class fails to open on a pack
+ * without it, and PlanNH's screen opens in every pack. The check reads source because the failure is a
+ * {@code NoClassDefFoundError} raised by classloading, which no headless test can provoke while the jar is on the test
+ * classpath.
  *
  * <p>
- * An allowlist rather than a list of banned mods: the next mod integration should have to say out
- * loud that it is reaching into the GUI, instead of being caught only when someone runs the pack
- * without it. PlanNH's own {@code data.provider.gregtech} classes are allowed here - that is where
- * mod references are supposed to live, behind a {@code Compat.GREGTECH.isLoaded} guard, which is what
- * {@code GTHooks} exists for.
+ * With a list of banned mods, the next mod integration would go unnoticed until someone runs a pack without that mod,
+ * so this is an allowlist. PlanNH's {@code data.provider.gregtech} classes are allowed: mod references belong there,
+ * reached through {@code GTHooks} behind a {@code Compat.GREGTECH.isLoaded} guard.
  */
 class GuiModIndependenceTest {
 

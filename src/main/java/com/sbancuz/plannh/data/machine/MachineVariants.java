@@ -14,14 +14,12 @@ import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.Settings;
 
 /**
- * Which machines can run a node's recipe, across whichever mods are installed.
+ * The machines that can run a node's recipe, across the installed mods.
  *
  * <p>
- * PlanNH used to answer this twice. A node cycles between the providers that claim its recipe, and
- * GregTech had a picker of its own for the machines inside one provider - two controls, two things to
- * persist, one question. This is the half that generalizes: a mod says which machines it offers for a
- * recipe, and gets the picker row, the per-machine settings rows and the persistence without writing
- * any of them.
+ * One picker row and one stored value per node, whichever provider the machines come from. A mod
+ * registers which machines run a recipe and gets the picker row, the per-machine settings rows and
+ * persistence without writing any of them.
  *
  * <p>
  * Static like {@code MachineProfileRegistry} and reset with it from {@code Compat.init}, because
@@ -32,21 +30,21 @@ public final class MachineVariants {
     private MachineVariants() {}
 
     /**
-     * A provider's answer for its own machines. Deliberately a lookup rather than a list handed over
-     * at registration: GregTech derives its 296 entries by cloning and probing every multiblock, which
-     * is far too expensive to do during mod init, and it already caches and orders them itself.
+     * A provider's lookup for its machines. A lookup, not a list passed at registration: the GregTech
+     * source builds its entries by cloning and probing every multiblock, which is too slow for mod init,
+     * and caches and orders them itself.
      */
     public interface Source {
 
         /**
-         * The machines that can run this recipe, best first - the widget treats the first as what an
-         * unset setting means, so the order is the provider's statement about which machine a player
-         * planning this line would reach for. Empty when this source does not recognise the recipe.
+         * The machines that can run this recipe, best first. The widget uses the first as the value of
+         * an unset setting, so the order sets which machine an untouched node is planned with. Empty when
+         * this source has no machine for the recipe.
          */
         @Nonnull
         List<? extends MachineVariant> candidates(RecipeContext ctx);
 
-        /** A machine by its persisted id, whatever recipe it was stored against; null when unknown. */
+        /** A machine by its persisted id, whatever recipe it was stored against, or null when unknown. */
         @Nullable
         MachineVariant byId(String id);
     }
@@ -65,9 +63,9 @@ public final class MachineVariants {
     }
 
     /**
-     * The first source that recognises the recipe wins, and nothing is merged. A node's recipe came
-     * from one recipe list belonging to one mod, so two sources answering would mean one of them has
-     * misidentified it - and concatenating would allocate on a path that runs every frame.
+     * The first non-empty answer, not merged. A node's recipe comes from one mod's recipe list, so two
+     * non-empty sources would mean one of them is wrong. Concatenating would also allocate on a path that
+     * runs every frame.
      */
     @Nonnull
     public static List<? extends MachineVariant> candidates(final RecipeContext ctx) {
@@ -88,8 +86,8 @@ public final class MachineVariants {
     }
 
     /**
-     * The last answer {@link #selected} gave, memoized on the identity of the candidate list rather
-     * than its contents - a source returns the same instance until its answer changes.
+     * The last result of {@link #selected}, memoized on the identity of the candidate list, not its
+     * contents. A source returns the same list instance until its candidates change.
      */
     @Nullable
     private static List<? extends MachineVariant> lastCandidates;
@@ -99,9 +97,9 @@ public final class MachineVariants {
     private static MachineVariant lastSelected;
 
     /**
-     * The machine a node is using: what it stored, or the best candidate when it stored nothing, so a
-     * node that accepts the obvious answer persists nothing at all. A stored id the installed pack no
-     * longer has resolves to null rather than quietly becoming a different machine.
+     * The node's machine: the stored one, or the best candidate when none is stored, so a node on the
+     * default stores nothing. A stored id missing from the installed pack resolves to null, not to a
+     * different machine.
      */
     @Nullable
     public static MachineVariant selected(final RecipeContext ctx, final Map<String, Object> settings) {
@@ -127,7 +125,7 @@ public final class MachineVariants {
         return null;
     }
 
-    /** Shows a row only when the machine the node selected actually reads that setting. */
+    /** Row visibility: a row appears only when the node's selected machine reads that setting. */
     @Nonnull
     public static BiPredicate<RecipeContext, Map<String, Object>> usesSetting(final Settings setting) {
         return (ctx, settings) -> {
@@ -138,10 +136,9 @@ public final class MachineVariants {
     }
 
     /**
-     * The picker. Options are the machines that can run this node's recipe, best-first, so an unset
-     * value renders and behaves as the obvious choice without being serialized. The stored value is
-     * the machine's id and the row shows its label, which is what lets a save stay stable while the
-     * row reads as a machine name.
+     * The picker. Options are the machines that can run this node's recipe, best first, so an unset value
+     * acts as the first option without being serialized. The row stores the machine's id and draws its
+     * label, so a save stays stable when a label changes.
      */
     @Nonnull
     public static SettingDef<String> pickerDef() {

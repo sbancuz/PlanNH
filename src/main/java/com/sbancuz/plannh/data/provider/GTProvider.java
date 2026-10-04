@@ -14,7 +14,6 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
-import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.Settings;
@@ -26,14 +25,13 @@ import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.data.provider.gregtech.GTMachineIndex;
-import com.sbancuz.plannh.data.provider.gregtech.GTOverclockStep;
 import com.sbancuz.plannh.data.provider.gregtech.GTSettings;
-import com.sbancuz.plannh.data.provider.gregtech.StructureState;
 
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.FurnaceRecipeHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
+import gregtech.api.logic.ModifierKind;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeMaps;
 import gregtech.api.recipe.RecipeMetadataKey;
@@ -83,17 +81,16 @@ public class GTProvider implements PropertyProvider {
         .build();
 
     /**
-     * The recipe this node was extracted from, kept so GT's own OverclockDescriber can be asked what
-     * a machine would do with it - several describers discard the template and rebuild from the
-     * recipe. Node.properties is rebuilt by refresh() and never serialized, and the balancer only
-     * aggregates Number values, so holding it costs nothing.
+     * Recipe this node was extracted from, passed to GT's OverclockDescriber. Several describers discard
+     * the template and rebuild from the recipe. Node.properties is rebuilt by refresh() and never
+     * serialized, and the balancer aggregates only Number values, so storing it here costs nothing.
      */
     public static final RecipeProperty<GTRecipe> GT_RECIPE = RecipeProperty.<GTRecipe>builder("gt.recipe", null)
         .build();
 
     /**
-     * The NEI handler's own tab title, which names the machine the recipe list belongs to. The
-     * machine picker uses it to default to the machine the player was actually looking at.
+     * NEI handler's tab title, which contains the name of the machine the recipe list belongs to. The
+     * machine picker defaults to that machine, the one the player had open in NEI.
      */
     public static final RecipeProperty<String> NEI_TITLE = RecipeProperty.<String>builder("gt.nei_title", "")
         .build();
@@ -108,71 +105,44 @@ public class GTProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(GTNEIDefaultHandler.class, this);
 
         MachineProfileRegistry.register(PROFILE);
-        // Cleared alongside the shared registries rather than left standing, so the index and the
-        // memo in MachineVariants that keys off it are emptied by the same pass.
+        // reset with the shared registries so the index and the MachineVariants memo keyed off it empty together
         GTMachineIndex.reset();
         MachineVariants.register(GTMachineIndex.SOURCE);
         GTSettings.registerChartMinimums();
-        new GTSteamProvider().register();
-    }
-
-    private static boolean hasHeat(final RecipeContext ctx) {
-        return ctx.properties()
-            .containsKey(GLASS_TIER)
-            || ctx.properties()
-                .containsKey(COIL_HEAT);
     }
 
     /**
-     * The one recipemap whose parallel count comes from an input item count rather than from the
-     * structure a machine was built with. Named once, because the row that reads the catalyst, the
-     * route that turns it into parallels, and the guard that stops a machine overwriting it are the
-     * same fact stated three times otherwise.
-     */
-    private static final String CATALYST_RECIPE_MAP = "gt.recipe.eyeofharmony";
-
-    private static boolean isEoH(final RecipeContext ctx) {
-        final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
-        return map != null && CATALYST_RECIPE_MAP.equals(map.unlocalizedName);
-    }
-
-    /**
-     * The machine picker plus the structure settings the chosen machine actually reads. Speed, EU
-     * discount, overclock factors and heat are all derived from the machine, and reappear as rows
-     * only once the user ticks Advanced.
+     * Machine picker plus the structure settings the chosen machine reads. Speed, EU discount, overclock
+     * factors and heat are derived from the machine and appear as rows only when Advanced is ticked.
      */
     private static void machineDriven(final MachineProfile.Builder b) {
         b.setting(GTSettings.MACHINE_DEF.withVisibility(GTSettings.neverAsARow()));
         b.setting(GTSettings.VOLTAGE_DEF.withVisibility(GTSettings.voltageEditable()));
         b.setting(Settings.MACHINES.def());
-        // Nearly every multiblock takes more than one energy hatch, so how many amps reach it is a
-        // build decision rather than an advanced override.
+        // Nearly every multiblock accepts more than one energy hatch, so amperage is a build choice and its
+        // row appears without Advanced.
         b.setting(GTSettings.AMP_DEF.withVisibility(GTSettings.ampEditable()));
-        b.setting(
-            GTSettings.PARALLELS_DEF.withVisibility(
-                GTSettings.parallelsEditable()
-                    .and((ctx, s) -> !isEoH(ctx))));
-        // Every structure setting is the same row with a different def: offered when the selected machine
-        // reads it, absent otherwise. Listing them one by one only invited the two lists to diverge.
-        for (final Settings setting : StructureState.STRUCTURE_SETTINGS) {
+        b.setting(GTSettings.PARALLELS_DEF.withVisibility(GTSettings.parallelsEditable()));
+        // One row per value a player builds or inserts, visible when the selected machine reads it.
+        // GregTech registers its kinds as its machines load, before this profile is built, so adding a kind
+        // requires no code here.
+        for (final ModifierKind kind : ModifierKind.all()) {
+            if (kind == ModifierKind.VOLTAGE || kind.source == ModifierKind.Source.RUNTIME) continue;
             b.setting(
-                GTSettings.settingDef(setting)
-                    .withVisibility(GTSettings.usesSetting(setting)));
+                GTSettings.structureDef(kind)
+                    .withVisibility(GTSettings.usesStructure(kind)));
         }
-        b.setting(
-            Settings.CATALYST_ASTRAL_ARRAYS.def()
-                .withVisibility((ctx, s) -> isEoH(ctx)));
+        b.setting(GTSettings.MODE_DEF.withVisibility(GTSettings.usesSetting(Settings.GT_MODE)));
         b.setting(GTSettings.ADVANCED_DEF);
     }
 
-    /** The pre-picker rows, kept so a hand-tuned chart can still be edited exactly as before. */
+    /** Override rows, under Advanced, for charts tuned by hand. */
     private static void manual(final MachineProfile.Builder b) {
-        // Each row reads the machine's own value until the user stores one over it. The two
-        // overclock caps have no machine counterpart - GT rarely sets them - so they stay plain
-        // optional limits where nothing stored means no cap.
+        // Each row reads the machine's value until the user stores one over it. The two overclock caps
+        // have no machine counterpart (GT rarely sets them), so they're plain optional limits and an
+        // empty value means no cap.
         for (final SettingDef<?> def : List.of(
             GTSettings.SPEED_DEF,
-            GTSettings.PERFECT_OC_DEF,
             Settings.LASER_OC.def(),
             Settings.NO_OVERCLOCK.def(),
             GTSettings.UNLIMITED_SKIPS_DEF,
@@ -195,27 +165,9 @@ public class GTProvider implements PropertyProvider {
     private static final MachineProfile PROFILE = MachineProfile.builder("gregtech:unified", "GT Unified")
         .settings(GTProvider::machineDriven)
         .settings(GTProvider::manual)
-        // Per-recipemap overclock defaults are not listed here: the machine probe derives them from
-        // the machine class, so a second table keyed on the recipemap would be a rival authority.
-        // What stays is the genuinely recipe-driven cases, which no machine can report.
         .effect(
             Effects.durationFromHandler()
-                .andThen(
-                    Effects.machineDriven(
-                        GTProvider::isEoH,
-                        GTOverclockStep.create()
-                            .applyIf(GTProvider::hasHeat, GTOverclockStep::withHeat)
-                            .applyIf(
-                                ctx -> ctx.properties()
-                                    .containsKey(FUSION_THRESHOLD),
-                                GTOverclockStep::withPerfectOC)
-                            .route(
-                                CATALYST_RECIPE_MAP,
-                                step -> step.withCatalyst(
-                                    (SettingDef<Integer>) Settings.CATALYST_ASTRAL_ARRAYS.def(),
-                                    v -> (int) Math.pow(
-                                        2,
-                                        (int) Math.floor(Math.log(8.0 * Math.min(v, 8637)) / Math.log(1.7))))))))
+                .andThen(Effects.machineDriven()))
         .onLoad(GTSettings::migrateLegacyNode)
         .build();
 

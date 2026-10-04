@@ -13,22 +13,21 @@ import javax.annotation.Nonnull;
 import com.sbancuz.plannh.PlanNH;
 
 /**
- * Carries the machine table's hand-review state across a regeneration.
+ * The machine table's hand-review column, read from the old file and written into the regenerated one.
  *
  * <p>
- * The table is generated, so everything in it can be rebuilt except the column saying a human has
- * read the row. That column has to survive being overwritten, and it has to stop surviving the moment
- * GregTech moves underneath the machine - so a tick is kept only where the row still
- * says the same numbers it was reviewed against.
+ * The table is generated, so every column can be rebuilt except the one where a human ticks the rows they have read. A
+ * tick survives a regeneration only while the row's numbers equal the numbers it was reviewed against, so a GregTech
+ * change to the machine clears it.
  */
 public final class ReviewTicks {
 
-    /** The unreviewed marker, and what every row of a fresh table carries. */
+    /** The unreviewed marker, and every row's mark in a fresh table. */
     public static final String UNCHECKED = "❌";
 
     /**
-     * The column's heading. Here rather than at the writer because the reader has to recognise it: a
-     * header row has the same shape as a data row, and would otherwise be read back as a machine.
+     * Column heading, which fromLines() also matches: a header row has a data row's shape and would otherwise be read
+     * back as a machine.
      */
     public static final String COLUMN = "checked by hand";
 
@@ -41,13 +40,13 @@ public final class ReviewTicks {
         this.byMachine = byMachine;
     }
 
-    /** Nothing carried, for a first run or a file that could not be read. */
+    /** No ticks, for a first run or a file that could not be read. */
     @Nonnull
     public static ReviewTicks none() {
         return new ReviewTicks(Map.of());
     }
 
-    /** The ticks in the file about to be overwritten; an unreadable file simply carries nothing. */
+    /** The ticks in the file about to be overwritten. A missing or unreadable file gives {@link #none()}. */
     @Nonnull
     public static ReviewTicks from(@Nonnull final File previous) {
         if (!previous.isFile()) return none();
@@ -60,8 +59,8 @@ public final class ReviewTicks {
     }
 
     /**
-     * Reads tick, machine and numbers from every data row. Anything that is not one - prose, the
-     * header, the separator - has too few cells or an unusable first cell and is skipped.
+     * Reads tick, machine and numbers from every data row. Prose, the header and the separator have too few cells or an
+     * unusable first cell, so they are skipped.
      */
     @Nonnull
     public static ReviewTicks fromLines(@Nonnull final List<String> lines) {
@@ -78,8 +77,8 @@ public final class ReviewTicks {
     }
 
     /**
-     * The tick this machine starts the new table with: carried only while the numbers are the ones
-     * that were reviewed. Whatever mark the reviewer used comes back verbatim, so the column is theirs.
+     * The tick for this machine in the new table, kept only while the numbers match the reviewed ones. The reviewer's
+     * mark is returned verbatim, so any mark counts as reviewed.
      */
     @Nonnull
     public String forMachine(@Nonnull final String machine, @Nonnull final String numbers) {
