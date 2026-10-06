@@ -7,8 +7,6 @@ import java.util.Map;
 
 import net.minecraft.util.StatCollector;
 
-import org.lwjgl.input.Keyboard;
-
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
@@ -81,7 +79,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         final long version = parent.getCanvas()
             .getGraph()
             .getVersion();
-        final boolean shift = shiftHeld();
+        final boolean shift = GuiHelper.shiftHeld();
         final RateUnit unit = rateUnit();
         if (version == lastVersion && shift == lastShift && unit == lastUnit) return;
         lastVersion = version;
@@ -103,8 +101,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         final IKey copies;
         if (operations < 0) copies = IKey.lang(LANG + "unbalanced");
         else if (operations <= 0) copies = IKey.lang(LANG + "unplanned");
-        else copies = IKey
-            .comp(IKey.lang(LANG + "copies_needed"), IKey.lang(LANG + "ops", GuiHelper.formatCount(operations)));
+        else copies = IKey.comp(IKey.lang(LANG + "copies_needed"), TooltipBuilder.multiple(operations));
 
         lines.removeAll();
 
@@ -131,26 +128,25 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         final boolean balanced = balance != null && balance.durationPerOp() > 0;
         final RateUnit unit = rateUnit();
         final int ticks = balanced ? balance.durationPerOp() : durationTicks(node);
-        final float cycleSeconds = balanced ? ticks / (float) GuiHelper.TICKS_PER_SECOND : 0;
 
         final TooltipBuilder out = TooltipBuilder.create(tooltip);
 
-        if (ticks > 0) out.duration(RecipePropertyAPI.DURATION_TICKS.displayName(), ticks, unit, shiftHeld());
+        if (ticks > 0) out.duration(RecipePropertyAPI.DURATION_TICKS.displayName(), ticks, unit, GuiHelper.shiftHeld());
         else out.langRow(LANG + "unbalanced");
 
         out.group(
             "plannh.summary.title.outputs",
-            rows -> { if (balanced) ports(rows, node.getOutputs(), balance.effectiveOutputs(), cycleSeconds, unit); });
+            rows -> { if (balanced) ports(rows, node.getOutputs(), balance.effectiveOutputs(), ticks, unit); });
         out.group(
             "plannh.summary.title.inputs",
-            rows -> { if (balanced) ports(rows, node.getInputs(), balance.effectiveInputs(), cycleSeconds, unit); });
+            rows -> { if (balanced) ports(rows, node.getInputs(), balance.effectiveInputs(), ticks, unit); });
         out.group("plannh.summary.title.properties", rows -> properties(rows, node));
 
         writeTarget(out);
 
         // Shift trades the hint that says what shift does for the thing it does, which is the only
         // reason to have a hint.
-        if (shiftHeld()) writeSettings(out);
+        if (GuiHelper.shiftHeld()) writeSettings(out);
         else out.separator()
             .langRow(LANG + "shift_hint");
 
@@ -207,18 +203,17 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
      * row.
      */
     private static void ports(final TooltipBuilder out, final List<Port<?>> ports, final Map<Integer, Float> perCycle,
-        final float cycleSeconds, final RateUnit unit) {
+        final int duration, final RateUnit unit) {
         for (int i = 0; i < ports.size(); i++) {
             final Float rate = perCycle.get(i);
             if (rate == null || rate <= 0) continue;
             final Port<?> port = ports.get(i);
-            final float amount = rate / cycleSeconds / (float) unit.secondsPerUnit;
             out.detail(
                 port.getDisplayName(),
                 TooltipTheme.Role.RATE,
                 TooltipBuilder.rate(
                     port.getType()
-                        .formatAmount(amount),
+                        .formatAmount(GuiHelper.rate(rate, duration, unit)),
                     unit));
         }
     }
@@ -256,10 +251,6 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         return Plan.getInstance()
             .getSummary()
             .getRateUnit();
-    }
-
-    private static boolean shiftHeld() {
-        return Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
     }
 
 }

@@ -114,13 +114,21 @@ plannh.share.copy_from_clipboard=Plan imported from clipboard
 
 ## GUI
 ## GUI - Node throughput
-plannh.gui.node.throughput.ops=×%s
 plannh.gui.node.throughput.duration=%s
 plannh.gui.node.throughput.copies_needed=Copies needed §7
 plannh.gui.node.throughput.unbalanced=not balanced
 plannh.gui.node.throughput.unplanned=not planned
 plannh.gui.node.throughput.settings=Settings
 plannh.gui.node.throughput.shift_hint=Hold §f§l[LSHIFT]§7 for every unit and setting
+
+## GUI - Node port
+## The rate under a port, and the rows that take it apart
+plannh.gui.node.port.rate=Rate
+plannh.gui.node.port.per_unit=Per unit
+plannh.gui.node.port.consumption=Input consumption
+plannh.gui.node.port.productivity=Output productivity
+plannh.gui.node.port.shift_hint=Hold §f§l[LSHIFT]§7 for the rate in every unit
+plannh.gui.node.port.configure_hint=Right-Click to Configure
 
 ## GUI - Node balancer target
 ## Target selector, at the head of the target fold
@@ -265,3 +273,7 @@ plannh.gui.rate.second.suffix=/s
 plannh.gui.rate.minute.suffix=/m
 plannh.gui.rate.hour.suffix=/h
 plannh.gui.rate.day.suffix=/d
+
+## GUI - Numbers
+## How a count of something is written, beside the thing it counts
+plannh.gui.number.multiple=×%s

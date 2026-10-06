@@ -181,11 +181,35 @@ public final class TooltipBuilder {
      */
     public TooltipBuilder entry(final String label, final TooltipTheme.Role role, final String value,
         final @Nullable String tail) {
+        return entry(IKey.str(label), role, value, tail);
+    }
+
+    /** An {@link #entry} whose label is a key, which is the form every lang-backed row reads best in. */
+    public TooltipBuilder entry(final IKey label, final TooltipTheme.Role role, final String value) {
+        return entry(label, role, value, null);
+    }
+
+    /** An {@link #entry} whose value is a key too, for a value a lang sentence carries. */
+    public TooltipBuilder entry(final IKey label, final TooltipTheme.Role role, final IKey value) {
+        return entry(label, role, value, null);
+    }
+
+    /** An {@link #entry} over keys throughout, tail included by way of the string overload. */
+    public TooltipBuilder entry(final IKey label, final TooltipTheme.Role role, final IKey value,
+        final @Nullable String tail) {
+        return entry(label, role, value.get(), tail);
+    }
+
+    public TooltipBuilder entry(final IKey label, final TooltipTheme.Role role, final String value,
+        final @Nullable String tail) {
         final IKey tailKey = tail == null ? IKey.EMPTY : TooltipTheme.key(TooltipTheme.Role.BODY, " (" + tail + ")");
         return line(
             IKey.comp(
                 pad(),
-                TooltipTheme.key(TooltipTheme.Role.LABEL, label + COLON),
+                TooltipTheme.key(
+                    TooltipTheme.Role.LABEL,
+                    IKey.comp(label, IKey.str(COLON))
+                        .get()),
                 TooltipTheme.key(role, value),
                 tailKey));
     }
@@ -246,6 +270,13 @@ public final class TooltipBuilder {
     /** An amount with its per-unit suffix, the way every rate in the pack is written. */
     public static String rate(final String amount, final RateUnit unit) {
         return amount + StatCollector.translateToLocal(unit.suffixKey());
+    }
+
+    /**
+     * Formats something like 3 -> x3
+     */
+    public static IKey multiple(final double factor) {
+        return IKey.lang("plannh.gui.number.multiple", GuiHelper.formatCount(factor));
     }
 
     private static String durationValue(final int ticks, final RateUnit unit, final boolean allUnits) {
