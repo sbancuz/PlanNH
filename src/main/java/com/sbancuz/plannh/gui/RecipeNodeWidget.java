@@ -32,7 +32,6 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.setting.SettingDef;
-import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import codechicken.nei.PositionedStack;
@@ -43,8 +42,7 @@ import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 
-public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
-    implements Interactable, RecipeViewerIngredientProvider, AutoLayout.LayoutNode {
+public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Interactable, RecipeViewerIngredientProvider {
 
     private static final int BASE_W = 120;
     private static final int BASE_H = 80;
@@ -172,29 +170,24 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         size(Math.round(BASE_W * z), Math.round(BASE_H * z));
     }
 
-    @Override
     public UUID id() {
         return node.getId();
     }
 
-    @Override
     public String machineName() {
         return node.getMachineName();
     }
 
-    @Override
     public int inputCount() {
         return node.getInputs()
             .size();
     }
 
-    @Override
     public int outputCount() {
         return node.getOutputs()
             .size();
     }
 
-    @Override
     public int worldWidth() {
         if (handlerRef != null && neiWidget != null) {
             return neiWidget.w + NEI_PAD_W + NEI_BORDER;
@@ -202,7 +195,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget>
         return BASE_W;
     }
 
-    @Override
     public int worldHeight() {
         if (handlerRef != null && neiWidget != null) {
             return neiWidget.h + NEI_PAD_H + calcInfoHeight() + computeConfigPanelHeight() + NEI_BORDER;

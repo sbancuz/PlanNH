@@ -24,7 +24,6 @@ public class GroupAreaWidget extends ParentWidget<GroupAreaWidget> implements IF
         this.parent = parent;
         data = parent.getData();
         configureCoverChildren();
-        setEnabledIf(_ -> !data.isCollapsed());
     }
 
     @Override

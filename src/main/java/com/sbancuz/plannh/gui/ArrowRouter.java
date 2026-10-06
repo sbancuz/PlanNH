@@ -83,6 +83,22 @@ public final class ArrowRouter {
     }
 
     /**
+     * The narrowest gap between two columns of machines that still leaves this router room to turn.
+     *
+     * <p>
+     * Every node box is inflated by {@link #margin} on each side before routing, so a corridor has to
+     * carry two of those rings plus a cell of its own to be usable.
+     *
+     * <p>
+     * Owned here rather than in the layout settings, because these are this class's numbers. An earlier
+     * attempt hand-transcribed the result into the settings as 24, commented it as "twice the margin plus
+     * one cell" — which is 30 — and never called the check from anywhere in production.
+     */
+    public int requiredCorridor() {
+        return 2 * margin + baseCell;
+    }
+
+    /**
      * Routes every request. Requests are routed in order; each routed arrow makes the cells it uses
      * less attractive to subsequent arrows, which spreads parallel connections apart.
      *
