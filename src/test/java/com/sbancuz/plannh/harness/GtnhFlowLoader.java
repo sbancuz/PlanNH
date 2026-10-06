@@ -22,8 +22,6 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.setting.Settings;
 
-import codechicken.nei.recipe.TemplateRecipeHandler;
-
 /**
  * Loads gtnh-flow style YAML charts into PlanNH {@link Graph}s.
  *
@@ -83,7 +81,7 @@ public final class GtnhFlowLoader {
                 new MachineProfile(
                     MachineProfileRegistry.defaultId(),
                     "Default",
-                    List.of(Settings.MACHINES.def(), Settings.TICK_MODIFIER.def()),
+                    List.of(MachineProfile.entry(Settings.MACHINES), MachineProfile.entry(Settings.TICK_MODIFIER)),
                     (s, ctx) -> new EffectResult(ctx.getOrDefault(DURATION_TICKS, 1), 0, 1)));
         }
     }
@@ -126,19 +124,7 @@ public final class GtnhFlowLoader {
             if (entry == null || !entry.containsKey("m")) continue;
             final int machineIndex = index++;
 
-            // todo fix
-            final Node node = new Node(new TemplateRecipeHandler() {
-                @Override
-                public String getGuiTexture() {
-                    return "";
-                }
-
-                @Override
-                public String getRecipeName() {
-                    return "";
-                }
-            }, 0);
-//            node.machineName = String.valueOf(entry.get("m"));
+            final Node node = new Node(nodeId(name, machineIndex), String.valueOf(entry.get("m")), 0, 0);
             node.getProperties().put(DURATION_TICKS,
                 (int) Math.round(asDouble(entry.get("dur"), 1.0) * TICKS_PER_SECOND));
 
@@ -155,7 +141,7 @@ public final class GtnhFlowLoader {
 
             if (entry.containsKey("number")) {
                 final int count = (int) asDouble(entry.get("number"), 1.0);
-                node.getMachineConfig().setMachineCount(count);
+                node.getMachineConfig().set(Settings.MACHINES, count);
                 node.setMachineCountFixed(true);
                 pins.add(new Pin("number", machineIndex, node.getMachineName(), null, count, -1));
             }

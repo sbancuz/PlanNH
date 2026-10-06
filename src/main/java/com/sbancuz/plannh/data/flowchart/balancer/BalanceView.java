@@ -16,6 +16,7 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternative;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
+import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.gui.GuiHelper;
 
 /**
@@ -101,7 +102,7 @@ public final class BalanceView {
     private static void collectConfigured(final Node node, final Set<PortRef> wired, final boolean input,
         final List<Boundary> out) {
         final MachineConfig cfg = node.getMachineConfig();
-        final double count = cfg.getMachineCount();
+        final double count = cfg.get(Settings.MACHINES);
         if (count <= 0) return;
         final var eff = cfg.computeEffect(node.getProperties());
         final int durTicks = Math.max(1, eff.durationTicks());

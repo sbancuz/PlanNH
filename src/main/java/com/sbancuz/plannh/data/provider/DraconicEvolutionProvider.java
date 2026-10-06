@@ -26,8 +26,8 @@ public final class DraconicEvolutionProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("draconicevolution:fusion_crafter", "Fusion Crafter")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.durationFromHandler()
                         .amortizeCost(CoFHCompat.RF_COST)

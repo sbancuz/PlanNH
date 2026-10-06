@@ -31,8 +31,8 @@ public class VanillaProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(ShapedRecipeHandler.class, this);
         MachineProfileRegistry.register(
             MachineProfile.builder("minecraft", "Default")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.durationFromHandler()
                         .applyParallelism())

@@ -9,13 +9,13 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.setting.SettingDef;
+import com.sbancuz.plannh.data.setting.Settings;
 
 public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, JsonDeserializer<MachineConfig> {
 
@@ -27,16 +27,11 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
         obj.addProperty("profile", src.getProfileId());
 
         JsonObject settingsObj = new JsonObject();
-        for (SettingDef<?> def : profile.settings()) {
-            Object val = src.getSettings().get(def.getKey());
+        for (SettingDef<?> def : profile.defs()) {
+            final Object val = src.get(def);
             if (val == null || val.equals(def.getDefaultValue())) continue;
-            switch (val) {
-                case Boolean b -> settingsObj.addProperty(def.getKey(), b);
-                case Integer i -> settingsObj.addProperty(def.getKey(), i);
-                case String s -> settingsObj.addProperty(def.getKey(), s);
-                default -> {
-                }
-            }
+            final JsonElement saved = def.serialize(val, Object.class, context);
+            if (saved != null && !saved.isJsonNull()) settingsObj.add(def.getKey(), saved);
         }
         obj.add("settings", settingsObj);
 
@@ -51,16 +46,13 @@ public class MachineConfigAdapter implements JsonSerializer<MachineConfig>, Json
             obj.get("profile")
                 .getAsString());
 
-        Map<String, Object> settings = new HashMap<>();
-        JsonObject settingsObj = obj.getAsJsonObject("settings");
-        for (Map.Entry<String, JsonElement> entry : settingsObj.entrySet()) {
-            JsonElement el = entry.getValue();
-            if (el.isJsonPrimitive()) {
-                JsonPrimitive prim = el.getAsJsonPrimitive();
-                if (prim.isBoolean()) settings.put(entry.getKey(), prim.getAsBoolean());
-                else if (prim.isNumber()) settings.put(entry.getKey(), prim.getAsInt());
-                else settings.put(entry.getKey(), prim.getAsString());
-            }
+        Map<SettingDef<?>, Object> settings = new HashMap<>();
+        for (Map.Entry<String, JsonElement> entry : obj.getAsJsonObject("settings")
+            .entrySet()) {
+            final SettingDef<?> setting = Settings.get(entry.getKey());
+            if (setting == null) continue;
+            final Object value = setting.deserialize(entry.getValue(), Object.class, context);
+            if (value != null) settings.put(setting, value);
         }
 
         return new MachineConfig(p, settings);

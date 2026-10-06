@@ -52,8 +52,8 @@ public final class GendustryProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder(PROFILE_ID, "Gendustry")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.durationFromHandler()
                         .amortizeCost(CoFHCompat.RF_COST)

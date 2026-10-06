@@ -45,12 +45,12 @@ public interface PropertyProvider {
                 if (NEIClientConfig.getSetting(NEIPlanConfig.ConfigBurnableOverride.KEY)
                     .getIntValue(NEIPlanConfig.ConfigBurnableOverride.OFF) == NEIPlanConfig.ConfigBurnableOverride.ON) {
                     if (node.getMachineConfig()
-                        .getEnum(Settings.BURNABLE_OVERRIDE.key(), Settings.Burnable.class)
+                        .get(Settings.BURNABLE_OVERRIDE)
                         .equals(Settings.Burnable.IN)) {
                         node.getInputs()
                             .add(Port.itemPort(ps));
                     } else if (node.getMachineConfig()
-                        .getEnum(Settings.BURNABLE_OVERRIDE.key(), Settings.Burnable.class)
+                        .get(Settings.BURNABLE_OVERRIDE)
                         .equals(Settings.Burnable.OUT)) {
                             node.getOutputs()
                                 .add(Port.itemPort(ps));

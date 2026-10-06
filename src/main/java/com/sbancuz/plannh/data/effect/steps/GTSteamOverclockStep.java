@@ -6,7 +6,7 @@ import static com.sbancuz.plannh.data.provider.GTSteamProvider.STEAM_EU_PERT;
 import static com.sbancuz.plannh.data.provider.GTSteamProvider.TOTAL_STEAM_EU;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectResult;
@@ -22,15 +22,14 @@ public class GTSteamOverclockStep implements EffectStep, EffectComputer {
     }
 
     @Override
-    public EffectResult compute(final java.util.Map<String, Object> s, final RecipeContext ctx) {
+    public EffectResult compute(final MachineConfig config, final RecipeContext ctx) {
         final Object dur = ctx.properties().get(RecipePropertyAPI.DURATION_TICKS);
         final int d = dur instanceof final Number n ? n.intValue() : 0;
-        return apply(new EffectResult(d, 0, 1), s, ctx);
+        return apply(new EffectResult(d, 0, 1), config, ctx);
     }
 
     @Override
-    public EffectResult apply(final EffectResult current, final java.util.Map<String, Object> s,
-        final RecipeContext ctx) {
+    public EffectResult apply(final EffectResult current, final MachineConfig config, final RecipeContext ctx) {
         final long recipeEUt = recipeEUt(ctx);
         final int recipeDuration = current.durationTicks();
 
@@ -40,10 +39,10 @@ public class GTSteamOverclockStep implements EffectStep, EffectComputer {
             return current;
         }
 
-        final int eutDiscount = MachineProfile.getInt(s, Settings.STEAM_EUT_DISCOUNT.key(), 100);
-        final int durationModifier = MachineProfile.getInt(s, Settings.STEAM_DURATION_MODIFIER.key(), 100);
-        final int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
-        final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
+        final int eutDiscount = config.get(Settings.STEAM_EUT_DISCOUNT);
+        final int durationModifier = config.get(Settings.STEAM_DURATION_MODIFIER);
+        final int parallels = config.get(Settings.PARALLELS);
+        final int machines = config.get(Settings.MACHINES);
 
         final long steamPerTick = recipeEUt * eutDiscount / 100;
         final int duration = Math.max(1, recipeDuration * durationModifier / 100);

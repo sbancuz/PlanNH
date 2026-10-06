@@ -30,8 +30,8 @@ public final class ThaumicTinkererProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("tt:necromancy_soul_mould", "Soul Mould")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())

@@ -55,7 +55,7 @@ public class Plan {
                 final String data = Files.readString(saveFile.toPath(), StandardCharsets.UTF_8);
                 return Serializer.decodePlan(data);
             }
-        } catch (final Exception ignored) {}
+        } catch (final Exception | LinkageError ignored) {}
         final Plan plan = new Plan();
         plan.getGraphs()
             .add(new Graph());

@@ -40,8 +40,8 @@ public class RailcraftProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("railcraft", "Railcraft")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.durationFromHandler()
                         .amortizeCost(CoFHCompat.RF_COST)

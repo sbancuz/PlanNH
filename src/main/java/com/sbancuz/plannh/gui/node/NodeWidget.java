@@ -6,19 +6,19 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.UUID;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
+import com.cleanroommc.modularui.value.BoolValue;
+import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
-import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
@@ -27,6 +27,8 @@ import it.unimi.dsi.fastutil.ints.IntIntPair;
 import lombok.Getter;
 
 public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
+
+    private static final String SETTINGS_LANG = "plannh.gui.node.settings";
 
     private final RecipeAreaWidget recipeAreaWidget;
     @Getter
@@ -49,7 +51,8 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         padding(5);
 
         Flow mainColumn = FlowchartFlow.column(this)
-            .coverChildren();
+            .coverChildren()
+            .collapseDisabledChild();
 
         Flow topRow = FlowchartFlow.row(this)
             .coverChildrenHeight()
@@ -63,31 +66,25 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                 .background()
                 .setTextColor(Color.BLACK.main));
 
+        // The settings fold, the way a summary section folds: two states driven off the node, and
+        // the body below is switched off rather than taken out of the tree.
+        topRow.child(
+            new CycleButtonWidget().size(12)
+                .stateCount(2)
+                .stateOverlay(true, IKey.str("^"))
+                .stateOverlay(false, IKey.str("V"))
+                .value(new BoolValue.Dynamic(data::isSettingsOpen, data::setSettingsOpen))
+                .tooltipBuilder(
+                    t -> t.addLine(IKey.lang(SETTINGS_LANG))
+                        .addLine(
+                            IKey.lang(() -> SETTINGS_LANG + (data.isSettingsOpen() ? ".hide_hint" : ".show_hint")))));
         topRow.child(new CloseButtonWidget(this));
         mainColumn.child(topRow);
 
         recipeAreaWidget = new RecipeAreaWidget(this);
         mainColumn.child(recipeAreaWidget);
-
-        Flow settingsColumn = FlowchartFlow.column(this)
-            .fullWidth()
-            .coverChildrenHeight()
-            .childPadding(2)
-            .crossAxisAlignment(Alignment.CrossAxis.START);
-
-        MachineConfig config = data.getMachineConfig();
-        config.getProfile()
-            .visibleSettings(new RecipeContext(data.getProperties()), config.getSettings())
-            .map(
-                settingDef -> FlowchartFlow.row(this)
-                    .fullWidth()
-                    .coverChildrenHeight()
-                    .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-                    .child(new FlowchartTextWidget(settingDef.getLabel(), this))
-                    .child(settingDef.settingsWidget(config)))
-            .forEach(settingsColumn::child);
-
-        mainColumn.child(settingsColumn);
+        mainColumn.child(new ThroughputInfoWidget(this));
+        mainColumn.child(new SettingsList(this));
 
         child(mainColumn);
     }
@@ -106,6 +103,9 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     @Override
     public void removeFromGraph() {
         super.removeFromGraph();
+        // The graph's own removal, not just the widget's: it also takes this node's edges with it.
+        canvas.getGraph()
+            .removeNode(data.getId());
         canvas.getNodeWidgets2()
             .remove(data.getId());
         arrowWidgets.forEach(ArrowWidget::removeFromGraph);

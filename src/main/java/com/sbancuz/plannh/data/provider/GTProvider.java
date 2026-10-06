@@ -16,6 +16,7 @@ import net.minecraftforge.fluids.FluidStack;
 
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeContext;
@@ -27,7 +28,6 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
-import com.sbancuz.plannh.data.setting.IntegerSettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
 import codechicken.nei.PositionedStack;
@@ -91,8 +91,8 @@ public class GTProvider implements PropertyProvider {
         new GTSteamProvider().register();
     }
 
-    static BiPredicate<RecipeContext, Map<String, Object>> multiblockOnly() {
-        return (ctx, s) -> MachineProfile.getBool(s, Settings.GT_MULTIBLOCK.key(), false);
+    static BiPredicate<RecipeContext, MachineConfig> multiblockOnly() {
+        return (ctx, config) -> config.get(Settings.GT_MULTIBLOCK);
     }
 
     private static boolean hasHeat(final RecipeContext ctx) {
@@ -108,60 +108,28 @@ public class GTProvider implements PropertyProvider {
     }
 
     private static final MachineProfile PROFILE = MachineProfile.builder("gregtech:unified", "GT Unified")
-        .setting(Settings.VOLTAGE.def())
-        .setting(Settings.AMP.def())
-        .setting(Settings.SPEED.def())
-        .setting(
-            Settings.PARALLELS.def()
-                .withVisibility((ctx, s) -> !isEoH(ctx)))
-        .setting(Settings.MACHINES.def())
-        .setting(Settings.PERFECT_OC.def())
-        .setting(Settings.GT_MULTIBLOCK.def())
-        .setting(
-            Settings.LASER_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.EUT_DISCOUNT.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.EUT_INCREASE_PER_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.DURATION_DECREASE_PER_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.MAX_OVERCLOCKS.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.MAX_REGULAR_OC.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.MAX_TIER_SKIPS.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.UNLIMITED_SKIPS.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.NO_OVERCLOCK.def()
-                .withVisibility(multiblockOnly()))
-        .setting(
-            Settings.HEAT_OC.def()
-                .withVisibility((ctx, s) -> hasHeat(ctx)))
-        .setting(
-            Settings.MACHINE_HEAT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.RECIPE_HEAT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.HEAT_DISCOUNT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.HEAT_DISCOUNT_MULT.def()
-                .withVisibility(multiblockOnly().and((ctx, s) -> hasHeat(ctx))))
-        .setting(
-            Settings.CATALYST_ASTRAL_ARRAYS.def()
-                .withVisibility((ctx, s) -> isEoH(ctx)))
+        .setting(Settings.VOLTAGE)
+        .setting(Settings.AMP)
+        .setting(Settings.SPEED)
+        .setting(Settings.PARALLELS, (ctx, s) -> !isEoH(ctx))
+        .setting(Settings.MACHINES)
+        .setting(Settings.PERFECT_OC)
+        .setting(Settings.GT_MULTIBLOCK)
+        .setting(Settings.LASER_OC, multiblockOnly())
+        .setting(Settings.EUT_DISCOUNT, multiblockOnly())
+        .setting(Settings.EUT_INCREASE_PER_OC, multiblockOnly())
+        .setting(Settings.DURATION_DECREASE_PER_OC, multiblockOnly())
+        .setting(Settings.MAX_OVERCLOCKS, multiblockOnly())
+        .setting(Settings.MAX_REGULAR_OC, multiblockOnly())
+        .setting(Settings.MAX_TIER_SKIPS, multiblockOnly())
+        .setting(Settings.UNLIMITED_SKIPS, multiblockOnly())
+        .setting(Settings.NO_OVERCLOCK, multiblockOnly())
+        .setting(Settings.HEAT_OC, (ctx, s) -> hasHeat(ctx))
+        .setting(Settings.MACHINE_HEAT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
+        .setting(Settings.RECIPE_HEAT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
+        .setting(Settings.HEAT_DISCOUNT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
+        .setting(Settings.HEAT_DISCOUNT_MULT, multiblockOnly().and((ctx, s) -> hasHeat(ctx)))
+        .setting(Settings.CATALYST_ASTRAL_ARRAYS, (ctx, s) -> isEoH(ctx))
 
         .effect(
             Effects.durationFromHandler()
@@ -175,28 +143,28 @@ public class GTProvider implements PropertyProvider {
                         .route(
                             "gt.recipe.eyeofharmony",
                             step -> step.withCatalyst(
-                                (IntegerSettingDef) Settings.CATALYST_ASTRAL_ARRAYS.def(),
+                                Settings.CATALYST_ASTRAL_ARRAYS,
                                 v -> (int) Math
                                     .pow(2, (int) Math.floor(Math.log(8.0 * Math.min(v, 8637)) / Math.log(1.7)))))
                         // Perfect OC defaults
-                        .withDefault("gt.recipe.largechemicalreactor", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtpp.recipe.flotationcell", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtpp.recipe.matterfab2", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtpp.recipe.oremill", Settings.PERFECT_OC.key(), true)
-                        .withDefault("bw.recipe.cal", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gtnhlanth.recipe.digester", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gt.recipe.nanoforge", Settings.PERFECT_OC.key(), true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.PERFECT_OC.key(), true)
+                        .withDefault("gt.recipe.largechemicalreactor", Settings.PERFECT_OC, true)
+                        .withDefault("gtpp.recipe.flotationcell", Settings.PERFECT_OC, true)
+                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.PERFECT_OC, true)
+                        .withDefault("gtpp.recipe.matterfab2", Settings.PERFECT_OC, true)
+                        .withDefault("gtpp.recipe.oremill", Settings.PERFECT_OC, true)
+                        .withDefault("bw.recipe.cal", Settings.PERFECT_OC, true)
+                        .withDefault("gtnhlanth.recipe.digester", Settings.PERFECT_OC, true)
+                        .withDefault("gt.recipe.nanoforge", Settings.PERFECT_OC, true)
+                        .withDefault("gt.recipe.plasmaforge", Settings.PERFECT_OC, true)
                         // Unlimited tier skip defaults
-                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gt.recipe.nanoforge", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gt.recipe.plasmaforge", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gtpp.recipe.alloyblastsmelter", Settings.UNLIMITED_SKIPS.key(), true)
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.UNLIMITED_SKIPS.key(), true)
+                        .withDefault("gg.recipe.naquadah_fuel_refine_factory", Settings.UNLIMITED_SKIPS, true)
+                        .withDefault("gt.recipe.nanoforge", Settings.UNLIMITED_SKIPS, true)
+                        .withDefault("gt.recipe.plasmaforge", Settings.UNLIMITED_SKIPS, true)
+                        .withDefault("gtpp.recipe.alloyblastsmelter", Settings.UNLIMITED_SKIPS, true)
+                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.UNLIMITED_SKIPS, true)
                         // No-overclock defaults
-                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.NO_OVERCLOCK.key(), true)
-                        .withDefault("gtpp.recipe.algae_pond", Settings.NO_OVERCLOCK.key(), true)))
+                        .withDefault("gt.recipe.transcendentplasmamixerrecipes", Settings.NO_OVERCLOCK, true)
+                        .withDefault("gtpp.recipe.algae_pond", Settings.NO_OVERCLOCK, true)))
         .build();
 
     @Override

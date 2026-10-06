@@ -15,6 +15,7 @@ import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.setting.Settings;
 
 /**
  * The chart as the solver sees it, built ONCE per run: machines in recipe-extent form, ports
@@ -75,7 +76,7 @@ public final class ModelData {
             }
             this.targetExtent = targetExtent(node, outQty);
             this.fixedExtent = node.isMachineCountFixed() ? node.getMachineConfig()
-                .getMachineCount() * (double) Numerics.TICKS_PER_SECOND
+                .get(Settings.MACHINES) * (double) Numerics.TICKS_PER_SECOND
                 / durTicks : null;
         }
 

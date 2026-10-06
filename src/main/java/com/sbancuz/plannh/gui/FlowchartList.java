@@ -19,7 +19,6 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.utils.Interpolation;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widget.sizer.Area;
-import com.cleanroommc.modularui.widgets.ListWidget;
 
 /**
  * A list whose sections can be reordered by dragging a {@link Grip} placed inside one of them.
@@ -30,11 +29,10 @@ import com.cleanroommc.modularui.widgets.ListWidget;
  * to re-add disposed ones - so a move sorts the children list in place.
  *
  * <p>
- * It also re-clamps the scroll offset after layout; ListWidget only does so on child churn, and a
- * resize that moves the visible size (the zoom-dependent max, folded sections) would otherwise
- * leave a bottom-anchored offset rendering past the panel.
+ * The scroll-offset clamp it inherited from {@link ClampedListWidget} is what keeps a zoom-dependent
+ * max honest; the rest is reordering, which is why a plain scrolling list should not extend this.
  */
-public final class FlowchartList extends ListWidget<IWidget, FlowchartList> {
+public final class FlowchartList extends ClampedListWidget<IWidget, FlowchartList> {
 
     private static final int REORDER_ANIM_MS = 250;
     private static final long MOVE_COOLDOWN_MS = 120;
@@ -97,14 +95,9 @@ public final class FlowchartList extends ListWidget<IWidget, FlowchartList> {
         return widget;
     }
 
-    /**
-     * This is to fix a bug where, when the scrollbar is at the bottom and you zoom out
-     * the area becomes bigger than needed
-     */
     @Override
     public boolean postLayoutWidgets() {
         final boolean done = super.postLayoutWidgets();
-        getScrollData().clamp(getScrollArea());
         applyGlides();
         return done;
     }

@@ -3,6 +3,7 @@ package com.sbancuz.plannh.gui;
 import java.util.Locale;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.StatCollector;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -51,6 +52,56 @@ public final class GuiHelper {
         if (rate >= 1000f) return String.format(Locale.ROOT, "%.1fk", rate / 1000f);
         if (rate >= 1f) return String.format(Locale.ROOT, "%.2f", rate);
         return trimTrailingZeros(String.format(Locale.ROOT, "%.5f", rate));
+    }
+
+    /** A unit of time, and how many seconds one of it holds. */
+    public enum RateUnit {
+
+        TICKS("tick", 1.0 / 20, false),
+        SECONDS("second", 1, true),
+        MINUTES("minute", 60, true),
+        HOURS("hour", 60 * 60, true),
+        DAYS("day", 60 * 60 * 24, true);
+
+        public static final RateUnit[] VALUES = RateUnit.values();
+
+        public final String name;
+        public final String langKey;
+        public final double secondsPerUnit;
+        /** Whether a duration reads well in this unit; a tick is a rate, not a span of time. */
+        public final boolean duration;
+
+        RateUnit(final String name, final double secondsPerUnit, final boolean duration) {
+            this.name = name;
+            this.langKey = "plannh.gui.rate." + name;
+            this.secondsPerUnit = secondsPerUnit;
+            this.duration = duration;
+        }
+
+        public String suffixKey() {
+            return langKey + ".suffix";
+        }
+    }
+
+    /** Largest unit that still leaves a number worth reading. */
+    public static RateUnit unitFor(final double seconds) {
+        RateUnit chosen = RateUnit.SECONDS;
+        for (final RateUnit unit : RateUnit.VALUES) {
+            if (unit.duration && seconds >= unit.secondsPerUnit) chosen = unit;
+        }
+        return chosen;
+    }
+
+    /** Ticks as one duration: "2s", "20m", "3.5h". */
+    public static String formatDuration(final long ticks) {
+        if (ticks <= 0) return "0" + mark(RateUnit.SECONDS);
+        final double seconds = ticks / (double) TICKS_PER_SECOND;
+        final RateUnit unit = unitFor(seconds);
+        return trimTrailingZeros(String.format(Locale.ROOT, "%.2f", seconds / unit.secondsPerUnit)) + mark(unit);
+    }
+
+    public static String mark(final RateUnit unit) {
+        return StatCollector.translateToLocal(unit.langKey);
     }
 
     public static void drawRectBorder(final int x, final int y, final int w, final int h, final int bw,

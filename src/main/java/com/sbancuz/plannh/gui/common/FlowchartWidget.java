@@ -137,6 +137,8 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
         canvas.getFlowchartWidgets()
             .remove(data.getId());
         dataContainer.remove(data.getId());
+        canvas.getGraph()
+            .bumpVersion();
     }
 
     protected abstract SortedMap<UUID, ? super D> getDefaultContainer();

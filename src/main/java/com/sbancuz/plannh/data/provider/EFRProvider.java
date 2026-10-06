@@ -37,8 +37,8 @@ public class EFRProvider implements PropertyProvider {
         registerHandlers(this);
         MachineProfileRegistry.register(
             MachineProfile.builder("etfuturum", "Et Futurum Requiem")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.durationFromHandler()
                         .applyParallelism())

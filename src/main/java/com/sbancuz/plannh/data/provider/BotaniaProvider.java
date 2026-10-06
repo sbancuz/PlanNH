@@ -49,11 +49,11 @@ public class BotaniaProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("botania:basic", "Botania")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.MANA_PER_TICK.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.MANA_PER_TICK)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
-                    Effects.durationFromTotal(MANA_COST, Settings.MANA_PER_TICK.key(), 10)
+                    Effects.durationFromTotal(MANA_COST, Settings.MANA_PER_TICK)
                         .amortizeCost(MANA_COST)
                         .applyParallelism())
                 .build());

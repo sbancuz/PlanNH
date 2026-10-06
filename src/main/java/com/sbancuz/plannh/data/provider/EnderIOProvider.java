@@ -57,8 +57,8 @@ public class EnderIOProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder(PROFILE_ID, "EnderIO")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.durationFromHandler()
                         .withCostPerT(CoFHCompat.RF_PER_T, (current, s, ctx) -> (long) RF_PER_TICK)

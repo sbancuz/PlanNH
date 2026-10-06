@@ -3,27 +3,28 @@ package com.sbancuz.plannh.data.effect;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.sbancuz.plannh.data.MachineProfile;
+import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
 @FunctionalInterface
 public interface EffectComputer {
 
-    EffectResult compute(Map<String, Object> settings, RecipeContext ctx);
+    EffectResult compute(MachineConfig config, RecipeContext ctx);
 
     default EffectComputer andThen(final EffectStep step) {
         final EffectComputer first = this;
         return new EffectComputer() {
             @Override
-            public EffectResult compute(final Map<String, Object> settings, final RecipeContext ctx) {
-                return step.apply(first.compute(settings, ctx), settings, ctx);
+            public EffectResult compute(final MachineConfig config, final RecipeContext ctx) {
+                return step.apply(first.compute(config, ctx), config, ctx);
             }
 
             @Override
-            public Map<String, Object> routeDefaults(final RecipeContext ctx) {
-                final Map<String, Object> merged = new HashMap<>(first.routeDefaults(ctx));
+            public Map<SettingDef<?>, Object> routeDefaults(final RecipeContext ctx) {
+                final Map<SettingDef<?>, Object> merged = new HashMap<>(first.routeDefaults(ctx));
                 if (step instanceof final EffectComputer ec) {
                     merged.putAll(ec.routeDefaults(ctx));
                 }
@@ -37,7 +38,7 @@ public interface EffectComputer {
      * Empty by default; only effect steps that define route defaults (e.g. per-recipe-machine
      * Perfect OC) override this. Used to seed node settings so route defaults show immediately.
      */
-    default Map<String, Object> routeDefaults(final RecipeContext ctx) {
+    default Map<SettingDef<?>, Object> routeDefaults(final RecipeContext ctx) {
         return Map.of();
     }
 
@@ -100,10 +101,10 @@ public interface EffectComputer {
     }
 
     default EffectComputer applyParallelism() {
-        return (s, ctx) -> {
-            final EffectResult res = this.compute(s, ctx);
-            final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
-            final int parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
+        return (c, ctx) -> {
+            final EffectResult res = this.compute(c, ctx);
+            final int machines = c.get(Settings.MACHINES);
+            final int parallels = c.get(Settings.PARALLELS);
             res.throughputFactor(res.throughputFactor() * machines * parallels);
             return res;
         };

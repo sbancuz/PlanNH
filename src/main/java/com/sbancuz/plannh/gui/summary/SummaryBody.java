@@ -9,6 +9,7 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
 import com.sbancuz.plannh.data.flowchart.balancer.Severity;
+import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
 
 /**
@@ -27,7 +28,7 @@ class SummaryBody extends SummaryFlow {
     private final Summary.Section section;
     private long rowsBuiltAt = Long.MIN_VALUE;
     private Summary.Mode rowsMode = null;
-    private Summary.RateUnit rowsUnit = Summary.RateUnit.SECONDS;
+    private GuiHelper.RateUnit rowsUnit = GuiHelper.RateUnit.SECONDS;
 
     SummaryBody(final SummaryWidget panel, final Summary data, final Summary.Section section) {
         super(GuiAxis.Y);
@@ -46,7 +47,7 @@ class SummaryBody extends SummaryFlow {
     public void onUpdate() {
         super.onUpdate();
         final Summary.Mode mode = data.computedMode();
-        final Summary.RateUnit unit = data.getRateUnit();
+        final GuiHelper.RateUnit unit = data.getRateUnit();
         if (rowsBuiltAt != data.calculatedAt() || rowsMode != mode || rowsUnit != unit) {
             rowsBuiltAt = data.calculatedAt();
             rowsMode = mode;

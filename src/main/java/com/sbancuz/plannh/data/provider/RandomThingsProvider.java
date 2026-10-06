@@ -30,8 +30,8 @@ public final class RandomThingsProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(
             MachineProfile.builder("randomthings:imbuing_station", "Imbuing Station")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
+                .setting(Settings.MACHINES)
+                .setting(Settings.TICK_MODIFIER)
                 .effect(
                     Effects.clearCost()
                         .applyParallelism())
