@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui.group;
 
+import java.util.UUID;
+
 import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
@@ -11,9 +13,12 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
+import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.PlannhColors;
@@ -188,21 +193,18 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
      * than an addition of unlike things.
      */
     private double copyLoad() {
-        // todo after balancer connection
-        /*
-         * final Graph graph = canvas.getGraph();
-         * final BalanceResult balance = graph.balance();
-         * if (balance == null) return 0;
-         * double load = 0;
-         * for (final UUID nodeId : getData().getNodeIds()) {
-         * final Balancer.NodeBalance nb = balance.nodeBalances()
-         * .get(nodeId);
-         * if (nb == null || nb.operations() <= 0) continue;
-         * load += nb.operations();
-         * }
-         * return load;
-         */
-        return 1;
+        final Graph graph = canvas.getGraph();
+        final BalanceResult balance = graph.balance();
+        if (balance == null) return 0;
+        double load = 0;
+        for (final UUID nodeId : getData().getChildren()
+            .keySet()) {
+            final Balancer.NodeBalance nb = balance.nodeBalances()
+                .get(nodeId);
+            if (nb == null || nb.operations() <= 0) continue;
+            load += nb.operations();
+        }
+        return load;
     }
 
     /**
