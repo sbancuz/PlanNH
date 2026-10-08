@@ -15,32 +15,6 @@ import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
 
-/**
- * Writes a tooltip, one level of nesting at a time.
- *
- * <p>
- * Two things this does that a hand-written {@code t.addLine(...)} chain does not. Indentation is
- * state rather than a string baked into a helper, so a group can hold a group; and a group buffers
- * its rows before deciding to print its own header, so a group with nothing in it disappears
- * entirely - rule included - without the caller having to know up front whether there was anything
- * to show.
- *
- * <p>
- * A builder is made fresh for every hover, because {@link RichTooltip} clears and re-runs its
- * builder each time. Nothing here may be cached across hovers: content reaches the model through the
- * suppliers held by the lambdas it is handed, and the widget that owns the tooltip calls {@link
- * Widget#markTooltipDirty()} when any of it has moved - which is
- * what stops a tooltip sitting on screen from going stale, since ModularUI only redraws it when it is
- * told to.
- *
- * <p>
- * Every sentence written here is a lang key, so the pack's wording, word order and punctuation live
- * in the lang file rather than in the calls that print them. What the builder owns is layout - what
- * sits under what, and what colour a value is because of what it is.
- *
- * <p>
- * Not thread safe, and does not need to be - a tooltip is built on the client thread.
- */
 public final class TooltipBuilder {
 
     /** One level. Three spaces, the width ModularUI's own tooltips indent by. */
@@ -68,11 +42,6 @@ public final class TooltipBuilder {
 
     /**
      * A builder over the tooltip it is about to fill.
-     *
-     * <p>
-     * Takes the {@link RichTooltip} rather than the widget that owns it, because the widget usually
-     * cannot be named from where its tooltip is written: it is a field on some other builder, a
-     * {@code Flow} of several, or a row rebuilt every solve.
      */
     public static TooltipBuilder create(final RichTooltip tooltip) {
         return new TooltipBuilder(tooltip);
@@ -82,8 +51,6 @@ public final class TooltipBuilder {
     private TooltipBuilder nest() {
         return new TooltipBuilder(null);
     }
-
-    // ── structure ───────────────────────────────────────────────────────────
 
     /** The divider between two groups, as wide as the tooltip turns out to be. */
     public TooltipBuilder separator() {
@@ -105,13 +72,6 @@ public final class TooltipBuilder {
 
     /**
      * A group of rows under a header, with a rule above it.
-     *
-     * <p>
-     * The body is written one level in from the header, because that is what a header <i>is</i> -
-     * the rows it introduces sit under it - and a caller who has to remember that will eventually
-     * forget. Both the rule and the header are skipped when the body turns out to be empty, which is
-     * the other reason this exists: the rows are built first and the header follows from what they
-     * turned out to be.
      */
     public TooltipBuilder group(final String headerKey, final Consumer<TooltipBuilder> body) {
         final TooltipBuilder nested = nest();
@@ -125,36 +85,14 @@ public final class TooltipBuilder {
 
     /**
      * A header in the label colour with a colon, the way the pack has always written one.
-     *
-     * <p>
-     * {@link #group} prints these itself. Calling it directly is for the one thing a group cannot
-     * express: a header whose rows belong at the same level as the header rather than under it.
      */
     public TooltipBuilder header(final String langKey) {
         return row(TooltipTheme.key(TooltipTheme.Role.LABEL, StatCollector.translateToLocal(langKey) + COLON));
     }
-
-    // ── rows ────────────────────────────────────────────────────────────────
-
-    /**
-     * A row of translated text, resolved now. For the sentences and headings a tooltip is mostly made
-     * of.
-     *
-     * <p>
-     * Named apart from {@link #row} because the difference matters: this translates, that does not.
-     */
     public TooltipBuilder langRow(final String langKey) {
         return row(IKey.lang(langKey));
     }
 
-    /**
-     * A translated row with the values the sentence is about filled in.
-     *
-     * <p>
-     * The sentence, its word order and where its punctuation sits all belong to the lang file, so the
-     * arguments here are values rather than a string this side assembled. A call site that wanted to
-     * write "1.2k mB/s" itself would be writing prose, and prose is what the lang file is for.
-     */
     public TooltipBuilder langRow(final String langKey, final Object... args) {
         return row(IKey.lang(langKey, args));
     }
@@ -226,12 +164,6 @@ public final class TooltipBuilder {
 
     /**
      * A bare label with no value: a flag that is on, and only ever on.
-     *
-     * <p>
-     * A null or blank label writes nothing rather than an empty row, so a producer with nothing to
-     * say can hand the builder one without the row having to be taken back out again. That is what
-     * lets a setting say "off is the absence of a row", and lets the group above it notice it has no
-     * rows to print.
      */
     public TooltipBuilder flag(final @Nullable String label) {
         if (label == null || label.isBlank()) return this;
@@ -247,18 +179,6 @@ public final class TooltipBuilder {
         return line(IKey.comp(pad(), IKey.str(mark + " "), TooltipTheme.key(role, label)));
     }
 
-    // ── numbers ──────────────────────────────────────────────────────────────
-
-    /**
-     * A duration, stated in one unit with its ticks beside it.
-     *
-     * <p>
-     * The ticks are a tail rather than a value: a tick is a rate, not a span of time, so it has no
-     * unit to sit in. They are dropped when the unit is already ticks, and when every unit is asked
-     * for - the all-units reading ends in them.
-     *
-     * @param allUnits every duration unit at once rather than the given one
-     */
     public TooltipBuilder duration(final String label, final int ticks, final RateUnit unit, final boolean allUnits) {
         return entry(
             label,
@@ -305,8 +225,6 @@ public final class TooltipBuilder {
         return GuiHelper.trimTrailingZeros(String.format(Locale.ROOT, "%.2f", value));
     }
 
-    // ── output ──────────────────────────────────────────────────────────────
-
     /**
      * Hands the rows to the tooltip. Called once per build, on the builder {@link #create} made, after
      * the content is written - which is every time, {@link RichTooltip} starting from scratch on a
@@ -323,20 +241,6 @@ public final class TooltipBuilder {
      */
     public boolean isEmpty() {
         return rows.isEmpty();
-    }
-
-    /**
-     * What this builder has collected so far, for a test to read.
-     *
-     * <p>
-     * A rule comes back as null: it is drawn, not written, so there is no text to assert on. What this
-     * buys is that the shape of a whole tooltip is checkable without a screen - a builder holds keys
-     * and strings and nothing that needs a {@code GuiContext}.
-     */
-    public List<IKey> collected() {
-        return rows.stream()
-            .map(Row::key)
-            .toList();
     }
 
     private TooltipBuilder line(final IKey key) {

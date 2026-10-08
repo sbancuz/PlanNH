@@ -5,7 +5,10 @@ import java.util.function.BooleanSupplier;
 import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
+import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
+import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.widgets.TextWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
@@ -59,19 +62,12 @@ abstract class NodeFold extends FlowchartFlow {
 
     /** One dimmed line, standing in for the rows a fold has none of. */
     protected IWidget hint(final String key, final Object... args) {
-        return FlowchartFlow.row(node)
-            .name("fold.hint")
-            .fullWidth()
-            .coverChildrenHeight()
-            .padding(2)
-            .child(
-                new FlowchartTextWidget(
+        return
+            new FlowchartTextWidget(
                     IKey.lang(key, args)
                         .color(PlannhColors.TEXT_DIM.getColor()),
-                    // No width of its own: the row it sits in is the node's full width, and a text
-                    // widget measures itself against its parent's rather than the window, so it wraps
-                    // to the card without anyone having to say how wide the card is.
-                    node).fullWidth());
+                    node).fullWidth()
+                    .name("node.hint");
     }
 
     protected void commitEdit(final Runnable change) {

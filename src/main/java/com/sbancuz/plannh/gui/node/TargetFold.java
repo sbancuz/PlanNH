@@ -6,7 +6,6 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
-import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
@@ -62,22 +61,14 @@ class TargetFold extends NodeFold {
     @Override
     protected void rebuild() {
         removeAll();
-        child(selector());
-        final Set<Pin> pages = balancerMode().pins();
-        if (pages.isEmpty()) child(hint(LANG + "unsupported", balancerMode().displayName()));
-        else child(page());
-        scheduleResize();
-    }
 
-    private IWidget selector() {
-        final Flow row = FlowchartFlow.row(node)
+        child(FlowchartFlow.row(node)
             .name("target.selector")
             .fullWidth()
             .coverChildrenHeight()
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-            .childPadding(2);
-
-        row.child(new FlowchartTextWidget(IKey.lang(LANG + "label"), node).name("target.selector.label"))
+            .childPadding(2)
+            .child(new FlowchartTextWidget(IKey.lang(LANG + "label"), node).name("target.selector.label"))
             .child(
                 FlowchartFlow.row(node)
                     .name("target.selector.switcher")
@@ -85,8 +76,26 @@ class TargetFold extends NodeFold {
                     .childPadding(2)
                     .child(step(-1))
                     .child(new FlowchartTextWidget(IKey.lang(selected().key()), node).name("target.selector.held"))
-                    .child(step(1)));
-        return row;
+                    .child(step(1))));
+
+        final Set<Pin> pages = balancerMode().pins();
+        if (pages.isEmpty()) { child(hint(LANG + "unsupported", balancerMode().displayName()));}
+        else {
+            IWidget result;
+            final Pin pin = selected();
+            final TargetKind kind = TargetKind.of(config(), pin);
+            if (kind == null) {
+                result = hint(LANG + "extent");
+            } else {
+                result = kind.widget(node, change -> commitEdit(() -> {
+                    change.run();
+                    config().setTargetKind(pin);
+                }));
+            }
+
+            child(result);
+        }
+        scheduleResize();
     }
 
     private IWidget step(final int delta) {
@@ -115,16 +124,5 @@ class TargetFold extends NodeFold {
         } while (!next.hasWidget || !pins.contains(next));
 
         return next;
-    }
-
-    private IWidget page() {
-        final Pin pin = selected();
-        final TargetKind kind = TargetKind.of(config(), pin);
-        if (kind == null) return hint(LANG + "extent");
-
-        return kind.widget(node, change -> commitEdit(() -> {
-            change.run();
-            config().setTargetKind(pin);
-        }));
     }
 }

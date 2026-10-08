@@ -128,12 +128,12 @@ class ThroughputFold extends NodeFold {
                     .coverChildrenHeight()
                     .childPadding(2)
                     .child(new SquareIndicator(node, port, input))
-                    .child(new FlowchartTextWidget(IKey.str(port.getDisplayName()), node)))
+                    .child(new FlowchartTextWidget(IKey.str(port.getDisplayName()), node).textAlign(Alignment.CenterLeft)))
             .child(
                 new FlowchartTextWidget(
-                    IKey.str(PortWidget.rateText(port, perCycle, duration, unit))
-                        .color(PlannhColors.ACCENT_CYAN2.getColor()),
-                    node).widthRel(1 - LABEL_RATIO)
+                    IKey.str(PortWidget.rateText(port, perCycle, duration, unit)), node)
+            .color(input ? PlannhColors.ACCENT_RED2.getColor() : PlannhColors.ACCENT_GREEN3.getColor())
+            .widthRel(1 - LABEL_RATIO)
                         .textAlign(Alignment.CenterRight));
     }
 

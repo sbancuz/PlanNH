@@ -5,15 +5,17 @@ import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.scroll.VerticalScrollData;
+import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.gui.ClampedListWidget;
 
 class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAreaWidget> {
 
     /** How many rows the region shows before the screen bound takes over as the limit. */
-    private static final int VISIBLE_ROWS = 8;
+    // TODO: Config pass
+    private static final int VISIBLE_ROWS = 10;
     private static final int SCROLLBAR_GAP = 4;
 
-    private int tallestRow;
+    private int avgRow;
 
     ConfigurationAreaWidget(final NodeWidget node) {
         name("node.config");
@@ -22,7 +24,7 @@ class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAr
         fullWidth().crossAxisAlignment(Alignment.CrossAxis.START)
             .paddingRight(SCROLLBAR_GAP)
             .scrollDirection(new VerticalScrollData())
-            .maxSize(() -> tallestRow == 0 ? Integer.MAX_VALUE : VISIBLE_ROWS * tallestRow);
+            .maxSize(() -> avgRow == 0 ? Integer.MAX_VALUE : VISIBLE_ROWS * avgRow);
 
         child(new ThroughputFold(node));
         child(new PropertiesFold(node));
@@ -33,9 +35,9 @@ class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAr
     @Override
     public boolean postLayoutWidgets() {
         final boolean done = super.postLayoutWidgets();
-        final int tallest = tallestRow();
-        if (tallest != tallestRow) {
-            tallestRow = tallest;
+        final int avg = averageRowHeight();
+        if (avg != avgRow) {
+            avgRow = avg;
             scheduleResize();
         }
         return done;
@@ -49,20 +51,16 @@ class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAr
     /**
      * The tallest row any open fold is showing, which is the unit the region's height is counted in.
      */
-    private int tallestRow() {
-        int tallest = 0;
+    private int averageRowHeight() {
+        int height = 0, count = 0;
         for (final IWidget section : getChildren()) {
             if (!section.isEnabled() || !(section instanceof final ParentWidget<?> fold)) continue;
             for (final IWidget row : fold.getChildren()) {
-                tallest = Math.max(
-                    tallest,
-                    row.getArea()
-                        .getSize(GuiAxis.Y)
-                        + row.getArea()
-                            .getMargin()
-                            .getTotal(GuiAxis.Y));
+                final Area a = row.getArea();
+                height+= a.height + a.getMargin().getTotal(GuiAxis.Y);
+                count += 1;
             }
         }
-        return tallest;
+        return height / count;
     }
 }

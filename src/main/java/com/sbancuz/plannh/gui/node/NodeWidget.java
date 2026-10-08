@@ -78,9 +78,11 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         padding(5);
         name("node");
 
+        recipeAreaWidget = new RecipeAreaWidget(this);
         Flow mainColumn = FlowchartFlow.col(this)
             .name("node.column")
-            .coverChildren()
+            .coverChildrenHeight()
+            .width(recipeAreaWidget.getRecipeWidth())
             .collapseDisabledChild()
             .childPadding(4);
 
@@ -104,8 +106,6 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
 
         topRow.child(new CloseButtonWidget(this));
         mainColumn.child(topRow);
-
-        recipeAreaWidget = new RecipeAreaWidget(this);
         mainColumn.child(recipeAreaWidget);
 
         // What this machine is, on the left as the folds that decide what else it says, and on the
@@ -120,6 +120,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         optionRow.child(
             FlowchartFlow.row(this)
                 .name("node.options.folds")
+                .fullWidth()
                 .coverChildrenHeight()
                 .childPadding(4)
                 .child(throughputFold)

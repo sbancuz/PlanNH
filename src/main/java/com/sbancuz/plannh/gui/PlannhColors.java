@@ -63,6 +63,8 @@ public final class PlannhColors {
 
     // ── Accent Text Colors (opaque) ──
     public static final ColorResource
+        ACCENT_RED2    = C.rgb("accent_red2",    "0xA00000"),
+        ACCENT_GREEN3  = C.rgb("accent_green3",  "0x006E00"),
         ACCENT_BLUE    = C.rgb("accent_blue",    "0x88AAFF"),
         ACCENT_GREEN   = C.rgb("accent_green",   "0x88FF88"),
         ACCENT_RED     = C.rgb("accent_red",     "0xFF8888"),
