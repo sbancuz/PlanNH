@@ -8,18 +8,15 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 
-class SettingsList extends NodeFoldList<SettingsList> {
-
-    private static final int VISIBLE_ROWS = 8;
+class SettingsFold extends NodeFold {
 
     private final Node data;
     private final MachineConfig config;
     private MachineProfile savedProfile;
 
-    public SettingsList(final NodeWidget node) {
+    public SettingsFold(final NodeWidget node) {
         super(
             node,
-            VISIBLE_ROWS,
             () -> node.getData()
                 .isSettingsOpen());
 

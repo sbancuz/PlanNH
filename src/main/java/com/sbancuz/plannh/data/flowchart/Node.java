@@ -51,6 +51,11 @@ public class Node extends GraphData {
     @Getter
     private transient boolean targetOpen = true;
 
+    /** Whether the throughput rows are showing. Transient, like {@link #targetOpen}. */
+    @Setter
+    @Getter
+    private transient boolean throughputOpen = true;
+
     private transient PropertyProvider extractor;
     private transient List<PropertyProvider> availableExtractors;
     @Setter

@@ -16,19 +16,9 @@ import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
-/**
- * The balancer-target fold: the rows that set whatever this machine is currently held to.
- *
- * <p>
- * Which kind it shows is decided by the buttons on the throughput row, so the fold has nothing to
- * decide for itself - it is only asked whether to be showing, by the toggle on that same row.
- */
-class TargetList extends NodeFoldList<TargetList> {
+class TargetFold extends NodeFold {
 
     private static final String LANG = "plannh.gui.node.target.";
-
-    /** How many rows to show before the screen bound takes over as the limit. */
-    private static final int VISIBLE_ROWS = 7;
 
     /** The two step buttons, square like the fold toggles they sit under. */
     private static final int STEP_BUTTON = 12;
@@ -36,10 +26,9 @@ class TargetList extends NodeFoldList<TargetList> {
     private BalanceMode savedMode;
     private Pin savedSelected;
 
-    public TargetList(final NodeWidget node) {
+    public TargetFold(final NodeWidget node) {
         super(
             node,
-            VISIBLE_ROWS,
             () -> node.getData()
                 .isTargetOpen());
 

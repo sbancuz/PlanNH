@@ -120,6 +120,10 @@ plannh.gui.node.throughput.unbalanced=not balanced
 plannh.gui.node.throughput.unplanned=not planned
 plannh.gui.node.throughput.settings=Settings
 plannh.gui.node.throughput.shift_hint=Hold §f§l[LSHIFT]§7 for every unit and setting
+## Throughput fold, the rows of rates behind it
+plannh.gui.node.throughput.rows=Throughput rows
+plannh.gui.node.throughput.rows.hide_hint=Click to fold these rows away
+plannh.gui.node.throughput.rows.show_hint=Click to show the rows again
 
 ## GUI - Node port
 ## The rate under a port, and the rows that take it apart

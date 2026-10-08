@@ -20,9 +20,7 @@ import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
-import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
-import com.cleanroommc.modularui.theme.WidgetTheme;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
@@ -110,8 +108,10 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         stack = port.getAllStacks()
             .get(index.secondInt());
 
+        final int color = portType == PortType.CATALYST ? portType.borderColor : port.getPinColor(input);
+
         background(
-            new Rectangle().color(portType.borderColor)
+            new Rectangle().color(color)
                 .hollow());
         hoverOverlay(new Rectangle().color(Color.argb(255, 255, 255, 128)));
         pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
@@ -294,10 +294,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         if (GuiHelper.shiftHeld()) {
             out.group(LANG + "per_unit", rows -> {
                 for (final RateUnit unit : RateUnit.VALUES) {
-                    rows.entry(
-                        IKey.EMPTY,
-                        TooltipTheme.Role.RATE,
-                        IKey.str(rateText(perCycle, duration, unit)));
+                    rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE, IKey.str(rateText(perCycle, duration, unit)));
                 }
             });
         } else out.langRow(LANG + "shift_hint");
@@ -439,8 +436,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     @Getter
     public enum PortType {
 
-        INPUT(Color.GREEN.main, true, false),
-        OUTPUT(Color.BLUE.main, true, true),
+        INPUT(0, true, false),
+        OUTPUT(0, true, true),
         CATALYST(Color.BLACK.main, false);
 
         private final int borderColor;

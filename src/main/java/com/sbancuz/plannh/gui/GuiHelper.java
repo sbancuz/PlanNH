@@ -115,7 +115,7 @@ public final class GuiHelper {
 
     public static float rate(final float perCycle, final int durationTicks, final RateUnit unit) {
         final float cycleSeconds = durationTicks / (float) TICKS_PER_SECOND;
-        return perCycle / cycleSeconds / (float) unit.secondsPerUnit;
+        return perCycle / cycleSeconds * (float) unit.secondsPerUnit;
     }
 
     public static boolean shiftHeld() {
