@@ -29,8 +29,8 @@ import com.sbancuz.plannh.data.flowchart.balancer.Severity;
 import com.sbancuz.plannh.data.flowchart.balancer.SolutionView;
 import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
+import com.sbancuz.plannh.harness.GtnhFlowLoader.FixturePin;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
-import com.sbancuz.plannh.harness.GtnhFlowLoader.Pin;
 import com.sbancuz.plannh.harness.TestIngredients;
 
 /**
@@ -105,14 +105,14 @@ class GroundTruthTest {
         assertAllMachinesRun(chart, s);
         assertEquals(
             1.0,
-            s.machineCounts.get(
+            s.copyCounts.get(
                 chart.machine(0)
                     .getId()),
             EPS,
             "pinned DT stays at 1");
         assertEquals(
             8.0 / 15.0,
-            s.machineCounts.get(
+            s.copyCounts.get(
                 chart.machine(1)
                     .getId()),
             EPS,
@@ -243,7 +243,7 @@ class GroundTruthTest {
         assertEquals(25.0 / 12.0, terminalRate(chart, s.terminalOutputs, "hydrogen sulfide"), EPS);
         assertEquals(
             1.0 / 60.0,
-            s.machineCounts.get(
+            s.copyCounts.get(
                 chart.machine(0)
                     .getId()),
             EPS,
@@ -275,21 +275,21 @@ class GroundTruthTest {
         assertEquals(0, s.openGates, "no external heavy naquadah - the bath eats the excess");
         assertEquals(
             1.0,
-            s.machineCounts.get(
+            s.copyCounts.get(
                 chart.machine(0)
                     .getId()),
             EPS,
             "fusion pinned at 1");
         assertEquals(
             3.12,
-            s.machineCounts.get(
+            s.copyCounts.get(
                 chart.machine(1)
                     .getId()),
             EPS,
             "DT at 3.12 machines");
         assertEquals(
             1.0 / 6.0,
-            s.machineCounts.get(
+            s.copyCounts.get(
                 chart.machine(2)
                     .getId()),
             EPS,
@@ -317,7 +317,7 @@ class GroundTruthTest {
         assertEquals(0, s.openGates, "gate-free as drawn: the bath absorbs all routed heavy");
         assertEquals(
             13.0 / 6.0,
-            s.machineCounts.get(
+            s.copyCounts.get(
                 chart.machine(2)
                     .getId()),
             EPS,
@@ -486,12 +486,13 @@ class GroundTruthTest {
         for (final Edge edge : chart.graph()
             .getEdges()
             .values()) {
-            if (!edge.targetNodeId.equals(machine.getId())) continue;
+            if (!edge.getTargetNodeId()
+                .equals(machine.getId())) continue;
             if (!TestIngredients.nameOf(
                 machine.getInputs()
-                    .get(edge.targetInputIndex))
+                    .get(edge.getTargetInputItemIndex()))
                 .equals(ingredient)) continue;
-            rate += s.edgeFlowsPerSecond.getOrDefault(edge.id, 0.0);
+            rate += s.edgeFlowsPerSecond.getOrDefault(edge.getId(), 0.0);
         }
         return rate;
     }
@@ -518,8 +519,12 @@ class GroundTruthTest {
             .getEdges()
             .values()
             .stream()
-            .filter(e -> e.sourceNodeId.equals(stranded.getId()) || e.targetNodeId.equals(stranded.getId()))
-            .map(e -> e.id)
+            .filter(
+                e -> e.getSourceNodeId()
+                    .equals(stranded.getId())
+                    || e.getTargetNodeId()
+                        .equals(stranded.getId()))
+            .map(Edge::getId)
             .toList()
             .forEach(
                 id -> chart.graph()
@@ -595,7 +600,10 @@ class GroundTruthTest {
             .values()
             .iterator()
             .next();
-        stale.targetInputIndex = 99;
+
+        // NOTE: This only works because in the loader we use a mutable pair object
+        stale.getTargetInputIndex()
+            .first(99);
 
         final Answer result = solveWith(chart.graph());
 
@@ -639,10 +647,12 @@ class GroundTruthTest {
                     for (final Edge edge : chart.graph()
                         .getEdges()
                         .values()) {
-                        final boolean hit = input ? edge.targetNodeId.equals(node.getId()) && edge.targetInputIndex == i
-                            : edge.sourceNodeId.equals(node.getId()) && edge.sourceOutputIndex == i;
+                        final boolean hit = input ? edge.getTargetNodeId()
+                            .equals(node.getId()) && edge.getTargetInputItemIndex() == i
+                            : edge.getSourceNodeId()
+                                .equals(node.getId()) && edge.getSourceOutputItemIndex() == i;
                         if (hit) {
-                            edges += s.edgeFlowsPerSecond.getOrDefault(edge.id, 0.0);
+                            edges += s.edgeFlowsPerSecond.getOrDefault(edge.getId(), 0.0);
                         }
                     }
                     final double edgeRate = edges;
@@ -699,7 +709,7 @@ class GroundTruthTest {
     /** Converts the loader's target-rate pins (ingredient/s) into extent pins (crafts/s). */
     private static Map<UUID, Double> targetPins(final LoadedChart chart) {
         final Map<UUID, Double> pins = new HashMap<>();
-        for (final Pin pin : chart.pins()) {
+        for (final FixturePin pin : chart.pins()) {
             if (!"target".equals(pin.kind())) continue;
             final Node node = chart.machine(pin.machineIndex());
             pins.put(

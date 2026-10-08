@@ -7,7 +7,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.data.effect.EffectResult;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.setting.CopyCountTarget;
+import com.sbancuz.plannh.data.setting.OutputRateTarget;
 import com.sbancuz.plannh.data.setting.SettingDef;
 import com.sbancuz.plannh.data.setting.Settings;
 
@@ -22,6 +25,12 @@ public class MachineConfig {
     private String profileId;
     @Getter(AccessLevel.NONE)
     private final Map<SettingDef<?>, Object> settings;
+
+    /** The targets this machine is held to. Values here, and one of them is what counts. */
+    private final CopyCountTarget copies = new CopyCountTarget();
+    private final OutputRateTarget rates = new OutputRateTarget();
+    private Pin targetKind = Pin.NONE;
+
     // todo make these functional
     private final Map<Integer, Float> inputConsumption = new HashMap<>();
     private final Map<Integer, Float> outputProductivity = new HashMap<>();
@@ -53,6 +62,19 @@ public class MachineConfig {
         this.settings.putIfAbsent(Settings.MACHINES, Settings.MACHINES.getDefaultValue());
     }
 
+    /** The copies target is the one that stands in for {@link Settings#MACHINES} as a row. */
+    public boolean isCopiesTargeted() {
+        return targetKind == Pin.FIXED_COPIES;
+    }
+
+    /**
+     * How many copies of this machine the chart runs - the copies target when one is pinned, and the
+     * machine setting otherwise. The physical answer either way, which is why it is neither name.
+     */
+    public int configuredCopies() {
+        return isCopiesTargeted() ? copies.copies() : get(Settings.MACHINES);
+    }
+
     @Nonnull
     public MachineProfile getProfile() {
         final MachineProfile p = MachineProfileRegistry.get(profileId);
@@ -65,7 +87,6 @@ public class MachineConfig {
         return (T) settings.computeIfAbsent(setting, SettingDef::getDefaultValue);
     }
 
-    @SuppressWarnings("unchecked")
     public <T> void set(final SettingDef<T> setting, T value) {
         settings.put(setting, value);
     }
@@ -109,14 +130,17 @@ public class MachineConfig {
 
     /**
      * Takes another node's machine settings, for the members of a machine group: they are one
-     * machine, so they run at one tier with one set of upgrades. The machine count is left alone -
-     * it is how much of that machine each recipe asks for, not part of what the machine is.
+     * machine, so they run at one tier with one set of upgrades. What each recipe asks for is left
+     * alone - the machine count, and the targets with it - because a plan belongs to the recipe that
+     * made it and not to the machine they share.
      */
     public void copySettingsFrom(final MachineConfig other) {
-        final int count = get(Settings.MACHINES);
+        final int machines = get(Settings.MACHINES);
+        final Pin kind = targetKind;
         settings.clear();
         settings.putAll(other.settings);
-        set(Settings.MACHINES, count);
+        set(Settings.MACHINES, machines);
+        targetKind = kind;
     }
 
     public float inputMultiplier(final int inputIndex) {

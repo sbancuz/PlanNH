@@ -28,7 +28,7 @@ import com.sbancuz.plannh.data.flowchart.Port;
 public final class SolutionView {
 
     public final Map<UUID, Double> extentsPerSecond = new LinkedHashMap<>();
-    public final Map<UUID, Double> machineCounts = new LinkedHashMap<>();
+    public final Map<UUID, Double> copyCounts = new LinkedHashMap<>();
     public final Map<UUID, Double> edgeFlowsPerSecond = new LinkedHashMap<>();
     public final List<External> gatedSources = new ArrayList<>();
     public final List<External> gatedSinks = new ArrayList<>();
@@ -49,7 +49,7 @@ public final class SolutionView {
         for (int m = 0; m < model.machines.size(); m++) {
             final ModelData.Machine md = model.machines.get(m);
             extentsPerSecond.put(md.node.getId(), ctx.extents()[m]);
-            machineCounts.put(md.node.getId(), ctx.extents()[m] * md.durTicks / (double) Numerics.TICKS_PER_SECOND);
+            copyCounts.put(md.node.getId(), ctx.extents()[m] * md.durTicks / (double) Numerics.TICKS_PER_SECOND);
         }
         for (int e = 0; e < model.edges.size(); e++) {
             edgeFlowsPerSecond.put(

@@ -92,7 +92,7 @@ public final class ModelBuilder {
      * One integer machine-count variable per machine, replacing the continuous extents family. The
      * OUTPUT / INPUT stage solves in count space so its answer is buildable without a read-out
      * ceil: the variable IS the machine count (a MILP rather than a bare LP). Pinned machines lock
-     * at their configured count (never fractional in these modes - only FIXED_COUNT pins are
+     * at their configured count (never fractional in these modes - only FIXED_COPIES pins are
      * honoured); everything else floors at one machine, the count-world image of the one-machine
      * extent floor. Port rows and the point reader convert back through TPS/durTicks.
      */

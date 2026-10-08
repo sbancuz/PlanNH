@@ -12,6 +12,7 @@ import net.minecraftforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IDraggable;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.api.widget.Interactable;
@@ -19,7 +20,9 @@ import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
+import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
+import com.cleanroommc.modularui.theme.WidgetTheme;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.Widget;
@@ -30,12 +33,19 @@ import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.flowchart.Edge2;
+import com.sbancuz.plannh.data.MachineConfig;
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.GuiHelper;
+import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 import com.sbancuz.plannh.mixins.PositionedStackAccessor;
 
 import codechicken.nei.KeyManager;
@@ -50,6 +60,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
 
     private static final int RECIPE_KEYCODE = KeyManager.getKeyCode("recipe.recipe");
     private static final int USAGE_KEYCODE = KeyManager.getKeyCode("recipe.usage");
+
+    private static final String LANG = "plannh.gui.node.port.";
 
     // needed for proper positioning of ports
     private static final int PORT_OFFSET_X = 1;
@@ -72,6 +84,12 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     private final IntIntPair index;
     @Getter
     private final Node node;
+    /**
+     * Which side of the machine this port is on. A {@link PortType} cannot answer it: a catalyst is
+     * the same type either way, and the balance keeps inputs and outputs in separate maps.
+     */
+    @Getter
+    private final boolean input;
 
     private boolean isConfiguring = false;
     private final Grid grid;
@@ -83,6 +101,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         this.parent = parent;
         this.index = index;
         this.portType = portType;
+        this.input = isInput;
         this.siblingPortWidgets = siblingPortWidgets;
 
         canvas = parent.getCanvas();
@@ -98,7 +117,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         pos(stack.relx + PORT_OFFSET_X, stack.rely + PORT_OFFSET_Y + yShift);
         size(PORT_SIZE);
 
-        tooltipBuilder(t -> t.addFromItem(stack.item));
+        tooltipBuilder(this::writeTooltip);
         tooltipAutoUpdate(true);
 
         if (configurable()) {
@@ -242,6 +261,69 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         return ((PositionedStackAccessor) stack).getPermutated();
     }
 
+    private void writeTooltip(final RichTooltip tooltip) {
+        tooltip.addFromItem(stack.item);
+
+        final TooltipBuilder out = TooltipBuilder.create(tooltip);
+        if (configurable()) out.langRow(LANG + "configure_hint");
+
+        writeThroughput(out);
+        out.flush();
+    }
+
+    private void writeThroughput(final TooltipBuilder out) {
+        final Balancer.NodeBalance balance = parent.balance();
+        final float perCycle = perCycle(balance);
+        if (perCycle <= 0) return;
+
+        final int duration = balance.durationPerOp();
+        final MachineConfig config = node.getMachineConfig();
+
+        final float bonus = input ? config.inputMultiplier(index.leftInt()) : config.outputMultiplier(index.leftInt());
+
+        out.separator()
+            .entry(
+                IKey.lang(LANG + "rate"),
+                TooltipTheme.Role.RATE,
+                IKey.str(rateText(perCycle, duration, rateUnit())));
+        out.entry(
+            IKey.lang(input ? LANG + "consumption" : LANG + "productivity"),
+            TooltipTheme.Role.TUNABLE,
+            TooltipBuilder.multiple(bonus));
+
+        if (GuiHelper.shiftHeld()) {
+            out.group(LANG + "per_unit", rows -> {
+                for (final RateUnit unit : RateUnit.VALUES) {
+                    rows.entry(
+                        IKey.EMPTY,
+                        TooltipTheme.Role.RATE,
+                        IKey.str(rateText(perCycle, duration, unit)));
+                }
+            });
+        } else out.langRow(LANG + "shift_hint");
+    }
+
+    private float perCycle(final @Nullable Balancer.NodeBalance balance) {
+        if (balance == null || balance.durationPerOp() <= 0) return 0;
+
+        final Float perCycle = (input ? balance.effectiveInputs() : balance.effectiveOutputs()).get(index.leftInt());
+        return perCycle == null ? 0 : perCycle;
+    }
+
+    /** This port's rate in the given unit, as the corner and the tooltip both state it. */
+    private String rateText(final float perCycle, final int duration, final RateUnit unit) {
+        return TooltipBuilder.rate(
+            port.getType()
+                .formatAmount(GuiHelper.rate(perCycle, duration, unit)),
+            unit);
+    }
+
+    private static RateUnit rateUnit() {
+        return Plan.getInstance()
+            .getSummary()
+            .getRateUnit();
+    }
+
     @Override
     public boolean onDragStart(int button) {
         if (button == 0 && portType.supportsEdge && !isConfiguring) {
@@ -279,8 +361,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     }
 
     public static void addArrow(CanvasWidget canvas, PortWidget source, PortWidget target) {
-        SortedMap<UUID, Edge2> edges = canvas.getGraph()
-            .getEdges2();
+        SortedMap<UUID, Edge> edges = canvas.getGraph()
+            .getEdges();
 
         if (target.notConfigured() && target.configurable()) target.setPermutationToStack(source.stack.item);
 
@@ -300,8 +382,9 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
                     .get(edge.getId())
                     .removeFromGraph());
 
-        Edge2 edge = new Edge2(source, target);
-        edges.put(edge.getId(), edge);
+        Edge edge = new Edge(source, target);
+        canvas.getGraph()
+            .addEdge(edge);
 
         ArrowWidget arrow = new ArrowWidget(canvas, edge);
         canvas.child(arrow);

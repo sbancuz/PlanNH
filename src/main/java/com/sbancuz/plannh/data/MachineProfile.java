@@ -99,7 +99,7 @@ public record MachineProfile(String id, String displayName, List<Entry> settings
 
     /** The defs on offer, unfiltered: what a fresh config seeds from, and what a save lists. */
     @Nonnull
-    public List<SettingDef<?>> defs() {
+    public List<? extends SettingDef<?>> defs() {
         return settings.stream()
             .map(Entry::def)
             .toList();
@@ -109,9 +109,14 @@ public record MachineProfile(String id, String displayName, List<Entry> settings
      * The settings this profile offers for one machine: its own list, minus the ones hidden for
      * this recipe and these values. Visibility is a question about the machine, so it answers
      * against the config rather than against a bag of values.
+     *
+     * <p>
+     * Nothing here depends on which target is pinned. {@link Settings#MACHINES} is how many machines
+     * the recipe runs on and the copies target is how many of them the chart runs; they are different
+     * numbers, so neither hides the other.
      */
     @Nonnull
-    public Stream<SettingDef<?>> visibleSettings(final RecipeContext ctx, final MachineConfig config) {
+    public Stream<? extends SettingDef<?>> visibleSettings(final RecipeContext ctx, final MachineConfig config) {
         return settings.stream()
             .filter(e -> e.isVisible(ctx, config))
             .map(Entry::def);

@@ -2,14 +2,12 @@ package com.sbancuz.plannh.data.setting;
 
 import java.util.function.Consumer;
 
-import net.minecraft.util.EnumChatFormatting;
-
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.text.TextRenderer;
 import com.cleanroommc.modularui.value.IntValue;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.gui.common.TooltipStyle;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 import lombok.Getter;
 
@@ -28,14 +26,26 @@ public class IntegerSettingDef extends SettingDef<Integer> {
     }
 
     @Override
-    protected EnumChatFormatting valueColour() {
-        return TooltipStyle.TUNABLE;
+    protected TooltipTheme.Role valueRole() {
+        return TooltipTheme.Role.TUNABLE;
     }
 
     private int getMaxWidth() {
-        final long widest = Math.max(Math.abs((long) min), Math.abs((long) max));
+        return fieldWidth(min, max);
+    }
+
+    public static int fieldWidth(final int min, final int max) {
+        return fieldWidth(Long.toString(widest(min, max)));
+    }
+
+    /** The same field, measured against a value that is not an int - a rate, say. */
+    public static int fieldWidth(final String widest) {
         return TextRenderer.getFontRenderer()
-            .getStringWidth(Long.toString(widest)) + PADDING;
+            .getStringWidth(widest) + PADDING;
+    }
+
+    private static long widest(final int min, final int max) {
+        return Math.max(Math.abs((long) min), Math.abs((long) max));
     }
 
     @Override

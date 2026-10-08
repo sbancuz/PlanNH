@@ -23,9 +23,9 @@ import com.sbancuz.plannh.data.flowchart.Graph;
  */
 public final class SolveContext {
 
-    /** Pins, strongest first: explicit extent, target output rate, fixed machine count. */
+    /** Pins, strongest first: explicit extent, target output rate, fixed copy count. */
     private static final List<SolverMessage> PIN_STRENGTH = List
-        .of(SolverMessage.PIN_COUNT, SolverMessage.PIN_TARGET, SolverMessage.PIN_EXTENT);
+        .of(SolverMessage.PIN_COPIES, SolverMessage.PIN_TARGET, SolverMessage.PIN_EXTENT);
 
     public final ModelData model;
     public final Heuristics heuristics;
@@ -73,11 +73,6 @@ public final class SolveContext {
     public final List<Note> stageNotes = new ArrayList<>();
 
     SolveContext(final Graph graph, final Heuristics heuristics, final Budget budget,
-        final Map<UUID, Double> extraExtentPins, final Set<Pin> pins) {
-        this(graph, heuristics, budget, extraExtentPins, pins, Profiler.disabled());
-    }
-
-    SolveContext(final Graph graph, final Heuristics heuristics, final Budget budget,
         final Map<UUID, Double> extraExtentPins, final Set<Pin> pins, final Profiler profiler) {
         this.model = new ModelData(graph, heuristics);
         this.heuristics = heuristics;
@@ -101,9 +96,9 @@ public final class SolveContext {
                 pinKind[m] = SolverMessage.PIN_TARGET;
                 any = true;
                 noteOvershotTargets(m, md.targetExtent);
-            } else if (pins.contains(Pin.FIXED_COUNT) && md.fixedExtent != null) {
+            } else if (pins.contains(Pin.FIXED_COPIES) && md.fixedExtent != null) {
                 pinnedExtent[m] = md.fixedExtent;
-                pinKind[m] = SolverMessage.PIN_COUNT;
+                pinKind[m] = SolverMessage.PIN_COPIES;
                 any = true;
             } else {
                 // NaN, not 0: a machine pinned to a zero count is a real pin (it must NOT run),
@@ -121,19 +116,18 @@ public final class SolveContext {
     private void noteOvershotTargets(final int m, final double chosenExtent) {
         final ModelData.Machine md = model.machines.get(m);
         final double tieRel = heuristics.numerics().tieRel;
-        for (final Map.Entry<Integer, Double> t : md.node.getTargetOutputRates()
+        for (final Map.Entry<Integer, Double> t : md.node.getMachineConfig()
+            .getRates()
+            .liveTargets(md.outQty)
             .entrySet()) {
-            if (t.getValue() == null || t.getValue() <= 0) continue;
-            final int i = t.getKey();
-            if (i < 0 || i >= md.outQty.length || md.outQty[i] <= 0) continue;
-            final double actual = chosenExtent * md.outQty[i];
+            final double actual = chosenExtent * md.outQty[t.getKey()];
             if (actual > t.getValue() * (1 + tieRel)) {
                 notes.add(
                     new Note(
                         SolverMessage.OVERSHOOTS_TARGET,
                         md.node.getMachineName(),
                         md.node.getOutputs()
-                            .get(i)
+                            .get(t.getKey())
                             .getDisplayName(),
                         actual,
                         t.getValue()));

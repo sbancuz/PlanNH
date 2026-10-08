@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.util.StatCollector;
 
 import org.apache.commons.lang3.StringUtils;
+import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.drawable.GuiDraw;
 
@@ -110,6 +111,15 @@ public final class GuiHelper {
         GuiDraw.drawRect(x, y + h - bw, w, bw, color);
         GuiDraw.drawRect(x, y, bw, h, color);
         GuiDraw.drawRect(x + w - bw, y, bw, h, color);
+    }
+
+    public static float rate(final float perCycle, final int durationTicks, final RateUnit unit) {
+        final float cycleSeconds = durationTicks / (float) TICKS_PER_SECOND;
+        return perCycle / cycleSeconds / (float) unit.secondsPerUnit;
+    }
+
+    public static boolean shiftHeld() {
+        return Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
     }
 
     private static final int CLOSE_INNER_INSET = 2;

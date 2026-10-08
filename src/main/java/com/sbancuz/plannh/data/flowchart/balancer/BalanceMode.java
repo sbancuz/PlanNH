@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.data.flowchart.balancer;
 
+import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Set;
 
@@ -30,12 +31,12 @@ public enum BalanceMode {
     /**
      * Output-priority: outputs shipped exactly, inputs at least, fewest extents.
      */
-    OUTPUT(Chain.enter(new ExtentMinStage(false)), Heuristics.counts(), Set.of(Pin.FIXED_COUNT), false),
+    OUTPUT(Chain.enter(new ExtentMinStage(false)), Heuristics.counts(), Set.of(Pin.FIXED_COPIES), false),
 
     /**
      * Input-priority: inputs consume exactly their capacity, outputs supply at least what's demanded.
      */
-    INPUT(Chain.enter(new ExtentMinStage(true)), Heuristics.counts(), Set.of(Pin.FIXED_COUNT), false),
+    INPUT(Chain.enter(new ExtentMinStage(true)), Heuristics.counts(), Set.of(Pin.FIXED_COPIES), false),
 
     /**
      * Lexicographic auto-balance: fractional machine counts, automatic source/sink placement on
@@ -47,7 +48,7 @@ public enum BalanceMode {
         .then(new FlowMinStage())
         .prelude(new FastPathStage())
         .audit(new EveryMachineRuns())
-        .withPinDiagnosis(), Heuristics.auto(), Set.of(Pin.FIXED_COUNT, Pin.TARGET_RATE, Pin.EXTENT), true);
+        .withPinDiagnosis(), Heuristics.auto(), Set.of(Pin.FIXED_COPIES, Pin.TARGET_RATE, Pin.EXTENT), true);
 
     @Getter
     @Accessors(fluent = true)
@@ -66,7 +67,10 @@ public enum BalanceMode {
         final boolean supportsAlternatives) {
         this.chain = chain;
         this.heuristics = heuristics;
-        this.pins = pins;
+
+        this.pins = EnumSet.noneOf(Pin.class);
+        this.pins.addAll(pins);
+        this.pins.add(Pin.NONE);
         this.supportsAlternatives = supportsAlternatives;
     }
 

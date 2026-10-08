@@ -57,7 +57,7 @@ public enum SolverMessage {
     // -----------------------------------------------------------------------------------------
     PIN_EXTENT(Severity.INFO, "plannh.solver.pin_extent"),
     PIN_TARGET(Severity.INFO, "plannh.solver.pin_target"),
-    PIN_COUNT(Severity.INFO, "plannh.solver.pin_count"),
+    PIN_COPIES(Severity.INFO, "plannh.solver.pin_copies"),
     PREF_FEWEST_GATES(Severity.INFO, "plannh.solver.pref_fewest_gates"),
     PREF_FEWEST_IMPORTS(Severity.INFO, "plannh.solver.pref_fewest_imports"),
     PREF_LEAST_EXCESS(Severity.INFO, "plannh.solver.pref_least_excess"),

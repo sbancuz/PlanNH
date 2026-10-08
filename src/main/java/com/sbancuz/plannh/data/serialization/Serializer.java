@@ -27,14 +27,12 @@ import com.google.gson.JsonPrimitive;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Edge;
-import com.sbancuz.plannh.data.flowchart.Edge2;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
-import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 
 import codechicken.nei.recipe.Recipe;
@@ -172,23 +170,23 @@ public final class Serializer {
                 .append("\"]\n");
         }
 
-        for (final Edge edge : graph.getEdges()
-            .values()) {
-            final String srcId = mermaidId(edge.sourceNodeId);
-            final String dstId = mermaidId(edge.targetNodeId);
-            final String label = edgeLabel(graph, edge);
-            sb.append("    ")
-                .append(srcId)
-                .append(" -->");
-            if (!label.isEmpty()) {
-                sb.append("|\"")
-                    .append(escapeMermaid(label))
-                    .append("\"|");
-            }
-            sb.append(" ")
-                .append(dstId)
-                .append("\n");
-        }
+        // for (final Edge edge : graph.getEdges()
+        // .values()) {
+        // final String srcId = mermaidId(edge.sourceNodeId);
+        // final String dstId = mermaidId(edge.targetNodeId);
+        // final String label = edgeLabel(graph, edge);
+        // sb.append(" ")
+        // .append(srcId)
+        // .append(" -->");
+        // if (!label.isEmpty()) {
+        // sb.append("|\"")
+        // .append(escapeMermaid(label))
+        // .append("\"|");
+        // }
+        // sb.append(" ")
+        // .append(dstId)
+        // .append("\n");
+        // }
 
         for (final Note note : graph.getNotes()
             .values()) {
@@ -229,7 +227,7 @@ public final class Serializer {
         root.add(
             "edges",
             GSON.toJsonTree(
-                graph.getEdges2()
+                graph.getEdges()
                     .values()));
 
         return root;
@@ -281,6 +279,7 @@ public final class Serializer {
 
         if (root.has("nodes")) {
             for (final JsonElement elem : root.getAsJsonArray("nodes")) {
+                migrateNodeTargets(elem.getAsJsonObject());
                 final Node node = GSON.fromJson(elem, Node.class);
 
                 if (node.invalid()) {
@@ -296,19 +295,55 @@ public final class Serializer {
 
         if (root.has("edges")) {
             for (final JsonElement elem : root.getAsJsonArray("edges")) {
-                final Edge2 edge = GSON.fromJson(elem, Edge2.class);
+                final Edge edge = GSON.fromJson(elem, Edge.class);
 
                 if (edge.invalid()) {
                     PlanNH.LOG.warn("Invalid state found for an edge!");
                     continue;
                 }
 
-                graph.getEdges2()
+                graph.getEdges()
                     .put(edge.getId(), edge);
             }
         }
 
         return graph;
+    }
+
+    /**
+     * Moves a save's node-level targets into the machine config, which is where they live now.
+     *
+     * <p>
+     * A node's count, rates and target kind used to be its own fields, where the reflective
+     * serializer wrote them for free. They belong to {@link MachineConfig} now, and that has a
+     * hand-written adapter - so a save written before the move has all three one level too high,
+     * where nothing reads them and every pin in the plan silently comes back unpinned.
+     */
+    static void migrateNodeTargets(final JsonObject node) {
+        final JsonElement config = node.get("machineConfig");
+        if (config == null || !config.isJsonObject()) return;
+        final JsonObject target = config.getAsJsonObject();
+
+        moveTarget(node, target, "targetKind", null);
+
+        // The count was an object either way, so it moves as it stands.
+        final JsonElement count = node.remove("count");
+        if (count != null && count.isJsonObject()) moveTarget(node, target, "count", count);
+
+        // The rates were written as the target object, so the map sat under its own field name.
+        final JsonElement rates = node.remove("rates");
+        if (rates != null && rates.isJsonObject()) {
+            final JsonObject wrapper = rates.getAsJsonObject();
+            moveTarget(node, target, "rates", wrapper.has("rates") ? wrapper.get("rates") : wrapper);
+        }
+    }
+
+    /** Puts a legacy value on the config, unless the config already carries that field itself. */
+    private static void moveTarget(final JsonObject node, final JsonObject config, final String key,
+        @Nullable final JsonElement unwrapped) {
+        final JsonElement value = unwrapped != null ? unwrapped : node.remove(key);
+        if (value == null || value.isJsonNull() || config.has(key)) return;
+        config.add(key, value);
     }
 
     // ── Mermaid helpers ──
@@ -324,22 +359,6 @@ public final class Serializer {
     private static String escapeMermaid(final String s) {
         return s.replace("\"", "#quot;")
             .replace("\n", "<br/>");
-    }
-
-    @Nonnull
-    private static String edgeLabel(final Graph graph, final Edge edge) {
-        final Node src = graph.getNodes()
-            .get(edge.sourceNodeId);
-        if (src == null) return "";
-
-        final int idx = edge.sourceOutputIndex;
-        if (idx >= 0 && idx < src.getOutputs()
-            .size()) {
-            final Port port = src.getOutputs()
-                .get(idx);
-            return port.getDisplayName();
-        }
-        return "";
     }
 
     private static <T> T getSafe(@Nullable JsonElement json, Type type, T defaultValue) {

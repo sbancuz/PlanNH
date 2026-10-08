@@ -2,7 +2,6 @@ package com.sbancuz.plannh.data.flowchart;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -45,18 +44,12 @@ public class Node extends GraphData {
     private transient Map<RecipeProperty<?>, Object> properties;
 
     @Setter
-    private boolean machineCountFixed;
-
-    @Setter
     private transient boolean settingsOpen = true;
 
-    /**
-     * Target production rates by output port index, in ingredient units per second. A target is
-     * a pin: AUTO holds the machine's extent so the targeted output hits the rate exactly, and
-     * the rest of the chart follows. With several targets on one machine the largest implied
-     * extent wins - parallel outputs share one extent, so only the tightest can be exact.
-     */
-    private final Map<Integer, Double> targetOutputRates = new LinkedHashMap<>();
+    /** Whether the target rows are showing. Transient, like {@link #settingsOpen}. */
+    @Setter
+    @Getter
+    private transient boolean targetOpen = true;
 
     private transient PropertyProvider extractor;
     private transient List<PropertyProvider> availableExtractors;
@@ -212,8 +205,7 @@ public class Node extends GraphData {
         return super.invalid() || machineName == null
             || inputConfigurations == null
             || recipeId == null
-            || machineConfig == null
-            || targetOutputRates == null;
+            || machineConfig == null;
     }
 
     // TODO: Find a better way to make the tests work

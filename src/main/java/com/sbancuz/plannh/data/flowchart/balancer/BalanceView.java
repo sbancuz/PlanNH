@@ -16,7 +16,6 @@ import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternative;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
-import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.gui.GuiHelper;
 
 /**
@@ -86,8 +85,8 @@ public final class BalanceView {
         final Set<PortRef> wired = new HashSet<>();
         for (final Edge edge : graph.getEdges()
             .values()) {
-            wired.add(new PortRef(edge.sourceNodeId, edge.sourceOutputIndex, false));
-            wired.add(new PortRef(edge.targetNodeId, edge.targetInputIndex, true));
+            wired.add(new PortRef(edge.getSourceNodeId(), edge.getSourceOutputItemIndex(), false));
+            wired.add(new PortRef(edge.getTargetNodeId(), edge.getTargetInputItemIndex(), true));
         }
         final List<Boundary> out = new ArrayList<>();
         for (final Node node : graph.getNodes()
@@ -102,7 +101,7 @@ public final class BalanceView {
     private static void collectConfigured(final Node node, final Set<PortRef> wired, final boolean input,
         final List<Boundary> out) {
         final MachineConfig cfg = node.getMachineConfig();
-        final double count = cfg.get(Settings.MACHINES);
+        final double count = cfg.configuredCopies();
         if (count <= 0) return;
         final var eff = cfg.computeEffect(node.getProperties());
         final int durTicks = Math.max(1, eff.durationTicks());

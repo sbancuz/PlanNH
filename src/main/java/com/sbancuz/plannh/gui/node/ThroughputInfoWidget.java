@@ -3,12 +3,9 @@ package com.sbancuz.plannh.gui.node;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import net.minecraft.util.StatCollector;
-
-import org.lwjgl.input.Keyboard;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
@@ -22,25 +19,36 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
+import com.sbancuz.plannh.data.properties.RecipeProperty;
 import com.sbancuz.plannh.data.properties.SummaryProperty;
 import com.sbancuz.plannh.data.setting.SettingDef;
+import com.sbancuz.plannh.data.setting.TargetKind;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
-import com.sbancuz.plannh.gui.common.TooltipStyle;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> implements IFlowchartDraggable {
 
     private static final String LANG = "plannh.gui.node.throughput.";
+    private static final String TARGET = "plannh.gui.node.target.";
 
     private final NodeWidget parent;
     private final Flow lines;
 
+    private Flow row;
+
     private double lastOperations = Double.NaN;
     private int lastDuration = Integer.MIN_VALUE;
+
+    private long lastVersion = Long.MIN_VALUE;
+    private boolean lastShift;
+    private RateUnit lastUnit;
 
     public ThroughputInfoWidget(NodeWidget parent) {
         this.parent = parent;
@@ -58,6 +66,7 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
     @Override
     public void onUpdate() {
         super.onUpdate();
+        invalidateTooltip();
         rebuild();
     }
 
@@ -66,191 +75,182 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
         return parent;
     }
 
+    private void invalidateTooltip() {
+        final long version = parent.getCanvas()
+            .getGraph()
+            .getVersion();
+        final boolean shift = GuiHelper.shiftHeld();
+        final RateUnit unit = rateUnit();
+        if (version == lastVersion && shift == lastShift && unit == lastUnit) return;
+        lastVersion = version;
+        lastShift = shift;
+        lastUnit = unit;
+        if (row != null) row.markTooltipDirty();
+    }
+
     private void rebuild() {
         final Node node = parent.getData();
-        final Balancer.NodeBalance nb = balance();
-        final int duration = nb == null ? durationTicks(node) : nb.durationPerOp();
-        final double operations = nb == null ? -1 : nb.operations();
+        final Balancer.NodeBalance balance = parent.balance();
+        final int duration = balance == null ? durationTicks(node) : balance.durationPerOp();
+        final double operations = balance == null ? -1 : balance.operations();
 
         if (operations == lastOperations && duration == lastDuration) return;
         lastOperations = operations;
         lastDuration = duration;
 
-        final IKey count;
-        if (operations < 0) count = IKey.lang(LANG + "unbalanced");
-        else if (operations <= 0) count = IKey.lang(LANG + "unplanned");
-        else count = IKey.lang(LANG + "ops", GuiHelper.formatCount(operations));
+        final IKey copies;
+        if (operations < 0) copies = IKey.lang(LANG + "unbalanced");
+        else if (operations <= 0) copies = IKey.lang(LANG + "unplanned");
+        else copies = IKey.comp(IKey.lang(LANG + "copies_needed"), TooltipBuilder.multiple(operations));
 
         lines.removeAll();
-        lines.child(
-            FlowchartFlow.row(parent)
-                .fullWidth()
-                .coverChildrenHeight()
-                .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-                .tooltipBuilder(this::rates)
-                .tooltipAutoUpdate(true)
-                .child(
-                    FlowchartFlow.row(parent)
-                        .coverChildrenHeight()
-                        .childPadding(2)
-                        .child(new MachineCountFixedButtonWidget(parent))
-                        .child(new FlowchartTextWidget(count, parent)))
-                .child(
-                    new FlowchartTextWidget(IKey.lang(LANG + "duration", GuiHelper.formatDuration(duration)), parent)));
+
+        // What the balance settled on, and how long a craft takes. Which target asked for it, and
+        // whether the rows below are showing, belong to the target list - this row only states the
+        // two numbers, and carries the tooltip that explains them.
+        row = FlowchartFlow.row(parent)
+            .name("throughput")
+            .fullWidth()
+            .coverChildrenHeight()
+            .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
+            .childPadding(2)
+            .tooltipBuilder(this::writeTooltip)
+            .child(new FlowchartTextWidget(copies, parent))
+            .child(new FlowchartTextWidget(IKey.lang(LANG + "duration", GuiHelper.formatDuration(duration)), parent));
+        lines.child(row);
 
         scheduleResize();
     }
 
-    private Balancer.NodeBalance balance() {
-        return parent.getCanvas()
-            .getGraph()
-            .balance()
-            .nodeBalances()
-            .get(
-                parent.getData()
-                    .getId());
-    }
-
-    private void rates(final RichTooltip t) {
+    private void writeTooltip(final RichTooltip tooltip) {
         final Node node = parent.getData();
-        final Balancer.NodeBalance nb = balance();
-        final boolean balanced = nb != null && nb.durationPerOp() > 0;
-        final int ticks = balanced ? nb.durationPerOp() : durationTicks(node);
-        final RateUnit unit = Plan.getInstance()
-            .getSummary()
-            .getRateUnit();
+        final Balancer.NodeBalance balance = parent.balance();
+        final boolean balanced = balance != null && balance.durationPerOp() > 0;
+        final RateUnit unit = rateUnit();
+        final int ticks = balanced ? balance.durationPerOp() : durationTicks(node);
 
-        if (ticks > 0) t.addLine(
-            IKey.str(
-                TooltipStyle.plain(
-                    RecipePropertyAPI.DURATION_TICKS.displayName(),
-                    TooltipStyle.IDENTITY,
-                    duration(ticks, unit))));
-        else t.addLine(
-            IKey.lang(LANG + "unbalanced")
-                .style(TooltipStyle.BODY));
+        final TooltipBuilder out = TooltipBuilder.create(tooltip);
 
-        if (balanced) {
-            final float cycleSeconds = nb.durationPerOp() / (float) GuiHelper.TICKS_PER_SECOND;
-            group(
-                t,
-                "plannh.summary.title.outputs",
-                portLines(node.getOutputs(), nb.effectiveOutputs(), cycleSeconds, unit));
-            group(
-                t,
-                "plannh.summary.title.inputs",
-                portLines(node.getInputs(), nb.effectiveInputs(), cycleSeconds, unit));
-        }
-        group(t, "plannh.summary.title.properties", costLines(node));
+        if (ticks > 0) out.duration(RecipePropertyAPI.DURATION_TICKS.displayName(), ticks, unit, GuiHelper.shiftHeld());
+        else out.langRow(LANG + "unbalanced");
 
-        if (isShiftHeld()) {
-            settings(t, node);
-        } else {
-            t.addLine(IKey.str(TooltipStyle.rule()));
-            t.addLine(IKey.lang(LANG + "shift_hint"));
-        }
+        out.group(
+            "plannh.summary.title.outputs",
+            rows -> { if (balanced) ports(rows, node.getOutputs(), balance.effectiveOutputs(), ticks, unit); });
+        out.group(
+            "plannh.summary.title.inputs",
+            rows -> { if (balanced) ports(rows, node.getInputs(), balance.effectiveInputs(), ticks, unit); });
+        out.group("plannh.summary.title.properties", rows -> properties(rows, node));
+
+        writeTarget(out);
+
+        // Shift trades the hint that says what shift does for the thing it does, which is the only
+        // reason to have a hint.
+        if (GuiHelper.shiftHeld()) writeSettings(out);
+        else out.separator()
+            .langRow(LANG + "shift_hint");
+
+        out.flush();
     }
 
-    private static String duration(final int ticks, final RateUnit unit) {
-        final double seconds = ticks / (double) GuiHelper.TICKS_PER_SECOND;
-        if (isShiftHeld()) {
-            final StringBuilder all = new StringBuilder();
-            for (final RateUnit each : RateUnit.VALUES) {
-                if (!each.duration) continue;
-                all.append(number(seconds / each.secondsPerUnit))
-                    .append(' ')
-                    .append(lang(each.langKey))
-                    .append(TooltipStyle.BODY)
-                    .append(", ");
+    private void writeTarget(final TooltipBuilder out) {
+        final List<Pin> held = parent.balanceMode()
+            .pins()
+            .stream()
+            .filter(pin -> pin.hasWidget && pin != Pin.NONE)
+            .toList();
+        // A mode that pins nothing has nothing to choose between, so there is no fold to describe.
+        if (held.isEmpty()) return;
+
+        final MachineConfig config = parent.getData()
+            .getMachineConfig();
+        final Pin selected = config.getTargetKind();
+        final TargetKind kind = TargetKind.of(config, selected);
+
+        out.group(TARGET + "title", rows -> {
+            for (final Pin pin : held) {
+                rows.marker(selected == pin ? ">" : " ", StatCollector.translateToLocal(pin.key()), selected == pin);
             }
-            return all.append(ticks)
-                .append(" t")
-                .toString();
-        }
-        final String in = number(seconds / unit.secondsPerUnit) + " " + lang(unit.langKey);
-        if (!unit.duration) return in;
-        return in + TooltipStyle.BODY + " (" + ticks + " t" + TooltipStyle.BODY + ")";
+            if (selected == Pin.NONE) rows.langRow(TARGET + "none_hint");
+            else if (kind != null) kind.tooltip(rows, parent);
+        });
     }
 
-    private static List<String> portLines(final List<Port<?>> ports, final Map<Integer, Float> perCycle,
-        final float cycleSeconds, final RateUnit unit) {
-        final List<String> items = new ArrayList<>();
+    /** Every setting the machine has a row for, as the machine currently reads it. */
+    @SuppressWarnings("unchecked")
+    private void writeSettings(final TooltipBuilder out) {
+        final Node node = parent.getData();
+        final MachineConfig config = node.getMachineConfig();
+
+        out.group(LANG + "settings", rows -> {
+            for (final SettingDef<?> def : visible(config, node)) {
+                final Object value = config.get(def);
+                if (value != null) ((SettingDef<Object>) def).tooltip(value)
+                    .accept(rows);
+            }
+        });
+    }
+
+    private static List<SettingDef<?>> visible(final MachineConfig config, final Node node) {
+        return config.getProfile()
+            .visibleSettings(new RecipeContext(node.getProperties()), config)
+            .<SettingDef<?>>map(def -> def)
+            .toList();
+    }
+
+    /**
+     * One row per port actually moving: a port this craft does not move, or moves at zero, is not a
+     * row.
+     */
+    private static void ports(final TooltipBuilder out, final List<Port<?>> ports, final Map<Integer, Float> perCycle,
+        final int duration, final RateUnit unit) {
         for (int i = 0; i < ports.size(); i++) {
             final Float rate = perCycle.get(i);
             if (rate == null || rate <= 0) continue;
             final Port<?> port = ports.get(i);
-            final float amount = rate / cycleSeconds / (float) unit.secondsPerUnit;
-            items.add(
-                TooltipStyle.entry(
-                    port.getDisplayName(),
-                    TooltipStyle.RATE,
+            out.detail(
+                port.getDisplayName(),
+                TooltipTheme.Role.RATE,
+                TooltipBuilder.rate(
                     port.getType()
-                        .formatAmount(amount) + lang(unit.suffixKey())));
+                        .formatAmount(GuiHelper.rate(rate, duration, unit)),
+                    unit));
         }
-        return items;
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    private static List<String> costLines(final Node node) {
+    /** Every summary property this machine actually spends, sorted so the list does not jump around. */
+    @SuppressWarnings("unchecked")
+    private static void properties(final TooltipBuilder out, final Node node) {
         final List<SummaryProperty> found = new ArrayList<>();
-        for (final var entry : node.getProperties()
+        for (final Map.Entry<RecipeProperty<?>, Object> entry : node.getProperties()
             .entrySet()) {
             if (!(entry.getKey() instanceof final SummaryProperty prop)) continue;
             if (!(entry.getValue() instanceof final Number num) || num.floatValue() == 0) continue;
             found.add(prop);
         }
-        if (found.isEmpty()) return List.of();
-
         found.sort(Comparator.comparing(prop -> prop.formatDisplayName(prop.getDefaultValue())));
-        final List<String> items = new ArrayList<>();
+
         for (final SummaryProperty prop : found) {
             final String name = prop.formatDisplayName(prop.getDefaultValue());
             final float value = ((Number) node.getProperties()
                 .get(prop)).floatValue();
-            items.add(
-                TooltipStyle.entry(name, name.endsWith("/t") ? TooltipStyle.POWER : TooltipStyle.BODY,
-                    prop.formatAmount(value)));
+            // A property named per tick is energy, and the pack marks energy wherever it turns up.
+            out.detail(name, name.endsWith("/t") ? TooltipTheme.Role.POWER : TooltipTheme.Role.BODY,
+                prop.formatAmount(value));
         }
-        return items;
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    private void settings(final RichTooltip t, final Node node) {
-        final MachineConfig config = node.getMachineConfig();
-        final List<String> items = new ArrayList<>();
-        for (final SettingDef def : config.getProfile()
-            .visibleSettings(new RecipeContext(node.getProperties()), config)
-            .toList()) {
-            final Object value = config.get(def);
-            if (value == null) continue;
-            final String item = def.tooltip(value);
-            if (item != null) items.add(item);
-        }
-        group(t, LANG + "settings", items);
-    }
-
-    private static void group(final RichTooltip t, final String headerKey, final List<String> items) {
-        if (items.isEmpty()) return;
-        t.addLine(IKey.str(TooltipStyle.rule()));
-        t.addLine(IKey.str(TooltipStyle.header(headerKey)));
-        for (final String item : items) t.addLine(IKey.str(item));
-    }
-
-    private static String number(final double value) {
-        return GuiHelper.trimTrailingZeros(String.format(Locale.ROOT, "%.2f", value));
-    }
-
-    private static String lang(final String key) {
-        return StatCollector.translateToLocal(key);
-    }
-
-    private static boolean isShiftHeld() {
-        return Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
-    }
-
+    /** The recipe's own craft time, which a machine knows before it has ever been solved. */
     private static int durationTicks(final Node node) {
         final Object raw = node.getProperties()
             .get(RecipePropertyAPI.DURATION_TICKS);
         return raw instanceof final Number n ? n.intValue() : 0;
     }
+
+    private static RateUnit rateUnit() {
+        return Plan.getInstance()
+            .getSummary()
+            .getRateUnit();
+    }
+
 }

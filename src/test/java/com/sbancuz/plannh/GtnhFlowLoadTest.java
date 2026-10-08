@@ -1,6 +1,7 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
@@ -13,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.data.setting.Settings;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
 import com.sbancuz.plannh.harness.GtnhFlowLoader.LoadedChart;
 import com.sbancuz.plannh.harness.TestIngredients;
@@ -67,11 +68,16 @@ class GtnhFlowLoadTest {
 
         // The target pin lands on the node itself: output 0 is the fuel, pinned at 10/s. The
         // count stays free - AUTO derives the exact fractional extent from the rate.
-        assertTrue(!fusion.isMachineCountFixed(), "a target: pin must not fix the machine count");
+        assertNotEquals(
+            Pin.FIXED_COPIES,
+            fusion.getMachineConfig()
+                .getTargetKind(),
+            "a target: pin must not fix the machine count");
         assertEquals(
             10.0,
-            fusion.getTargetOutputRates()
-                .get(0),
+            fusion.getMachineConfig()
+                .getRates()
+                .rate(0),
             1e-9,
             "10/s on the fuel output");
     }
@@ -91,11 +97,16 @@ class GtnhFlowLoadTest {
                 .size());
 
         final Node dt = chart.machine(0);
-        assertTrue(dt.isMachineCountFixed(), "number: pin must fix the machine count");
+        assertEquals(
+            Pin.FIXED_COPIES,
+            dt.getMachineConfig()
+                .getTargetKind(),
+            "number: pin must fix the machine count");
         assertEquals(
             1,
             dt.getMachineConfig()
-                .get(Settings.MACHINES));
+                .getCopies()
+                .copies());
     }
 
     @Test
@@ -174,7 +185,7 @@ class GtnhFlowLoadTest {
         for (final Edge edge : chart.graph()
             .getEdges()
             .values()) {
-            parent.put(find(parent, edge.sourceNodeId), find(parent, edge.targetNodeId));
+            parent.put(find(parent, edge.getSourceNodeId()), find(parent, edge.getTargetNodeId()));
         }
         final Set<UUID> roots = new HashSet<>();
         for (final UUID id : parent.keySet()) {

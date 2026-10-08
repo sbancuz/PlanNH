@@ -16,11 +16,9 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.ModularScreen;
 import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
-import com.cleanroommc.modularui.value.DoubleValue;
 import com.cleanroommc.modularui.value.EnumValue;
 import com.cleanroommc.modularui.value.StringValue;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
@@ -81,41 +79,6 @@ public class FlowchartScreen extends ModularScreen {
         Menu<?> contextMenu = new Menu<>();
 
         CanvasWidget canvas = new CanvasWidget(contextMenu, panel, new ElkLayoutStrategy());
-
-        // Target-rate editor: one numeric field in a floating menu. numbersDouble gives the MUI2
-        // math parser, so "2k" and "1/3" work; committing (enter or clicking away) closes it.
-        final Menu<?> targetEditor = new Menu<>();
-        // Re-read in onFocus: the field only refreshes its bound value while unfocused, so it
-        // would otherwise show the previously edited port's rate.
-        final DoubleValue.Dynamic targetValue = new DoubleValue.Dynamic(
-            canvas::editedTargetRate,
-            canvas::setEditedTargetRate);
-        final TextFieldWidget targetField = new TextFieldWidget() {
-
-            @Override
-            public void onFocus(final ModularGuiContext context) {
-                super.onFocus(context);
-                // trimmed: String.valueOf(double) renders 26 as "26.0"
-                setText(GuiHelper.trimTrailingZeros(targetValue.getStringValue()));
-                handler.setCursor(0, getText().length(), true, false);
-            }
-        }.numbersDouble(0, 1_000_000)
-            .value(targetValue)
-            .size(70, 14);
-        // Focus from the field's own update listener: the only place the widget is guaranteed
-        // to be in the tree.
-        targetField.onUpdateListener(w -> {
-            if (w.isValid() && canvas.consumeTargetEditorFocus()) {
-                w.getContext()
-                    .focus(w);
-            }
-        }, true);
-        targetEditor.setEnabledIf(_ -> canvas.isTargetEditorOpen())
-            .coverChildren()
-            .background()
-            .relativeToScreen()
-            .child(targetField);
-        canvas.setTargetEditorMenu(targetEditor);
 
         contextMenu.setEnabledIf(_ -> canvas.isMenuOpen())
             .coverChildren()
@@ -309,7 +272,6 @@ public class FlowchartScreen extends ModularScreen {
         panel.child(mainColumn);
         panel.child(new SummaryWidget(canvas));
         panel.child(contextMenu);
-        panel.child(targetEditor);
 
         return new FlowchartScreen(panel, canvas);
     }

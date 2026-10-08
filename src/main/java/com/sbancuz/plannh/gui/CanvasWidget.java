@@ -37,7 +37,7 @@ import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.client.ScreenEffect;
 import com.sbancuz.plannh.client.UIBlurEffect;
-import com.sbancuz.plannh.data.flowchart.Edge2;
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
@@ -182,13 +182,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     @Nullable
     private NodeLookupContext pendingLookup = null;
-    @Setter
-    @Nullable
-    private Menu<?> targetEditorMenu = null;
-    @Nullable
-    private Node targetEditNode;
-    private int targetEditOutput = -1;
-    private boolean targetFocusPending;
 
     @Nullable
     @Getter
@@ -269,9 +262,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final int nw = widget.getArea().width;
             final int nh = widget.getArea().height;
 
-            if (x < n.getX() + nw && n.getX() < x + w
-                && y < n.getY() + nh
-                && n.getY() < y + h) {
+            if (x < n.getX() + nw && n.getX() < x + w && y < n.getY() + nh && n.getY() < y + h) {
                 return true;
             }
         }
@@ -305,7 +296,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public void resolveOverlapsFrom(final FlowchartWidget<?, ?> source) {
         final GraphData srcData = source.getData();
         final int srcW = source.getArea().width;
-        final int srcH =  source.getArea().height;
+        final int srcH = source.getArea().height;
 
         for (final FlowchartWidget<?, ?> other : flowchartWidgets.values()) {
             if (other == source) continue;
@@ -314,7 +305,8 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final int dstH = other.getArea().height;
 
             if (srcData.getX() < dstData.getX() + dstW && dstData.getX() < srcData.getX() + srcW
-                && srcData.getY() < dstData.getY() + dstH && dstData.getY() < srcData.getY() + srcH) {
+                && srcData.getY() < dstData.getY() + dstH
+                && dstData.getY() < srcData.getY() + srcH) {
                 final int[] spot = findFreeSpot(dstData.getX(), dstData.getY(), dstW, dstH);
 
                 PlanAPI.recordEdit(graph, () -> {
@@ -374,62 +366,6 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             .set(plan.getActiveIndex(), restored);
         setGraph(restored);
         PlanAPI.save();
-    }
-
-    // ── Target-rate editor ──
-    // The node config panel is immediate-mode drawing, so it cannot host a text widget; the
-    // editor is a screen-level menu (same pattern as the context menu) that this widget opens
-    // and positions, with the value bridged through the two methods below.
-    // TODO rework
-    public boolean isTargetEditorOpen() {
-        return targetEditNode != null;
-    }
-
-    public void openTargetEditor(final Node node, final int outputIndex) {
-        targetEditNode = node;
-        targetEditOutput = outputIndex;
-        if (targetEditorMenu != null) {
-            targetEditorMenu.pos(getContext().getAbsMouseX(), getContext().getAbsMouseY());
-        }
-        targetFocusPending = true;
-    }
-
-    /**
-     * True exactly once per editor opening, and only while the editor is still open.
-     */
-    public boolean consumeTargetEditorFocus() {
-        if (!targetFocusPending || targetEditNode == null) return false;
-        targetFocusPending = false;
-        return true;
-    }
-
-    public void closeTargetEditor() {
-        targetEditNode = null;
-        targetEditOutput = -1;
-    }
-
-    public double editedTargetRate() {
-        if (targetEditNode == null) return 0;
-        return targetEditNode.getTargetOutputRates()
-            .getOrDefault(targetEditOutput, 0.0);
-    }
-
-    /**
-     * Commits the typed rate as one undo step and closes the editor; 0 clears the pin.
-     */
-    public void setEditedTargetRate(final double rate) {
-        final Node node = targetEditNode;
-        final int out = targetEditOutput;
-        if (node == null) return;
-        PlanAPI.recordEdit(graph, () -> {
-            if (rate <= 0) node.getTargetOutputRates()
-                .remove(out);
-            else node.getTargetOutputRates()
-                .put(out, rate);
-        });
-        graph.bumpVersion();
-        PlanAPI.save();
-        closeTargetEditor();
     }
 
     // todo redo
@@ -564,7 +500,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     public void rebuildArrowWidgets() {
         arrowWidgets.clear();
-        for (final Edge2 edge : graph.getEdges2()
+        for (final Edge edge : graph.getEdges()
             .values()) {
             child(new ArrowWidget(this, edge));
         }
@@ -874,7 +810,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             .toList();
 
         final List<ArrowRouter.Request> requests = new ArrayList<>();
-        for (final Edge2 edge : graph.getEdges2()
+        for (final Edge edge : graph.getEdges()
             .values()) {
             final NodeWidget src = nodeWidgets2.get(edge.getSourceNodeId());
             final NodeWidget dst = nodeWidgets2.get(edge.getTargetNodeId());

@@ -39,6 +39,10 @@ public class Port<T> {
         return type.formatDisplayName(value);
     }
 
+    public boolean hasVisibleAmount() {
+        return type.extractAmount(value) > 0;
+    }
+
     /** Pin color for this port's ingredient; the type's pin color when none is derivable. */
     public int getPinColor(final boolean input) {
         return colorOr(input ? type.getPinInputColor() : type.getPinOutputColor());

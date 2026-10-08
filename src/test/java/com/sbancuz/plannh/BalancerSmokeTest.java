@@ -1,7 +1,6 @@
 package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,6 +15,7 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
+import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.flowchart.balancer.SolverMessage;
 import com.sbancuz.plannh.data.setting.Settings;
 import com.sbancuz.plannh.harness.GtnhFlowLoader;
@@ -84,7 +84,11 @@ class BalancerSmokeTest {
     void autoModeReportsExactFractionalCounts_andDoesNotWriteThemBack() {
         final LoadedChart chart = GtnhFlowLoader.load("loopGraph");
         final Node lcr = chart.machine(1);
-        assertFalse(lcr.isMachineCountFixed());
+        // NONE, not null: "no target" is a pin the chart carries, not an absent field.
+        assertEquals(
+            Pin.NONE,
+            lcr.getMachineConfig()
+                .getTargetKind());
         lcr.getMachineConfig()
             .set(Settings.MACHINES, 3);
 

@@ -15,7 +15,6 @@ import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
-import com.sbancuz.plannh.data.setting.Settings;
 
 /**
  * The chart as the solver sees it, built ONCE per run: machines in recipe-extent form, ports
@@ -45,13 +44,7 @@ public final class ModelData {
 
         final double[] inQty;
         final double[] outQty;
-        /**
-         * Extent implied by the node's target output rates, or zero when there is none.
-         */
         final double targetExtent;
-        /**
-         * Extent implied by the node's fixed machine count, or null when unfixed.
-         */
         final @Nullable Double fixedExtent;
 
         private Machine(final Node node) {
@@ -74,9 +67,11 @@ public final class ModelData {
                     .get(i);
                 outQty[i] = Math.max(0, s.getAmount()) * s.getChance() * cfg.outputMultiplier(i) * tf;
             }
-            this.targetExtent = targetExtent(node, outQty);
-            this.fixedExtent = node.isMachineCountFixed() ? node.getMachineConfig()
-                .get(Settings.MACHINES) * (double) Numerics.TICKS_PER_SECOND
+
+            this.targetExtent = cfg.getTargetKind() == Pin.TARGET_RATE ? cfg.getRates()
+                .extent(outQty) : 0;
+            this.fixedExtent = cfg.getTargetKind() == Pin.FIXED_COPIES ? cfg.getCopies()
+                .copies() * (double) Numerics.TICKS_PER_SECOND
                 / durTicks : null;
         }
 
@@ -88,22 +83,6 @@ public final class ModelData {
             return input ? inQty[portIndex] : outQty[portIndex];
         }
 
-        /**
-         * The extent implied by the node's target output rates: rate divided by per-craft quantity,
-         * largest target winning (parallel outputs share one extent, so only the tightest can be hit
-         * exactly). Targets on stale ports are skipped the same way stale edges are.
-         */
-        private static double targetExtent(final Node node, final double[] outQty) {
-            double extent = 0;
-            for (final Map.Entry<Integer, Double> t : node.getTargetOutputRates()
-                .entrySet()) {
-                if (t.getValue() == null || t.getValue() <= 0) continue;
-                final int i = t.getKey();
-                if (i < 0 || i >= outQty.length || outQty[i] <= 0) continue;
-                extent = Math.max(extent, t.getValue() / outQty[i]);
-            }
-            return extent > 0 ? extent : 0;
-        }
     }
 
     public record EdgeData(UUID id, int srcPort, int dstPort) {}
@@ -146,22 +125,22 @@ public final class ModelData {
 
         for (final Edge edge : graph.getEdges()
             .values()) {
-            final Integer src = machineIndex.get(edge.sourceNodeId);
-            final Integer dst = machineIndex.get(edge.targetNodeId);
+            final Integer src = machineIndex.get(edge.getSourceNodeId());
+            final Integer dst = machineIndex.get(edge.getTargetNodeId());
             if (src == null || dst == null) continue;
             // Edges keep the port indices they were saved with, while port lists can shrink (a
             // settings change, or a recipe that lost an output between modpack versions). Drop the
             // dangling edge rather than indexing past the node's ports.
             if (!machines.get(src)
-                .hasPort(edge.sourceOutputIndex, false)
+                .hasPort(edge.getSourceOutputItemIndex(), false)
                 || !machines.get(dst)
-                    .hasPort(edge.targetInputIndex, true)) {
+                    .hasPort(edge.getTargetInputItemIndex(), true)) {
                 continue;
             }
-            final int srcPort = internPort(src, edge.sourceOutputIndex, false);
-            final int dstPort = internPort(dst, edge.targetInputIndex, true);
+            final int srcPort = internPort(src, edge.getSourceOutputItemIndex(), false);
+            final int dstPort = internPort(dst, edge.getTargetInputItemIndex(), true);
             final int e = edges.size();
-            edges.add(new EdgeData(edge.id, srcPort, dstPort));
+            edges.add(new EdgeData(edge.getId(), srcPort, dstPort));
             connectedPorts.get(srcPort)
                 .edges()
                 .add(e);

@@ -10,10 +10,7 @@ import java.util.function.IntConsumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
 
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.GuiDraw;
@@ -523,7 +520,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     @Nullable
     private String portLabel(final Port<?> port, final int index, final Balancer.NodeBalance nb, final float sec,
         final boolean output) {
-        if (!hasVisibleAmount(port)) return null;
+        if (!port.hasVisibleAmount()) return null;
         // Both directions read the balance's effective totals so exact rates sit next to exact
         // rates on the same node.
         final float total = effectiveTotal(nb, index, output, port.getAmount());
@@ -686,56 +683,13 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final MachineConfig c = node.getMachineConfig();
         int y = y0;
 
-        // Fixed toggle
-        final boolean fixed = node.isMachineCountFixed();
-        final String fixedLabel = (fixed ? "[\u2713] " : "[  ] ") + "Fixed";
-        GuiDraw.drawText(
-            fixedLabel,
-            x,
-            y,
-            1.0f,
-            fixed ? PlannhColors.SETTING_ON.getColor() : PlannhColors.SETTING_OFF.getColor(),
-            false);
-        configZones.add(new ClickZone(x, y, x + BOOL_CLICK_W, y + CLICK_H, () -> {
-            node.setMachineCountFixed(!fixed);
-            onConfigChanged();
-        }));
-        y += LINE_H;
+        // The fixed toggle and the per-output target rows used to live here, the rows behind a
+        // screen-level rate editor. Both are TargetList's now, inside the node's own widget tree.
 
         // for (final SettingDef<?> def : profile
         // .visibleSettings(new RecipeContext(node.getProperties()), c.getSettings())) {
         // y = drawSetting(x, y, def, c);
         // }
-
-        // One row per output: pin the rate the chart should produce. The row opens a text
-        // editor; rates are typed, not stepped.
-        final FontRenderer font = Minecraft.getMinecraft().fontRenderer;
-        for (final int idx : targetableOutputs()) {
-            final double current = node.getTargetOutputRates()
-                .getOrDefault(idx, 0.0);
-            // Scale suffixes but not the port's formatter: this row is what the rate editor writes
-            // back, and the editor takes a plain number. "1.2k" is the same quantity as 1200, but a
-            // fluid's "1.0B" is 1000 litres in a field that wants litres.
-            final String value = current > 0 ? GuiHelper.formatRate((float) current) + "/s" : "off";
-            final int valueW = font.getStringWidth(value);
-            final String label = font.trimStringToWidth(
-                "Tgt " + node.getOutputs()
-                    .get(idx)
-                    .getDisplayName(),
-                TARGET_ROW_W - valueW - 6);
-            GuiDraw.drawText(label, x, y, 1.0f, PlannhColors.TEXT_LIGHT.getColor(), false);
-            GuiDraw.drawText(
-                value,
-                x + TARGET_ROW_W - valueW,
-                y,
-                1.0f,
-                current > 0 ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_MUTED.getColor(),
-                false);
-            final int out = idx;
-            configZones
-                .add(new ClickZone(x, y, x + TARGET_ROW_W, y + CLICK_H, () -> canvas.openTargetEditor(node, out)));
-            y += LINE_H;
-        }
 
         if (node.getAvailableExtractors()
             .size() > 1) {
@@ -836,9 +790,9 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
         final List<Integer> result = new ArrayList<>();
         for (int i = 0; i < node.getOutputs()
             .size(); i++) {
-            if (hasVisibleAmount(
-                node.getOutputs()
-                    .get(i))) {
+            if (node.getOutputs()
+                .get(i)
+                .hasVisibleAmount()) {
                 result.add(i);
             }
         }
@@ -994,19 +948,6 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
     private static boolean displayMatches(final Port<?> port, final ItemStack stack) {
         // final ItemStack display = port.getDisplayStack();
         // return display != null && display.isItemEqual(stack);
-        return false;
-    }
-
-    /** Whether the port draws a throughput row: it holds a value with a positive amount. */
-    private static boolean hasVisibleAmount(final Port<?> port) {
-        if (port.getType() == RecipePropertyAPI.ITEM) {
-            final ItemStack stack = (ItemStack) port.getValue();
-            return stack != null && stack.stackSize > 0;
-        }
-        if (port.getType() == RecipePropertyAPI.FLUID) {
-            final FluidStack fs = (FluidStack) port.getValue();
-            return fs != null && fs.amount > 0;
-        }
         return false;
     }
 

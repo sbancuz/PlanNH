@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.widget.IWidget;
@@ -15,7 +14,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.gui.common.TooltipStyle;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
+import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 import lombok.Getter;
 
@@ -34,13 +34,12 @@ public abstract class SettingDef<T> implements JsonSerializer<Object>, JsonDeser
         Settings.register(this);
     }
 
-    /** This setting's line on a node tooltip, or null when the value it holds has nothing to say. */
-    public String tooltip(final T value) {
-        return TooltipStyle.entry(getLabel(), valueColour(), String.valueOf(value));
+    public Consumer<TooltipBuilder> tooltip(final T value) {
+        return out -> out.entry(getLabel(), valueRole(), String.valueOf(value));
     }
 
-    protected EnumChatFormatting valueColour() {
-        return TooltipStyle.IDENTITY;
+    protected TooltipTheme.Role valueRole() {
+        return TooltipTheme.Role.IDENTITY;
     }
 
     /**

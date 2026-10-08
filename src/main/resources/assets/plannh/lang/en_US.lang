@@ -114,19 +114,38 @@ plannh.share.copy_from_clipboard=Plan imported from clipboard
 
 ## GUI
 ## GUI - Node throughput
-plannh.gui.node.throughput.ops=×%s
 plannh.gui.node.throughput.duration=%s
+plannh.gui.node.throughput.copies_needed=Copies needed §7
 plannh.gui.node.throughput.unbalanced=not balanced
 plannh.gui.node.throughput.unplanned=not planned
 plannh.gui.node.throughput.settings=Settings
 plannh.gui.node.throughput.shift_hint=Hold §f§l[LSHIFT]§7 for every unit and setting
 
+## GUI - Node port
+## The rate under a port, and the rows that take it apart
+plannh.gui.node.port.rate=Rate
+plannh.gui.node.port.per_unit=Per unit
+plannh.gui.node.port.consumption=Input consumption
+plannh.gui.node.port.productivity=Output productivity
+plannh.gui.node.port.shift_hint=Hold §f§l[LSHIFT]§7 for the rate in every unit
+plannh.gui.node.port.configure_hint=Right-Click to Configure
 
-## GUI - Node pin
-plannh.gui.node.fixed=Fixed machine count
-plannh.gui.node.fixed.short=✓
-plannh.gui.node.fixed.pinned_hint=Kept at the count above; the balance fits the rest of the chart around it
-plannh.gui.node.fixed.unpinned_hint=Whatever count the balance asks for; click to pin it to the count above
+## GUI - Node balancer target
+## Target selector, at the head of the target fold
+plannh.gui.node.target.label=Target
+plannh.gui.node.target.prev=Previous target
+plannh.gui.node.target.next=Next target
+## Target fold
+plannh.gui.node.target.title=Held by
+plannh.gui.node.target.rows=Target rows
+plannh.gui.node.target.rows.hide_hint=Click to fold these rows away
+plannh.gui.node.target.rows.show_hint=Click to show the rows again
+plannh.gui.node.target.none_hint=No target selected, so the balance picks this machine's count
+plannh.gui.node.target.copies=Copies
+plannh.gui.node.target.solved=The balance asks for
+plannh.gui.node.target.no_outputs=This recipe names no output, so there is no rate to ask for
+plannh.gui.node.target.unsupported=%s honours no target; switch the chart's balance mode to pin machines
+plannh.gui.node.target.extent=Extent pins are handed to a solve by the caller, not set on a machine
 
 ## GUI - Node settings
 plannh.gui.node.settings=Machine settings
@@ -138,6 +157,7 @@ plannh.gui.group.add_machine_group=Add Machine Group
 plannh.gui.group.machine_badge=[M]
 plannh.gui.group.machine_group_tooltip=Machine group: every recipe framed here runs on the same machine, so they share its settings and their machine counts add up
 plannh.gui.group.machine_capacity=Machines in this group; 0 for as many as it takes
+plannh.gui.group.load=§7×%s §8copies of %s
 
 ## GUI - Balancer
 plannh.gui.balancer_mode=Mode: %s
@@ -175,9 +195,10 @@ plannh.solver.inexact_residual=Returned an inexact port residual %s
 plannh.solver.under_supply=Returned a port that under-supplies: residual %s
 plannh.solver.gate_count_not_certified=Gate count %d is minimal but not certified optimal (exact search over budget)
 ## Names
-plannh.solver.pin_extent=extent pin
-plannh.solver.pin_target=target rate
-plannh.solver.pin_count=fixed machine count
+plannh.solver.none=none
+plannh.solver.pin_extent=extent
+plannh.solver.pin_target=rate
+plannh.solver.pin_copies=copies
 plannh.solver.pref_fewest_gates=fewest gates
 plannh.solver.pref_fewest_imports=fewest imports
 plannh.solver.pref_least_excess=least excess
@@ -198,7 +219,7 @@ plannh.solver.boundary_flow=%s
 plannh.solver.boundary_nothing=nothing crosses the boundary
 
 ## NEI config
-nei.options.plannh = "PlanNH";
+nei.options.plannh=PlanNH
 nei.options.plannh.item_columns=Item Columns
 nei.options.plannh.item_columns.tip=Number of columns in the NEI item panel (minimum: 6)
 nei.options.plannh.blur_strength=Blur Strength
@@ -252,3 +273,7 @@ plannh.gui.rate.second.suffix=/s
 plannh.gui.rate.minute.suffix=/m
 plannh.gui.rate.hour.suffix=/h
 plannh.gui.rate.day.suffix=/d
+
+## GUI - Numbers
+## How a count of something is written, beside the thing it counts
+plannh.gui.number.multiple=×%s

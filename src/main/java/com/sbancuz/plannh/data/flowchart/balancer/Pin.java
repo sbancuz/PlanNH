@@ -8,12 +8,29 @@ package com.sbancuz.plannh.data.flowchart.balancer;
  */
 public enum Pin {
 
-    /** The node's fixed machine count, converted to an extent (count * ticks/s / duration). */
-    FIXED_COUNT,
+    NONE("plannh.solver.none", true),
+
+    /** The node's fixed copy count, converted to an extent (copies * ticks/s / duration). */
+    FIXED_COPIES("plannh.solver.pin_copies", true),
 
     /** A node's target output rate, converted to the extent that just satisfies it. */
-    TARGET_RATE,
+    TARGET_RATE("plannh.solver.pin_target", true),
 
     /** An explicit extra extent pin supplied by the caller (crafts/second). */
-    EXTENT
+    EXTENT("plannh.solver.pin_extent", false);
+
+    private final String key;
+    public final boolean hasWidget;
+
+    public static final Pin[] VALUES = values();
+
+    Pin(final String langKey, boolean hasWidget) {
+        this.key = langKey;
+        this.hasWidget = hasWidget;
+    }
+
+    public String key() {
+        return key;
+    }
+
 }

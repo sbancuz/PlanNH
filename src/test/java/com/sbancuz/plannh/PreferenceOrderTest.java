@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
@@ -46,7 +47,7 @@ class PreferenceOrderTest {
             final List<UUID> edgeIds = graph.getEdges()
                 .values()
                 .stream()
-                .map(e -> e.id)
+                .map(Edge::getId)
                 .toList();
             assertEquals(
                 nodeIds.stream()

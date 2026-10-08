@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.sbancuz.plannh.data.flowchart.Edge2;
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.IngredientColors;
 import com.sbancuz.plannh.gui.node.NodeWidget;
@@ -25,7 +25,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
     private final CanvasWidget canvas;
 
     @Getter
-    private final Edge2 edge;
+    private final Edge edge;
 
     private final List<EdgeWidget> edges = new ArrayList<>();
     private final List<CornerWidget> corners = new ArrayList<>();
@@ -41,7 +41,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
     }
 
     // normal ctor
-    public ArrowWidget(CanvasWidget canvas, Edge2 edge) {
+    public ArrowWidget(CanvasWidget canvas, Edge edge) {
         this.canvas = canvas;
         this.edge = edge;
         child(head);
@@ -127,7 +127,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
 
     public void removeFromGraph() {
         canvas.getGraph()
-            .getEdges2()
+            .getEdges()
             .remove(edge.getId());
         canvas.getArrowWidgets()
             .remove(edge.getId());

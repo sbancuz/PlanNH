@@ -27,7 +27,7 @@ import com.sbancuz.plannh.data.flowchart.balancer.StageOutcome;
  * the integer machine counts (a MILP, {@link ModelBuilder#extentCounts()}) and the answer needs no
  * read-out ceil: what the stage commits has whole-machine counts by construction. Every unpinned
  * machine carries the one-machine floor {@code count >= 1}. Pinned machines are locked at their
- * count (the FIXED_COUNT pin). A feasible chart gets one answer, so this entry commits the point
+ * copies (the FIXED_COPIES pin). A feasible chart gets one answer, so this entry commits the point
  * and short-circuits the chain.
  */
 public final class ExtentMinStage implements Entry<StageOutcome> {

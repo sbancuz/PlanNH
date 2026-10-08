@@ -67,7 +67,7 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
                 true),
             true);
 
-        Flow mainColumn = FlowchartFlow.column(this)
+        Flow mainColumn = FlowchartFlow.col(this)
             .coverChildren(GROUP_MIN_W, 0)
             .collapseDisabledChild();
 

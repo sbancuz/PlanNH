@@ -7,7 +7,7 @@ import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.value.BoolValue;
 import com.cleanroommc.modularui.widgets.ToggleButton;
 import com.sbancuz.plannh.data.MachineConfig;
-import com.sbancuz.plannh.gui.common.TooltipStyle;
+import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
 
 public class BooleanSettingDef extends SettingDef<Boolean> {
 
@@ -16,8 +16,8 @@ public class BooleanSettingDef extends SettingDef<Boolean> {
     }
 
     @Override
-    public String tooltip(final Boolean value) {
-        return value ? TooltipStyle.flag(getLabel()) : null;
+    public Consumer<TooltipBuilder> tooltip(final Boolean value) {
+        return value ? out -> out.flag(getLabel()) : out -> {};
     }
 
     @Override

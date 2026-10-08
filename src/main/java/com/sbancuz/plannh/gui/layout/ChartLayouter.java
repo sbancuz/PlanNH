@@ -12,7 +12,7 @@ import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
-import com.sbancuz.plannh.data.flowchart.Edge2;
+import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -121,8 +121,8 @@ public final class ChartLayouter {
 
     private List<LayoutRelation> relations() {
         final List<LayoutRelation> relations = new ArrayList<>();
-        for (final Edge2 edge : canvas.getGraph()
-            .getEdges2()
+        for (final Edge edge : canvas.getGraph()
+            .getEdges()
             .values()) {
             relations.add(new LayoutRelation(edge.getId(), edge.getSourceNodeId(), edge.getTargetNodeId()));
         }
