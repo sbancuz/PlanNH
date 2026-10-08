@@ -10,6 +10,7 @@ public class EdgeWidget extends ArrowComponentWidget {
 
     public EdgeWidget(ArrowWidget parent) {
         super(parent);
+        name("arrow.segment");
     }
 
     @Override

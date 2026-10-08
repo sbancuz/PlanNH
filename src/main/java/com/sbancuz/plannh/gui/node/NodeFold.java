@@ -6,8 +6,6 @@ import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
-import com.sbancuz.plannh.api.PlanAPI;
-import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
@@ -62,6 +60,7 @@ abstract class NodeFold extends FlowchartFlow {
     /** One dimmed line, standing in for the rows a fold has none of. */
     protected IWidget hint(final String key, final Object... args) {
         return FlowchartFlow.row(node)
+            .name("fold.hint")
             .fullWidth()
             .coverChildrenHeight()
             .padding(2)
@@ -72,15 +71,11 @@ abstract class NodeFold extends FlowchartFlow {
                     // No width of its own: the row it sits in is the node's full width, and a text
                     // widget measures itself against its parent's rather than the window, so it wraps
                     // to the card without anyone having to say how wide the card is.
-                    node));
+                    node).fullWidth());
     }
 
     protected void commitEdit(final Runnable change) {
-        final CanvasWidget canvas = node.getCanvas();
-        PlanAPI.recordEdit(canvas.getGraph(), change);
-        canvas.getGraph()
-            .bumpVersion();
-        PlanAPI.save();
+        node.commitEdit(change);
     }
 
     /** Asks for a rebuild on the next update that finds no focused field. */

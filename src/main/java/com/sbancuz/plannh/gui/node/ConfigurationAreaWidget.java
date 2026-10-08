@@ -16,6 +16,7 @@ class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAr
     private int tallestRow;
 
     ConfigurationAreaWidget(final NodeWidget node) {
+        name("node.config");
         showScrollShadows(false);
 
         fullWidth().crossAxisAlignment(Alignment.CrossAxis.START)

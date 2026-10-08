@@ -22,17 +22,13 @@ import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.IFlowchartDraggable;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
-import com.sbancuz.plannh.gui.tooltips.TooltipTheme;
 
 class ThroughputFold extends NodeFold {
 
     private static final String LANG = "plannh.gui.node.throughput.";
-    private static final String PORT_LANG = "plannh.gui.node.port.";
 
     /** The square that opens a row. Big enough to read a hue at, small enough not to crowd the name. */
     private static final int PIN = 7;
-
-    private static final float NAME_RATIO = 2 / 3f;
 
     private final Node data;
 
@@ -48,6 +44,7 @@ class ThroughputFold extends NodeFold {
             node,
             () -> node.getData()
                 .isThroughputOpen());
+        name("fold.throughput");
 
         data = node.getData();
         lastVersion = version();
@@ -103,21 +100,27 @@ class ThroughputFold extends NodeFold {
             final Float rate = perCycle.get(i);
             if (rate == null || rate <= 0) continue;
 
-            final Flow row = rateRow(ports.get(i), input, rate, duration, unit);
+            final Flow row = rateRow(ports.get(i), i, input, rate, duration, unit);
             rateRows.add(row);
             child(row);
         }
     }
 
-    private Flow rateRow(final Port<?> port, final boolean input, final float perCycle, final int duration,
-        final RateUnit unit) {
+    private Flow rateRow(final Port<?> port, final int portIndex, final boolean input, final float perCycle,
+        final int duration, final RateUnit unit) {
+        // The summary's shape: the bar, the name and the value are siblings in one row. The bar is
+        // pixels, so it takes what it takes, and the two texts are given caps out of the rest - a name
+        // wrapped at its own cap measures to the height it is drawn at, whatever the row turns out to
+        // be. Nothing is nested inside the name either: a width handed down through two rows is a
+        // width that is not there yet.
         return FlowchartFlow.row(node)
+            .name("throughput.rate")
             .fullWidth()
             .marginBottom(ROW_GAP)
             .coverChildrenHeight()
             .childPadding(2)
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-            .tooltipBuilder(tooltip -> writeTooltip(tooltip, port, perCycle, duration))
+            .tooltipBuilder(tooltip -> writeTooltip(tooltip, port, portIndex, input, perCycle, duration))
             .child(
                 FlowchartFlow.row(node)
                     .widthRel(LABEL_RATIO)
@@ -128,35 +131,21 @@ class ThroughputFold extends NodeFold {
                     .child(new FlowchartTextWidget(IKey.str(port.getDisplayName()), node)))
             .child(
                 new FlowchartTextWidget(
-                    IKey.str(rateText(port, perCycle, duration, unit))
+                    IKey.str(PortWidget.rateText(port, perCycle, duration, unit))
                         .color(PlannhColors.ACCENT_CYAN2.getColor()),
                     node).widthRel(1 - LABEL_RATIO)
                         .textAlign(Alignment.CenterRight));
     }
 
-    private void writeTooltip(final RichTooltip tooltip, final Port<?> port, final float perCycle, final int duration) {
+    private void writeTooltip(final RichTooltip tooltip, final Port<?> port, final int portIndex, final boolean input,
+        final float perCycle, final int duration) {
+        tooltip.addFromItem(
+            port.getAllStacks()
+                .getFirst().item);
+
         final TooltipBuilder out = TooltipBuilder.create(tooltip);
-        out.entry(
-            IKey.lang(PORT_LANG + "rate"),
-            TooltipTheme.Role.RATE,
-            IKey.str(rateText(port, perCycle, duration, rateUnit())));
-
-        if (GuiHelper.shiftHeld()) {
-            out.group(PORT_LANG + "per_unit", rows -> {
-                for (final RateUnit unit : RateUnit.VALUES) {
-                    rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE, IKey.str(rateText(port, perCycle, duration, unit)));
-                }
-            });
-        } else out.langRow(PORT_LANG + "shift_hint");
+        PortWidget.writeThroughput(out, data, port, input, portIndex, perCycle, duration);
         out.flush();
-    }
-
-    /** This port's rate in the given unit, with the unit's suffix, the way every rate in the pack reads. */
-    private static String rateText(final Port<?> port, final float perCycle, final int duration, final RateUnit unit) {
-        return TooltipBuilder.rate(
-            port.getType()
-                .formatAmount(GuiHelper.rate(perCycle, duration, unit)),
-            unit);
     }
 
     private long version() {
@@ -177,6 +166,7 @@ class ThroughputFold extends NodeFold {
 
         private SquareIndicator(final NodeWidget node, final Port<?> port, final boolean input) {
             this.node = node;
+            name("throughput.rate.pin");
             width(PIN);
             fullHeight();
 

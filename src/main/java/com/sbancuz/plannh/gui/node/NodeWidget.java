@@ -8,14 +8,18 @@ import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.value.BoolValue;
+import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
@@ -23,6 +27,7 @@ import com.sbancuz.plannh.gui.CanvasWidget;
 import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.CloseButtonWidget;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
+import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.common.FlowchartWidget;
 import com.sbancuz.plannh.gui.common.HeaderTextWidget;
 import com.sbancuz.plannh.gui.edge.ArrowWidget;
@@ -37,9 +42,11 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     private static final String TARGET_LANG = "plannh.gui.node.target.rows";
     private static final String THROUGHPUT_LANG = "plannh.gui.node.throughput.rows";
     private static final String PROPERTIES_LANG = "plannh.gui.node.properties";
+    private static final String EXTRACTOR_LANG = "plannh.gui.node.extractor.";
 
-    /** The fold toggles, square for the header row they sit in. */
+    /** The fold toggles and the profile steps, square for the option row they sit in. */
     private static final int FOLD_BUTTON = 12;
+    private static final float EXTRACTOR_RATIO = 3 / 5f - 0.05f;
 
     private final RecipeAreaWidget recipeAreaWidget;
     private final CycleButtonWidget settingsFold;
@@ -69,13 +76,16 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         coverChildren();
         background(bg);
         padding(5);
+        name("node");
 
         Flow mainColumn = FlowchartFlow.col(this)
+            .name("node.column")
             .coverChildren()
             .collapseDisabledChild()
             .childPadding(4);
 
         Flow topRow = FlowchartFlow.row(this)
+            .name("node.header")
             .coverChildrenHeight()
             .childPadding(4)
             .fullWidth()
@@ -87,34 +97,66 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                 .background()
                 .setTextColor(Color.BLACK.main));
 
-        // The four folds, told apart by their icon and dimmed when they are not showing, so which rows
-        // are on screen is readable from the header alone. Each hint names what the click will do, so
-        // every tooltip turns over with its fold rather than answering a question already changed. The
-        // chip is the throughput fold and the page the properties fold: a chart reads as the target,
-        // and neither a gear nor a chip can be mistaken for either of the other three.
         throughputFold = fold(GuiTextures.PROCESSOR, THROUGHPUT_LANG, data::isThroughputOpen, data::setThroughputOpen);
         propertiesFold = fold(GuiTextures.FILE, PROPERTIES_LANG, data::isPropertiesOpen, data::setPropertiesOpen);
         targetFold = fold(GuiTextures.GRAPH, TARGET_LANG, data::isTargetOpen, data::setTargetOpen);
         settingsFold = fold(GuiTextures.GEAR, SETTINGS_LANG, data::isSettingsOpen, data::setSettingsOpen);
-        topRow.child(throughputFold);
-        topRow.child(propertiesFold);
-        topRow.child(targetFold);
-        topRow.child(settingsFold);
+
         topRow.child(new CloseButtonWidget(this));
         mainColumn.child(topRow);
 
         recipeAreaWidget = new RecipeAreaWidget(this);
         mainColumn.child(recipeAreaWidget);
+
+        // What this machine is, on the left as the folds that decide what else it says, and on the
+        // right the profile it is being read as - which is what the settings fold below is a list of.
+        Flow optionRow = FlowchartFlow.row(this)
+            .name("node.options")
+            .fullWidth()
+            .coverChildrenHeight()
+            .childPadding(4)
+            .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN);
+
+        optionRow.child(
+            FlowchartFlow.row(this)
+                .name("node.options.folds")
+                .coverChildrenHeight()
+                .childPadding(4)
+                .child(throughputFold)
+                .child(propertiesFold)
+                .child(targetFold)
+                .child(settingsFold))
+            .child(extractorSwitcher());
+        mainColumn.child(optionRow);
         mainColumn.child(new ThroughputInfoWidget(this));
-
         mainColumn.child(new ConfigurationAreaWidget(this));
-
         child(mainColumn);
+    }
+
+    private Flow extractorSwitcher() {
+        return FlowchartFlow.row(this)
+            .name("node.options.extractor")
+            .widthRel(EXTRACTOR_RATIO)
+            .coverChildrenHeight()
+            .childPadding(2)
+            .child(extractorStep(-1))
+            // Dynamic, so the name follows the switcher without the row having to be rebuilt
+            // around it: a text widget re-measures itself when its key's text changes. No width
+            // of its own either - the row it sits in is sized by its contents, so a share of
+            // that row is a share of nothing, and the name comes out one letter per line.
+            .child(
+                new FlowchartTextWidget(
+                    IKey.dynamic(
+                        () -> data.getExtractor()
+                            .getExtractorName()),
+                    this))
+            .child(extractorStep(1));
     }
 
     private CycleButtonWidget fold(final UITexture icon, final String langKey, final BooleanSupplier open,
         final Consumer<Boolean> set) {
         return new CycleButtonWidget().size(FOLD_BUTTON)
+            .name("fold.toggle")
             .stateCount(2)
             .stateOverlay(true, icon.asIcon())
             .stateOverlay(
@@ -126,6 +168,32 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                 tooltip -> TooltipBuilder.create(tooltip)
                     .langRows(langKey, langKey + (open.getAsBoolean() ? ".hide_hint" : ".show_hint"))
                     .flush());
+    }
+
+    private IWidget extractorStep(final int delta) {
+        return new ButtonWidget<>().size(FOLD_BUTTON)
+            .name(delta < 0 ? "extractor.prev" : "extractor.next")
+            .overlay(IKey.str(delta < 0 ? "<" : ">"))
+            .setEnabledIf(
+                _ -> data.getAvailableExtractors()
+                    .size() > 1)
+            .onMousePressed(clicked -> {
+                if (clicked != 0) return false;
+                commitEdit(() -> data.switchExtractor(delta));
+                return true;
+            })
+            .tooltipBuilder(
+                tooltip -> TooltipBuilder.create(tooltip)
+                    .langRows(EXTRACTOR_LANG + (delta < 0 ? "prev" : "next"))
+                    .flush());
+    }
+
+    /** Records an edit to this node's machine, so undo can take it back and the chart is re-solved. */
+    public void commitEdit(final Runnable change) {
+        PlanAPI.recordEdit(canvas.getGraph(), change);
+        canvas.getGraph()
+            .bumpVersion();
+        PlanAPI.save();
     }
 
     @Override

@@ -697,7 +697,7 @@ public class RecipeNodeWidget extends Widget<RecipeNodeWidget> implements Intera
                 .getExtractorName() + " [\u00BB]";
             GuiDraw.drawText(label, x, y, 1.0f, PlannhColors.ACCENT_GREEN.getColor(), false);
             configZones.add(new ClickZone(x, y, x + EXTRACTOR_BTN_W, y + CLICK_H, () -> {
-                node.switchExtractor();
+                node.switchExtractor(1);
                 onConfigChanged();
             }));
         }

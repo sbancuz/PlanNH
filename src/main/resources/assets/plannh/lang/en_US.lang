@@ -158,6 +158,11 @@ plannh.gui.node.properties.hide_hint=Click to fold these rows away
 plannh.gui.node.properties.show_hint=Click to show the rows again
 plannh.gui.node.properties.none_hint=This recipe carries no properties to show
 
+## GUI - Node extractor
+## The switcher on the node's option row, over how this recipe is read
+plannh.gui.node.extractor.prev=Previous extractor
+plannh.gui.node.extractor.next=Next extractor
+
 ## GUI - Node settings
 plannh.gui.node.settings=Machine settings
 plannh.gui.node.settings.hide_hint=Click to fold these rows away

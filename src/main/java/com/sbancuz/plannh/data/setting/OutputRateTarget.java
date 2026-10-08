@@ -72,6 +72,7 @@ public final class OutputRateTarget implements TargetKind {
     @Override
     public IWidget widget(final NodeWidget parent, final Consumer<Runnable> edit) {
         final Flow column = FlowchartFlow.col(parent)
+            .name("target.rates")
             .fullWidth()
             .coverChildrenHeight()
             .childPadding(ROW_GAP);
@@ -86,6 +87,7 @@ public final class OutputRateTarget implements TargetKind {
             rows++;
         }
         if (rows == 0) return FlowchartFlow.row(parent)
+            .name("target.rates.hint")
             .fullWidth()
             .coverChildrenHeight()
             .padding(2)
@@ -125,13 +127,15 @@ public final class OutputRateTarget implements TargetKind {
             parent);
 
         final FlowchartFlow flow = FlowchartFlow.row(parent);
-        flow.fullWidth()
+        flow.name("target.rates.row")
+            .fullWidth()
             .coverChildrenHeight()
             .childPadding(2)
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
             .child(label)
             .child(
-                new TextFieldWidget().width(fieldWidth())
+                new TextFieldWidget().name("target.rates.field")
+                    .width(fieldWidth())
                     .value(new DoubleValue.Dynamic(() -> rate(index), typed -> edit.accept(() -> {
                         if (typed <= 0) rates.remove(index);
                         else rates.put(index, typed);

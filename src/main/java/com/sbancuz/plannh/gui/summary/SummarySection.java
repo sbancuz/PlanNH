@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui.summary;
 
+import java.util.Locale;
+
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Summary;
@@ -22,11 +24,15 @@ class SummarySection extends ParentWidget<SummarySection> {
             .getSummary();
         this.section = section;
 
+        name(
+            "summary.section." + section.name()
+                .toLowerCase(Locale.ROOT));
         fullWidth().coverChildrenHeight()
             .setEnabledIf(_ -> data.lineCount(section) > 0);
 
         child(
             SummaryFlow.col()
+                .name("summary.section.stack")
                 .fullWidth()
                 .coverChildrenHeight()
                 .childPadding(INNER_GAP)

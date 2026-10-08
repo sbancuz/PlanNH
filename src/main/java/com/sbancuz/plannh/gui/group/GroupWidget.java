@@ -67,7 +67,10 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
                 true),
             true);
 
+        name("group");
+
         Flow mainColumn = FlowchartFlow.col(this)
+            .name("group.column")
             .coverChildren(GROUP_MIN_W, 0)
             .collapseDisabledChild();
 
@@ -88,6 +91,7 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
 
     protected Flow getTopRow() {
         return FlowchartFlow.row(this)
+            .name("group.header")
             .coverChildrenHeight()
             .fullWidth()
             .childPadding(4)
@@ -97,20 +101,24 @@ public abstract class GroupWidget<G extends Group> extends FlowchartWidget<Group
 
     protected Flow getButtonRow(IPanelHandler colorPicker) {
         return FlowchartFlow.row(this)
+            .name("group.buttons")
             .coverChildren()
             .childPadding(2)
             .reverseLayout()
             .child(new CloseButtonWidget(this))
-            .child(new ToggleButton().value(new BoolValue.Dynamic(data::isCoverChildren, val -> {
-                data.setCoverChildren(val);
-                areaWidget.configureCoverChildren();
-            }))
-                .overlay(
-                    IKey.str("CC")
-                        .color(Color.WHITE.main))
-                .addTooltipLine("Toggle Cover Children"))
             .child(
-                new ButtonWidget<>().overlay(GuiTextures.COLOR_WHEEL)
+                new ToggleButton().name("group.coverChildren")
+                    .value(new BoolValue.Dynamic(data::isCoverChildren, val -> {
+                        data.setCoverChildren(val);
+                        areaWidget.configureCoverChildren();
+                    }))
+                    .overlay(
+                        IKey.str("CC")
+                            .color(Color.WHITE.main))
+                    .addTooltipLine("Toggle Cover Children"))
+            .child(
+                new ButtonWidget<>().name("group.color")
+                    .overlay(GuiTextures.COLOR_WHEEL)
                     .onMousePressed(_ -> {
                         if (!colorPicker.isPanelOpen()) colorPicker.openPanel();
                         else colorPicker.closePanel();

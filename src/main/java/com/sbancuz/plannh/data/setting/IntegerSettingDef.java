@@ -50,7 +50,8 @@ public class IntegerSettingDef extends SettingDef<Integer> {
 
     @Override
     public IWidget settingsWidget(final MachineConfig config, final Consumer<Runnable> edit) {
-        return new TextFieldWidget().width(getMaxWidth())
+        return new TextFieldWidget().name("settings.int")
+            .width(getMaxWidth())
             .value(new IntValue.Dynamic(() -> config.get(this), val -> edit.accept(() -> config.set(this, val))))
             .numbersInt(min, max)
             .formatAsInteger(true);

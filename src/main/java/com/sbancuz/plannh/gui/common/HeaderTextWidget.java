@@ -20,6 +20,7 @@ public class HeaderTextWidget extends FlowchartTextFieldWidget {
 
     public HeaderTextWidget(FlowchartWidget<?, ?> parent, IntSupplier bgColor) {
         super(parent);
+        name("header");
 
         height(HEIGHT);
         setScale(1.5f);

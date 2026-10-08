@@ -44,6 +44,7 @@ public class ArrowWidget extends ParentWidget<ArrowWidget> {
     public ArrowWidget(CanvasWidget canvas, Edge edge) {
         this.canvas = canvas;
         this.edge = edge;
+        name(edge == null ? "arrow.preview" : "arrow");
         child(head);
 
         if (edge != null) {

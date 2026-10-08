@@ -9,6 +9,7 @@ public class HeadWidget extends ArrowComponentWidget {
 
     public HeadWidget(ArrowWidget parent) {
         super(parent);
+        name("arrow.head");
     }
 
     @Override

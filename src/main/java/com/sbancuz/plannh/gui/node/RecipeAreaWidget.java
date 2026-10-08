@@ -47,6 +47,7 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
     private boolean success = true;
 
     public RecipeAreaWidget(NodeWidget parent) {
+        name("node.recipe");
         this.parent = parent;
         Node data = parent.getData();
 

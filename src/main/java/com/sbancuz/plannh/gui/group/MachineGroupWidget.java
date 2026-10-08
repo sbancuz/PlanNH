@@ -39,6 +39,7 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
 
     public MachineGroupWidget(CanvasWidget canvas, MachineGroup data) {
         super(canvas, data);
+        name("group.machine");
         mainNode = data.getChildren()
             .values()
             .stream()
@@ -96,7 +97,8 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
     protected Flow getTopRow() {
         return super.getTopRow().child(
             0,
-            new TextWidget<>(IKey.lang("plannh.gui.group.machine_badge")).color(Color.WHITE.main)
+            new TextWidget<>(IKey.lang("plannh.gui.group.machine_badge")).name("group.machine.badge")
+                .color(Color.WHITE.main)
                 .textAlign(Alignment.CenterLeft)
                 .addTooltipLine(IKey.lang("plannh.gui.group.machine_group_tooltip")));
     }
@@ -119,9 +121,10 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
      * edit like any other: recorded for undo and version-bumped so the chart re-balances under it.
      */
     private ButtonWidget<?> capacityButton(final String label, final int step) {
-        return new ButtonWidget<>().overlay(
-            IKey.str(label)
-                .color(Color.WHITE.main))
+        return new ButtonWidget<>().name(step > 0 ? "group.capacity.add" : "group.capacity.remove")
+            .overlay(
+                IKey.str(label)
+                    .color(Color.WHITE.main))
             .onMousePressed(_ -> {
                 PlanAPI.recordEdit(canvas.getGraph(), () -> {
                     data.setMachineCapacity(Math.max(0, data.getMachineCapacity() + step));
@@ -145,7 +148,8 @@ public class MachineGroupWidget extends GroupWidget<MachineGroup> {
             if (load <= 0) return "";
             final String used = "×" + GuiHelper.formatCount(load);
             return data.getMachineCapacity() > 0 ? used + " / " + data.getMachineCapacity() : used;
-        })).color(PlannhColors.SUMMARY_TEXT_MUTED.getColor())
+        })).name("group.load")
+            .color(PlannhColors.SUMMARY_TEXT_MUTED.getColor())
             .textAlign(Alignment.CenterRight)
             .tooltipPos(RichTooltip.Pos.BELOW)
             .tooltipBuilder(

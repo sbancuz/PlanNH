@@ -102,6 +102,10 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         this.input = isInput;
         this.siblingPortWidgets = siblingPortWidgets;
 
+        // One name per port per node, so the debug overlay can say which stack of which port is
+        // under the mouse instead of just "port".
+        name((isInput ? "port.in." : "port.out.") + index.leftInt() + "." + index.secondInt());
+
         canvas = parent.getCanvas();
         node = parent.getData();
         port = (isInput ? node.getInputs() : node.getOutputs()).get(index.firstInt());
@@ -124,7 +128,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
             List<ItemStack> items = new ArrayList<>(List.of(stack.items));
             items.addFirst(null);
 
-            grid = new Grid().coverChildren()
+            grid = new Grid().name("port.config.grid")
+                .coverChildren()
                 .gridOfWidthElements(
                     PORT_CONFIG_GRID_WIDTH,
                     items,
@@ -140,7 +145,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
     }
 
     private ButtonWidget<?> createConfigButton(@Nullable ItemStack itemStack) {
-        ButtonWidget<?> button = new ButtonWidget<>().padding(1)
+        ButtonWidget<?> button = new ButtonWidget<>().name("port.config.button")
+            .padding(1)
             .coverChildren()
             .background(
                 new Rectangle().color(Color.GREY.darker(2)),
@@ -276,16 +282,22 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         final float perCycle = perCycle(balance);
         if (perCycle <= 0) return;
 
-        final int duration = balance.durationPerOp();
+        writeThroughput(out, node, port, input, index.leftInt(), perCycle, balance.durationPerOp());
+    }
+
+    public static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port, final boolean input,
+        final int portIndex, final float perCycle, final int duration) {
         final MachineConfig config = node.getMachineConfig();
 
-        final float bonus = input ? config.inputMultiplier(index.leftInt()) : config.outputMultiplier(index.leftInt());
+        final float bonus = input ? config.inputMultiplier(portIndex) : config.outputMultiplier(portIndex);
 
-        out.separator()
-            .entry(
-                IKey.lang(LANG + "rate"),
-                TooltipTheme.Role.RATE,
-                IKey.str(rateText(perCycle, duration, rateUnit())));
+        // A rule between this and what came before it - unless it is the first thing in the tooltip,
+        // where a rule would be a heading over nothing.
+        if (!out.isEmpty()) out.separator();
+        out.entry(
+            IKey.lang(LANG + "rate"),
+            TooltipTheme.Role.RATE,
+            IKey.str(rateText(port, perCycle, duration, rateUnit())));
         out.entry(
             IKey.lang(input ? LANG + "consumption" : LANG + "productivity"),
             TooltipTheme.Role.TUNABLE,
@@ -294,7 +306,7 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         if (GuiHelper.shiftHeld()) {
             out.group(LANG + "per_unit", rows -> {
                 for (final RateUnit unit : RateUnit.VALUES) {
-                    rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE, IKey.str(rateText(perCycle, duration, unit)));
+                    rows.entry(IKey.EMPTY, TooltipTheme.Role.RATE, IKey.str(rateText(port, perCycle, duration, unit)));
                 }
             });
         } else out.langRow(LANG + "shift_hint");
@@ -307,8 +319,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         return perCycle == null ? 0 : perCycle;
     }
 
-    /** This port's rate in the given unit, as the corner and the tooltip both state it. */
-    private String rateText(final float perCycle, final int duration, final RateUnit unit) {
+    /** This port's rate in the given unit, as the corner, the row and the tooltip all state it. */
+    static String rateText(final Port<?> port, final float perCycle, final int duration, final RateUnit unit) {
         return TooltipBuilder.rate(
             port.getType()
                 .formatAmount(GuiHelper.rate(perCycle, duration, unit)),

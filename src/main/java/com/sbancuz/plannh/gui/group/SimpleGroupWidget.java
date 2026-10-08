@@ -8,6 +8,7 @@ public class SimpleGroupWidget extends GroupWidget<Group> {
 
     public SimpleGroupWidget(CanvasWidget canvas, Group data) {
         super(canvas, data);
+        name("group.simple");
     }
 
     @Override

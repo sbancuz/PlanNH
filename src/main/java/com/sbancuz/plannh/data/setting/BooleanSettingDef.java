@@ -22,7 +22,7 @@ public class BooleanSettingDef extends SettingDef<Boolean> {
 
     @Override
     public IWidget settingsWidget(final MachineConfig config, final Consumer<Runnable> edit) {
-        return new ToggleButton()
+        return new ToggleButton().name("settings.toggle")
             .value(new BoolValue.Dynamic(() -> config.get(this), val -> edit.accept(() -> config.set(this, val))))
             .overlay(false, IKey.str("[ ]"))
             .overlay(true, IKey.str("[✓]"));

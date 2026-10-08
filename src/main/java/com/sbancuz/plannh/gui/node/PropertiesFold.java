@@ -23,6 +23,7 @@ class PropertiesFold extends NodeFold {
             node,
             () -> node.getData()
                 .isPropertiesOpen());
+        name("fold.properties");
     }
 
     @Override
@@ -38,6 +39,7 @@ class PropertiesFold extends NodeFold {
 
             child(
                 FlowchartFlow.row(node)
+                    .name("properties.value")
                     .fullWidth()
                     .marginBottom(ROW_GAP)
                     .coverChildrenHeight()

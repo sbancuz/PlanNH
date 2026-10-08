@@ -30,6 +30,7 @@ class TargetFold extends NodeFold {
             node,
             () -> node.getData()
                 .isTargetOpen());
+        name("fold.target");
 
         savedMode = balancerMode();
         savedSelected = selected();
@@ -70,24 +71,27 @@ class TargetFold extends NodeFold {
 
     private IWidget selector() {
         final Flow row = FlowchartFlow.row(node)
+            .name("target.selector")
             .fullWidth()
             .coverChildrenHeight()
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
             .childPadding(2);
 
-        row.child(new FlowchartTextWidget(IKey.lang(LANG + "label"), node))
+        row.child(new FlowchartTextWidget(IKey.lang(LANG + "label"), node).name("target.selector.label"))
             .child(
                 FlowchartFlow.row(node)
+                    .name("target.selector.switcher")
                     .coverChildren()
                     .childPadding(2)
                     .child(step(-1))
-                    .child(new FlowchartTextWidget(IKey.lang(selected().key()), node))
+                    .child(new FlowchartTextWidget(IKey.lang(selected().key()), node).name("target.selector.held"))
                     .child(step(1)));
         return row;
     }
 
     private IWidget step(final int delta) {
         return new ButtonWidget<>().size(STEP_BUTTON)
+            .name(delta < 0 ? "target.prev" : "target.next")
             .overlay(IKey.str(delta < 0 ? "<" : ">"))
             .onMousePressed(clicked -> {
                 if (clicked != 0) return false;

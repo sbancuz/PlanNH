@@ -1,5 +1,7 @@
 package com.sbancuz.plannh.gui.summary;
 
+import java.util.Locale;
+
 import net.minecraft.util.StatCollector;
 
 import com.cleanroommc.modularui.api.GuiAxis;
@@ -43,6 +45,13 @@ class SummaryBody extends SummaryFlow {
         rebuildRows(panel);
     }
 
+    /** Named for the section it holds, so the debug overlay says which body is under the mouse. */
+    @Override
+    public String getName() {
+        return "summary.body." + section.name()
+            .toLowerCase(Locale.ROOT);
+    }
+
     @Override
     public void onUpdate() {
         super.onUpdate();
@@ -61,7 +70,8 @@ class SummaryBody extends SummaryFlow {
         for (final Line<?> line : data.lines(section)) {
             if (line instanceof Line.Totals) {
                 child(
-                    new Widget<>().fullWidth()
+                    new Widget<>().name("summary.rule")
+                        .fullWidth()
                         .height(1)
                         .background(new Rectangle().color(PlannhColors.SEPARATOR_DIM.getColor())));
             }
@@ -74,12 +84,13 @@ class SummaryBody extends SummaryFlow {
         return switch (line) {
             case Line.Measure<?> measure -> new MeasureRow(measure, rowSuffix(), amountScale());
             case Line.Message message -> new TextRow(IKey.str(message.displayName()),
-                severityColor(message.note().severity()));
-            case Line.Text(String key) -> new TextRow(IKey.lang(key), PlannhColors.SUMMARY_TEXT.getColor());
+                severityColor(message.note().severity()), "summary.message");
+            case Line.Text(String key) -> new TextRow(IKey.lang(key), PlannhColors.SUMMARY_TEXT.getColor(),
+                "summary.text" );
             case Line.Heading heading -> new TextRow(IKey.str(heading.displayName()),
-                PlannhColors.SUMMARY_TEXT_MUTED.getColor());
-            case Line.Choice choice -> new ChoiceRow(choice);
-            case Line.Totals totals -> new TotalsRow(totals, rowsMode);
+                PlannhColors.SUMMARY_TEXT_MUTED.getColor(), "summary.heading" );
+            case Line.Choice choice -> new ChoiceRow(choice).name("summary.choice" );
+            case Line.Totals totals -> new TotalsRow(totals, rowsMode).name("summary.totals");
         };
     }
 

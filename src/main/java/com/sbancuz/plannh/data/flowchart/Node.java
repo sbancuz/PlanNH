@@ -162,10 +162,9 @@ public class Node extends GraphData {
         ports.addAll(aggregate);
     }
 
-    // TODO add button for this
-    public void switchExtractor() {
+    public void switchExtractor(final int delta) {
         if (availableExtractors.size() < 2) return;
-        extractorIndex = (extractorIndex + 1) % availableExtractors.size();
+        extractorIndex = Math.floorMod(extractorIndex + delta, availableExtractors.size());
         extractor = availableExtractors.get(extractorIndex);
 
         RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);

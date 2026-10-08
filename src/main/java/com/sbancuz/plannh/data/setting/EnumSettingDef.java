@@ -34,10 +34,11 @@ public class EnumSettingDef<E extends Enum<E>> extends SettingDef<E> {
 
     @Override
     public IWidget settingsWidget(final MachineConfig config, final Consumer<Runnable> edit) {
-        final CycleButtonWidget button = new CycleButtonWidget().value(new EnumValue.Dynamic<>(type, () -> {
-            E val = config.get(this);
-            return val != null ? val : type.getEnumConstants()[0];
-        }, val -> edit.accept(() -> config.set(this, val))))
+        final CycleButtonWidget button = new CycleButtonWidget().name("settings.cycle")
+            .value(new EnumValue.Dynamic<>(type, () -> {
+                E val = config.get(this);
+                return val != null ? val : type.getEnumConstants()[0];
+            }, val -> edit.accept(() -> config.set(this, val))))
             .width(getMaxWidth());
         for (final E constant : type.getEnumConstants()) {
             button.stateOverlay(constant, IKey.str(constant.name()));

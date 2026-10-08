@@ -14,6 +14,8 @@ final class MeasureRow extends SummaryFlow {
 
     MeasureRow(final Summary.Line.Measure<?> measure, final String suffix, final double scale) {
         super(GuiAxis.X);
+        name("summary.measure");
+
         final String raw = measure.displayAmount((float) (measure.amount() * scale));
         final String amount = raw.isEmpty() ? "" : raw + suffix;
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
@@ -23,12 +25,13 @@ final class MeasureRow extends SummaryFlow {
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
             .hoverBackground(new Rectangle().color(PlannhColors.SUMMARY_ROW_HOVER.getColor()))
             .child(
-                new TextWidget<>(IKey.str(measure.displayName()))
+                new TextWidget<>(IKey.str(measure.displayName())).name("summary.measure.name")
                     .color(amount.isEmpty() ? PlannhColors.ACCENT_BLUE.getColor() : PlannhColors.TEXT_WHITE.getColor())
                     .textAlign(Alignment.CenterLeft)
                     .widthRel(NAME_RATIO))
             .child(
-                new TextWidget<>(IKey.str(amount)).color(PlannhColors.ACCENT_BLUE.getColor())
+                new TextWidget<>(IKey.str(amount)).name("summary.measure.amount")
+                    .color(PlannhColors.ACCENT_BLUE.getColor())
                     .textAlign(Alignment.CenterRight)
                     .widthRel(1 - NAME_RATIO));
     }
