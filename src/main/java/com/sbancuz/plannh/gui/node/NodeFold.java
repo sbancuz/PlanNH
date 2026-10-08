@@ -3,11 +3,14 @@ package com.sbancuz.plannh.gui.node;
 import java.util.function.BooleanSupplier;
 
 import com.cleanroommc.modularui.api.GuiAxis;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.screen.viewport.LocatedWidget;
 import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
+import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 
 /**
  * Foldable aware area part of the configuration widget
@@ -16,6 +19,7 @@ abstract class NodeFold extends FlowchartFlow {
 
     /** The gap between two rows of a fold, and either side of the rule between two folds. */
     protected static final int ROW_GAP = 4;
+    protected static final float LABEL_RATIO = 2 / 3f;
 
     protected final NodeWidget node;
 
@@ -54,6 +58,22 @@ abstract class NodeFold extends FlowchartFlow {
 
     /** The rows, from whatever they are a function of. Called on construction and on every rebuild. */
     protected abstract void rebuild();
+
+    /** One dimmed line, standing in for the rows a fold has none of. */
+    protected IWidget hint(final String key, final Object... args) {
+        return FlowchartFlow.row(node)
+            .fullWidth()
+            .coverChildrenHeight()
+            .padding(2)
+            .child(
+                new FlowchartTextWidget(
+                    IKey.lang(key, args)
+                        .color(PlannhColors.TEXT_DIM.getColor()),
+                    // No width of its own: the row it sits in is the node's full width, and a text
+                    // widget measures itself against its parent's rather than the window, so it wraps
+                    // to the card without anyone having to say how wide the card is.
+                    node));
+    }
 
     protected void commitEdit(final Runnable change) {
         final CanvasWidget canvas = node.getCanvas();

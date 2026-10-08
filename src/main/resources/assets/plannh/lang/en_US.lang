@@ -151,6 +151,13 @@ plannh.gui.node.target.no_outputs=This recipe names no output, so there is no ra
 plannh.gui.node.target.unsupported=%s honours no target; switch the chart's balance mode to pin machines
 plannh.gui.node.target.extent=Extent pins are handed to a solve by the caller, not set on a machine
 
+## GUI - Node properties
+## The fold, and the recipe's own figures behind it
+plannh.gui.node.properties=Machine properties
+plannh.gui.node.properties.hide_hint=Click to fold these rows away
+plannh.gui.node.properties.show_hint=Click to show the rows again
+plannh.gui.node.properties.none_hint=This recipe carries no properties to show
+
 ## GUI - Node settings
 plannh.gui.node.settings=Machine settings
 plannh.gui.node.settings.hide_hint=Click to fold these rows away

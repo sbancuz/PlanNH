@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.api.widget.IWidget;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.utils.Alignment;
@@ -88,8 +87,8 @@ class ThroughputFold extends NodeFold {
         }
 
         final RateUnit unit = rateUnit();
-        rates(false, data.getOutputs(), balance.effectiveOutputs(), duration, unit);
         rates(true, data.getInputs(), balance.effectiveInputs(), duration, unit);
+        rates(false, data.getOutputs(), balance.effectiveOutputs(), duration, unit);
 
         // Solved, and still nothing to say: a machine with no port the solve moved has no rate to
         // print, which is a different thing from not having been solved.
@@ -119,12 +118,9 @@ class ThroughputFold extends NodeFold {
             .childPadding(2)
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
             .tooltipBuilder(tooltip -> writeTooltip(tooltip, port, perCycle, duration))
-            // The name is given a width rather than left to take what it wants, which is the only
-            // thing that makes it wrap: a text widget whose width is known draws itself inside that
-            // width over as many lines as it needs, and one left to size itself never wraps at all.
             .child(
                 FlowchartFlow.row(node)
-                    .widthRel(NAME_RATIO)
+                    .widthRel(LABEL_RATIO)
                     .crossAxisAlignment(Alignment.CrossAxis.START)
                     .coverChildrenHeight()
                     .childPadding(2)
@@ -134,7 +130,7 @@ class ThroughputFold extends NodeFold {
                 new FlowchartTextWidget(
                     IKey.str(rateText(port, perCycle, duration, unit))
                         .color(PlannhColors.ACCENT_CYAN2.getColor()),
-                    node).widthRel(1 - NAME_RATIO)
+                    node).widthRel(1 - LABEL_RATIO)
                         .textAlign(Alignment.CenterRight));
     }
 
@@ -153,18 +149,6 @@ class ThroughputFold extends NodeFold {
             });
         } else out.langRow(PORT_LANG + "shift_hint");
         out.flush();
-    }
-
-    private IWidget hint(final String key) {
-        return FlowchartFlow.row(node)
-            .fullWidth()
-            .coverChildrenHeight()
-            .padding(2)
-            .child(
-                new FlowchartTextWidget(
-                    IKey.lang(key)
-                        .color(PlannhColors.TEXT_DIM.getColor()),
-                    node).maxWidth(176 - 2 * 5 - 4));
     }
 
     /** This port's rate in the given unit, with the unit's suffix, the way every rate in the pack reads. */

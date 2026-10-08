@@ -11,7 +11,6 @@ import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.Pin;
 import com.sbancuz.plannh.data.setting.TargetKind;
-import com.sbancuz.plannh.gui.PlannhColors;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 import com.sbancuz.plannh.gui.tooltips.TooltipBuilder;
@@ -123,18 +122,5 @@ class TargetFold extends NodeFold {
             change.run();
             config().setTargetKind(pin);
         }));
-    }
-
-    private Flow hint(final String key, final Object... args) {
-        return FlowchartFlow.row(node)
-            .fullWidth()
-            .coverChildrenHeight()
-            .padding(2)
-            .child(
-                new FlowchartTextWidget(
-                    IKey.lang(key, args)
-                        .color(PlannhColors.TEXT_DIM.getColor()),
-                    // IDK how to get it here
-                    node).maxWidth(176 - 2 * 5 - 4));
     }
 }

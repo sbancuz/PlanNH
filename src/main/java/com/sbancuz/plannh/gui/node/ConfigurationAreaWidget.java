@@ -24,6 +24,7 @@ class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAr
             .maxSize(() -> tallestRow == 0 ? Integer.MAX_VALUE : VISIBLE_ROWS * tallestRow);
 
         child(new ThroughputFold(node));
+        child(new PropertiesFold(node));
         child(new TargetFold(node));
         child(new SettingsFold(node));
     }

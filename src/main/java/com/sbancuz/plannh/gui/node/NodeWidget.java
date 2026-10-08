@@ -36,6 +36,7 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     private static final String SETTINGS_LANG = "plannh.gui.node.settings";
     private static final String TARGET_LANG = "plannh.gui.node.target.rows";
     private static final String THROUGHPUT_LANG = "plannh.gui.node.throughput.rows";
+    private static final String PROPERTIES_LANG = "plannh.gui.node.properties";
 
     /** The fold toggles, square for the header row they sit in. */
     private static final int FOLD_BUTTON = 12;
@@ -44,9 +45,11 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
     private final CycleButtonWidget settingsFold;
     private final CycleButtonWidget targetFold;
     private final CycleButtonWidget throughputFold;
+    private final CycleButtonWidget propertiesFold;
     private boolean lastSettingsOpen;
     private boolean lastTargetOpen;
     private boolean lastThroughputOpen;
+    private boolean lastPropertiesOpen;
 
     @Getter
     private final List<ArrowWidget> arrowWidgets = new ArrayList<>();
@@ -84,15 +87,17 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
                 .background()
                 .setTextColor(Color.BLACK.main));
 
-        // The three folds, told apart by their icon and dimmed when they are not showing, so which rows
+        // The four folds, told apart by their icon and dimmed when they are not showing, so which rows
         // are on screen is readable from the header alone. Each hint names what the click will do, so
         // every tooltip turns over with its fold rather than answering a question already changed. The
-        // chip is the throughput fold: a chart reads as the target, and a gear cannot be mistaken for
-        // either of the two.
+        // chip is the throughput fold and the page the properties fold: a chart reads as the target,
+        // and neither a gear nor a chip can be mistaken for either of the other three.
         throughputFold = fold(GuiTextures.PROCESSOR, THROUGHPUT_LANG, data::isThroughputOpen, data::setThroughputOpen);
+        propertiesFold = fold(GuiTextures.FILE, PROPERTIES_LANG, data::isPropertiesOpen, data::setPropertiesOpen);
         targetFold = fold(GuiTextures.GRAPH, TARGET_LANG, data::isTargetOpen, data::setTargetOpen);
         settingsFold = fold(GuiTextures.GEAR, SETTINGS_LANG, data::isSettingsOpen, data::setSettingsOpen);
         topRow.child(throughputFold);
+        topRow.child(propertiesFold);
         topRow.child(targetFold);
         topRow.child(settingsFold);
         topRow.child(new CloseButtonWidget(this));
@@ -143,6 +148,12 @@ public class NodeWidget extends FlowchartWidget<NodeWidget, Node> {
         if (throughput != lastThroughputOpen) {
             lastThroughputOpen = throughput;
             if (throughputFold != null) throughputFold.markTooltipDirty();
+        }
+
+        final boolean properties = data.isPropertiesOpen();
+        if (properties != lastPropertiesOpen) {
+            lastPropertiesOpen = properties;
+            if (propertiesFold != null) propertiesFold.markTooltipDirty();
         }
     }
 
