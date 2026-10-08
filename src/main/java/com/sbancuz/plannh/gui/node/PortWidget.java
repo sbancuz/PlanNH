@@ -285,8 +285,8 @@ public class PortWidget extends Widget<PortWidget> implements Interactable, IDra
         writeThroughput(out, node, port, input, index.leftInt(), perCycle, balance.durationPerOp());
     }
 
-    public static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port, final boolean input,
-        final int portIndex, final float perCycle, final int duration) {
+    public static void writeThroughput(final TooltipBuilder out, final Node node, final Port<?> port,
+        final boolean input, final int portIndex, final float perCycle, final int duration) {
         final MachineConfig config = node.getMachineConfig();
 
         final float bonus = input ? config.inputMultiplier(portIndex) : config.outputMultiplier(portIndex);
