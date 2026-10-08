@@ -62,25 +62,27 @@ class TargetFold extends NodeFold {
     protected void rebuild() {
         removeAll();
 
-        child(FlowchartFlow.row(node)
-            .name("target.selector")
-            .fullWidth()
-            .coverChildrenHeight()
-            .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-            .childPadding(2)
-            .child(new FlowchartTextWidget(IKey.lang(LANG + "label"), node).name("target.selector.label"))
-            .child(
-                FlowchartFlow.row(node)
-                    .name("target.selector.switcher")
-                    .coverChildren()
-                    .childPadding(2)
-                    .child(step(-1))
-                    .child(new FlowchartTextWidget(IKey.lang(selected().key()), node).name("target.selector.held"))
-                    .child(step(1))));
+        child(
+            FlowchartFlow.row(node)
+                .name("target.selector")
+                .fullWidth()
+                .coverChildrenHeight()
+                .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
+                .childPadding(2)
+                .child(new FlowchartTextWidget(IKey.lang(LANG + "label"), node).name("target.selector.label"))
+                .child(
+                    FlowchartFlow.row(node)
+                        .name("target.selector.switcher")
+                        .coverChildren()
+                        .childPadding(2)
+                        .child(step(-1))
+                        .child(new FlowchartTextWidget(IKey.lang(selected().key()), node).name("target.selector.held"))
+                        .child(step(1))));
 
         final Set<Pin> pages = balancerMode().pins();
-        if (pages.isEmpty()) { child(hint(LANG + "unsupported", balancerMode().displayName()));}
-        else {
+        if (pages.isEmpty()) {
+            child(hint(LANG + "unsupported", balancerMode().displayName()));
+        } else {
             IWidget result;
             final Pin pin = selected();
             final TargetKind kind = TargetKind.of(config(), pin);

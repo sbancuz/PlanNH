@@ -11,7 +11,6 @@ import org.jetbrains.annotations.Nullable;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
-import com.cleanroommc.modularui.widget.Widget;
 import com.sbancuz.plannh.gui.GuiHelper;
 import com.sbancuz.plannh.gui.GuiHelper.RateUnit;
 
@@ -89,6 +88,7 @@ public final class TooltipBuilder {
     public TooltipBuilder header(final String langKey) {
         return row(TooltipTheme.key(TooltipTheme.Role.LABEL, StatCollector.translateToLocal(langKey) + COLON));
     }
+
     public TooltipBuilder langRow(final String langKey) {
         return row(IKey.lang(langKey));
     }

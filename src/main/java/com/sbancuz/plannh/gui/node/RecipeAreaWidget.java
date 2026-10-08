@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import lombok.Getter;
 import net.minecraft.client.Minecraft;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
@@ -29,6 +28,7 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
+import lombok.Getter;
 
 public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements IFlowchartDraggable {
 

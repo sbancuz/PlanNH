@@ -128,13 +128,13 @@ class ThroughputFold extends NodeFold {
                     .coverChildrenHeight()
                     .childPadding(2)
                     .child(new SquareIndicator(node, port, input))
-                    .child(new FlowchartTextWidget(IKey.str(port.getDisplayName()), node).textAlign(Alignment.CenterLeft)))
+                    .child(
+                        new FlowchartTextWidget(IKey.str(port.getDisplayName()), node).textAlign(Alignment.CenterLeft)))
             .child(
-                new FlowchartTextWidget(
-                    IKey.str(PortWidget.rateText(port, perCycle, duration, unit)), node)
-            .color(input ? PlannhColors.ACCENT_RED2.getColor() : PlannhColors.ACCENT_GREEN3.getColor())
-            .widthRel(1 - LABEL_RATIO)
-                        .textAlign(Alignment.CenterRight));
+                new FlowchartTextWidget(IKey.str(PortWidget.rateText(port, perCycle, duration, unit)), node)
+                    .color(input ? PlannhColors.ACCENT_RED2.getColor() : PlannhColors.ACCENT_GREEN3.getColor())
+                    .widthRel(1 - LABEL_RATIO)
+                    .textAlign(Alignment.CenterRight));
     }
 
     private void writeTooltip(final RichTooltip tooltip, final Port<?> port, final int portIndex, final boolean input,

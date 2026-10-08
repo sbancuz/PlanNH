@@ -124,7 +124,7 @@ public final class OutputRateTarget implements TargetKind {
         final IWidget label = new FlowchartTextWidget(
             IKey.str(port.getDisplayName())
                 .color(rate(index) > 0 ? PlannhColors.SETTING_ON.getColor() : PlannhColors.TEXT_DIM.getColor()),
-            parent).widthRel(2/3f);
+            parent).widthRel(2 / 3f);
 
         final FlowchartFlow flow = FlowchartFlow.row(parent);
         flow.name("target.rates.row")
