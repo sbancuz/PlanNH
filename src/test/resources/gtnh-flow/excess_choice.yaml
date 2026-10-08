@@ -1,0 +1,43 @@
+# The wood-tar chart's shape, reduced to the three machines that create the choice.
+#
+# The centrifuge is pinned, so its 780/s nitrogen exists whether anything wants it. The second
+# oven is pinned, so charcoal demand is 5/s. The first oven's extent is therefore free between two
+# ends, and exactly one of them has to absorb the slack:
+#
+#   A: run it on all the nitrogen (0.78 crafts/s) and void 10.6/s of surplus charcoal
+#   B: run it on the charcoal demand (0.25 crafts/s) and void 530/s of surplus nitrogen
+#
+# Both void the same thing - 0.53 crafts of oven that nobody needs - so they are the same answer
+# written in two units. Summing raw external rates says 10.6 < 530 and picks A, which also burns
+# three times the oak wood to get there.
+- m: multiblock centrifuge
+  tier: LV
+  I:
+    air: 800
+  O:
+    oxygen: 80
+    nitrogen: 3120
+  eut: 7
+  dur: 4
+  number: 1
+
+- m: coke oven
+  tier: MV
+  I:
+    oak wood: 4
+    nitrogen: 1000
+  O:
+    charcoal: 20
+    wood tar: 1500
+  eut: 96
+  dur: 5
+
+- m: second coke oven
+  tier: MV
+  I:
+    charcoal: 25
+  O:
+    coal tar: 800
+  eut: 120
+  dur: 5
+  number: 1

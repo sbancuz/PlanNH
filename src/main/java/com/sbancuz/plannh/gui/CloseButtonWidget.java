@@ -7,6 +7,7 @@ import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.utils.Color;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
+import com.sbancuz.plannh.api.PlanAPI;
 
 public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
 
@@ -27,10 +28,12 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
 
     @Override
     public @NotNull Result onMousePressed(int mouseButton) {
-        if (parent.getCanvas()
-            .isMouseInsideCanvas()) {
-            ((ParentWidget<?>) parent.getParent()).remove(parent);
-            parent.removeFromGraph();
+        final CanvasWidget canvas = parent.getCanvas();
+        if (canvas.isMouseInsideCanvas()) {
+            PlanAPI.recordEdit(canvas.getGraph(), () -> {
+                ((ParentWidget<?>) parent.getParent()).remove(parent);
+                parent.removeFromGraph();
+            });
         }
         return Result.SUCCESS;
     }

@@ -21,6 +21,7 @@ import net.minecraft.util.StatCollector;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Serializer;
+import com.sbancuz.plannh.data.flowchart.UndoHistory;
 
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
@@ -30,22 +31,39 @@ public final class PlanAPI {
     /** NBT key used to store the encoded graph in the share ItemStack. */
     public static final String PLANNH_DATA_KEY = "plannh_data";
 
+    @Nonnull
+    public static Graph getActiveGraph() {
+        return Plan.getActiveGraph();
+    }
+
+    public static UndoHistory undoHistory() {
+        return getActiveGraph().undoHistory;
+    }
+
+    /** Runs {@code edit} as one undo step; no-op edits leave no trace. */
+    public static void recordEdit(final Graph graph, final Runnable edit) {
+        final UndoHistory history = graph.undoHistory;
+        final String before = history.beginEdit(graph);
+        edit.run();
+        history.commitEdit(before, graph);
+    }
+
     /**
      * Encodes the given graph and sends it as an NEI item-link chat message.
      * Other PlanNH clients see an import link; vanilla clients see a dirt-item
      * tooltip with a bookmark prompt.
      */
     public static void shareGraph(final Graph graph) {
-        final String encoded = Serializer.encodeGraph(graph);
+        final String encoded = Serializer.encode(graph);
         final ItemStack stack = createShareStack();
         stack.getTagCompound()
             .setString(PLANNH_DATA_KEY, encoded);
-        NEIClientUtils.sendChatItemLink(stack);
+        NEIClientUtils.sendChatItemLink(stack.writeToNBT(new NBTTagCompound()));
     }
 
     /** Copies the serialised graph to the system clipboard. */
     public static void copyToClipboard(final Graph graph) {
-        GuiScreen.setClipboardString(Serializer.encodeGraph(graph));
+        GuiScreen.setClipboardString(Serializer.encode(graph));
     }
 
     /**
@@ -59,7 +77,7 @@ public final class PlanAPI {
         final String data = GuiScreen.getClipboardString();
         if (data.isEmpty()) return null;
         try {
-            return Serializer.decodeGraph(data);
+            return Serializer.decode(data);
         } catch (final Exception e) {
             return null;
         }
@@ -80,7 +98,7 @@ public final class PlanAPI {
             if (!nbt.hasKey("tag")) return null;
             final NBTTagCompound tag = nbt.getCompoundTag("tag");
             if (!tag.hasKey(PLANNH_DATA_KEY)) return null;
-            return Serializer.decodeGraph(tag.getString(PLANNH_DATA_KEY));
+            return Serializer.decode(tag.getString(PLANNH_DATA_KEY));
         } catch (final NBTException e) {
             return null;
         }
@@ -136,10 +154,16 @@ public final class PlanAPI {
 
     public static void save() {
         try {
-            final File saveFile = getSaveFile();
+            File saveFile = getSaveFile();
             saveFile.getParentFile()
                 .mkdirs();
             Files.writeString(saveFile.toPath(), Serializer.encodePlan(Plan.getInstance()), StandardCharsets.UTF_8);
+
+            saveFile = getDebugSaveFile();
+            saveFile.getParentFile()
+                .mkdirs();
+            Files
+                .writeString(saveFile.toPath(), Serializer.encodePlanDebug(Plan.getInstance()), StandardCharsets.UTF_8);
         } catch (final Exception ignored) {}
     }
 
@@ -150,5 +174,14 @@ public final class PlanAPI {
             return new File(mc.mcDataDir, "saves/NEI/" + worldName + "/plannh/plannh.dat");
         }
         return new File(mc.mcDataDir, "plannh/plannh.dat");
+    }
+
+    public static File getDebugSaveFile() {
+        final Minecraft mc = Minecraft.getMinecraft();
+        final String worldName = NEIClientConfig.getWorldPath();
+        if (worldName != null && !worldName.isEmpty()) {
+            return new File(mc.mcDataDir, "saves/NEI/" + worldName + "/plannh/plannh_debug.json");
+        }
+        return new File(mc.mcDataDir, "plannh/plannh_debug.json");
     }
 }

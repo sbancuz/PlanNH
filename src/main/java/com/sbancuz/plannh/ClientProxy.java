@@ -14,6 +14,7 @@ import com.sbancuz.plannh.client.GPUProgram;
 import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.client.WorldHandler;
 import com.sbancuz.plannh.gui.FlowchartScreen;
+import com.sbancuz.plannh.layout.AutoLayout;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -56,6 +57,8 @@ public class ClientProxy extends CommonProxy {
             .bus()
             .register(this);
 
+        Minecraft.getMinecraft()
+            .func_152344_a(AutoLayout::warmup);
         Minecraft.getMinecraft()
             .func_152344_a(GPUProgram.BLUR::compile);
     }

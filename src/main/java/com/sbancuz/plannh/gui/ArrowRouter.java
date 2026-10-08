@@ -2,6 +2,8 @@ package com.sbancuz.plannh.gui;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -18,20 +20,40 @@ import java.util.UUID;
  * produced paths stable while the user pans (a pure translation) and lets the caller cache them.
  * <p>
  * The router lays a uniform grid over the bounding region and runs A* where the search state is
- * {@code (cell, incoming-direction)} so that turns can be penalized. Node rectangles inflated by a
- * margin are hard obstacles; cells already occupied by a routed arrow carry a soft penalty so that
- * later arrows take a parallel track instead of overlapping.
+ * {@code (cell, incoming-direction)} so that turns can be penalized. Node rectangles are hard
+ * obstacles; their surrounding margin ring and cells already occupied by a routed arrow carry soft
+ * penalties, so arrows keep clearance where there is room but can squeeze through tight gaps.
  */
 public final class ArrowRouter {
 
     /** Per-cell movement cost. */
     private static final int STEP = 1;
-    /** Extra cost for changing direction. Keeps the number of bends low. */
-    private static final int TURN = 12;
-    /** Extra cost per cell that already carries another arrow. Makes arrows separate. */
-    private static final int ARROW = 4;
+    /** Extra cost per direction change; high relative to STEP so paths don't micro-dodge. */
+    private static final int TURN = 24;
+    /**
+     * Extra cost per cell already carrying another arrow; low, so sharing a long corridor
+     * stays cheaper than detouring around the chart.
+     */
+    private static final int ARROW = 2;
     /** Smaller penalty around an occupied cell, so arrows keep at least one cell of clearance. */
     private static final int NEAR = 1;
+    /**
+     * Penalty per cell in a node's margin ring. Soft rather than blocked: hard margins seal
+     * any gap narrower than two margins and force whole-chart detours.
+     */
+    private static final int MARGIN_COST = 8;
+    /**
+     * Penalty for crossing another edge's port anchor (the straight approach run beside a
+     * pin), keeping each pin's first and last segment visually its own.
+     */
+    private static final int ANCHOR_COST = 30;
+
+    /**
+     * World units a no-turn zone is grown by. One router cell, because that is the granularity the
+     * grid can actually express: a smaller pad would round away to nothing on most edges and to a
+     * whole cell on others, which is worse than either.
+     */
+    private static final int NO_TURN_PAD = 6;
 
     /** Hard cap on grid cells; the cell size is grown if a region would exceed it. */
     private static final int MAX_CELLS = 200_000;
@@ -67,6 +89,32 @@ public final class ArrowRouter {
      * @return a map from {@link Request#key()} to a list of {@code {x, y}} world-space waypoints
      */
     public Map<UUID, List<int[]>> route(final List<Rect> obstacles, final List<Request> requests) {
+        return route(obstacles, List.of(), requests);
+    }
+
+    /**
+     * @param noTurn regions an arrow may cross but may not change direction inside.
+     *
+     *               <p>
+     *               For the boundary chips: blocking them outright seals the approach to any pin
+     *               one is parked in front of, and a request that cannot be served falls back to a
+     *               straight line that ignores every obstacle - worse than the overlap, and silent.
+     *               A straight run behind a label reads fine; it is the corner that looks like the
+     *               arrow terminates there.
+     */
+    public Map<UUID, List<int[]>> route(final List<Rect> obstacles, final List<Rect> noTurn,
+        final List<Request> requests) {
+        return route(obstacles, noTurn, requests, null);
+    }
+
+    /**
+     * @param fellBack if given, receives the key of every request A* could not serve, which came
+     *                 back as the obstacle-ignoring {@link #fallback}. A route that quietly gives up
+     *                 looks identical on screen to one that went somewhere silly on purpose, and
+     *                 only one of those is worth investigating.
+     */
+    public Map<UUID, List<int[]>> route(final List<Rect> obstacles, final List<Rect> noTurn,
+        final List<Request> requests, final Collection<UUID> fellBack) {
         final Map<UUID, List<int[]>> result = new HashMap<>();
         if (requests.isEmpty()) return result;
 
@@ -78,6 +126,12 @@ public final class ArrowRouter {
             minY = Math.min(minY, r.y - margin);
             maxX = Math.max(maxX, r.x + r.w + margin);
             maxY = Math.max(maxY, r.y + r.h + margin);
+        }
+        for (final Rect r : noTurn) {
+            minX = Math.min(minX, r.x);
+            minY = Math.min(minY, r.y);
+            maxX = Math.max(maxX, r.x + r.w);
+            maxY = Math.max(maxY, r.y + r.h);
         }
         final int stub = margin + baseCell;
         for (final Request q : requests) {
@@ -103,11 +157,24 @@ public final class ArrowRouter {
 
         final Grid grid = new Grid(minX, minY, cols, rows, cell, stub);
         grid.blockObstacles(obstacles, margin);
+        grid.markNoTurn(noTurn, NO_TURN_PAD);
+        grid.reserveAnchors(requests);
 
-        for (final Request q : requests) {
-            final List<int[]> cellPath = grid.search(q);
+        for (int i = 0; i < requests.size(); i++) {
+            final Request q = requests.get(i);
+            // Ports closer than two anchor stubs cannot satisfy the leave-right/arrive-right
+            // state machine without looping around themselves; draw the canonical Z directly.
+            // Forward edges only: for a backward edge the gap is negative, and the Z would cut
+            // straight through every node between the two ports.
+            if (q.dx > q.sx && q.dx - q.sx < 2 * stub && Math.abs(q.dy - q.sy) < 10 * baseCell) {
+                if (fellBack != null) fellBack.add(q.key);
+                result.put(q.key, fallback(q, stub));
+                continue;
+            }
+            final List<int[]> cellPath = grid.search(q, i);
             final List<int[]> path;
             if (cellPath == null) {
+                if (fellBack != null) fellBack.add(q.key);
                 path = fallback(q, stub);
             } else {
                 path = grid.toWorld(cellPath, q);
@@ -133,7 +200,10 @@ public final class ArrowRouter {
 
         final int originX, originY, cols, rows, cell, stub;
         final boolean[] blocked;
+        /** Cells an arrow may pass straight through but may not turn in. */
+        final boolean[] straightOnly;
         final int[] occupancy;
+        final int[] anchorOwner;
         final int[] gScore;
         final int[] cameFrom;
         final int[] scoreRun;
@@ -147,7 +217,10 @@ public final class ArrowRouter {
             this.cell = cell;
             this.stub = stub;
             this.blocked = new boolean[cols * rows];
+            this.straightOnly = new boolean[cols * rows];
             this.occupancy = new int[cols * rows];
+            this.anchorOwner = new int[cols * rows];
+            Arrays.fill(anchorOwner, -1);
             final int states = cols * rows * 4;
             this.gScore = new int[states];
             this.cameFrom = new int[states];
@@ -174,11 +247,49 @@ public final class ArrowRouter {
             for (final Rect r : obstacles) {
                 final int x0 = gx(r.x - margin), x1 = gx(r.x + r.w + margin);
                 final int y0 = gy(r.y - margin), y1 = gy(r.y + r.h + margin);
+                final int bx0 = gx(r.x), bx1 = gx(r.x + r.w);
+                final int by0 = gy(r.y), by1 = gy(r.y + r.h);
                 for (int y = y0; y <= y1; y++) {
                     for (int x = x0; x <= x1; x++) {
-                        blocked[y * cols + x] = true;
+                        if (x >= bx0 && x <= bx1 && y >= by0 && y <= by1) {
+                            blocked[y * cols + x] = true;
+                        } else {
+                            occupancy[y * cols + x] += MARGIN_COST;
+                        }
                     }
                 }
+            }
+        }
+
+        /**
+         * @param pad world units grown around each zone before it is rasterized. A corner sitting
+         *            exactly on a label's edge still reads as a corner in the label; pushing the
+         *            zone out slightly moves it clear. Cells are {@code cell} units wide, so a pad
+         *            below that only takes effect where the edge already sits near a cell boundary.
+         */
+        void markNoTurn(final List<Rect> zones, final int pad) {
+            for (final Rect r : zones) {
+                for (int y = gy(r.y - pad); y <= gy(r.y + r.h + pad); y++) {
+                    for (int x = gx(r.x - pad); x <= gx(r.x + r.w + pad); x++) {
+                        straightOnly[y * cols + x] = true;
+                    }
+                }
+            }
+        }
+
+        /** Marks every request's port-approach runs so other arrows keep out of them. */
+        void reserveAnchors(final List<Request> requests) {
+            for (int i = 0; i < requests.size(); i++) {
+                final Request q = requests.get(i);
+                markAnchor(gx(q.sx), gx(q.sx + stub), gy(q.sy), i);
+                markAnchor(gx(q.dx - stub), gx(q.dx), gy(q.dy), i);
+            }
+        }
+
+        private void markAnchor(final int x0, final int x1, final int y, final int owner) {
+            for (int x = x0; x <= x1; x++) {
+                final int idx = y * cols + x;
+                if (anchorOwner[idx] == -1) anchorOwner[idx] = owner;
             }
         }
 
@@ -196,7 +307,7 @@ public final class ArrowRouter {
         }
 
         /** A* over (cell, direction); returns the list of {@code {gx, gy}} cells or null. */
-        List<int[]> search(final Request q) {
+        List<int[]> search(final Request q, final int requestIndex) {
             final int sgx = gx(q.sx + stub), sgy = gy(q.sy);
             final int ggx = gx(q.dx - stub), ggy = gy(q.dy);
             final int run = nextRun();
@@ -229,10 +340,13 @@ public final class ArrowRouter {
                     final int ny = cy + DY[nd];
                     if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
                     final int nIdx = ny * cols + nx;
-                    final boolean isGoal = nx == ggx && ny == ggy;
-                    if (blocked[nIdx] && !isGoal) continue;
+                    if (blocked[nIdx]) continue;
+                    // A corner inside a label reads as the arrow ending there. Crossing it does not.
+                    if (nd != dir && (straightOnly[nIdx] || straightOnly[idx])) continue;
 
-                    final int cost = STEP + (nd != dir ? TURN : 0) + occupancy[nIdx];
+                    final int foreignAnchor = anchorOwner[nIdx] != -1 && anchorOwner[nIdx] != requestIndex ? ANCHOR_COST
+                        : 0;
+                    final int cost = STEP + (nd != dir ? TURN : 0) + occupancy[nIdx] + foreignAnchor;
                     final int ng = g + cost;
                     final int nState = nIdx * 4 + nd;
                     if (ng < score(nState, run)) {
@@ -275,7 +389,7 @@ public final class ArrowRouter {
                 cells.add(new int[] { idx % cols, idx / cols });
                 s = cameFrom[s];
             }
-            java.util.Collections.reverse(cells);
+            Collections.reverse(cells);
             return cells;
         }
 

@@ -1,5 +1,6 @@
 package com.sbancuz.plannh.gui;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -33,7 +34,9 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
 
     @Override
     protected Map<UUID, Note> getDefaultContainer() {
-        return canvas.getGraph()
-            .getNotes();
+        final Map<UUID, Note> out = new HashMap<>();
+        for (final Note n : canvas.getGraph()
+            .getNotes()) out.put(n.getId(), n);
+        return out;
     }
 }

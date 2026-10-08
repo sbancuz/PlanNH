@@ -2,12 +2,15 @@ package com.sbancuz.plannh.nei;
 
 import net.minecraftforge.common.MinecraftForge;
 
+import org.lwjgl.input.Keyboard;
+
 import com.cleanroommc.modularui.screen.GuiContainerWrapper;
 import com.sbancuz.plannh.Compat;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.Tags;
 import com.sbancuz.plannh.gui.FlowchartScreen;
 
+import codechicken.nei.NEIClientUtils;
 import codechicken.nei.api.API;
 import codechicken.nei.api.IConfigureNEI;
 import codechicken.nei.config.OptionCycled;
@@ -36,6 +39,26 @@ public class NEIPlanConfig implements IConfigureNEI {
         public static String KEY = "plannh.burnable_override";
         public static int OFF = 0;
         public static int ON = 1;
+    }
+
+    // Hash binds carry their modifiers in the stored int and compare exactly, so every accepted
+    // combination needs its own ident.
+    public static class ConfigUndoKey {
+
+        public static String KEY = "plannh.undo";
+        public static int defVal = Keyboard.KEY_Z + NEIClientUtils.CTRL_HASH;
+    }
+
+    public static class ConfigRedoKey {
+
+        public static String KEY = "plannh.redo";
+        public static int defVal = Keyboard.KEY_Z + NEIClientUtils.CTRL_HASH + NEIClientUtils.SHIFT_HASH;
+    }
+
+    public static class ConfigRedoAltKey {
+
+        public static String KEY = "plannh.redo_alt";
+        public static int defVal = Keyboard.KEY_Y + NEIClientUtils.CTRL_HASH;
     }
 
     public static class ConfigBlurStrength {
@@ -76,6 +99,9 @@ public class NEIPlanConfig implements IConfigureNEI {
                 }
             }
         });
+        API.addHashBind(ConfigUndoKey.KEY, ConfigUndoKey.defVal);
+        API.addHashBind(ConfigRedoKey.KEY, ConfigRedoKey.defVal);
+        API.addHashBind(ConfigRedoAltKey.KEY, ConfigRedoAltKey.defVal);
 
         API.addOption(new OptionIntegerField(ConfigItemColumns.KEY, ConfigItemColumns.min, ConfigItemColumns.max));
         API.addOption(new OptionIntegerField(ConfigBlurStrength.KEY, ConfigBlurStrength.min, ConfigBlurStrength.max));

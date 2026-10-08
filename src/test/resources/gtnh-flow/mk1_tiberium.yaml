@@ -1,0 +1,36 @@
+# Naquadah line with a tiberium chemical bath consuming the excess heavy naquadah fuel:
+# fusion 14.4/s heavy + 31.2/s light -> 4/s mk1 fuel (pinned x1), DT 20/s solution -> 5/s heavy
+# + 10/s light per machine, bath 0.05/s diamond + 7.2/s heavy -> 0.05/s tiberium. The
+# zero-external steady state is DT x3.12 + bath x0.167 (unique; light pins the DT, heavy then
+# pins the bath) - all fractional.
+- m: fusion reactor
+  tier: LuV
+  I:
+    heavy naquadah fuel: 360
+    light naquadah fuel: 780
+  O:
+    naquadah fuel mk1: 100
+  eut: 30720
+  dur: 25
+  number: 1
+- m: distillation tower
+  tier: EV
+  I:
+    naquadah solution: 20
+  O:
+    naquadah asphalt: 2
+    heavy naquadah fuel: 5
+    light naquadah fuel: 10
+    water: 10
+    naquadah gas: 60
+  eut: 1920
+  dur: 1
+- m: chemical bath
+  tier: EV
+  I:
+    diamond: 1
+    heavy naquadah fuel: 144
+  O:
+    tiberium: 1
+  eut: 1920
+  dur: 20

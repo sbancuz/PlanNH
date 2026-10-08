@@ -2,8 +2,10 @@ package com.sbancuz.plannh.gui;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
@@ -30,21 +32,31 @@ import com.cleanroommc.modularui.utils.Platform;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widget.sizer.Area;
 import com.cleanroommc.modularui.widgets.menu.Menu;
-import com.sbancuz.plannh.api.RecipePropertyAPI;
+import com.sbancuz.plannh.Config;
+import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.api.PlanAPI;
 import com.sbancuz.plannh.client.ScreenEffect;
 import com.sbancuz.plannh.client.UIBlurEffect;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
+import com.sbancuz.plannh.data.flowchart.MachineGroup;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.Port;
+import com.sbancuz.plannh.data.flowchart.UndoHistory;
+import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
+import com.sbancuz.plannh.layout.AutoLayout;
 import com.sbancuz.plannh.nei.NEIPlanConfig;
+import com.sbancuz.plannh.nei.NodeLookupContext;
 
 import codechicken.lib.config.ConfigTag;
 import codechicken.nei.NEIClientConfig;
+import codechicken.nei.recipe.GuiRecipeTab;
+import codechicken.nei.recipe.IRecipeHandler;
+import codechicken.nei.recipe.RecipeHandlerRef;
 import lombok.Getter;
 
 public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interactable, IViewport, IDraggable {
@@ -58,6 +70,9 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int CLAMP_MARGIN = 4;
     private static final int NODE_W_ESTIMATE = 120;
     private static final int NODE_H_ESTIMATE = 80;
+    private static final int AUTO_PLACE_GAP_X = 80;
+    private static final int AUTO_PLACE_GAP_Y = 30;
+    private static final int AUTO_PLACE_STAGGER = 20;
     private static final int HEADER_OFFSET = 24;
     private static final int PORT_S = 8;
     private static final int PORT_HALF = 4;
@@ -70,12 +85,25 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private static final int LINE_THICK_BASE = 2;
     private static final int LINE_THICK_MIN = 1;
     private static final float ARROW_HB_RATIO = 0.35f;
+    private static final int EDGE_OUTLINE_EXTRA = 3;
     private static final int EDGE_MARGIN_BASE = 4;
     private static final int PORT_LABEL_MAX = 20;
     private static final int PORT_LABEL_TRUNC = 19;
     private static final int PORT_FONT_SIZE = 9;
     private static final float PORT_FONT_SCALE = 0.9f;
     private static final int PORT_LABEL_PAD = 2;
+
+    /**
+     * Gap in world units between a node's edge and the chip that hangs off it. Short on purpose:
+     * every unit here is paid twice over in the layout, once by the node on each side of a corridor.
+     */
+    private static final int CHIP_GAP = 8;
+    private static final int CHIP_H = 11;
+    /** Horizontal breathing room either side of the label, in world units. */
+    private static final int CHIP_PAD_X = 3;
+    /** How far below the pin the chip hangs, in world units. */
+    private static final int CHIP_DROP = 3;
+    private static final float CHIP_TEXT_SCALE = 0.5f;
 
     private static final int GROUP_FIT_PAD = 12;
     private static final float ZOOM_STEP = 0.15f;
@@ -110,6 +138,15 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     private boolean menuOpen;
     private final Menu<?> contextMenu2;
 
+    @Nullable
+    private NodeLookupContext pendingLookup = null;
+    @Nullable
+    private Menu<?> targetEditorMenu = null;
+    @Nullable
+    private Node targetEditNode;
+    private int targetEditOutput = -1;
+    private boolean targetFocusPending;
+
     private final ModularPanel panel;
 
     private final ScreenEffect effect = new UIBlurEffect();
@@ -140,13 +177,60 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void removeNode(final UUID nodeId) {
-        graph.removeNode(nodeId);
-        for (final Group group : graph.getGroups()
-            .values()) {
-            group.getNodeIds()
-                .remove(nodeId);
-        }
+        PlanAPI.recordEdit(graph, () -> {
+            graph.removeNode(nodeId);
+            for (final Group group : graph.getGroups()) {
+                group.getNodeIds()
+                    .remove(nodeId);
+            }
+        });
         rebuildNodeWidgets();
+    }
+
+    public void setPendingLookup(@Nullable final NodeLookupContext lookup) {
+        pendingLookup = lookup;
+    }
+
+    /** Returns and clears the pending lookup: it wires at most one added recipe. */
+    @Nullable
+    public NodeLookupContext consumePendingLookup() {
+        final NodeLookupContext result = pendingLookup;
+        pendingLookup = null;
+        return result;
+    }
+
+    /**
+     * Positions an auto-wired node beside its lookup origin: producers left, consumers right,
+     * in the first free slot down the column.
+     */
+    public void placeBesideOrigin(final Node added, final Node origin, final boolean addedFeedsOrigin) {
+        final RecipeNodeWidget originWidget = nodeWidgets.get(origin.id);
+        final int originW = originWidget != null ? originWidget.worldWidth() : NODE_W_ESTIMATE;
+        final int originH = originWidget != null ? originWidget.worldHeight() : NODE_H_ESTIMATE;
+        final int baseX = Math
+            .round(addedFeedsOrigin ? origin.x - originW - AUTO_PLACE_GAP_X : origin.x + originW + AUTO_PLACE_GAP_X);
+        final int baseY = Math.round(origin.y);
+        int x;
+        int y;
+        int slot = 0;
+        do {
+            final int stagger = slot * AUTO_PLACE_STAGGER;
+            x = addedFeedsOrigin ? baseX - stagger : baseX + stagger;
+            y = baseY + slot * (originH + AUTO_PLACE_GAP_Y) + (slot + 1) * (PortGeometry.SPACING / 2);
+            slot++;
+        } while (overlapsAnyNode(x, y, originW, originH));
+        added.x = x;
+        added.y = y;
+    }
+
+    private boolean overlapsAnyNode(final int x, final int y, final int w, final int h) {
+        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
+            final Node n = widget.getNode();
+            if (x < n.x + widget.worldWidth() && n.x < x + w && y < n.y + widget.worldHeight() && n.y < y + h) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void setGraph(final Graph newGraph) {
@@ -157,13 +241,104 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         rebuildNodeWidgets();
     }
 
+    /** One entry point, not three: removeAll() drops every child, so a partial rebuild loses the rest. */
+    public void rebuildWidgets() {
+        removeAll();
+        nodeWidgets.clear();
+        flowchartWidgets.clear();
+        rebuildGroupWidgets();
+        rebuildNodeWidgets();
+    }
+
+    public void undoGraph() {
+        // Ends any text-edit session first: its bracket must commit before the graph is swapped,
+        // and committing after the redo snapshot is taken would clear the redo stack again.
+        getContext().removeFocus();
+        final UndoHistory history = PlanAPI.undoHistory();
+        if (!history.canUndo()) return;
+        adoptRestoredGraph(history.undo(graph));
+    }
+
+    public void redoGraph() {
+        getContext().removeFocus();
+        final UndoHistory history = PlanAPI.undoHistory();
+        if (!history.canRedo()) return;
+        adoptRestoredGraph(history.redo(graph));
+    }
+
+    // View and mode settings are not part of an edit, so they carry over from the live graph.
+    // The active slot must adopt the restored graph, or the next save writes the pre-undo state back.
+    private void adoptRestoredGraph(final Graph restored) {
+        restored.setZoom(graph.getZoom());
+        restored.setPanX(graph.getPanX());
+        restored.setPanY(graph.getPanY());
+        restored.setSnapToGrid(graph.isSnapToGrid());
+        restored.setBalanceMode(graph.getBalanceMode());
+        final Plan plan = Plan.getInstance();
+        plan.getGraphs()
+            .set(plan.getActiveIndex(), restored);
+        setGraph(restored);
+        PlanAPI.save();
+    }
+
+    // ── Target-rate editor ──
+    // The node config panel is immediate-mode drawing, so it cannot host a text widget; the
+    // editor is a screen-level menu (same pattern as the context menu) that this widget opens
+    // and positions, with the value bridged through the two methods below.
+
+    public void setTargetEditorMenu(final Menu<?> menu) {
+        targetEditorMenu = menu;
+    }
+
+    public boolean isTargetEditorOpen() {
+        return targetEditNode != null;
+    }
+
+    public void openTargetEditor(final Node node, final int outputIndex) {
+        targetEditNode = node;
+        targetEditOutput = outputIndex;
+        if (targetEditorMenu != null) {
+            targetEditorMenu.pos(getContext().getAbsMouseX(), getContext().getAbsMouseY());
+        }
+        targetFocusPending = true;
+    }
+
+    /** True exactly once per editor opening, and only while the editor is still open. */
+    public boolean consumeTargetEditorFocus() {
+        if (!targetFocusPending || targetEditNode == null) return false;
+        targetFocusPending = false;
+        return true;
+    }
+
+    public void closeTargetEditor() {
+        targetEditNode = null;
+        targetEditOutput = -1;
+    }
+
+    public double editedTargetRate() {
+        if (targetEditNode == null) return 0;
+        return targetEditNode.targetOutputRates.getOrDefault(targetEditOutput, 0.0);
+    }
+
+    /** Commits the typed rate as one undo step and closes the editor; 0 clears the pin. */
+    public void setEditedTargetRate(final double rate) {
+        final Node node = targetEditNode;
+        final int out = targetEditOutput;
+        if (node == null) return;
+        PlanAPI.recordEdit(graph, () -> {
+            if (rate <= 0) node.targetOutputRates.remove(out);
+            else node.targetOutputRates.put(out, rate);
+        });
+        graph.markDirty();
+        PlanAPI.save();
+        closeTargetEditor();
+    }
+
     public void moveGroupNodes(final UUID groupId, final int deltaX, final int deltaY) {
-        final Group group = graph.getGroups()
-            .get(groupId);
+        final Group group = graph.groups.get(groupId);
         if (group == null) return;
         for (final UUID nodeId : group.getNodeIds()) {
-            final Node node = graph.getNodes()
-                .get(nodeId);
+            final Node node = graph.nodes.get(nodeId);
             if (node == null) continue;
             node.x += deltaX;
             node.y += deltaY;
@@ -175,14 +350,12 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void setGroupNodesVisible(final UUID groupId, final boolean visible) {
-        final Group group = graph.getGroups()
-            .get(groupId);
+        final Group group = graph.groups.get(groupId);
         if (group == null) return;
         for (final UUID nodeId : group.getNodeIds()) {
             if (visible) {
                 if (nodeWidgets.containsKey(nodeId)) continue;
-                final Node node = graph.getNodes()
-                    .get(nodeId);
+                final Node node = graph.nodes.get(nodeId);
                 if (node == null) continue;
                 addNodeWidget(node);
             } else {
@@ -193,17 +366,73 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void recheckMembershipAndFit() {
-        for (final Node node : graph.getNodes()
-            .values()) {
+        for (final Node node : graph.getNodes()) {
             updateNodeGroupMembership(node);
         }
         autoFitGroups();
     }
 
+    public void autoLayoutNodes() {
+        if (graph.getNodes()
+            .isEmpty()) return;
+
+        // The widgets ARE the layout input (they implement LayoutNode); measure them first
+        // because MUI2 culls off-viewport widgets and unmeasured nodes report stub sizes.
+        int anchorX = Integer.MAX_VALUE;
+        int anchorY = Integer.MAX_VALUE;
+        for (final Node node : graph.getNodes()) {
+            final RecipeNodeWidget widget = nodeWidgets.get(node.id);
+            if (widget != null) widget.ensureRecipeHandler();
+            anchorX = Math.min(anchorX, node.x);
+            anchorY = Math.min(anchorY, node.y);
+        }
+
+        // ELK reports bad option/graph combinations by throwing, and its node placement recurses
+        // per path, so a pathological chart can exhaust the stack. Both would otherwise leave a
+        // mouse handler and crash the client with the chart unsaved; the chart is worth more than
+        // the layout, so log and keep the current positions.
+        final Map<UUID, int[]> positions;
+        try {
+            positions = AutoLayout.layout(nodeWidgets.values(), graph.getEdges(), chipMargins());
+        } catch (final RuntimeException | StackOverflowError e) {
+            PlanNH.LOG.error("Auto-layout failed; node positions left unchanged", e);
+            return;
+        }
+        if (positions.isEmpty()) return;
+
+        // Anchor the new layout's top-left where the chart's top-left used to be.
+        int layoutMinX = Integer.MAX_VALUE;
+        int layoutMinY = Integer.MAX_VALUE;
+        for (final int[] pos : positions.values()) {
+            layoutMinX = Math.min(layoutMinX, pos[0]);
+            layoutMinY = Math.min(layoutMinY, pos[1]);
+        }
+        final int offsetX = anchorX - layoutMinX;
+        final int offsetY = anchorY - layoutMinY;
+
+        // Bracketed only from here: a layout that threw or produced nothing left the chart alone,
+        // and an undo entry for a no-op move would make the button look like it did something.
+        PlanAPI.recordEdit(graph, () -> {
+            for (final Node node : graph.getNodes()) {
+                final int[] pos = positions.get(node.id);
+                if (pos == null) continue;
+                node.x = pos[0] + offsetX;
+                node.y = pos[1] + offsetY;
+            }
+            applyNodePositions();
+        });
+    }
+
+    private void applyNodePositions() {
+        for (final RecipeNodeWidget widget : nodeWidgets.values()) {
+            widget.pos(widget.getNode().x, widget.getNode().y);
+        }
+        recheckMembershipAndFit();
+    }
+
     @Nullable
     public Group getGroupForNode(final UUID nodeId) {
-        for (final Group g : graph.getGroups()
-            .values()) {
+        for (final Group g : graph.groups.values()) {
             if (g.getNodeIds()
                 .contains(nodeId)) return g;
         }
@@ -222,8 +451,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private void autoFitGroups() {
-        for (final Group group : graph.getGroups()
-            .values()) {
+        for (final Group group : graph.groups.values()) {
             if (!group.isCoverChildren() || group.getNodeIds()
                 .isEmpty()) continue;
             fitGroupToChildren(group);
@@ -236,8 +464,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
         for (final UUID nid : group.getNodeIds()) {
-            final Node n = graph.getNodes()
-                .get(nid);
+            final Node n = graph.nodes.get(nid);
             if (n == null) continue;
             if (n.x < minX) minX = n.x;
             if (n.y < minY) minY = n.y;
@@ -257,23 +484,23 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         group.setHeight(maxY - minY + GROUP_FIT_PAD * 2);
         // Clamp all member nodes
         for (final UUID nid : group.getNodeIds()) {
-            final Node n = graph.getNodes()
-                .get(nid);
+            final Node n = graph.nodes.get(nid);
             if (n == null) continue;
             clampNodeToGroup(n);
         }
     }
 
     private void updateNodeGroupMembership(final Node node) {
-        for (final Group group : graph.getGroups()
-            .values()) {
+        for (final Group group : graph.groups.values()) {
             if (group.isCollapsed()) continue;
-            final boolean inside = node.x >= group.getX() && node.x < group.getX() + group.getWidth()
-                && node.y >= group.getY()
-                && node.y < group.getY() + group.getHeight();
+            final boolean inside = isInside(group, node);
             final boolean contained = group.getNodeIds()
                 .contains(node.id);
             if (inside && !contained) {
+                if (group instanceof final MachineGroup machineGroup) {
+                    joinsMachineGroup(machineGroup, node);
+                    continue;
+                }
                 group.getNodeIds()
                     .add(node.id);
             } else if (!inside && contained) {
@@ -283,13 +510,76 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
     }
 
+    /**
+     * Takes a node into a machine group under the group's settings. One machine cannot be at two
+     * tiers at once, so a joining node runs the way the group already runs.
+     */
+    private boolean joinsMachineGroup(final MachineGroup group, final Node node) {
+        final Node member = memberOf(group);
+        if (member != null) {
+            if (!handlerOf(member).equals(handlerOf(node))) return false;
+            node.machineConfig.copySettingsFrom(member.machineConfig);
+        }
+        group.getNodeIds()
+            .add(node.id);
+        return true;
+    }
+
+    /**
+     * Whether a machine group would turn this node away. The group is one machine, so every member
+     * has to be the same one: identity is the NEI recipe handler rather than the machine's display
+     * name, which a player can rewrite. The first node in sets what the machine is; a node running
+     * anything else does not belong in the frame, which is why a drag that would drop it there is
+     * sent back rather than quietly leaving it inside a group it is not part of.
+     */
+    public boolean refusesNode(final Node node) {
+        for (final Group group : graph.groups.values()) {
+            if (!(group instanceof final MachineGroup machineGroup) || group.isCollapsed()) continue;
+            if (!isInside(group, node) || group.getNodeIds()
+                .contains(node.id)) continue;
+            final Node member = memberOf(machineGroup);
+            if (member != null && !handlerOf(member).equals(handlerOf(node))) return true;
+        }
+        return false;
+    }
+
+    /** Any node already in the group, which is what the group's one machine is; null while empty. */
+    @Nullable
+    private Node memberOf(final MachineGroup group) {
+        for (final UUID memberId : group.getNodeIds()) {
+            final Node member = graph.nodes.get(memberId);
+            if (member != null) return member;
+        }
+        return null;
+    }
+
+    private static boolean isInside(final Group group, final Node node) {
+        return node.x >= group.getX() && node.x < group.getX() + group.getWidth()
+            && node.y >= group.getY()
+            && node.y < group.getY() + group.getHeight();
+    }
+
+    /**
+     * The NEI handler a node's recipe came from, as its registered handler name. Read off the
+     * handler rather than off {@code RecipeId}, whose getter for the same string is spelled
+     * differently across NEI versions, so this holds for the version the mod builds against and the
+     * one the pack ships. The empty string when the handler is gone, which groups a chart's
+     * unresolvable nodes together and is as good an answer as any.
+     */
+    private static String handlerOf(final Node node) {
+        if (node.recipeId == null) return "";
+        final IRecipeHandler handler = RecipeHandlerRef.of(node.recipeId).handler;
+        if (handler == null) return "";
+        return GuiRecipeTab.getHandlerInfo(handler)
+            .getHandlerName();
+    }
+
     public void rebuildNodeWidgets() {
         for (final RecipeNodeWidget w : nodeWidgets.values()) {
             remove(w);
         }
         nodeWidgets.clear();
-        for (final Node node : graph.getNodes()
-            .values()) {
+        for (final Node node : graph.nodes.values()) {
             if (isNodeInCollapsedGroup(node.id)) continue;
             addNodeWidget(node);
             updateNodeGroupMembership(node);
@@ -298,8 +588,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private boolean isNodeInCollapsedGroup(final UUID nodeId) {
-        for (final Group group : graph.getGroups()
-            .values()) {
+        for (final Group group : graph.groups.values()) {
             if (group.isCollapsed() && group.getNodeIds()
                 .contains(nodeId)) return true;
         }
@@ -307,13 +596,11 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void rebuildNoteWidgets() {
-        for (final Note note : graph.getNotes()
-            .values()) child(new NoteWidget(this, note));
+        for (final Note note : graph.notes.values()) child(new NoteWidget(this, note));
     }
 
     public void rebuildGroupWidgets() {
-        for (final Group group : graph.getGroups()
-            .values()) child(new GroupWidget(this, group));
+        for (final Group group : graph.groups.values()) child(new GroupWidget(this, group));
     }
 
     public boolean isOutputPortHit(final int worldMx, final int worldMy) {
@@ -354,13 +641,16 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             drawGrid(width, height);
         }
 
+        Stencil.applyAtZero(getArea(), context);
         drawArrows();
+        drawExternalChips();
 
         if (creatingEdge) {
             drawPreviewLine();
         }
 
         drawHoveredPortLabels();
+        Stencil.remove();
     }
 
     private void drawGrid(final int w, final int h) {
@@ -405,11 +695,172 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     private int worldWidth(final RecipeNodeWidget w) {
-        return w.getWorldWidth();
+        return w.worldWidth();
     }
 
     private int worldHeight(final RecipeNodeWidget w) {
-        return w.getWorldHeight();
+        return w.worldHeight();
+    }
+
+    /** World-space rectangles the chips occupy, for the router to route around. */
+    private List<ArrowRouter.Rect> chipRects() {
+        final List<ArrowRouter.Rect> rects = new ArrayList<>();
+        for (final BalanceView.Boundary flow : graph.boundary()) {
+            final RecipeNodeWidget widget = nodeWidgets.get(
+                flow.port()
+                    .nodeId());
+            if (widget == null) continue;
+            final int index = flow.port()
+                .portIndex();
+            final int width = chipWorldWidth(flow);
+            final boolean input = flow.port()
+                .input();
+            final int x = input ? widget.getNode().x - CHIP_GAP - width
+                : widget.getNode().x + worldWidth(widget) + CHIP_GAP;
+            final int y = widget.getNode().y + portWorldY(index) + chipOffset(flow.kind(), CHIP_H, CHIP_DROP);
+            rects.add(new ArrowRouter.Rect(x, y, width, CHIP_H));
+        }
+        return rects;
+    }
+
+    /** Chip width in world units - the same measurement the drawing and the layout margin use. */
+    private static int chipWorldWidth(final BalanceView.Boundary flow) {
+        return CHIP_PAD_X * 2 + Math.round(
+            Minecraft.getMinecraft().fontRenderer.getStringWidth(
+                flow.label()
+                    .render())
+                * CHIP_TEXT_SCALE);
+    }
+
+    /**
+     * World-space room to keep clear beside each node for its boundary chips, {@code {left, right}}
+     * by node id. The chips are drawn, not laid out, so the layout would otherwise put the next
+     * column exactly where "533.33mB/s Air" goes.
+     */
+    private Map<UUID, int[]> chipMargins() {
+        final Map<UUID, int[]> margins = new HashMap<>();
+        for (final BalanceView.Boundary flow : graph.boundary()) {
+            final int width = CHIP_GAP + chipWorldWidth(flow);
+            final int side = flow.port()
+                .input() ? 0 : 1;
+            final int[] margin = margins.computeIfAbsent(
+                flow.port()
+                    .nodeId(),
+                k -> new int[2]);
+            margin[side] = Math.max(margin[side], width);
+        }
+        return margins;
+    }
+
+    /**
+     * Stub source and sink markers for everything crossing the chart's boundary. Derived from the
+     * solve and never stored: they are not {@link Node}s and take no part in layout or routing.
+     */
+    private void drawExternalChips() {
+        for (final BalanceView.Boundary flow : graph.boundary()) {
+            drawChip(flow);
+        }
+    }
+
+    /**
+     * Where a chip sits relative to its pin. Terminals stay level with it - nothing else is
+     * competing for that line. The two kinds that hang off a CONNECTED port step out of the way of
+     * the edge already using it, and step opposite ways so the two are told apart at a glance:
+     * a surplus leaving drops below, a shortfall arriving rides above.
+     */
+    private static int chipOffset(final BalanceView.Kind kind, final int chipHeight, final int drop) {
+        return switch (kind) {
+            case EXCESS -> drop;
+            case IMPORT -> -drop - chipHeight;
+            default -> -chipHeight / 2;
+        };
+    }
+
+    /** The wire colour for a boundary flow's ingredient, matching the edges that carry it. */
+    private int leadColor(final BalanceView.Boundary flow) {
+        final Node node = graph.nodes.get(
+            flow.port()
+                .nodeId());
+        if (node == null) return ARROW_COLOR_ITEM;
+        final List<Port<?>> ports = flow.port()
+            .input() ? node.inputs : node.outputs;
+        final int index = flow.port()
+            .portIndex();
+        return index < 0 || index >= ports.size() ? ARROW_COLOR_ITEM
+            : ports.get(index)
+                .getArrowColor();
+    }
+
+    private void drawChip(final BalanceView.Boundary flow) {
+        final RecipeNodeWidget widget = nodeWidgets.get(
+            flow.port()
+                .nodeId());
+        if (widget == null) return;
+        final boolean input = flow.port()
+            .input();
+        final int index = flow.port()
+            .portIndex();
+
+        // Kind decides the ink, the ingredient decides the frame, and the fill is the same
+        // almost-opaque near-black plate for all of them (PORT_LABEL_BG): a per-kind translucent
+        // tint over a dark canvas leaves green-on-charcoal text unreadable.
+        final int textColor;
+        switch (flow.kind()) {
+            case EXCESS -> textColor = PlannhColors.ACCENT_GREEN2.getColor();
+            case IMPORT -> textColor = PlannhColors.ACCENT_AMBER.getColor();
+            case PRODUCT -> textColor = PlannhColors.ACCENT_GREEN2.getColor();
+            default -> textColor = PlannhColors.ACCENT_BLUE2.getColor();
+        }
+
+        final float zoom = graph.getZoom();
+        final float textScale = CHIP_TEXT_SCALE * zoom;
+        final int textW = Math.round(
+            Minecraft.getMinecraft().fontRenderer.getStringWidth(
+                flow.label()
+                    .render())
+                * textScale);
+        final int textH = Math.round(Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT * textScale);
+        final int chipW = textW + Math.round(CHIP_PAD_X * 2 * zoom);
+        final int chipH = Math.round(CHIP_H * zoom);
+        final int thickness = Math.max(1, Math.round(zoom));
+
+        final int gap = Math.round(CHIP_GAP * zoom);
+        final int y = widgetY(widget) + portY(index) + chipOffset(flow.kind(), chipH, Math.round(CHIP_DROP * zoom));
+        final int nodeRight = widgetX(widget) + Math.round(widget.getArea().width * zoom);
+        final int x = input ? widgetX(widget) - gap - chipW : nodeRight + gap;
+
+        // The stub reads as attached rather than floating: a lead from the pin to the chip edge,
+        // in the ingredient's own wire colour so it matches the edges carrying the same thing. The
+        // label keeps its kind colour - the line says WHAT, the text says what is happening to it.
+        //
+        // Drawn the way a machine-to-machine edge is drawn, contrast underlay and all: an oak-wood
+        // brown hairline over a night-time world is invisible without one, and the lead was the
+        // only wire on the canvas not getting that treatment.
+        final int leadColor = leadColor(flow);
+        final int outline = IngredientColors.outlineFor(leadColor);
+        final float leadThick = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * zoom);
+        final int leadX = input ? x + chipW : nodeRight;
+        final int pinY = widgetY(widget) + portY(index);
+        final int[] leadXs = { leadX, leadX + gap };
+        final int[] leadYs = { pinY, pinY };
+        drawLineStrip(leadXs, leadYs, outline, leadThick + EDGE_OUTLINE_EXTRA);
+        drawLineStrip(leadXs, leadYs, leadColor, leadThick);
+
+        GuiDraw.drawRect(x, y, chipW, chipH, PlannhColors.CHIP_BG.getColor());
+        // Framed in the ingredient's wire colour so the chip, its lead and the edges carrying the
+        // same thing read as one run. No contrast ring around it: the frame already sits against an
+        // opaque plate, so unlike the hairline lead it was never in danger of disappearing.
+        GuiHelper.drawRectBorder(x, y, chipW, chipH, thickness, leadColor);
+        // Centred in the box on both axes, measured rather than nudged: the label is what sizes
+        // the chip, so the padding either side is the same number the width was built from.
+        GuiDraw.drawText(
+            flow.label()
+                .render(),
+            x + (chipW - textW) / 2,
+            y + (chipH - textH) / 2,
+            textScale,
+            textColor,
+            false);
     }
 
     /**
@@ -465,8 +916,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             obstacles.add(new ArrowRouter.Rect(w.getNode().x, w.getNode().y, worldWidth(w), worldHeight(w)));
         }
         final List<ArrowRouter.Request> requests = new ArrayList<>();
-        for (final Edge edge : graph.getEdges()
-            .values()) {
+        for (final Edge edge : graph.edges.values()) {
             final RecipeNodeWidget src = nodeWidgets.get(edge.sourceNodeId);
             final RecipeNodeWidget dst = nodeWidgets.get(edge.targetNodeId);
             if (src == null || dst == null) continue;
@@ -477,13 +927,84 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             requests.add(new ArrowRouter.Request(edge.id, sx, sy, dx, dy));
         }
 
-        edgeRoutes.putAll(ARROW_ROUTER.route(obstacles, requests));
+        // Chips are no-turn zones rather than obstacles: a chip sits directly on the approach to
+        // its own port, so blocking it would seal the only way in and drop the edge to a
+        // straight-line fallback that ignores everything. Passing behind a label is fine; turning
+        // under one is what reads as the arrow terminating there.
+        final Set<UUID> fellBack = new HashSet<>();
+        edgeRoutes.putAll(ARROW_ROUTER.route(obstacles, chipRects(), requests, fellBack));
+
+        // A fallback ignores every obstacle, so it is the one route that can end up crossing a
+        // node or cornering under a label however the zones are set up. Worth saying out loud
+        // rather than leaving someone to infer it from a screenshot.
+        if (!fellBack.isEmpty()) {
+            PlanNH.LOG
+                .info("Arrow routing fell back for {} of {} edges: {}", fellBack.size(), requests.size(), fellBack);
+        }
+
+        if (!Config.debugRouteDump) return;
+
+        // The routing input replays headlessly (ArrowRouter is Minecraft-free); dump it on
+        // every recompute so any bad-looking route can be rebuilt from the dev log.
+        PlanNH.LOG.info(reproDump(obstacles, requests));
+
+        // A route several times longer than its direct distance means the router wrapped
+        // around the chart; call it out so the dump above gets looked at.
+        for (final ArrowRouter.Request q : requests) {
+            final List<int[]> path = edgeRoutes.get(q.key());
+            if (path == null) continue;
+            int len = 0;
+            for (int i = 1; i < path.size(); i++) {
+                len += Math.abs(path.get(i)[0] - path.get(i - 1)[0]) + Math.abs(path.get(i)[1] - path.get(i - 1)[1]);
+            }
+            final int direct = Math.abs(q.dx() - q.sx()) + Math.abs(q.dy() - q.sy());
+            if (len <= direct * 3 + 200) continue;
+            PlanNH.LOG.info(
+                "Arrow route wrapped: edge {} ({},{})->({},{}) len={} direct={}",
+                q.key(),
+                q.sx(),
+                q.sy(),
+                q.dx(),
+                q.dy(),
+                len,
+                direct);
+        }
+    }
+
+    private static String reproDump(final List<ArrowRouter.Rect> obstacles, final List<ArrowRouter.Request> requests) {
+        final StringBuilder sb = new StringBuilder("Route repro: obstacles=");
+        for (final ArrowRouter.Rect r : obstacles) {
+            sb.append(r.x())
+                .append(',')
+                .append(r.y())
+                .append(',')
+                .append(r.w())
+                .append(',')
+                .append(r.h())
+                .append(';');
+        }
+        sb.append(" requests=");
+        for (final ArrowRouter.Request r : requests) {
+            sb.append(r.sx())
+                .append(',')
+                .append(r.sy())
+                .append(',')
+                .append(r.dx())
+                .append(',')
+                .append(r.dy())
+                .append(';');
+        }
+        return sb.toString();
     }
 
     private long computeRouteSignature() {
         long sig = ROUTE_HASH_SEED;
-        for (final Edge edge : graph.getEdges()
-            .values()) {
+        // The chips are obstacles, so a re-solve that moves or renames one has to invalidate the
+        // routes with it. The balance object's identity is the cheap proxy for "the chips changed":
+        // it is memoized and replaced wholesale whenever the chart is re-solved, where rebuilding
+        // every chip rectangle to hash it would run on each frame.
+        sig = mixRouteHash(sig, System.identityHashCode(graph.balance()));
+        for (final Edge edge : graph.edges.values()) {
             final RecipeNodeWidget src = nodeWidgets.get(edge.sourceNodeId);
             final RecipeNodeWidget dst = nodeWidgets.get(edge.targetNodeId);
             if (src == null || dst == null) continue;
@@ -509,22 +1030,17 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
     private void drawArrows() {
         ensureRoutes();
-        for (final Edge edge : graph.getEdges()
-            .values()) {
+        for (final Edge edge : graph.edges.values()) {
             final RecipeNodeWidget srcWidget = nodeWidgets.get(edge.sourceNodeId);
             final RecipeNodeWidget dstWidget = nodeWidgets.get(edge.targetNodeId);
             if (srcWidget == null || dstWidget == null) continue;
 
-            final Node srcNode = graph.getNodes()
-                .get(edge.sourceNodeId);
-            final boolean isFluid = srcNode != null && edge.sourceOutputIndex >= 0
-                && edge.sourceOutputIndex < srcNode.outputs.size()
-                && srcNode.outputs.get(edge.sourceOutputIndex)
-                    .getType() == RecipePropertyAPI.FLUID;
+            final Node srcNode = graph.nodes.get(edge.sourceNodeId);
+            final int color = edgeColor(srcNode, edge.sourceOutputIndex);
 
             final List<int[]> route = edgeRoutes.get(edge.id);
             if (route != null && route.size() >= 2) {
-                drawRoutedArrow(route, isFluid);
+                drawRoutedArrow(route, color);
                 continue;
             }
 
@@ -534,14 +1050,23 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             final int dstX = widgetX(dstWidget);
             final int dstY = widgetY(dstWidget) + portY(edge.targetInputIndex);
 
-            drawArrow(srcX, srcY, dstX, dstY, isFluid);
+            drawArrow(srcX, srcY, dstX, dstY, color);
         }
+    }
+
+    /** Edge color follows the ingredient flowing through it; type color as fallback. */
+    private static int edgeColor(@Nullable final Node srcNode, final int outputIndex) {
+        if (srcNode == null || outputIndex < 0 || outputIndex >= srcNode.outputs.size()) {
+            return ARROW_COLOR_ITEM;
+        }
+        return srcNode.outputs.get(outputIndex)
+            .getArrowColor();
     }
 
     /**
      * Draws a multi-segment orthogonal arrow from cached world-space waypoints.
      */
-    private void drawRoutedArrow(final List<int[]> route, final boolean fluid) {
+    private void drawRoutedArrow(final List<int[]> route, final int color) {
         final int n = route.size();
         final int[] sx = new int[n];
         final int[] sy = new int[n];
@@ -551,22 +1076,28 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         }
 
         final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
-        final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
         final int x2 = sx[n - 1];
         final int y2 = sy[n - 1];
         // Stop the line at the arrow base so it does not poke through the head (last segment is horizontal).
         sx[n - 1] = Math.round(x2 - as);
 
-        drawLineStrip(sx, sy, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
+        final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
+        // Contrast underlay so the colored line stays readable over any world background.
+        final int outline = IngredientColors.outlineFor(color);
+        drawLineStrip(sx, sy, outline, thickness + EDGE_OUTLINE_EXTRA);
+        drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, outline);
+        drawLineStrip(sx, sy, color, thickness);
         drawArrowHead(x2, y2, sx[n - 1], as * ARROW_HB_RATIO, color);
     }
 
-    private void drawArrow(final int x1, final int y1, final int x2, final int y2, final boolean fluid) {
+    private void drawArrow(final int x1, final int y1, final int x2, final int y2, final int color) {
         final float as = Math.max(ARROW_MIN_SIZE, ARROW_SIZE * graph.getZoom());
         final int ex = Math.round(x2 - as);
-        final int color = fluid ? ARROW_COLOR_FLUID : ARROW_COLOR_ITEM;
-        drawOrthogonalLine(x1, y1, x2, y2, ex, color, Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom()));
-
+        final float thickness = Math.max(LINE_THICK_MIN, LINE_THICK_BASE * graph.getZoom());
+        final int outline = IngredientColors.outlineFor(color);
+        drawOrthogonalLine(x1, y1, x2, y2, ex, outline, thickness + EDGE_OUTLINE_EXTRA);
+        drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO + EDGE_OUTLINE_EXTRA / 2f, outline);
+        drawOrthogonalLine(x1, y1, x2, y2, ex, color, thickness);
         drawArrowHead(x2, y2, ex, as * ARROW_HB_RATIO, color);
     }
 
@@ -646,8 +1177,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
         final int margin = Math.max(EDGE_MARGIN_BASE, Math.round(EDGE_MARGIN_BASE * graph.getZoom()));
         final int cmx = absMx - getArea().x;
         final int cmy = absMy - getArea().y;
-        for (final Edge edge : graph.getEdges()
-            .values()) {
+        for (final Edge edge : graph.edges.values()) {
             final List<int[]> route = edgeRoutes.get(edge.id);
             if (route == null || route.size() < 2) continue;
             for (int i = 0; i < route.size() - 1; i++) {
@@ -707,8 +1237,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
             if (!isMouseOverAnyNode(absMx, absMy) && !isMouseOverAnyGroup(absMx, absMy)) {
                 final Edge clicked = getEdgeAt(absMx, absMy);
                 if (clicked != null) {
-                    graph.getEdges()
-                        .remove(clicked.id);
+                    PlanAPI.recordEdit(graph, () -> graph.removeEdge(clicked.id));
                     return Result.SUCCESS;
                 }
                 return Result.ACCEPT;
@@ -758,16 +1287,18 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     public boolean onMouseRelease(final int mouseButton) {
         if (creatingEdge) {
             if (edgeHoverNodeId != null) {
-                final Node srcNode = graph.getNodes()
-                    .get(edgeSourceNodeId);
-                final Node dstNode = graph.getNodes()
-                    .get(edgeHoverNodeId);
+                final Node srcNode = graph.nodes.get(edgeSourceNodeId);
+                final Node dstNode = graph.nodes.get(edgeHoverNodeId);
                 if (srcNode != null && dstNode != null) {
-                    UUID id = UUID.randomUUID();
-                    graph.getEdges()
-                        .put(
-                            id,
-                            new Edge(id, edgeSourceNodeId, edgeHoverNodeId, edgeSourcePortIndex, edgeHoverPortIndex));
+                    PlanAPI.recordEdit(
+                        graph,
+                        () -> graph.addEdge(
+                            new Edge(
+                                UUID.randomUUID(),
+                                edgeSourceNodeId,
+                                edgeHoverNodeId,
+                                edgeSourcePortIndex,
+                                edgeHoverPortIndex)));
                 }
             }
             creatingEdge = false;
@@ -855,25 +1386,35 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
     }
 
     public void addNote(int x, int y) {
-        final Note note = new Note();
-        note.setX(x);
-        note.setY(y);
+        PlanAPI.recordEdit(graph, () -> {
+            final Note note = new Note();
+            note.setX(x);
+            note.setY(y);
 
-        graph.getNotes()
-            .put(note.getId(), note);
-        child(new NoteWidget(this, note));
+            graph.notes.put(note.getId(), note);
+            child(new NoteWidget(this, note));
+        });
 
         menuOpen = false;
     }
 
     public void addGroup(int x, int y) {
-        final Group group = new Group();
-        group.setX(x);
-        group.setY(y);
+        addGroup(x, y, new Group());
+    }
 
-        graph.getGroups()
-            .put(group.getId(), group);
-        child(new GroupWidget(this, group));
+    /** A group whose recipes share one machine; see {@link MachineGroup}. */
+    public void addMachineGroup(int x, int y) {
+        addGroup(x, y, new MachineGroup());
+    }
+
+    private void addGroup(final int x, final int y, final Group group) {
+        PlanAPI.recordEdit(graph, () -> {
+            group.setX(x);
+            group.setY(y);
+
+            graph.groups.put(group.getId(), group);
+            child(new GroupWidget(this, group));
+        });
 
         menuOpen = false;
     }
@@ -948,7 +1489,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         for (final RecipeNodeWidget w : nodeWidgets.values()) {
             final Node node = w.getNode();
-            final int worldW = w.getWorldWidth();
+            final int worldW = w.worldWidth();
 
             // Output ports (right side)
             for (int i = 0; i < node.outputs.size(); i++) {

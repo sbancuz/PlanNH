@@ -1,0 +1,60 @@
+# Two mirror-image branches feeding one demand that is smaller than their combined output.
+#
+# Each furnace is pinned at 1 craft/s, so 10/s of its ingot exists whether or not anything wants
+# it. The final assembler is pinned, so plate demand is 15/s against 20/s of capacity. The two
+# assemblers' extents therefore satisfy x + y = 1.5, and exactly one branch has to run below full:
+#
+#   A: x = 1.0, y = 0.5  -> alpha fully consumed,  5/s beta ingot voided
+#   B: x = 0.5, y = 1.0  -> beta fully consumed,   5/s alpha ingot voided
+#   C: x = 1.0, y = 1.0  -> both fully consumed,   5/s plate voided
+#
+# A and B are the same solution with the two branches relabelled, so no objective the solver has
+# can separate them: same gate count, same 0.5 crafts voided, same 30/s of internal flow. C ties on
+# the first two and loses on the third (40/s of flow), so it is dominated, not an alternative.
+- m: alpha blast furnace
+  tier: MV
+  I:
+    alpha dust: 10
+  O:
+    alpha ingot: 10
+  eut: 120
+  dur: 1
+  number: 1
+
+- m: beta blast furnace
+  tier: MV
+  I:
+    beta dust: 10
+  O:
+    beta ingot: 10
+  eut: 120
+  dur: 1
+  number: 1
+
+- m: alpha bender
+  tier: MV
+  I:
+    alpha ingot: 10
+  O:
+    plate: 10
+  eut: 120
+  dur: 1
+
+- m: beta bender
+  tier: MV
+  I:
+    beta ingot: 10
+  O:
+    plate: 10
+  eut: 120
+  dur: 1
+
+- m: final assembler
+  tier: MV
+  I:
+    plate: 15
+  O:
+    machine casing: 1
+  eut: 120
+  dur: 1
+  number: 1
