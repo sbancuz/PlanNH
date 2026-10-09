@@ -19,6 +19,7 @@ import com.sbancuz.plannh.data.RecipeContext;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
 import com.sbancuz.plannh.data.SettingDef;
 import com.sbancuz.plannh.data.Settings;
+import com.sbancuz.plannh.data.channels.ChannelReport;
 import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.GTOverclockStep;
 import com.sbancuz.plannh.data.flowchart.Node;
@@ -50,7 +51,7 @@ public class GTProvider implements PropertyProvider {
     private static final int FURNACE_COOK_TICKS = 200;
 
     /** GT5u stores a chance as 1..10000, where 10000 is 100%. */
-    private static final float GT_CHANCE_SCALE = 10_000f;
+    static final float GT_CHANCE_SCALE = 10_000f;
 
     public static final RecipeProperty<Integer> SPECIAL_VALUE = RecipeProperty.<Integer>builder("gt.special_value", 0)
         .build();
@@ -79,6 +80,9 @@ public class GTProvider implements PropertyProvider {
         .<RecipeMap<?>>builder("gt.recipe_map", null)
         .build();
 
+    public static final RecipeProperty<GTRecipe> GT_RECIPE = RecipeProperty.<GTRecipe>builder("gt.recipe", null)
+        .build();
+
     @Override
     public void register() {
         RecipePropertyAPI.registerExtractor(FurnaceRecipeHandler.class, this);
@@ -90,6 +94,7 @@ public class GTProvider implements PropertyProvider {
 
         MachineProfileRegistry.register(PROFILE);
         new GTSteamProvider().register();
+        ChannelReport.setAnalyzer(GTChannelAnalyzer::analyze);
     }
 
     static BiPredicate<RecipeContext, Map<String, Object>> multiblockOnly() {
@@ -303,6 +308,7 @@ public class GTProvider implements PropertyProvider {
 
         if (gthMap != null) {
             props.put(RECIPE_MAP, gthMap);
+            props.put(GT_RECIPE, r);
         }
 
         extractMD(props, r, FUSION_THRESHOLD, GTRecipeConstants.FUSION_THRESHOLD, 0L);
