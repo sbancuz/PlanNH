@@ -159,6 +159,7 @@ public final class FlowchartList extends ClampedListWidget<IWidget, FlowchartLis
         private final FlowchartList list;
 
         public Grip(FlowchartList sectionsList, final int accentColor, final int tintColor) {
+            name("summary.grip");
             width(WIDTH).fullHeight()
                 .background(
                     new Rectangle().color(accentColor),

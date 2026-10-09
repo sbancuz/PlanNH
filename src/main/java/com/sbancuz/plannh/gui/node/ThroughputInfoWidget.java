@@ -52,10 +52,12 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
 
     public ThroughputInfoWidget(NodeWidget parent) {
         this.parent = parent;
+        name("node.info");
         fullWidth();
         coverChildrenHeight();
 
         lines = FlowchartFlow.col(parent)
+            .name("node.info.lines")
             .fullWidth()
             .coverChildrenHeight();
         child(lines);
@@ -115,8 +117,11 @@ public class ThroughputInfoWidget extends ParentWidget<ThroughputInfoWidget> imp
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
             .childPadding(2)
             .tooltipBuilder(this::writeTooltip)
-            .child(new FlowchartTextWidget(copies, parent))
-            .child(new FlowchartTextWidget(IKey.lang(LANG + "duration", GuiHelper.formatDuration(duration)), parent));
+            .child(new FlowchartTextWidget(copies, parent).name("node.info.copies"))
+            .child(
+                new FlowchartTextWidget(IKey.lang(LANG + "duration", GuiHelper.formatDuration(duration)), parent)
+                    .name("node.info.duration")
+                    .textAlign(Alignment.CenterRight));
         lines.child(row);
 
         scheduleResize();

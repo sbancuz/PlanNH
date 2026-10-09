@@ -29,7 +29,8 @@ final class TotalsRow extends SummaryFlow {
             .paddingLeft(SummaryBody.TEXT_X)
             .hoverBackground(new Rectangle().color(PlannhColors.SUMMARY_ROW_HOVER.getColor()))
             .child(
-                new TextWidget<>(text).color(PlannhColors.ACCENT_BLUE.getColor())
+                new TextWidget<>(text).name("summary.totals.text")
+                    .color(PlannhColors.ACCENT_BLUE.getColor())
                     .textAlign(Alignment.CenterLeft)
                     .fullWidth());
     }

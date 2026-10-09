@@ -16,6 +16,7 @@ public class NoteTextWidget extends FlowchartTextFieldWidget {
 
     public NoteTextWidget(NoteWidget parent) {
         super(parent);
+        name("note.text");
         background(
             new DynamicDrawable(
                 () -> new Rectangle()

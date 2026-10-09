@@ -217,6 +217,7 @@ public class CanvasWidget extends ParentWidget<CanvasWidget> implements Interact
 
         full();
         marginBottom(18);
+        name("canvas");
 
         contextMenu = menu;
         rebuildWidgets();

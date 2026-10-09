@@ -18,11 +18,14 @@ public class NoteWidget extends FlowchartWidget<NoteWidget, Note> {
     public NoteWidget(CanvasWidget canvas, Note note) {
         super(canvas, note);
 
+        name("note");
         coverChildren();
 
         Flow mainColumn = Flow.column()
+            .name("note.column")
             .coverChildren();
         Flow topRow = FlowchartFlow.row(this)
+            .name("note.header")
             .coverChildrenHeight()
             .fullWidth()
             .childPadding(4)

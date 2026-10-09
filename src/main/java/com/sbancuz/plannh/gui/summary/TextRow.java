@@ -9,13 +9,15 @@ import com.sbancuz.plannh.gui.PlannhColors;
 
 final class TextRow extends SummaryFlow {
 
-    TextRow(final IKey text, final int color) {
+    TextRow(final IKey text, final int color, final String name) {
         super(GuiAxis.X);
+        name(name);
         fullWidth().coverChildrenHeight(SummaryBody.LINE_H)
             .paddingLeft(SummaryBody.TEXT_X)
             .hoverBackground(new Rectangle().color(PlannhColors.SUMMARY_ROW_HOVER.getColor()))
             .child(
-                new TextWidget<>(text).color(color)
+                new TextWidget<>(text).name(name + ".text")
+                    .color(color)
                     .textAlign(Alignment.CenterLeft)
                     .fullWidth());
     }

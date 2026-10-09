@@ -10,6 +10,7 @@ public class CornerWidget extends ArrowComponentWidget {
 
     public CornerWidget(ArrowWidget parent) {
         super(parent);
+        name("arrow.corner");
     }
 
     @Override

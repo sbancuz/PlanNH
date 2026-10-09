@@ -120,6 +120,10 @@ plannh.gui.node.throughput.unbalanced=not balanced
 plannh.gui.node.throughput.unplanned=not planned
 plannh.gui.node.throughput.settings=Settings
 plannh.gui.node.throughput.shift_hint=Hold §f§l[LSHIFT]§7 for every unit and setting
+## Throughput fold, the rows of rates behind it
+plannh.gui.node.throughput.rows=Throughput rows
+plannh.gui.node.throughput.rows.hide_hint=Click to fold these rows away
+plannh.gui.node.throughput.rows.show_hint=Click to show the rows again
 
 ## GUI - Node port
 ## The rate under a port, and the rows that take it apart
@@ -146,6 +150,18 @@ plannh.gui.node.target.solved=The balance asks for
 plannh.gui.node.target.no_outputs=This recipe names no output, so there is no rate to ask for
 plannh.gui.node.target.unsupported=%s honours no target; switch the chart's balance mode to pin machines
 plannh.gui.node.target.extent=Extent pins are handed to a solve by the caller, not set on a machine
+
+## GUI - Node properties
+## The fold, and the recipe's own figures behind it
+plannh.gui.node.properties=Machine properties
+plannh.gui.node.properties.hide_hint=Click to fold these rows away
+plannh.gui.node.properties.show_hint=Click to show the rows again
+plannh.gui.node.properties.none_hint=This recipe carries no properties to show
+
+## GUI - Node extractor
+## The switcher on the node's option row, over how this recipe is read
+plannh.gui.node.extractor.prev=Previous extractor
+plannh.gui.node.extractor.next=Next extractor
 
 ## GUI - Node settings
 plannh.gui.node.settings=Machine settings

@@ -28,6 +28,7 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.NEIRecipeWidget;
 import codechicken.nei.recipe.RecipeHandlerRef;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
+import lombok.Getter;
 
 public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements IFlowchartDraggable {
 
@@ -46,7 +47,11 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
     private static long lastHandlerUpdate = 0;
     private boolean success = true;
 
+    @Getter
+    private int recipeWidth = 0;
+
     public RecipeAreaWidget(NodeWidget parent) {
+        name("node.recipe");
         this.parent = parent;
         Node data = parent.getData();
 
@@ -66,8 +71,10 @@ public class RecipeAreaWidget extends ParentWidget<RecipeAreaWidget> implements 
         if (Compat.GREGTECH.isLoaded && handlerRef.handler instanceof GTNEIDefaultHandlerAccessor handler) {
             Size size = handler.getNeiProperties().recipeBackgroundSize;
             size(size.width, size.height);
+            recipeWidth = size.width;
         } else {
             size(neiWidget.w, neiWidget.h);
+            recipeWidth = neiWidget.w;
         }
 
         NEIRecipeWidgetAccessor accessor = (NEIRecipeWidgetAccessor) neiWidget;

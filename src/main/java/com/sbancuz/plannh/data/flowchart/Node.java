@@ -51,6 +51,16 @@ public class Node extends GraphData {
     @Getter
     private transient boolean targetOpen = true;
 
+    /** Whether the throughput rows are showing. Transient, like {@link #targetOpen}. */
+    @Setter
+    @Getter
+    private transient boolean throughputOpen = true;
+
+    /** Whether the properties rows are showing. Transient, like {@link #throughputOpen}. */
+    @Setter
+    @Getter
+    private transient boolean propertiesOpen = true;
+
     private transient PropertyProvider extractor;
     private transient List<PropertyProvider> availableExtractors;
     @Setter
@@ -152,10 +162,9 @@ public class Node extends GraphData {
         ports.addAll(aggregate);
     }
 
-    // TODO add button for this
-    public void switchExtractor() {
+    public void switchExtractor(final int delta) {
         if (availableExtractors.size() < 2) return;
-        extractorIndex = (extractorIndex + 1) % availableExtractors.size();
+        extractorIndex = Math.floorMod(extractorIndex + delta, availableExtractors.size());
         extractor = availableExtractors.get(extractorIndex);
 
         RecipeHandlerRef ref = RecipeHandlerRef.of(recipeId);

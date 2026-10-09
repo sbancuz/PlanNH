@@ -53,13 +53,15 @@ public final class CopyCountTarget implements TargetKind {
                 .addLine(solved(parent)));
         final FlowchartFlow flow = FlowchartFlow.row(parent);
 
-        flow.fullWidth()
+        flow.name("target.copies")
+            .fullWidth()
             .coverChildrenHeight()
             .childPadding(2)
             .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
             .child(label)
             .child(
-                new TextFieldWidget().width(IntegerSettingDef.fieldWidth(MIN, MAX))
+                new TextFieldWidget().name("target.copies.field")
+                    .width(IntegerSettingDef.fieldWidth(MIN, MAX))
                     .value(new IntValue.Dynamic(() -> copies, typed -> edit.accept(() -> copies = typed)))
                     .numbersInt(MIN, MAX)
                     .formatAsInteger(true));

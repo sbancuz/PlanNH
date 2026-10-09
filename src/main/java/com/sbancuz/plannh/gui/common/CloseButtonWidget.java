@@ -17,6 +17,7 @@ public class CloseButtonWidget extends ButtonWidget<CloseButtonWidget> {
 
     public CloseButtonWidget(FlowchartWidget<?, ?> parent) {
         this.parent = parent;
+        name("close");
         background(
             new Rectangle().color(PlannhColors.NOTE_CLOSE_BG.getColor()),
             new Rectangle().color(Color.BLACK.main)

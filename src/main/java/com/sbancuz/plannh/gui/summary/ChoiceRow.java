@@ -29,6 +29,7 @@ final class ChoiceRow extends SummaryFlow implements Interactable {
             .hoverBackground(new Rectangle().color(PlannhColors.SUMMARY_ROW_HOVER.getColor()))
             .child(
                 new TextWidget<>(IKey.str((choice.active() ? "> " : "  ") + choice.displayName()))
+                    .name("summary.choice.text")
                     .paddingLeft(SummaryBody.TEXT_X)
                     .color(
                         choice.active() ? PlannhColors.ACCENT_CYAN2.getColor()

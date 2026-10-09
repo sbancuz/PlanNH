@@ -27,24 +27,32 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
 
     protected SummaryHeader(final SummaryWidget panel, final Summary data, final Summary.Section section,
         FlowchartList sectionsList) {
+        name("summary.section.header");
         fullWidth().height(HEADER_H)
             .background(new Rectangle().color(PlannhColors.SUMMARY_HEADER_BG.getColor()));
 
         child(
             SummaryFlow.row()
+                .name("summary.section.header.row")
                 .full()
                 .childPadding(PAD)
                 .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
                 .child(
                     SummaryFlow.row()
+                        .name("summary.section.header.title")
                         .coverChildren()
                         .childPadding(PAD)
-                        .child(new FlowchartList.Grip(sectionsList, accentColor(section), textColor(section)))
-                        .child(new TextWidget<>(headerTitle(section, data)).color(textColor(section))))
+                        .child(
+                            new FlowchartList.Grip(sectionsList, accentColor(section), textColor(section))
+                                .name("summary.grip"))
+                        .child(
+                            new TextWidget<>(headerTitle(section, data)).name("summary.section.header.text")
+                                .color(textColor(section))))
                 .child(foldToggle(data, section)));
 
         child(
-            new Widget<>().fullWidth()
+            new Widget<>().name("summary.section.header.rule")
+                .fullWidth()
                 .height(1)
                 .background(new Rectangle().color(PlannhColors.SUMMARY_SEPARATOR.getColor())));
 
@@ -83,7 +91,8 @@ class SummaryHeader extends ParentWidget<SummaryHeader> {
     }
 
     static CycleButtonWidget foldToggle(final Summary data, final Summary.Section section) {
-        return new CycleButtonWidget().stateCount(2)
+        return new CycleButtonWidget().name("summary.fold")
+            .stateCount(2)
             .size(HEADER_H, HEADER_H)
             .stateOverlay(true, IKey.str("V"))
             .stateOverlay(false, IKey.str("^"))

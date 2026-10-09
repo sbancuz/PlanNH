@@ -8,20 +8,18 @@ import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.gui.common.FlowchartFlow;
 import com.sbancuz.plannh.gui.common.FlowchartTextWidget;
 
-class SettingsList extends NodeFoldList<SettingsList> {
-
-    private static final int VISIBLE_ROWS = 8;
+class SettingsFold extends NodeFold {
 
     private final Node data;
     private final MachineConfig config;
     private MachineProfile savedProfile;
 
-    public SettingsList(final NodeWidget node) {
+    public SettingsFold(final NodeWidget node) {
         super(
             node,
-            VISIBLE_ROWS,
             () -> node.getData()
                 .isSettingsOpen());
+        name("fold.settings");
 
         data = node.getData();
         config = data.getMachineConfig();
@@ -48,12 +46,13 @@ class SettingsList extends NodeFoldList<SettingsList> {
             .forEach(
                 def -> child(
                     FlowchartFlow.row(node)
+                        .name("settings.row")
                         .fullWidth()
                         .marginBottom(ROW_GAP)
                         .coverChildrenHeight()
                         .childPadding(2)
                         .mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
-                        .child(new FlowchartTextWidget(def.getLabel(), node))
+                        .child(new FlowchartTextWidget(def.getLabel(), node).name("settings.row.label"))
                         .child(def.settingsWidget(data.getMachineConfig(), change -> {
                             commitEdit(change);
                             markStale();
