@@ -165,18 +165,19 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             getContext().getAllBelowMouse()
                 .spliterator(),
             false)
-            .filter(w -> (w instanceof FlowchartWidget<?, ?> || w instanceof CanvasWidget) && w != this)
+            // a group's header, border and collapsed body have no area to place the widget into
+            .filter(w -> (w instanceof GroupAreaWidget || w instanceof CanvasWidget) && !isSelfOrDescendant(w))
             .map(w -> (ParentWidget<?>) w)
             .findFirst() // this should always find at least 1 match (the canvas)
             .orElseThrow();
 
-        if (oldParent != newParent && (newParent instanceof CanvasWidget || newParent instanceof GroupWidget)) {
+        if (oldParent != newParent) {
             oldParent.remove(this);
 
             dataContainer.remove(data.getId());
-            if (newParent instanceof GroupWidget groupWidget) {
-                groupWidget.getAreaWidget()
-                    .child(this);
+            if (newParent instanceof GroupAreaWidget areaWidget) {
+                final GroupWidget groupWidget = (GroupWidget) areaWidget.getFlowchartParent();
+                areaWidget.child(this);
                 dataContainer = groupWidget.getData()
                     .getChildren();
                 data.setX(groupWidget.getMouseGroupX() - dragOffsetX);
@@ -191,5 +192,12 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             dataContainer.put(data.getId(), data);
             reposition();
         }
+    }
+
+    private boolean isSelfOrDescendant(IWidget widget) {
+        for (IWidget w = widget; w != null; w = w.hasParent() ? w.getParent() : null) {
+            if (w == this) return true;
+        }
+        return false;
     }
 }
