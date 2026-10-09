@@ -9,15 +9,15 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.api.RecipePropertyAPI;
-import com.sbancuz.plannh.data.MachineProfile;
 import com.sbancuz.plannh.data.MachineProfileRegistry;
 import com.sbancuz.plannh.data.RecipeHandlerAccess;
-import com.sbancuz.plannh.data.Settings;
-import com.sbancuz.plannh.data.effect.Effects;
 import com.sbancuz.plannh.data.effect.steps.CoFHCompat;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.machine.MachineVariants;
 import com.sbancuz.plannh.data.properties.PropertyProvider;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
+import com.sbancuz.plannh.data.provider.enderio.EnderIOMachines;
+import com.sbancuz.plannh.data.provider.enderio.EnderIOProfile;
 
 import codechicken.nei.recipe.IRecipeHandler;
 import codechicken.nei.recipe.TemplateRecipeHandler;
@@ -35,11 +35,6 @@ import crazypants.enderio.nei.VatRecipeHandler.InnerVatRecipe;
 
 public class EnderIOProvider implements PropertyProvider {
 
-    // TODO: Make a PR to expose these constants
-    // EnderIO machines run at 80 RF/t base (crazypants.enderio.machine.AbstractPowerConsumerEntity)
-    private static final int RF_PER_TICK = 80;
-    private static final String PROFILE_ID = "enderio";
-
     public static final RecipeProperty<Integer> EXPERIENCE = RecipeProperty.<Integer>builder("enderio.experience", 0)
         .build();
 
@@ -55,16 +50,9 @@ public class EnderIOProvider implements PropertyProvider {
         RecipePropertyAPI.registerExtractor(SliceAndSpliceRecipeHandler.class, this);
         RecipePropertyAPI.registerExtractor(SoulBinderRecipeHandler.class, this);
 
-        MachineProfileRegistry.register(
-            MachineProfile.builder(PROFILE_ID, "EnderIO")
-                .setting(Settings.MACHINES.def())
-                .setting(Settings.TICK_MODIFIER.def())
-                .effect(
-                    Effects.durationFromHandler()
-                        .withCostPerT(CoFHCompat.RF_PER_T, (current, s, ctx) -> (long) RF_PER_TICK)
-                        .computeTotal(CoFHCompat.RF_COST)
-                        .applyParallelism())
-                .build());
+        MachineVariants.register(EnderIOMachines.SOURCE);
+        EnderIOProfile.registerChartMinimum();
+        MachineProfileRegistry.register(EnderIOProfile.profile());
 
         Field f = null;
         try {
@@ -86,7 +74,8 @@ public class EnderIOProvider implements PropertyProvider {
     public String getProfileId(final IRecipeHandler handler, final int recipeIndex) {
         if (!(handler instanceof TemplateRecipeHandler trh)) return null;
         final String overlay = trh.getOverlayIdentifier();
-        if (overlay != null && (overlay.startsWith("EnderIO") || overlay.equals("EIOEnchanter"))) return PROFILE_ID;
+        if (overlay != null && (overlay.startsWith("EnderIO") || overlay.equals("EIOEnchanter")))
+            return EnderIOProfile.ID;
         return null;
     }
 
@@ -104,24 +93,31 @@ public class EnderIOProvider implements PropertyProvider {
         final TemplateRecipeHandler.CachedRecipe cached = recipes.get(recipeIndex);
 
         if (cached instanceof final AlloySmelterRecipe r) {
-            applyEnergy(props, r.getEnergy());
+            applyEnergy(props, EnderIOMachines.ALLOY_SMELTER, r.getEnergy());
         } else if (cached instanceof final MillRecipe r) {
-            applyEnergy(props, r.getEnergy());
+            applyEnergy(props, EnderIOMachines.SAG_MILL, r.getEnergy());
             applyMillChances(node, r);
         } else if (cached instanceof final SliceAndSpliceRecipe r) {
-            applyEnergy(props, r.getEnergy());
+            applyEnergy(props, EnderIOMachines.SLICE_AND_SPLICE, r.getEnergy());
         } else if (cached instanceof final SoulBinderRecipeNEI r) {
-            applyEnergy(props, r.getEnergy());
+            applyEnergy(props, EnderIOMachines.SOUL_BINDER, r.getEnergy());
             if (r.getExperience() > 0) props.put(EXPERIENCE, r.getExperience());
         } else if (cached instanceof final InnerVatRecipe r) {
-            applyEnergy(props, r.getEnergy());
+            applyEnergy(props, EnderIOMachines.VAT, r.getEnergy());
+        } else if (handler instanceof EnchanterRecipeHandler) {
+            props.put(EnderIOMachines.MACHINE, EnderIOMachines.ENCHANTER);
         }
 
         return props;
     }
 
-    private static void applyEnergy(final Map<RecipeProperty<?>, Object> props, final int energy) {
-        props.put(RecipePropertyAPI.DURATION_TICKS, energy / RF_PER_TICK);
+    /**
+     * The recipe's energy, and nothing about how long it takes. A duration written down here would be
+     * a duration at one capacitor, and the node would keep reporting it after the row moved.
+     */
+    private static void applyEnergy(final Map<RecipeProperty<?>, Object> props, final EnderIOMachines machine,
+        final int energy) {
+        props.put(EnderIOMachines.MACHINE, machine);
         props.put(CoFHCompat.RF_COST, (long) energy);
     }
 

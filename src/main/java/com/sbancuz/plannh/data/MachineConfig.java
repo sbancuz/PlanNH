@@ -10,6 +10,16 @@ import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
 
+/**
+ * A node's machine settings.
+ *
+ * <p>
+ * {@link #settings} is <b>sparse</b>: a key is present only if the user deliberately chose that
+ * value. Absence means "derive it" - from the machine, or from the setting's declared default - so
+ * {@code containsKey} answers "did the user choose this?" without sentinel values. Seeding every
+ * default here is what forced the old sentinels (0 meaning auto, or a value equal to the default
+ * meaning untouched), each of which eventually said the wrong thing.
+ */
 public class MachineConfig {
 
     public String profileId;
@@ -19,6 +29,12 @@ public class MachineConfig {
     public final Map<Integer, Float> outputProductivity = new HashMap<>();
 
     private final Node parentRef;
+
+    /** Key lookup for the current profile; rebuilt when the node's profile changes. */
+    @Nullable
+    private Map<String, SettingDef<?>> defsByKey;
+    @Nullable
+    private String defsProfileId;
 
     public MachineConfig(final Node parentRef) {
         this(parentRef, MachineProfileRegistry.get(MachineProfileRegistry.defaultId()));
@@ -32,10 +48,6 @@ public class MachineConfig {
         final MachineProfile profile = requested != null ? requested
             : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
         this.profileId = profile.id();
-        for (final SettingDef<?> def : profile.settings()) {
-            settings.putIfAbsent(def.key, def.defaultValue);
-        }
-        settings.putIfAbsent(Settings.MACHINES.key(), Settings.MACHINES.def().defaultValue);
     }
 
     @Nonnull
@@ -44,19 +56,44 @@ public class MachineConfig {
         return p != null ? p : MachineProfileRegistry.get(MachineProfileRegistry.defaultId());
     }
 
+    /**
+     * The declared default for a key, used when nothing is stored. Cached because the settings rows
+     * and the node title look defs up every frame and a profile carries around thirty of them.
+     */
+    @Nullable
+    private SettingDef<?> def(final String key) {
+        final MachineProfile profile = getProfile();
+        if (defsByKey == null || !profile.id()
+            .equals(defsProfileId)) {
+            final Map<String, SettingDef<?>> built = new HashMap<>();
+            for (final SettingDef<?> def : profile.settings()) {
+                built.put(def.key, def);
+            }
+            defsByKey = built;
+            defsProfileId = profile.id();
+        }
+        return defsByKey.get(key);
+    }
+
     public int getInt(final String key) {
         final Object v = settings.get(key);
-        return v instanceof final Number n ? n.intValue() : 0;
+        if (v instanceof final Number n) return n.intValue();
+        final SettingDef<?> def = def(key);
+        return def != null && def.defaultValue instanceof final Number n ? n.intValue() : 0;
     }
 
     public boolean getBoolean(final String key) {
         final Object v = settings.get(key);
-        return v instanceof final Boolean b && b;
+        if (v instanceof final Boolean b) return b;
+        final SettingDef<?> def = def(key);
+        return def != null && def.defaultValue instanceof final Boolean b && b;
     }
 
     public String getString(final String key) {
         final Object v = settings.get(key);
-        return v instanceof final String s ? s : "";
+        if (v instanceof final String s) return s;
+        final SettingDef<?> def = def(key);
+        return def != null && def.defaultValue instanceof final String s ? s : "";
     }
 
     public void setInt(final String key, final int value) {
@@ -75,32 +112,25 @@ public class MachineConfig {
     }
 
     /**
-     * Applies the profile's per-recipe-map route defaults (e.g. Perfect OC on for specific recipe
-     * machines) to the settings. Only values still at the profile default are overridden, so a
-     * user's explicit choice is never clobbered.
+     * Hands a setting back to the machine. Absence is a real state that the steppers cannot reach on
+     * their own, so without this a row nudged and returned to its old number stays pinned there.
      */
-    public void seedRouteDefaults() {
-        final RecipeContext ctx = new RecipeContext(parentRef.properties);
-        final MachineProfile profile = getProfile();
-        final Map<String, Object> defaults = profile.effectComputer()
-            .routeDefaults(ctx);
-        if (defaults.isEmpty()) return;
-        for (final Map.Entry<String, Object> e : defaults.entrySet()) {
-            final Object current = settings.get(e.getKey());
-            if (current == null) {
-                settings.put(e.getKey(), e.getValue());
-                continue;
-            }
-            final Object profileDefault = profile.settings()
-                .stream()
-                .filter(def -> def.key.equals(e.getKey()))
-                .map(def -> def.defaultValue)
-                .findFirst()
-                .orElse(null);
-            if (profileDefault != null && current.equals(profileDefault)) {
-                settings.put(e.getKey(), e.getValue());
-            }
-        }
+    public void clear(final String key) {
+        settings.remove(key);
+        parentRef.refresh();
+    }
+
+    /**
+     * Drops everything the previous machine implied. A different machine has different coils, a
+     * different parallel ceiling and different overclock rules, so carrying values across produces
+     * numbers the new machine cannot actually reach. Voltage survives because it describes the power
+     * supplied to the node rather than the machine itself.
+     */
+    public void resetForNewMachine() {
+        settings.keySet()
+            .removeIf(
+                key -> !Settings.VOLTAGE.key()
+                    .equals(key));
     }
 
     @Nonnull
@@ -127,11 +157,31 @@ public class MachineConfig {
         final Object count = settings.get(Settings.MACHINES.key());
         settings.clear();
         settings.putAll(other.settings);
+        // Absence is a state: an unpinned node must not inherit the other's pin.
         if (count != null) settings.put(Settings.MACHINES.key(), count);
+        else settings.remove(Settings.MACHINES.key());
     }
 
+    /**
+     * How many machines this node stands for, one when it has not been pinned. Pinning is the presence
+     * of the key: a node that never had a count typed into it follows whatever the solver works out,
+     * so it must not contribute a multiplier of its own.
+     */
     public int getMachineCount() {
-        return getInt(Settings.MACHINES.key());
+        // Hard default rather than the profile's: a profile need not declare the setting, and a
+        // count of zero would silently void the node.
+        final Object v = settings.get(Settings.MACHINES.key());
+        return v instanceof final Number n ? Math.max(1, n.intValue()) : 1;
+    }
+
+    /** Whether a count was typed in. The solver treats a pinned node as a constraint, not a variable. */
+    public boolean isMachineCountPinned() {
+        return settings.containsKey(Settings.MACHINES.key());
+    }
+
+    public void clearMachineCount() {
+        settings.remove(Settings.MACHINES.key());
+        parentRef.refresh();
     }
 
     public void setMachineCount(final int count) {
@@ -146,14 +196,10 @@ public class MachineConfig {
         return outputProductivity.getOrDefault(outputIndex, 1.0f);
     }
 
-    public boolean hasAnyBoost() {
+    /** Whether this node has anything worth writing to the save. */
+    public boolean hasStoredSettings() {
         if (!MachineProfileRegistry.defaultId()
             .equals(profileId)) return true;
-        final MachineProfile p = getProfile();
-        for (final SettingDef<?> def : p.settings()) {
-            final Object val = settings.get(def.key);
-            if (val != null && !val.equals(def.defaultValue)) return true;
-        }
-        return !inputConsumption.isEmpty() || !outputProductivity.isEmpty();
+        return !settings.isEmpty() || !inputConsumption.isEmpty() || !outputProductivity.isEmpty();
     }
 }

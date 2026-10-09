@@ -1,4 +1,4 @@
-package com.sbancuz.plannh.data.effect.steps;
+package com.sbancuz.plannh.data.provider.gregtech;
 
 import static com.sbancuz.plannh.data.provider.GTProvider.EU_PER_TICK;
 import static com.sbancuz.plannh.data.provider.GTProvider.RECIPE_MAP;
@@ -23,6 +23,7 @@ import com.sbancuz.plannh.data.effect.EffectComputer;
 import com.sbancuz.plannh.data.effect.EffectResult;
 import com.sbancuz.plannh.data.effect.EffectStep;
 
+import gregtech.api.enums.GTValues;
 import gregtech.api.recipe.RecipeMap;
 import gregtech.api.util.OverclockCalculator;
 
@@ -40,7 +41,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
     private boolean forcePerfectOC;
     private final List<Condition> conditions = new ArrayList<>();
     private final Map<String, Consumer<GTOverclockStep>> routeModifiers = new HashMap<>();
-    private final Map<String, Map<String, Object>> routeDefaults = new HashMap<>();
     private SettingDef<Integer> catalystSetting;
     private IntUnaryOperator catalystComputer;
 
@@ -52,12 +52,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
 
     public GTOverclockStep route(final String recipeMapId, final Consumer<GTOverclockStep> modifier) {
         routeModifiers.put(recipeMapId, modifier);
-        return this;
-    }
-
-    public GTOverclockStep withDefault(final String recipeMapId, final String key, final Object value) {
-        routeDefaults.computeIfAbsent(recipeMapId, k -> new HashMap<>())
-            .put(key, value);
         return this;
     }
 
@@ -85,13 +79,6 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
     }
 
     @Override
-    public Map<String, Object> routeDefaults(final RecipeContext ctx) {
-        final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
-        if (map == null || routeDefaults.isEmpty()) return Map.of();
-        return routeDefaults.getOrDefault(map.unlocalizedName, Map.of());
-    }
-
-    @Override
     public EffectResult apply(EffectResult current, Map<String, Object> s, RecipeContext ctx) {
         forceHeat = false;
         forcePerfectOC = false;
@@ -106,40 +93,41 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
             }
         }
 
-        if (!routeModifiers.isEmpty() || !routeDefaults.isEmpty()) {
+        if (!routeModifiers.isEmpty()) {
             final RecipeMap<?> map = ctx.getOrDefault(RECIPE_MAP, null);
             if (map != null) {
                 final String uid = map.unlocalizedName;
                 final Consumer<GTOverclockStep> mod = routeModifiers.get(uid);
                 if (mod != null) mod.accept(this);
-                final Map<String, Object> defs = routeDefaults.get(uid);
-                if (defs != null) {
-                    defs.forEach((key, value) -> { if (!s.containsKey(key)) s.put(key, value); });
-                }
             }
         }
 
+        // PARALLELS_DEF's default is 0, meaning "ask the machine", so reading it raw yields a
+        // throughput factor of 0 on every path that does not go through the preset - which zeroes
+        // every port on the node and makes it silently produce and consume nothing.
+        final int settingParallels = Math.max(1, GTSettings.PARALLELS_DEF.effectiveInt(ctx, s));
         final int parallels;
         if (catalystSetting != null) {
             final int cat = MachineProfile.getInt(s, catalystSetting.key, 0);
-            parallels = cat > 0 ? catalystComputer.applyAsInt(cat)
-                : MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
+            parallels = cat > 0 ? catalystComputer.applyAsInt(cat) : settingParallels;
         } else {
-            parallels = MachineProfile.getInt(s, Settings.PARALLELS.key(), 1);
+            parallels = settingParallels;
         }
         final int machines = MachineProfile.getInt(s, Settings.MACHINES.key(), 1);
 
         final long eut = recipeEUt(ctx, current);
         final int recipeDuration = current.durationTicks();
 
-        if (eut <= 0 || recipeDuration <= 0
-            || MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF")
-                .equals("OFF")) {
-            current.durationTicks(recipeDuration);
-            current.energyPerT(eut);
-            current.throughputFactor(parallels * machines);
-            return current;
-        }
+        // The recipe as written, which is the answer on every path that does not overclock. Set once
+        // here so each of those paths is a bare return rather than a copy of these three lines.
+        current.durationTicks(recipeDuration);
+        current.energyPerT(eut);
+        current.throughputFactor(parallels * machines);
+
+        if (eut <= 0 || recipeDuration <= 0) return current;
+
+        if (MachineProfile.getString(s, Settings.VOLTAGE.key(), "OFF")
+            .equals("OFF")) return current;
 
         final OverclockCalculator calc = buildGtCalc(s, eut, recipeDuration, parallels);
 
@@ -161,16 +149,18 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         calc.calculate();
         current.durationTicks(calc.getDuration());
         current.energyPerT(calc.getConsumption());
-        current.throughputFactor(parallels * machines);
         return current;
     }
 
+    /**
+     * Settings.VOLTAGE's option list is GTValues.VN, so the tier table is GT's to define. The
+     * closed form 8*4^tier that this used to compute is wrong at the top end: V[14] is
+     * Integer.MAX_VALUE - 7, not 2147483648.
+     */
     public static long tierNameToVoltage(@Nullable final String name) {
         if (name == null || name.equals("OFF")) return 0;
-        final String[] names = { "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UMV",
-            "UXV", "MAX" };
-        for (int i = 0; i < names.length; i++) {
-            if (names[i].equals(name)) return 8L * (long) Math.pow(4, i);
+        for (int tier = 0; tier < GTValues.VN.length; tier++) {
+            if (GTValues.VN[tier].equals(name)) return GTValues.V[tier];
         }
         return 0;
     }
@@ -215,11 +205,24 @@ public class GTOverclockStep implements EffectStep, EffectComputer {
         return calc;
     }
 
-    static long recipeEUt(RecipeContext ctx, EffectResult current) {
+    static long recipeEUt(final RecipeContext ctx, final EffectResult current) {
+        final long fromRecipe = recipeEUt(ctx, current.durationTicks());
+        return fromRecipe > 0 ? fromRecipe : current.energyPerT();
+    }
+
+    /**
+     * The recipe's own EU/t, for callers that have no {@link EffectResult} to fall back on - the
+     * settings rows, which need it to know which voltage tiers can run the recipe at all.
+     */
+    public static long recipeEUt(final RecipeContext ctx) {
+        return recipeEUt(ctx, ctx.getOrDefault(RecipePropertyAPI.DURATION_TICKS, 0));
+    }
+
+    private static long recipeEUt(final RecipeContext ctx, final int duration) {
         final Long euPerTick = ctx.getOrDefault(EU_PER_TICK, null);
         if (euPerTick != null && euPerTick > 0) return euPerTick;
         final Long totalEu = ctx.getOrDefault(TOTAL_EU, null);
-        if (totalEu != null && totalEu > 0 && current.durationTicks() > 0) return totalEu / current.durationTicks();
-        return current.energyPerT();
+        if (totalEu != null && totalEu > 0 && duration > 0) return totalEu / duration;
+        return 0;
     }
 }

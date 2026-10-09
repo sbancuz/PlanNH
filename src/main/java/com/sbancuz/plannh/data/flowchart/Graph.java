@@ -6,6 +6,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
@@ -46,6 +48,26 @@ public class Graph {
 
     @Getter
     private BalanceMode balanceMode = BalanceMode.AUTO;
+
+    /** Nothing is set for this key, so a node opens on the best the game offers. */
+    public static final int NO_MINIMUM = -1;
+
+    /**
+     * The structure this chart assumes it can build, keyed by setting. A chart describes a factory at
+     * one point in a world's progression, so the coil a node opens on belongs to the chart rather than
+     * to each node; setting it once is what keeps a node's own settings down to what makes that node
+     * different.
+     *
+     * <p>
+     * A starting value, not a ceiling. A recipe that needs more raises its own node, and a row the
+     * user edits keeps what it was given.
+     *
+     * <p>
+     * Keyed rather than one field per setting, because which settings a chart has a floor for is the
+     * installed mods' business, not this package's - naming them here would put GregTech in a class
+     * that has to stay loadable without it. Sorted so a save writes them in a stable order.
+     */
+    private final SortedMap<String, Integer> minimums = new TreeMap<>();
 
     /**
      * Per-graph undo/redo stack, transient because snapshots are content-encoded and never stored.
@@ -110,6 +132,26 @@ public class Graph {
     public void setBalanceMode(final BalanceMode mode) {
         balanceMode = mode;
         bumpVersion();
+    }
+
+    /** What this chart plans at for one setting, or {@link #NO_MINIMUM} when it has not said. */
+    public int getMinimum(final String settingKey) {
+        return minimums.getOrDefault(settingKey, NO_MINIMUM);
+    }
+
+    /**
+     * A minimum changes what an untouched node runs at, which changes its parallel count and so the
+     * whole solve.
+     */
+    public void setMinimum(final String settingKey, final int tier) {
+        minimums.put(settingKey, tier);
+        bumpVersion();
+    }
+
+    /** The stored floors, for the serializer. Sorted, so a save is reproducible. */
+    @Nonnull
+    public SortedMap<String, Integer> getMinimums() {
+        return minimums;
     }
 
     public void removeNode(final UUID id) {

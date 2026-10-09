@@ -9,6 +9,20 @@ plannh.settings.energy_per_tick=Energy/t
 plannh.settings.inputs_per_tick=Inputs/t
 plannh.settings.burnable_override=Burnable
 
+plannh.settings.machine=Machine
+
+## Settings - GT machine and structure
+plannh.settings.gt_advanced=Advanced
+plannh.settings.gt_coil=Coil
+plannh.settings.gt_solenoid=Solenoid
+plannh.settings.gt_item_pipe=Item Pipe
+plannh.settings.gt_pipe_casing=Pipe Casing
+plannh.settings.gt_sawblade=Sawblade
+plannh.settings.gt_electrode=Electrode
+plannh.settings.gt_structure_tier=Struct. Tier
+plannh.settings.gt_width=Width
+plannh.settings.gt_mode=Mode
+
 ## Settings - GT
 plannh.settings.voltage=Tier
 plannh.settings.amp=Amp
@@ -40,14 +54,12 @@ plannh.settings.mana_per_tick=Mana/t
 ## Settings - Thaumcraft (and friends)
 plannh.settings.vis_per_tick=Vis/t
 
-## Settings - Forestry
-plannh.settings.forestry_rf_per_tick=For. RF/t
-
 ## Settings - BloodMagic
 plannh.settings.lp_per_tick=BM LP/t
 
 ## Settings - Cofh core
 plannh.settings.rf_per_tick=RF/t
+plannh.settings.eio_capacitor=Capacitor
 
 ## Settings - Steam
 plannh.settings.steam_eut_discount=Steam EU%
@@ -142,6 +154,7 @@ plannh.solver.stopped_early=Stopped after %d combinations, so there may be more 
 plannh.solver.choice_no_longer_fits=The saved excess choice no longer fits this chart - showing the solver's own answer
 plannh.solver.choice_needs_more_gates=The saved excess choice needs more gates than the solver's answer, so it was dropped
 ## Pipeline diagnostics
+plannh.solver.count_and_target='%s' fixes a machine count and asks for an output rate, which cannot both hold. The rate is used and the count ignored - remove one.
 plannh.solver.pins_conflict=These pins cannot hold together, and dropping them makes the chart solvable: %s
 plannh.solver.stage_failed=%s %s
 plannh.solver.machines_cannot_run=%d machines cannot run: %s
@@ -155,6 +168,7 @@ plannh.solver.inexact_residual=Returned an inexact port residual %s
 plannh.solver.under_supply=Returned a port that under-supplies: residual %s
 plannh.solver.gate_count_not_certified=Gate count %d is minimal but not certified optimal (exact search over budget)
 ## Names
+plannh.machine.singleblock_suffix= (single)
 plannh.solver.pin_extent=extent pin
 plannh.solver.pin_target=target rate
 plannh.solver.pin_count=fixed machine count

@@ -2,6 +2,7 @@ package com.sbancuz.plannh;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -75,27 +76,48 @@ class BalancerSmokeTest {
     }
 
     /**
-     * AUTO must never write solved counts back into the node configs: viewing a chart is not
-     * editing it. The reported operation count is the exact fractional machine count - no
-     * rounding anywhere, so every displayed number can be checked against every other by hand.
+     * AUTO must never write solved counts back into the node configs: viewing a chart is not editing
+     * it. Since storing a count is now what pins a node, a write-back would also silently pin every
+     * node in the chart, so the two halves of that rule are one assertion.
      */
     @Test
-    void autoModeReportsExactFractionalCounts_andDoesNotWriteThemBack() {
+    void autoModeDoesNotWriteSolvedCountsBack() {
         final LoadedChart chart = GtnhFlowLoader.load("loopGraph");
         final Node lcr = chart.machine(1);
-        assertFalse(lcr.isMachineCountFixed());
+        assertFalse(lcr.machineConfig.isMachineCountPinned());
+
+        Balancer.balance(chart.graph(), BalanceMode.AUTO);
+
+        assertFalse(
+            lcr.machineConfig.isMachineCountPinned(),
+            "solving pinned a node the user never touched, freezing it at the solved count");
+    }
+
+    /** A pinned count is a constraint the solve must respect and must not overwrite. */
+    @Test
+    void aPinnedCountSurvivesViewing() {
+        final LoadedChart chart = GtnhFlowLoader.load("loopGraph");
+        final Node lcr = chart.machine(1);
         lcr.machineConfig.setMachineCount(3);
 
-        final BalanceResult result = Balancer.balance(chart.graph(), BalanceMode.AUTO);
+        Balancer.balance(chart.graph(), BalanceMode.AUTO);
 
+        assertTrue(lcr.machineConfig.isMachineCountPinned());
         assertEquals(3, lcr.machineConfig.getMachineCount(), "configured count must survive viewing");
-        assertEquals(
-            8.0 / 15.0,
-            result.nodeBalances()
-                .get(lcr.id)
-                .operations(),
-            1e-6,
-            "the exact fractional machine count, not a ceiling");
+    }
+
+    /** AUTO reports the exact fractional machine count, so displayed numbers reconcile by hand. */
+    @Test
+    void autoModeReportsExactFractionalCounts() {
+        final LoadedChart chart = GtnhFlowLoader.load("loopGraph");
+        final Node lcr = chart.machine(1);
+
+        final double ops = Balancer.balance(chart.graph(), BalanceMode.AUTO)
+            .nodeBalances()
+            .get(lcr.id)
+            .operations();
+
+        assertNotEquals(Math.rint(ops), ops, 1e-9, "a whole number here means something rounded on the way out");
     }
 
     /**

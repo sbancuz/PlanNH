@@ -63,7 +63,7 @@ class GtnhFlowLoadTest {
 
         // The target pin lands on the node itself: output 0 is the fuel, pinned at 10/s. The
         // count stays free - AUTO derives the exact fractional extent from the rate.
-        assertTrue(!fusion.isMachineCountFixed(), "a target: pin must not fix the machine count");
+        assertTrue(!fusion.machineConfig.isMachineCountPinned(), "a target: pin must not fix the machine count");
         assertEquals(10.0, fusion.targetOutputRates.get(0), 1e-9, "10/s on the fuel output");
     }
 
@@ -82,7 +82,7 @@ class GtnhFlowLoadTest {
                 .size());
 
         final Node dt = chart.machine(0);
-        assertTrue(dt.isMachineCountFixed(), "number: pin must fix the machine count");
+        assertTrue(dt.machineConfig.isMachineCountPinned(), "number: pin must fix the machine count");
         assertEquals(1, dt.machineConfig.getMachineCount());
     }
 

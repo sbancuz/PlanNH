@@ -27,6 +27,7 @@ public enum SolverMessage {
     WIRING_IMPORT(Severity.INFO, "plannh.solver.wiring_import"),
     WIRING_UNLINKED(Severity.WARN, "plannh.solver.wiring_unlinked"),
     OVERSHOOTS_TARGET(Severity.WARN, "plannh.solver.overshoots_target"),
+    COUNT_AND_TARGET(Severity.ERROR, "plannh.solver.count_and_target"),
 
     // -----------------------------------------------------------------------------------------
     // The alternatives search - the honesty notes a truncated or overridden answer owes the reader
