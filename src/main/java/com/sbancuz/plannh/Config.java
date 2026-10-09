@@ -62,9 +62,8 @@ public final class Config {
      * running out of time inside the enumeration.
      *
      * <p>
-     * The ceiling is 200 and not more because AUTO solves from {@code draw()}: a chart that takes
-     * its whole budget freezes the GUI for it, and 40 seconds is already past what anyone would
-     * read as anything but a hang.
+     * Spent on a background thread, so the ceiling is about patience rather than the GUI: a solve
+     * that runs long shows the chart its previous answer for longer, and nothing freezes.
      */
     public static int solverEffortPercent = 100;
 
@@ -101,8 +100,8 @@ public final class Config {
     public static int layoutLayerSpacing = 70;
 
     /**
-     * How many crossing-minimisation sweeps the engine attempts, keeping the best. Higher is slower
-     * and marginally cleaner; the layout runs while the chart is on screen, so a big chart will pause.
+     * How many crossing-minimisation sweeps the engine attempts, keeping the best. Higher takes
+     * longer; the chart keeps the positions it has until the new arrangement is ready.
      */
     public static int layoutThoroughness = 30;
 
@@ -176,8 +175,8 @@ public final class Config {
             SOLVER_EFFORT_MIN,
             SOLVER_EFFORT_MAX,
             "How long AUTO balancing may spend looking for a better answer, as a percentage of the"
-                + " default. Lower gives up sooner on big charts; higher makes them balance better"
-                + " and the GUI pause longer, because the solve runs while the screen draws.");
+                + " default. Lower gives up sooner on big charts; higher balances them better, and"
+                + " the chart keeps showing its last answer for longer while the new one is worked out.");
 
         layoutNodeSpacing = configuration.getInt(
             "layoutNodeSpacing",
@@ -205,8 +204,8 @@ public final class Config {
             layoutThoroughness,
             LAYOUT_THOROUGHNESS_MIN,
             LAYOUT_THOROUGHNESS_MAX,
-            "How hard auto-layout works to untangle arrow crossings, from 1 to 30. Higher is slower,"
-                + " and the layout runs while the chart is on screen, so a big chart will pause.");
+            "How hard auto-layout works to untangle arrow crossings, from 1 to 30. Higher takes longer,"
+                + " and a chart keeps its current positions until the new arrangement is ready.");
 
         if (configuration.hasChanged()) {
             configuration.save();

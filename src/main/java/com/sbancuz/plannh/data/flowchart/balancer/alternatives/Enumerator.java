@@ -81,7 +81,7 @@ public final class Enumerator {
         // source/sink tilt rather than let it delete a candidate before anyone sees it.
         final long altBudget = n.effort(n.altBudgetMillis);
         final Budget whole = Budget.of(altBudget);
-        ctx.budget = Budget.of(altBudget * n.altSearchSharePercent / 100);
+        ctx.budget = whole.split(altBudget * n.altSearchSharePercent / 100);
         final Set<ChoiceKey> seen = new HashSet<>();
         seen.add(chosen);
         // Two passes: the neighbourhood is large and most of it is not feasible. A stage-2 LP alone

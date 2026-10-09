@@ -61,6 +61,6 @@ class ConfigurationAreaWidget extends ClampedListWidget<IWidget, ConfigurationAr
                 count += 1;
             }
         }
-        return height / count;
+        return count != 0 ? height / count : 0;
     }
 }
