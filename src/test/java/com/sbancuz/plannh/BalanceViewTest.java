@@ -79,11 +79,26 @@ class BalanceViewTest {
             .toList();
     }
 
+    /**
+     * The chart's boundary once its solve has landed. Asking the chart starts the solve and it runs
+     * on the background thread, so a test that wants solved quantities has to wait for the answer
+     * rather than read the chart as it stands.
+     */
+    private static List<Boundary> solvedBoundary(final Graph graph) throws InterruptedException {
+        graph.balance();
+        final long deadline = System.currentTimeMillis() + 30_000;
+        while (graph.getSolvedAt() != graph.getVersion() && System.currentTimeMillis() < deadline) {
+            Thread.sleep(1);
+        }
+        assertEquals(graph.getVersion(), graph.getSolvedAt(), "the solve never landed");
+        return graph.boundary();
+    }
+
     @Test
-    void surplusIsNamedAtItsPortAndReadsAsSomethingToCollect() {
+    void surplusIsNamedAtItsPortAndReadsAsSomethingToCollect() throws InterruptedException {
         // The reported bug in one assertion: the surplus is pinned to the port it leaves by, and
         // named as a surplus rather than as destruction - a player empties that bus like any other.
-        final List<Boundary> flows = chart("excess_choice").boundary();
+        final List<Boundary> flows = solvedBoundary(chart("excess_choice"));
 
         final List<Boundary> voided = of(flows, Kind.EXCESS);
         assertEquals(1, voided.size());
@@ -124,7 +139,7 @@ class BalanceViewTest {
     }
 
     @Test
-    void aBalancedChartHasNothingToChooseAndNothingToVoid() {
+    void aBalancedChartHasNothingToChooseAndNothingToVoid() throws InterruptedException {
         final Graph graph = chart("light_fuel");
         assertTrue(
             alternatives(graph).options()
@@ -188,7 +203,7 @@ class BalanceViewTest {
     }
 
     @Test
-    void pickingAnAnswerChangesTheChartAndSticksAcrossASave() {
+    void pickingAnAnswerChangesTheChartAndSticksAcrossASave() throws InterruptedException {
         final Graph graph = chart("symmetric_choice");
         final Alternatives before = alternatives(graph);
         final Alternative alternative = before.options()
@@ -221,7 +236,7 @@ class BalanceViewTest {
             alternative.externals()
                 .get(0)
                 .port(),
-            of(graph.boundary(), Kind.EXCESS).stream()
+            of(solvedBoundary(graph), Kind.EXCESS).stream()
                 .map(Boundary::port)
                 .findFirst()
                 .orElse(null),

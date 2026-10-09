@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.widget.sizer.Area;
 import com.sbancuz.plannh.Config;
 import com.sbancuz.plannh.PlanNH;
 import com.sbancuz.plannh.api.PlanAPI;
+import com.sbancuz.plannh.client.Background;
 import com.sbancuz.plannh.data.flowchart.Edge;
 import com.sbancuz.plannh.data.flowchart.GraphData;
 import com.sbancuz.plannh.data.flowchart.Group;
@@ -40,6 +41,9 @@ public final class ChartLayouter {
     /** Immediate group of each machine and note, built by {@link #build()} and reused by apply. */
     private final Map<UUID, UUID> parentOf = new HashMap<>();
 
+    /** A layout is in flight; client thread only. */
+    private boolean layoutRunning = false;
+
     public ChartLayouter(final CanvasWidget canvas, final LayoutStrategy strategy) {
         this.canvas = canvas;
         this.strategy = strategy;
@@ -47,21 +51,27 @@ public final class ChartLayouter {
 
     /** Entry point. The three phases below exist to be read, not to be called from elsewhere. */
     public void autoLayout() {
+        if (layoutRunning) return;
+
         final LayoutRequest request = build();
         if (request.machines()
             .isEmpty()) return;
 
-        final LayoutPlan plan;
-        try {
-            plan = strategy.layout(request, settings());
-        } catch (final RuntimeException | StackOverflowError | AssertionError e) {
-            // A chart with stale positions beats a client that dies inside a click handler.
-            PlanNH.LOG.error("Auto-layout failed; node positions left unchanged", e);
-            return;
-        }
-        if (plan.isEmpty()) return;
+        final LayoutSettings settings = settings();
+        layoutRunning = true;
 
-        apply(plan);
+        Background.offClient(() -> {
+            try {
+                return strategy.layout(request, settings);
+            } catch (final RuntimeException | StackOverflowError | AssertionError e) {
+                // A chart with stale positions beats a client that dies inside a click handler.
+                PlanNH.LOG.error("Auto-layout failed; node positions left unchanged", e);
+                return null;
+            }
+        }, plan -> {
+            layoutRunning = false;
+            if (plan != null && !plan.isEmpty()) apply(plan);
+        });
     }
 
     /**

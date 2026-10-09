@@ -9,9 +9,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.PlanNH;
+import com.sbancuz.plannh.client.Background;
 import com.sbancuz.plannh.data.MachineConfig;
 import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Node;
+import com.sbancuz.plannh.data.flowchart.Plan;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Enumerator;
 import com.sbancuz.plannh.data.properties.RecipeProperty;
@@ -25,7 +27,36 @@ import com.sbancuz.plannh.data.properties.RecipeProperty;
  */
 public final class Balancer {
 
+    private static Graph solving = null;
+
     private Balancer() {}
+
+    public static BalanceResult current(final Graph graph) {
+        if (graph.getSolvedAt() != graph.getVersion() && solving == null) request(graph);
+        if (graph.getSolvedAt() < 0) return configured(graph);
+        return Plan.getInstance()
+            .getSummary()
+            .balance();
+    }
+
+    private static void request(final Graph graph) {
+        solving = graph;
+        final long version = graph.getVersion();
+        final BalanceMode mode = graph.getBalanceMode();
+        final ChoiceKey choice = graph.getExcessChoice();
+        final SolveContext ctx = ctxOf(mode, graph, Map.of());
+
+        Background.offClient(() -> solve(mode, ctx, choice), answer -> {
+            solving = null;
+            if (answer == null || graph.getVersion() != version) return;
+            graph.setBoundaryView(null);
+            Plan.getInstance()
+                .getSummary()
+                .applyBalance(graph, resolve(graph, mode, answer), version);
+
+            graph.setSolvedAt(version);
+        });
+    }
 
     /**
      * Runs the mode's chain against the chart and returns the context plus its {@link Settlement}
@@ -82,12 +113,18 @@ public final class Balancer {
         final long budgetMillis = mode.heuristics()
             .numerics().solveBudgetMillis;
         return new SolveContext(
+            new ModelData(graph, mode.heuristics()),
             graph,
             mode.heuristics(),
-            Budget.of(budgetMillis),
+            budgetMillis,
             extraExtentPins,
             mode.pins(),
             profiler);
+    }
+
+    public static SolveContext context(final BalanceMode mode, final Graph graph,
+        final Map<UUID, Double> extraExtentPins) {
+        return ctxOf(mode, graph, extraExtentPins);
     }
 
     /**
@@ -138,7 +175,11 @@ public final class Balancer {
      */
     public static Answer solveWithAlternatives(final BalanceMode mode, final Graph graph,
         @Nullable final ChoiceKey choice, final Map<UUID, Double> extraExtentPins) {
-        final SolveContext ctx = ctxOf(mode, graph, extraExtentPins);
+        return solve(mode, context(mode, graph, extraExtentPins), choice);
+    }
+
+    public static Answer solve(final BalanceMode mode, final SolveContext ctx,
+        @Nullable final ChoiceKey choice) {
         final long start = System.currentTimeMillis();
         if (ctx.model.machines.isEmpty()) {
             return new Answer.Failed(SolverMessage.EMPTY_GRAPH.toNote());
@@ -166,37 +207,19 @@ public final class Balancer {
                 return new Answer.Failed(SolverMessage.VALIDATION_FAILED.toNote(residualError));
             }
         }
+        // Building the read-out is the first step that reads the live ports, so a chart that has
+        // moved on is refused here rather than raced.
+        if (ctx.cancelled()) {
+            return new Answer.Failed(SolverMessage.SOLVER_BUDGET.toNote());
+        }
         final SolutionView view = SolutionView.of(ctx, System.currentTimeMillis() - start);
         final Alternatives alternatives = mode.supportsAlternatives() ? Enumerator.enumerate(ctx)
             : new Alternatives(ctx.keyOf(ctx.support()), List.of(), true, List.of());
         return new Answer.Solved(view, alternatives);
     }
 
-    /** A solved chart plus the other answers it could have had, or the failure that prevented both. */
-    public sealed interface Answer permits Answer.Solved,Answer.Failed {
-
-        /** The solve committed a usable point and the enumeration that goes with it. */
-        record Solved(SolutionView solution, Alternatives alternatives) implements Answer {}
-
-        /** The solve committed no point; {@code failure} is why. */
-        record Failed(Note failure) implements Answer {}
-    }
-
-    /**
-     * The GUI dispatcher: every solving mode runs the SAME engine - build a context, run the
-     * mode's own {@link Chain}, and derive the result from the committed point's {@link SolutionView}
-     * - so a new balancer is a new {@link BalanceMode} constant and nothing else. Only NONE is a
-     * separate branch, because it never solves: the chart's configured counts as-is, which the chain
-     * cannot express (an empty chain stalls rather than succeeding-without-a-point).
-     */
-    @Nonnull
-    public static BalanceResult balance(final Graph graph, final BalanceMode mode) {
-        if (mode == BalanceMode.NONE) {
-            return buildResultFractional(graph, configuredCounts(graph), List.of(), null, null);
-        }
-        // One pass produces both the chart and the answers it could have had: the panel shows the
-        // alternatives unconditionally now, and re-deriving them would mean solving twice per edit.
-        final Answer answer = solveWithAlternatives(mode, graph, graph.getExcessChoice(), Map.of());
+    /** Turns an answer into the numbers a chart displays; reads the chart, so client thread only. */
+    public static BalanceResult resolve(final Graph graph, final BalanceMode mode, final Answer answer) {
         if (answer instanceof final Answer.Failed failed) {
             final Note reason = failed.failure();
             if (reason != null && reason.message() == SolverMessage.NO_PIN) {
@@ -227,6 +250,30 @@ public final class Balancer {
             view.openGates,
             view.wallMillis);
         return buildResultFractional(graph, view.copyCounts, view.notes, view, solved.alternatives());
+    }
+
+    /** A solved chart plus the other answers it could have had, or the failure that prevented both. */
+    public sealed interface Answer permits Answer.Solved,Answer.Failed {
+
+        /** The solve committed a usable point and the enumeration that goes with it. */
+        record Solved(SolutionView solution, Alternatives alternatives) implements Answer {}
+
+        /** The solve committed no point; {@code failure} is why. */
+        record Failed(Note failure) implements Answer {}
+    }
+
+    @Nonnull
+    public static BalanceResult balance(final Graph graph, final BalanceMode mode) {
+        if (mode == BalanceMode.NONE) {
+            return configured(graph);
+        }
+        return resolve(graph, mode, solveWithAlternatives(mode, graph, graph.getExcessChoice(), Map.of()));
+    }
+
+    /** The chart as it reads with no solve: NONE's answer, and what it shows while a solve runs. */
+    @Nonnull
+    public static BalanceResult configured(final Graph graph) {
+        return buildResultFractional(graph, configuredCounts(graph), List.of(), null, null);
     }
 
     /**

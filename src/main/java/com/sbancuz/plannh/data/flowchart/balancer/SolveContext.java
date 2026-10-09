@@ -35,6 +35,9 @@ public final class SolveContext {
      * it is about to build.
      */
     public Budget budget;
+    /** The chart this run was built from, kept only to read {@link #version} off it. */
+    private final Graph chart;
+    private final long version;
     public final boolean anyPin;
     /** The instrumentation hook for this run; {@link Profiler#disabled()} unless a test attaches one. */
     public final Profiler profiler;
@@ -65,6 +68,14 @@ public final class SolveContext {
         return point;
     }
 
+    /**
+     * Whether the chart has been edited since this run read it. The user is not waiting for a
+     * background solve, so an edit can land underneath one.
+     */
+    public boolean cancelled() {
+        return chart.getVersion() != version;
+    }
+
     /** Why the last model produced nothing usable; stages read it for their failure messages. */
     public Note rejection = new Note(SolverMessage.SOLVER_NO_SOLUTION);
     /** Final answer notes: pin overshoots from construction, then each pass's own stage notes. */
@@ -72,11 +83,14 @@ public final class SolveContext {
     /** Stage notes produced by the pass currently running (cleared on every pass). */
     public final List<Note> stageNotes = new ArrayList<>();
 
-    SolveContext(final Graph graph, final Heuristics heuristics, final Budget budget,
+    /** Builds the run's shared state over a {@link ModelData} the caller has already read. */
+    SolveContext(final ModelData model, final Graph chart, final Heuristics heuristics, final long budgetMillis,
         final Map<UUID, Double> extraExtentPins, final Set<Pin> pins, final Profiler profiler) {
-        this.model = new ModelData(graph, heuristics);
+        this.model = model;
+        this.chart = chart;
+        this.version = chart.getVersion();
+        this.budget = Budget.of(budgetMillis, this::cancelled);
         this.heuristics = heuristics;
-        this.budget = budget;
         this.pins = Set.copyOf(pins);
         this.profiler = profiler;
 

@@ -59,6 +59,7 @@ public class ClientProxy extends CommonProxy {
 
         Minecraft.getMinecraft()
             .func_152344_a(ElkLayoutStrategy::warmUp);
+        // This needs to run on the main thread since it uses the GL context
         Minecraft.getMinecraft()
             .func_152344_a(GPUProgram.BLUR::compile);
     }

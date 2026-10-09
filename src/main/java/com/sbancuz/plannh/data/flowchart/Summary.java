@@ -13,7 +13,6 @@ import javax.annotation.Nullable;
 
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
-import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
 import com.sbancuz.plannh.data.flowchart.balancer.Note;
 import com.sbancuz.plannh.data.flowchart.balancer.alternatives.Alternatives;
@@ -276,6 +275,14 @@ public final class Summary extends GraphData {
         return atVersion;
     }
 
+    /**
+     * The chart these rows describe. Two charts can sit on the same version and render different
+     * rows, so a panel watching {@link #calculatedAt()} alone cannot tell a switch apart.
+     */
+    public Graph computedFor() {
+        return atGraph;
+    }
+
     /** The {@link Mode} the current rows were derived for; the panel pings it to reload. */
     public Mode computedMode() {
         return atMode;
@@ -304,9 +311,7 @@ public final class Summary extends GraphData {
         .build();
 
     /**
-     * Re-derive this summary's lines from a fresh balance: every node's throughput is scaled up to
-     * the longest recipe on the chart (one cycle's rates) or to a per-second rate, per this
-     * summary's {@link Mode}.
+     * Re-derive this summary's lines, asking the chart to solve if its answer is behind.
      */
     public Summary recompute(final Graph graph) {
         if (atGraph == graph && atVersion >= graph.getVersion() && atMode == mode && atSettings == settingsVersion)
@@ -314,8 +319,22 @@ public final class Summary extends GraphData {
         atGraph = graph;
         atMode = mode;
         atSettings = settingsVersion;
+        // Filed under the version the balance came from, not the chart's current one: a solve that
+        // lands later has to read as a change, and filing a stale render under the current version
+        // would hide it.
+        return applyBalance(graph, graph.balance(), graph.getSolvedAt());
+    }
 
-        this.balance = Balancer.balance(graph, graph.getBalanceMode());
+    /**
+     * Replaces the rows from an already-computed balance: every node's throughput is scaled up to
+     * the longest recipe on the chart (one cycle's rates) or to a per-second rate, per this
+     * summary's {@link Mode}. Runs no solver, so it stays on the client thread.
+     *
+     * @param derivedAt the version {@code result} was computed from, which lags the chart while a
+     *                  solve is running
+     */
+    public Summary applyBalance(final Graph graph, final BalanceResult result, final long derivedAt) {
+        this.balance = result;
 
         final Map<LineKey, Float> outputs = new HashMap<>();
         final Map<LineKey, Float> inputs = new HashMap<>();
@@ -355,7 +374,7 @@ public final class Summary extends GraphData {
         setLines(Section.CHOICES, choiceLines(graph));
         setLines(Section.MESSAGES, messageLines());
 
-        atVersion = graph.getVersion();
+        atVersion = derivedAt;
         return this;
     }
 

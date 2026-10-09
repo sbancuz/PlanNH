@@ -8,6 +8,7 @@ import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.Rectangle;
 import com.cleanroommc.modularui.widget.Widget;
+import com.sbancuz.plannh.data.flowchart.Graph;
 import com.sbancuz.plannh.data.flowchart.Summary;
 import com.sbancuz.plannh.data.flowchart.Summary.Line;
 import com.sbancuz.plannh.data.flowchart.balancer.Severity;
@@ -29,6 +30,7 @@ class SummaryBody extends SummaryFlow {
     private final Summary data;
     private final Summary.Section section;
     private long rowsBuiltAt = Long.MIN_VALUE;
+    private Graph rowsFor = null;
     private Summary.Mode rowsMode = null;
     private GuiHelper.RateUnit rowsUnit = GuiHelper.RateUnit.SECONDS;
 
@@ -57,8 +59,10 @@ class SummaryBody extends SummaryFlow {
         super.onUpdate();
         final Summary.Mode mode = data.computedMode();
         final GuiHelper.RateUnit unit = data.getRateUnit();
-        if (rowsBuiltAt != data.calculatedAt() || rowsMode != mode || rowsUnit != unit) {
+        final Graph forGraph = data.computedFor();
+        if (rowsBuiltAt != data.calculatedAt() || rowsFor != forGraph || rowsMode != mode || rowsUnit != unit) {
             rowsBuiltAt = data.calculatedAt();
+            rowsFor = forGraph;
             rowsMode = mode;
             rowsUnit = unit;
             rebuildRows(null);

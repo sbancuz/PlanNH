@@ -8,6 +8,7 @@ import java.util.UUID;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceMode;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceResult;
 import com.sbancuz.plannh.data.flowchart.balancer.BalanceView;
+import com.sbancuz.plannh.data.flowchart.balancer.Balancer;
 import com.sbancuz.plannh.data.flowchart.balancer.ChoiceKey;
 
 import lombok.Getter;
@@ -50,6 +51,7 @@ public class Graph {
      * The display view, built on first ask after a solve rather than with it: the canvas wants the
      * boundary every frame and never the choices, which the summary reads straight from the solve.
      */
+    @Setter
     private List<BalanceView.Boundary> boundaryView = null;
 
     /**
@@ -57,12 +59,13 @@ public class Graph {
      * boundary view) each compare against it to know when they are stale. Transient because
      * a loaded plan starts cold and re-derives everything on first ask.
      */
-    private transient long version = 0;
+    private transient volatile long version = 0;
 
     /**
      * The graph version the solve caches above were built from.
      */
-    private transient long solvedAt = -1;
+    @Setter
+    private transient volatile long solvedAt = -1;
 
     public Graph() {
         this.name = "";
@@ -112,15 +115,7 @@ public class Graph {
     }
 
     public BalanceResult balance() {
-        if (solvedAt != version) {
-            Plan.getInstance()
-                .getSummary()
-                .recompute(this);
-            solvedAt = version;
-        }
-        return Plan.getInstance()
-            .getSummary()
-            .balance();
+        return Balancer.current(this);
     }
 
     /**
@@ -128,7 +123,7 @@ public class Graph {
      * once per frame and the answer only moves when the chart does.
      */
     public List<BalanceView.Boundary> boundary() {
-        balance(); // drops a view built before the last edit
+        balance();
         if (boundaryView == null) boundaryView = BalanceView.boundary(this);
         return boundaryView;
     }
