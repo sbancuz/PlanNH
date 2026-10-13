@@ -186,6 +186,16 @@ public final class ModelBuilder {
         return this;
     }
 
+    /** One binary per gate and nothing else: a model over supports alone, with no rates to link. */
+    public ModelBuilder gatesAlone() {
+        gateVars = new Variable[ctx.model.gates.size()];
+        for (int g = 0; g < gateVars.length; g++) {
+            gateVars[g] = m.addVariable("y_" + g)
+                .binary();
+        }
+        return this;
+    }
+
     /**
      * The AUTO conservation rows: per connected port, the drawn flows plus the external minus the
      * machine's own rate balance to zero, scaled by {@code 1/max(1, qty)} so coefficients stay

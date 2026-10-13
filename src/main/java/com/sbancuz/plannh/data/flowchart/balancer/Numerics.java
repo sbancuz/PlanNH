@@ -14,8 +14,9 @@ public final class Numerics {
 
     /**
      * How far above a chart's own scale the big-M gate links sit. Relative because the model is
-     * homogeneous: one fixed M is absurd on a chart measured in hundredths of an item. Under-estimates
-     * are caught by {@link Solver#pressesCap(Handles, double)} and grown.
+     * homogeneous: one fixed M is absurd on a chart measured in hundredths of an item. A returned point
+     * near M grows it ({@link Solver#pressesCap(Handles, double)}); a better point M excluded outright
+     * is caught by {@link Solver#cheaperSupport} in stage 1 and by the quantity bound in stage 2.
      */
     public final double bigMFactor = 1e3;
     public final int maxMGrowths = 3;
@@ -40,6 +41,11 @@ public final class Numerics {
     public final int maxTiedSupports = 64;
     /** How many supports the LP may refute before a gate MILP gives up; see {@link Solver#gateMILP}. */
     public final int maxRefutedSupports = 16;
+    /**
+     * LP solves {@link Solver#cheaperSupport} may spend proving a gate count, deliberately NOT scaled
+     * by effort: running out costs the certificate. The corpus peaks at 187 (230_platline, 62 gates).
+     */
+    public final int gateProofLpBudget = 1024;
     /** Ceiling on any ONE model's model time, scaled by effort. */
     public final long stageTimeLimitMillis = 15_000;
 

@@ -16,10 +16,11 @@ import com.sbancuz.plannh.data.flowchart.balancer.StageOutcome;
 
 /**
  * The AUTO chain's entry: gate count. Decides WHICH ingredient gates open and proves the count is
- * optimal. It runs twice - an LP deletion filter always produces a minimal support fast, then a
- * short exact-MILP slice certifies or beats it when the chart is small enough for branch-and-bound;
- * large charts keep the filter answer, uncertified. Hands the carrying set ({@link GatePlan}) and
- * its weighted cost as the cap the next stage searches under.
+ * optimal. An LP deletion filter always produces a minimal support fast, then a short exact-MILP
+ * slice certifies or beats it when the chart is small enough for branch-and-bound, and a big-M-free
+ * proof ({@link Solver#cheaperSupport}) confirms no support the MILP's M excluded is cheaper; large
+ * charts keep the filter answer, uncertified. Hands the carrying set ({@link GatePlan}) and its
+ * weighted cost as the cap the next stage searches under.
  *
  * <p>
  * This stage owns the AUTO non-linear branches (filter vs certified MILP); the chain stays flat.
@@ -40,8 +41,7 @@ public final class GateCountStage implements Entry<GateCountStage.GatePlan> {
             return new Outcome.Fail<>(filter.rejection());
         }
         final StageOutcome filterPoint = filter.point();
-        // Everything with a binary in it is sized from the filter's own solution: it is the first
-        // point that exists, and every later stage lives at the same scale.
+        // The gate MILP is sized from the filter's own solution: it is the first point that exists.
         final double scale = ctx.solutionScale(filterPoint.extents, filterPoint.flows, filterPoint.externals);
 
         // Certification is optional: the filter's support is already minimal, and proving it so is
@@ -59,6 +59,15 @@ public final class GateCountStage implements Entry<GateCountStage.GatePlan> {
                 certified = milpPoint.provenOptimal;
             }
         }
+        // The MILP's optimum only holds among supports its big-M admits.
+        if (certified) {
+            final Solver.GateProof proof = Solver.cheaperSupport(ctx, ctx.weightedCost(s1Support));
+            certified = proof.proven();
+            if (proof.cheaper() != null) {
+                s1Witness = proof.cheaper();
+                s1Support = s1Witness.support;
+            }
+        }
         if (!certified) {
             // Legacy keeps this note so the user knows the count is bought, not proven.
             ctx.stageNotes.add(SolverMessage.GATE_COUNT_NOT_CERTIFIED.toNote(s1Support.size()));
@@ -68,7 +77,10 @@ public final class GateCountStage implements Entry<GateCountStage.GatePlan> {
         // carrying flow too small to register still costs its weight, and capping below it leaves
         // stage 2 infeasible on a graph stage 1 has just solved.
         final Set<Integer> carrying = ctx.carryingGates(s1Witness.externals, s1Support);
-        return new Outcome.Continue<>(new GatePlan(carrying, ctx.weightedCost(carrying), scale, certified));
+        // Stage 2's big-M has to admit the witness it is capped by.
+        final double planScale = Math
+            .max(scale, ctx.solutionScale(s1Witness.extents, s1Witness.flows, s1Witness.externals));
+        return new Outcome.Continue<>(new GatePlan(carrying, ctx.weightedCost(carrying), planScale, certified));
     }
 
     /**
