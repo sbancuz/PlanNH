@@ -18,6 +18,7 @@ import com.sbancuz.plannh.data.flowchart.Group;
 import com.sbancuz.plannh.data.flowchart.Node;
 import com.sbancuz.plannh.data.flowchart.Note;
 import com.sbancuz.plannh.gui.CanvasWidget;
+import com.sbancuz.plannh.gui.group.GroupAreaWidget;
 import com.sbancuz.plannh.gui.group.GroupWidget;
 import com.sbancuz.plannh.gui.node.NodeWidget;
 import com.sbancuz.plannh.gui.note.NoteWidget;
@@ -169,16 +170,18 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             getContext().getAllBelowMouse()
                 .spliterator(),
             false)
-            .filter(w -> (w instanceof FlowchartWidget<?, ?> || w instanceof CanvasWidget) && w != this)
+            // the dragged widget and its descendants can be under the mouse. Skip them
+            .filter(w -> (w instanceof GroupAreaWidget || w instanceof CanvasWidget) && !isSelfOrDescendant(w))
             .map(w -> (ParentWidget<?>) w)
             .findFirst() // this should always find at least 1 match (the canvas)
             .orElseThrow();
 
-        if (oldParent != newParent && (newParent instanceof CanvasWidget || newParent instanceof GroupWidget<?>)) {
+        if (oldParent != newParent) {
             dataContainer.remove(data.getId());
             oldParent.remove(this);
 
-            if (newParent instanceof GroupWidget<?>groupWidget) {
+            if (newParent instanceof GroupAreaWidget areaWidget) {
+                final GroupWidget<?> groupWidget = (GroupWidget<?>) areaWidget.getFlowchartParent();
                 groupWidget.joinGroup(this);
                 data.setX(groupWidget.getMouseGroupX() - dragOffsetX);
                 data.setY(groupWidget.getMouseGroupY() - dragOffsetY);
@@ -195,6 +198,13 @@ public abstract class FlowchartWidget<T extends ParentWidget<T>, D extends Graph
             dataContainer.put(data.getId(), data);
             reposition();
         }
+    }
+
+    private boolean isSelfOrDescendant(IWidget widget) {
+        for (IWidget w = widget; w != null; w = w.hasParent() ? w.getParent() : null) {
+            if (w == this) return true;
+        }
+        return false;
     }
 
     public static FlowchartWidget<?, ?> getFlowchartWidgetFromData(CanvasWidget canvas, GraphData data) {
