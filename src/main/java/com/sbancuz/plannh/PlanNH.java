@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
+import cpw.mods.fml.common.event.FMLConstructionEvent;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
@@ -18,6 +19,11 @@ public class PlanNH {
 
     @SidedProxy(clientSide = "com.sbancuz.plannh.ClientProxy", serverSide = "com.sbancuz.plannh.CommonProxy")
     public static CommonProxy proxy;
+
+    @Mod.EventHandler
+    public void construct(final FMLConstructionEvent event) {
+        proxy.construct(event);
+    }
 
     @Mod.EventHandler
     // preInit "Run before anything else. Read your config, create blocks, items, etc, and register them with the

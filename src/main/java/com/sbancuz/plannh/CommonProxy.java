@@ -4,12 +4,15 @@ import com.sbancuz.plannh.annotation.VersionedInjector;
 import com.sbancuz.plannh.client.ImportCommand;
 import com.sbancuz.plannh.config.ConfigMain;
 
+import cpw.mods.fml.common.event.FMLConstructionEvent;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 
 public class CommonProxy {
+
+    public void construct(final FMLConstructionEvent event) {}
 
     public void preInit(final FMLPreInitializationEvent event) {
         VersionedInjector.injectAll(event.getAsmData());
